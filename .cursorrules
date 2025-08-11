@@ -50,9 +50,10 @@ When asked to "ship" the code or when shipping is mentioned, systematically exec
 
 1. **Generate Code**: Execute `go generate ./...` to ensure all generated files are up to date
 2. **Lint and Fix**: Execute `dagger call lint --source-dir=.` and automatically fix any linting errors that are found
-3. **Create Branch**: Create a new branch with a descriptive name based on the changes made
-4. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format
-5. **Push Branch**: Push the new branch to the remote repository
+3. **Unit tests**: Execute `dagger call unit-tests --source-dir .`  and automatically fix any errors that are found
+4. **Create Branch**: Create a new branch with a descriptive name based on the changes made
+5. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format
+6. **Push Branch**: Push the new branch to the remote repository
 
 ### Branch Naming Convention
 - Use descriptive names like: `feat/add-new-feature`, `fix/resolve-linting-issues`, `docs/update-readme`
