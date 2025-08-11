@@ -175,3 +175,160 @@ func (c *cgwt) getWorkspaceName(config *WorkspaceConfig, filename string) string
 	// Fallback to filename without extension
 	return strings.TrimSuffix(filepath.Base(filename), ".code-workspace")
 }
+
+// handleMultipleWorkspaces handles the selection of workspace files when multiple are found.
+func (c *cgwt) handleMultipleWorkspaces(workspaceFiles []string) (string, error) {
+	c.verbosePrint(fmt.Sprintf("Multiple workspace files found: %d", len(workspaceFiles)))
+
+	// Display selection prompt
+	c.displayWorkspaceSelection(workspaceFiles)
+
+	// Get user selection
+	selection, err := c.getUserSelection(len(workspaceFiles))
+	if err != nil {
+		return "", fmt.Errorf("user cancelled selection: %w", err)
+	}
+
+	selectedFile := workspaceFiles[selection-1] // Convert to 0-based index
+
+	// Confirm selection
+	confirmed, err := c.confirmSelection(selectedFile)
+	if err != nil {
+		return "", fmt.Errorf("user cancelled confirmation: %w", err)
+	}
+
+	if !confirmed {
+		// User wants to go back to selection
+		return c.handleMultipleWorkspaces(workspaceFiles)
+	}
+
+	c.verbosePrint(fmt.Sprintf("Selected workspace file: %s", selectedFile))
+	return selectedFile, nil
+}
+
+// displayWorkspaceSelection displays the workspace selection prompt.
+func (c *cgwt) displayWorkspaceSelection(workspaceFiles []string) {
+	if c.outputMode != OutputModeQuiet {
+		fmt.Println("Multiple workspace files found. Please select one:")
+		fmt.Println()
+
+		for i, file := range workspaceFiles {
+			fmt.Printf("%d. %s\n", i+1, file)
+		}
+
+		fmt.Println()
+		fmt.Printf("Enter your choice (1-%d) or 'q' to quit: ", len(workspaceFiles))
+	}
+}
+
+// getUserSelection gets and validates user input for workspace selection.
+func (c *cgwt) getUserSelection(maxChoice int) (int, error) {
+	return c.getUserSelectionWithRetries(maxChoice, 3)
+}
+
+// getUserSelectionWithRetries gets and validates user input with retry limit.
+func (c *cgwt) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
+	if retries <= 0 {
+		return 0, fmt.Errorf("too many invalid inputs, user cancelled selection")
+	}
+
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		return 0, fmt.Errorf("failed to read user input: %w", err)
+	}
+
+	// Handle quit commands
+	if c.isQuitCommand(input) {
+		return 0, fmt.Errorf("user cancelled selection")
+	}
+
+	// Parse numeric input
+	choice, err := c.parseNumericInput(input)
+	if err != nil {
+		if c.outputMode != OutputModeQuiet {
+			fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
+		}
+		return c.getUserSelectionWithRetries(maxChoice, retries-1)
+	}
+
+	// Validate range
+	if !c.isValidChoice(choice, maxChoice) {
+		if c.outputMode != OutputModeQuiet {
+			fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
+		}
+		return c.getUserSelectionWithRetries(maxChoice, retries-1)
+	}
+
+	return choice, nil
+}
+
+// isQuitCommand checks if the input is a quit command.
+func (c *cgwt) isQuitCommand(input string) bool {
+	quitCommands := []string{"q", "quit", "exit", "cancel"}
+	for _, cmd := range quitCommands {
+		if input == cmd {
+			return true
+		}
+	}
+	return false
+}
+
+// parseNumericInput parses numeric input from string.
+func (c *cgwt) parseNumericInput(input string) (int, error) {
+	var choice int
+	_, err := fmt.Sscanf(input, "%d", &choice)
+	return choice, err
+}
+
+// isValidChoice checks if the choice is within valid range.
+func (c *cgwt) isValidChoice(choice, maxChoice int) bool {
+	return choice >= 1 && choice <= maxChoice
+}
+
+// confirmSelection asks the user to confirm their workspace selection.
+func (c *cgwt) confirmSelection(workspaceFile string) (bool, error) {
+	return c.confirmSelectionWithRetries(workspaceFile, 3)
+}
+
+// confirmSelectionWithRetries asks the user to confirm their workspace selection with retry limit.
+func (c *cgwt) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
+	if retries <= 0 {
+		return false, fmt.Errorf("too many invalid inputs, user cancelled confirmation")
+	}
+
+	if c.outputMode != OutputModeQuiet {
+		fmt.Printf("You selected: %s\n", workspaceFile)
+		fmt.Println()
+		fmt.Print("Proceed with this workspace? (y/n): ")
+	}
+
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		return false, fmt.Errorf("failed to read user input: %w", err)
+	}
+
+	// Handle confirmation
+	result, err := c.parseConfirmationInput(input)
+	if err != nil {
+		if c.outputMode != OutputModeQuiet {
+			fmt.Print("Please enter 'y' for yes, 'n' for no, or 'q' to quit: ")
+		}
+		return c.confirmSelectionWithRetries(workspaceFile, retries-1)
+	}
+
+	return result, nil
+}
+
+// parseConfirmationInput parses confirmation input.
+func (c *cgwt) parseConfirmationInput(input string) (bool, error) {
+	switch input {
+	case "y", "yes", "Y", "YES":
+		return true, nil
+	case "n", "no", "N", "NO":
+		return false, nil
+	case "q", "quit", "exit", "cancel":
+		return false, fmt.Errorf("user cancelled confirmation")
+	default:
+		return false, fmt.Errorf("invalid input")
+	}
+}

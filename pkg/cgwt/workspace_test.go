@@ -169,9 +169,11 @@ func TestCGWT_Run_MultipleWorkspaceFiles(t *testing.T) {
 	// Mock workspace detection - multiple workspace files found
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace", "dev.code-workspace"}, nil)
 
+	// Note: This test would require stdin/stdout mocking for user input
+	// For now, we'll test that the error is related to user cancellation
 	err := cgwt.Run()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "2 .code-workspace files found in current directory")
+	assert.Contains(t, err.Error(), "user cancelled selection")
 }
 
 func TestCGWT_Run_EmptyFolders(t *testing.T) {
