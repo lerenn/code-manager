@@ -54,7 +54,16 @@ func (ci *Cgwt) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:" + goVersion() + "-alpine")
 	return ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir).
 		WithExec([]string{"sh", "-c",
-			"go test -tags=unit ./... | grep -v 'no test files'",
+			"go test -tags=unit ./...",
+		})
+}
+
+// IntegrationTests returns a container that runs the integration tests.
+func (ci *Cgwt) IntegrationTests(sourceDir *dagger.Directory) *dagger.Container {
+	c := dag.Container().From("golang:" + goVersion() + "-alpine")
+	return ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir).
+		WithExec([]string{"sh", "-c",
+			"go test -tags=integration ./...",
 		})
 }
 
