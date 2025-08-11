@@ -367,7 +367,7 @@ func (c *realCGWT) validateGitConfiguration(workDir string) error {
 	return nil
 }
 
-// ProjectType represents the type of project detected
+// ProjectType represents the type of project detected.
 type ProjectType int
 
 const (
@@ -376,7 +376,7 @@ const (
 	ProjectTypeWorkspace
 )
 
-// detectProjectType detects the project type and returns the type and workspace files if applicable
+// detectProjectType detects the project type and returns the type and workspace files if applicable.
 func (c *realCGWT) detectProjectType() (ProjectType, []string, error) {
 	// First check for single repository mode
 	isSingleRepo, err := c.detectSingleRepoMode()
@@ -402,7 +402,7 @@ func (c *realCGWT) detectProjectType() (ProjectType, []string, error) {
 	return ProjectTypeNone, nil, nil
 }
 
-// handleProjectDetection handles the output for the detected project type
+// handleProjectDetection handles the output for the detected project type.
 func (c *realCGWT) handleProjectDetection(projectType ProjectType, workspaceFiles []string) error {
 	switch projectType {
 	case ProjectTypeSingleRepo:
@@ -426,7 +426,7 @@ func (c *realCGWT) handleProjectDetection(projectType ProjectType, workspaceFile
 	return nil
 }
 
-// validateProjectStructureWithResults validates the project structure using pre-detected results
+// validateProjectStructureWithResults validates the project structure using pre-detected results.
 func (c *realCGWT) validateProjectStructureWithResults(projectType ProjectType, workspaceFiles []string) error {
 	if c.verbose {
 		c.logger.Logf("Starting project structure validation")
