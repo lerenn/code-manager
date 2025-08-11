@@ -7,7 +7,7 @@ import (
 )
 
 func TestDisplayWorkspaceSelection(t *testing.T) {
-	c := NewCGWTWithMode(nil, OutputModeNormal)
+	c := NewCGWT()
 
 	workspaceFiles := []string{
 		"project.code-workspace",
@@ -16,19 +16,7 @@ func TestDisplayWorkspaceSelection(t *testing.T) {
 	}
 
 	// Test that the method doesn't panic
-	c.(*cgwt).displayWorkspaceSelection(workspaceFiles)
-}
-
-func TestDisplayWorkspaceSelection_QuietMode(t *testing.T) {
-	c := NewCGWTWithMode(nil, OutputModeQuiet)
-
-	workspaceFiles := []string{
-		"project.code-workspace",
-		"project-dev.code-workspace",
-	}
-
-	// Test that the method doesn't panic in quiet mode
-	c.(*cgwt).displayWorkspaceSelection(workspaceFiles)
+	c.(*realCGWT).displayWorkspaceSelection(workspaceFiles)
 }
 
 func TestGetUserSelection_ValidInput(t *testing.T) {

@@ -22,7 +22,7 @@ type WorkspaceFolder struct {
 }
 
 // detectWorkspaceMode checks if the current directory contains workspace files.
-func (c *cgwt) detectWorkspaceMode() ([]string, error) {
+func (c *realCGWT) detectWorkspaceMode() ([]string, error) {
 	c.verbosePrint("Checking for .code-workspace files...")
 
 	// Check for workspace files
@@ -40,26 +40,8 @@ func (c *cgwt) detectWorkspaceMode() ([]string, error) {
 	return workspaceFiles, nil
 }
 
-// getWorkspaceInfo parses and validates a workspace configuration file.
-func (c *cgwt) getWorkspaceInfo(workspaceFile string) (*WorkspaceConfig, error) {
-	// Parse workspace configuration
-	workspaceConfig, err := c.parseWorkspaceFile(workspaceFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse workspace file: %w", err)
-	}
-
-	// Validate workspace repositories
-	err = c.validateWorkspaceRepositories(workspaceConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to validate workspace repositories: %w", err)
-	}
-
-	c.verbosePrint("Workspace mode detected")
-	return workspaceConfig, nil
-}
-
 // parseWorkspaceFile parses a workspace configuration file.
-func (c *cgwt) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) {
+func (c *realCGWT) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) {
 	c.verbosePrint("Parsing workspace configuration...")
 
 	// Read workspace file
@@ -108,65 +90,8 @@ func (c *cgwt) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) {
 	return &config, nil
 }
 
-// validateWorkspaceRepositories validates all repository paths in the workspace.
-func (c *cgwt) validateWorkspaceRepositories(config *WorkspaceConfig) error {
-	c.verbosePrint("Validating repository paths...")
-
-	// Track resolved paths to check for duplicates
-	resolvedPaths := make(map[string]bool)
-
-	for _, folder := range config.Folders {
-		// Resolve relative paths relative to current working directory
-		resolvedPath := folder.Path
-		if !filepath.IsAbs(folder.Path) {
-			resolvedPath = filepath.Join(".", folder.Path)
-		}
-
-		// Normalize path separators
-		cleanPath := filepath.Clean(resolvedPath)
-
-		// Check for duplicates
-		if resolvedPaths[cleanPath] {
-			return fmt.Errorf("duplicate repository paths found after resolution: %s", folder.Path)
-		}
-		resolvedPaths[cleanPath] = true
-
-		// Validate that the path exists
-		exists, err := c.fs.Exists(cleanPath)
-		if err != nil {
-			return fmt.Errorf("failed to check repository path: %w", err)
-		}
-		if !exists {
-			return fmt.Errorf("workspace repository not found: %s", folder.Path)
-		}
-
-		// Validate that it's a directory
-		isDir, err := c.fs.IsDir(cleanPath)
-		if err != nil {
-			return fmt.Errorf("failed to check repository directory: %w", err)
-		}
-		if !isDir {
-			return fmt.Errorf("workspace repository is not a git repository: %s", folder.Path)
-		}
-
-		// Check for .git directory
-		gitPath := filepath.Join(cleanPath, ".git")
-		gitExists, err := c.fs.Exists(gitPath)
-		if err != nil {
-			return fmt.Errorf("failed to check .git directory: %w", err)
-		}
-		if !gitExists {
-			return fmt.Errorf("workspace repository is not a git repository: %s", folder.Path)
-		}
-
-		c.verbosePrint(fmt.Sprintf("Validated repository: %s", folder.Path))
-	}
-
-	return nil
-}
-
 // getWorkspaceName extracts the workspace name from configuration or filename.
-func (c *cgwt) getWorkspaceName(config *WorkspaceConfig, filename string) string {
+func (c *realCGWT) getWorkspaceName(config *WorkspaceConfig, filename string) string {
 	// First try to get name from workspace configuration
 	if config.Name != "" {
 		return config.Name
@@ -177,7 +102,7 @@ func (c *cgwt) getWorkspaceName(config *WorkspaceConfig, filename string) string
 }
 
 // handleMultipleWorkspaces handles the selection of workspace files when multiple are found.
-func (c *cgwt) handleMultipleWorkspaces(workspaceFiles []string) (string, error) {
+func (c *realCGWT) handleMultipleWorkspaces(workspaceFiles []string) (string, error) {
 	c.verbosePrint(fmt.Sprintf("Multiple workspace files found: %d", len(workspaceFiles)))
 
 	// Display selection prompt
@@ -207,27 +132,25 @@ func (c *cgwt) handleMultipleWorkspaces(workspaceFiles []string) (string, error)
 }
 
 // displayWorkspaceSelection displays the workspace selection prompt.
-func (c *cgwt) displayWorkspaceSelection(workspaceFiles []string) {
-	if c.outputMode != OutputModeQuiet {
-		fmt.Println("Multiple workspace files found. Please select one:")
-		fmt.Println()
+func (c *realCGWT) displayWorkspaceSelection(workspaceFiles []string) {
+	fmt.Println("Multiple workspace files found. Please select one:")
+	fmt.Println()
 
-		for i, file := range workspaceFiles {
-			fmt.Printf("%d. %s\n", i+1, file)
-		}
-
-		fmt.Println()
-		fmt.Printf("Enter your choice (1-%d) or 'q' to quit: ", len(workspaceFiles))
+	for i, file := range workspaceFiles {
+		fmt.Printf("%d. %s\n", i+1, file)
 	}
+
+	fmt.Println()
+	fmt.Printf("Enter your choice (1-%d) or 'q' to quit: ", len(workspaceFiles))
 }
 
 // getUserSelection gets and validates user input for workspace selection.
-func (c *cgwt) getUserSelection(maxChoice int) (int, error) {
+func (c *realCGWT) getUserSelection(maxChoice int) (int, error) {
 	return c.getUserSelectionWithRetries(maxChoice, 3)
 }
 
 // getUserSelectionWithRetries gets and validates user input with retry limit.
-func (c *cgwt) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
+func (c *realCGWT) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
 	if retries <= 0 {
 		return 0, fmt.Errorf("too many invalid inputs, user cancelled selection")
 	}
@@ -245,17 +168,13 @@ func (c *cgwt) getUserSelectionWithRetries(maxChoice int, retries int) (int, err
 	// Parse numeric input
 	choice, err := c.parseNumericInput(input)
 	if err != nil {
-		if c.outputMode != OutputModeQuiet {
-			fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
-		}
+		fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
 		return c.getUserSelectionWithRetries(maxChoice, retries-1)
 	}
 
 	// Validate range
 	if !c.isValidChoice(choice, maxChoice) {
-		if c.outputMode != OutputModeQuiet {
-			fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
-		}
+		fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
 		return c.getUserSelectionWithRetries(maxChoice, retries-1)
 	}
 
@@ -263,7 +182,7 @@ func (c *cgwt) getUserSelectionWithRetries(maxChoice int, retries int) (int, err
 }
 
 // isQuitCommand checks if the input is a quit command.
-func (c *cgwt) isQuitCommand(input string) bool {
+func (c *realCGWT) isQuitCommand(input string) bool {
 	quitCommands := []string{"q", "quit", "exit", "cancel"}
 	for _, cmd := range quitCommands {
 		if input == cmd {
@@ -274,33 +193,31 @@ func (c *cgwt) isQuitCommand(input string) bool {
 }
 
 // parseNumericInput parses numeric input from string.
-func (c *cgwt) parseNumericInput(input string) (int, error) {
+func (c *realCGWT) parseNumericInput(input string) (int, error) {
 	var choice int
 	_, err := fmt.Sscanf(input, "%d", &choice)
 	return choice, err
 }
 
 // isValidChoice checks if the choice is within valid range.
-func (c *cgwt) isValidChoice(choice, maxChoice int) bool {
+func (c *realCGWT) isValidChoice(choice, maxChoice int) bool {
 	return choice >= 1 && choice <= maxChoice
 }
 
 // confirmSelection asks the user to confirm their workspace selection.
-func (c *cgwt) confirmSelection(workspaceFile string) (bool, error) {
+func (c *realCGWT) confirmSelection(workspaceFile string) (bool, error) {
 	return c.confirmSelectionWithRetries(workspaceFile, 3)
 }
 
 // confirmSelectionWithRetries asks the user to confirm their workspace selection with retry limit.
-func (c *cgwt) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
+func (c *realCGWT) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
 	if retries <= 0 {
 		return false, fmt.Errorf("too many invalid inputs, user cancelled confirmation")
 	}
 
-	if c.outputMode != OutputModeQuiet {
-		fmt.Printf("You selected: %s\n", workspaceFile)
-		fmt.Println()
-		fmt.Print("Proceed with this workspace? (y/n): ")
-	}
+	fmt.Printf("You selected: %s\n", workspaceFile)
+	fmt.Println()
+	fmt.Print("Proceed with this workspace? (y/n): ")
 
 	var input string
 	if _, err := fmt.Scanln(&input); err != nil {
@@ -310,9 +227,7 @@ func (c *cgwt) confirmSelectionWithRetries(workspaceFile string, retries int) (b
 	// Handle confirmation
 	result, err := c.parseConfirmationInput(input)
 	if err != nil {
-		if c.outputMode != OutputModeQuiet {
-			fmt.Print("Please enter 'y' for yes, 'n' for no, or 'q' to quit: ")
-		}
+		fmt.Print("Please enter 'y' for yes, 'n' for no, or 'q' to quit: ")
 		return c.confirmSelectionWithRetries(workspaceFile, retries-1)
 	}
 
@@ -320,7 +235,7 @@ func (c *cgwt) confirmSelectionWithRetries(workspaceFile string, retries int) (b
 }
 
 // parseConfirmationInput parses confirmation input.
-func (c *cgwt) parseConfirmationInput(input string) (bool, error) {
+func (c *realCGWT) parseConfirmationInput(input string) (bool, error) {
 	switch input {
 	case "y", "yes", "Y", "YES":
 		return true, nil
