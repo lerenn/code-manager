@@ -44,21 +44,33 @@ func NewCGWTWithMode(fs fs.FS, mode OutputMode) CGWT {
 
 // Run executes the main application logic.
 func (c *cgwt) Run() error {
+	// First check for single repository mode
 	isSingleRepo, err := c.detectSingleRepoMode()
 	if err != nil {
 		return fmt.Errorf("failed to detect repository mode: %w", err)
 	}
 
 	if isSingleRepo {
-		if c.outputMode != OutputModeQuiet {
-			fmt.Println("Single repository mode detected")
-		}
-	} else {
-		if c.outputMode != OutputModeQuiet {
-			fmt.Println("No Git repository found")
-		}
+		c.handleSingleRepoMode()
+		return nil
 	}
 
+	// If no single repo found, check for workspace mode
+	workspaceFiles, err := c.detectWorkspaceMode()
+	if err != nil {
+		return fmt.Errorf("failed to detect workspace mode: %w", err)
+	}
+
+	if len(workspaceFiles) > 1 {
+		return fmt.Errorf("%d .code-workspace files found in current directory", len(workspaceFiles))
+	}
+
+	if len(workspaceFiles) == 1 {
+		return c.handleWorkspaceMode(workspaceFiles[0])
+	}
+
+	// No repository or workspace found
+	c.handleNoProjectFound()
 	return nil
 }
 
@@ -81,7 +93,7 @@ func (c *cgwt) detectSingleRepoMode() (bool, error) {
 
 	if !exists {
 		c.verbosePrint("No .git directory found")
-		return false, fmt.Errorf("no git repository found in current directory")
+		return false, nil
 	}
 
 	c.verbosePrint("Verifying .git is a directory...")
@@ -94,10 +106,44 @@ func (c *cgwt) detectSingleRepoMode() (bool, error) {
 
 	if !isDir {
 		c.verbosePrint(".git exists but is not a directory")
-		return false, fmt.Errorf("no git repository found in current directory")
+		return false, nil
 	}
 
 	c.verbosePrint("Git repository detected")
-
 	return true, nil
+}
+
+// handleSingleRepoMode handles the output for single repository mode.
+func (c *cgwt) handleSingleRepoMode() {
+	if c.outputMode != OutputModeQuiet {
+		fmt.Println("Single repository mode detected")
+	}
+}
+
+// handleWorkspaceMode handles the output for workspace mode.
+func (c *cgwt) handleWorkspaceMode(workspaceFile string) error {
+	workspaceConfig, err := c.getWorkspaceInfo(workspaceFile)
+	if err != nil {
+		return fmt.Errorf("failed to get workspace info: %w", err)
+	}
+
+	workspaceName := c.getWorkspaceName(workspaceConfig, workspaceFile)
+	if c.outputMode != OutputModeQuiet {
+		fmt.Printf("Found workspace: %s\n", workspaceName)
+	}
+	if c.outputMode == OutputModeVerbose {
+		c.verbosePrint("Workspace configuration:")
+		c.verbosePrint(fmt.Sprintf("  Folders: %d", len(workspaceConfig.Folders)))
+		for _, folder := range workspaceConfig.Folders {
+			c.verbosePrint(fmt.Sprintf("    - %s: %s", folder.Name, folder.Path))
+		}
+	}
+	return nil
+}
+
+// handleNoProjectFound handles the output when no project is found.
+func (c *cgwt) handleNoProjectFound() {
+	if c.outputMode != OutputModeQuiet {
+		fmt.Println("No Git repository or workspace found")
+	}
 }
