@@ -1,0 +1,45 @@
+# Cursor Rules for CGWT Project
+
+## Testing Conventions
+
+### Test Organization
+- **Adapters** (like `pkg/fs`) should have **integration tests only** using real file system operations
+- **Business Logic** (like `pkg/cgwt`) should have **unit tests only** using mocked dependencies
+- Use build tags to organize tests:
+  - `//go:build unit` for unit tests with mocked dependencies
+  - `//go:build integration` for integration tests with real file system
+
+### Test File Naming
+- Standard test files: `*_test.go` (for integration tests in adapters)
+- Unit test files: `*_test.go` with `//go:build unit` tag
+- Integration test files: `*_integration_test.go` with `//go:build integration` tag
+
+### Mock Generation
+- Use Uber gomock for mocking: `go.uber.org/mock v0.5.2`
+- Generate mocks with: `//go:generate go run go.uber.org/mock/mockgen@v0.5.2`
+- Mock files should be committed to repository as `*_gen.go`
+- Keep mockgen parameters simple
+
+### Test Structure
+- Use `testify/assert` for assertions
+- Use `gomock.NewController(t)` for mock setup
+- Always clean up resources with `defer` statements
+- Test both positive and negative cases
+- Verify error messages and user output
+
+### What Constitutes an Adapter
+- **Adapters**: Interfaces that abstract external systems (file system, network, databases)
+- Examples: `pkg/fs` (file system operations), future network clients, database clients
+- **Business Logic**: Core application logic that uses adapters
+- Examples: `pkg/cgwt` (Git repository detection logic)
+
+### Running Tests
+- Unit tests: `go test -tags=unit ./...`
+- Integration tests: `go test -tags=integration ./...`
+- All tests: `go test ./...`
+
+### Code Quality
+- Follow Go best practices and conventions
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Handle errors properly with wrapped errors using `fmt.Errorf` with `%w`
