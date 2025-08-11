@@ -15,11 +15,33 @@
 package main
 
 import (
+	"context"
 	"dagger/cgwt/internal/dagger"
 	"runtime"
 )
 
 type Cgwt struct{}
+
+// Publish a new release.
+func (ci *Cgwt) PublishTag(
+	ctx context.Context,
+	sourceDir *dagger.Directory,
+	user *string,
+	token *dagger.Secret,
+) error {
+	// Create Git repo access
+	repo, err := NewGit(ctx, NewGitOptions{
+		SrcDir: sourceDir,
+		User:   user,
+		Token:  token,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Publish new tag
+	return repo.PublishTagFromReleaseTitle(ctx)
+}
 
 // Lint runs golangci-lint on the main repo (./...) only.
 func (ci *Cgwt) Lint(sourceDir *dagger.Directory) *dagger.Container {
