@@ -6,13 +6,13 @@ import (
 	"github.com/lerenn/cgwt/pkg/fs"
 )
 
-// CGWT interface provides Git repository detection functionality
+// CGWT interface provides Git repository detection functionality.
 type CGWT interface {
-	// Run executes the main application logic
+	// Run executes the main application logic.
 	Run() error
 }
 
-// OutputMode represents the different output modes
+// OutputMode represents the different output modes.
 type OutputMode int
 
 const (
@@ -26,7 +26,7 @@ type cgwt struct {
 	outputMode OutputMode
 }
 
-// NewCGWT creates a new CGWT instance
+// NewCGWT creates a new CGWT instance.
 func NewCGWT(fs fs.FS) CGWT {
 	return &cgwt{
 		fs:         fs,
@@ -34,7 +34,7 @@ func NewCGWT(fs fs.FS) CGWT {
 	}
 }
 
-// NewCGWTWithMode creates a new CGWT instance with specified output mode
+// NewCGWTWithMode creates a new CGWT instance with specified output mode.
 func NewCGWTWithMode(fs fs.FS, mode OutputMode) CGWT {
 	return &cgwt{
 		fs:         fs,
@@ -42,7 +42,7 @@ func NewCGWTWithMode(fs fs.FS, mode OutputMode) CGWT {
 	}
 }
 
-// Run executes the main application logic
+// Run executes the main application logic.
 func (c *cgwt) Run() error {
 	isSingleRepo, err := c.detectSingleRepoMode()
 	if err != nil {
@@ -62,14 +62,14 @@ func (c *cgwt) Run() error {
 	return nil
 }
 
-// verbosePrint prints a message only in verbose mode
+// verbosePrint prints a message only in verbose mode.
 func (c *cgwt) verbosePrint(message string) {
 	if c.outputMode == OutputModeVerbose {
 		fmt.Printf("[VERBOSE] %s\n", message)
 	}
 }
 
-// detectSingleRepoMode checks if the current directory is a single Git repository
+// detectSingleRepoMode checks if the current directory is a single Git repository.
 func (c *cgwt) detectSingleRepoMode() (bool, error) {
 	c.verbosePrint("Checking for .git directory...")
 
