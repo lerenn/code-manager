@@ -15,7 +15,9 @@ func TestCGWT_Run_ValidWorkspace(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -57,7 +59,9 @@ func TestCGWT_Run_InvalidWorkspaceJSON(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -78,7 +82,9 @@ func TestCGWT_Run_MissingRepository(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -110,7 +116,9 @@ func TestCGWT_Run_InvalidRepository(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -144,7 +152,9 @@ func TestCGWT_Run_NoWorkspaceFile(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -161,7 +171,9 @@ func TestCGWT_Run_MultipleWorkspaceFiles(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -181,7 +193,9 @@ func TestCGWT_Run_EmptyFolders(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -205,7 +219,9 @@ func TestCGWT_Run_InvalidFolderStructure(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -233,7 +249,9 @@ func TestCGWT_Run_DuplicatePaths(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -271,7 +289,9 @@ func TestCGWT_Run_BrokenSymlink(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
@@ -304,7 +324,9 @@ func TestCGWT_Run_NullValuesInFolders(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWTWithMode(mockFS, OutputModeVerbose)
+	cgwt := NewCGWT()
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)

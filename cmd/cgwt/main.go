@@ -4,7 +4,6 @@ import (
 	"log"
 
 	"github.com/lerenn/cgwt/pkg/cgwt"
-	"github.com/lerenn/cgwt/pkg/fs"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +18,10 @@ func main() {
 		Short: "Cursor Git WorkTree Manager",
 		Long:  `A powerful CLI tool for managing Git worktrees specifically designed for Cursor IDE.`,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			outputMode := getOutputMode()
-			fsAdapter := fs.NewFS()
-			cgwtManager := cgwt.NewCGWTWithMode(fsAdapter, outputMode)
+			cgwtManager := cgwt.NewCGWT()
+			if verbose {
+				cgwtManager.SetVerbose(true)
+			}
 			return cgwtManager.Run()
 		},
 	}
@@ -34,9 +34,10 @@ func main() {
 		RunE: func(_ *cobra.Command, _ []string) error {
 			// For now, just call the detection logic
 			// The branch argument is not used yet
-			outputMode := getOutputMode()
-			fsAdapter := fs.NewFS()
-			cgwtManager := cgwt.NewCGWTWithMode(fsAdapter, outputMode)
+			cgwtManager := cgwt.NewCGWT()
+			if verbose {
+				cgwtManager.SetVerbose(true)
+			}
 			return cgwtManager.Run()
 		},
 	}
@@ -51,15 +52,4 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// getOutputMode determines the output mode based on flags.
-func getOutputMode() cgwt.OutputMode {
-	if quiet {
-		return cgwt.OutputModeQuiet
-	}
-	if verbose {
-		return cgwt.OutputModeVerbose
-	}
-	return cgwt.OutputModeNormal
 }

@@ -25,17 +25,17 @@ type FS interface {
 	Glob(pattern string) ([]string, error)
 }
 
-type fs struct {
+type realFS struct {
 	// No fields needed for basic file system operations
 }
 
 // NewFS creates a new FS instance.
 func NewFS() FS {
-	return &fs{}
+	return &realFS{}
 }
 
 // Exists checks if a file or directory exists at the given path.
-func (f *fs) Exists(path string) (bool, error) {
+func (f *realFS) Exists(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true, nil
@@ -47,7 +47,7 @@ func (f *fs) Exists(path string) (bool, error) {
 }
 
 // IsDir checks if the path is a directory.
-func (f *fs) IsDir(path string) (bool, error) {
+func (f *realFS) IsDir(path string) (bool, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return false, err
@@ -56,16 +56,16 @@ func (f *fs) IsDir(path string) (bool, error) {
 }
 
 // ReadFile reads the contents of a file.
-func (f *fs) ReadFile(path string) ([]byte, error) {
+func (f *realFS) ReadFile(path string) ([]byte, error) {
 	return os.ReadFile(path)
 }
 
 // ReadDir reads the contents of a directory.
-func (f *fs) ReadDir(path string) ([]os.DirEntry, error) {
+func (f *realFS) ReadDir(path string) ([]os.DirEntry, error) {
 	return os.ReadDir(path)
 }
 
 // Glob finds files matching the pattern.
-func (f *fs) Glob(pattern string) ([]string, error) {
+func (f *realFS) Glob(pattern string) ([]string, error) {
 	return filepath.Glob(pattern)
 }

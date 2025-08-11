@@ -1,11 +1,5 @@
 # Cursor Git WorkTree Manager - Backlog
 
-- **3. Handle multiple workspace files with selection prompt**
-  - **Blocked by:** 1, 2
-
-- **4. Validate project structure and Git configuration**
-  - **Blocked by:** 1, 2, 3
-
 - **5. Implement `$HOME/.cursor/cgwt/repos/<repo>/<branch>/` structure**
   - **Blocked by:** 4
 
