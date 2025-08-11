@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/cgwt/pkg/fs"
+	"github.com/lerenn/cgwt/pkg/git"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -15,17 +16,19 @@ func TestCGWT_Run_ValidWorkspace(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
 	cgwt := NewCGWT()
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
+	c.git = mockGit
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
-	// Mock workspace detection - find workspace file
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
+	// Mock workspace detection - find workspace file (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
-	// Mock reading workspace file
+	// Mock reading workspace file (called twice: detectProjectMode and validateProjectStructure)
 	workspaceJSON := `{
 		"folders": [
 			{
@@ -38,17 +41,19 @@ func TestCGWT_Run_ValidWorkspace(t *testing.T) {
 			}
 		]
 	}`
-	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil)
+	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil).Times(2)
 
 	// Mock repository validation for frontend
 	mockFS.EXPECT().Exists("frontend").Return(true, nil)
-	mockFS.EXPECT().IsDir("frontend").Return(true, nil)
 	mockFS.EXPECT().Exists("frontend/.git").Return(true, nil)
 
 	// Mock repository validation for backend
 	mockFS.EXPECT().Exists("backend").Return(true, nil)
-	mockFS.EXPECT().IsDir("backend").Return(true, nil)
 	mockFS.EXPECT().Exists("backend/.git").Return(true, nil)
+
+	// Mock Git status for validation (called for each repository, order may vary)
+	mockGit.EXPECT().Status("frontend").Return("On branch main", nil).AnyTimes()
+	mockGit.EXPECT().Status("backend").Return("On branch main", nil).AnyTimes()
 
 	err := cgwt.Run()
 	assert.NoError(t, err)
@@ -63,8 +68,8 @@ func TestCGWT_Run_InvalidWorkspaceJSON(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
@@ -86,8 +91,8 @@ func TestCGWT_Run_MissingRepository(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
@@ -120,8 +125,8 @@ func TestCGWT_Run_InvalidRepository(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
@@ -156,8 +161,8 @@ func TestCGWT_Run_NoWorkspaceFile(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - no workspace files found
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
@@ -175,8 +180,8 @@ func TestCGWT_Run_MultipleWorkspaceFiles(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - multiple workspace files found
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace", "dev.code-workspace"}, nil)
@@ -197,8 +202,8 @@ func TestCGWT_Run_EmptyFolders(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
@@ -223,8 +228,8 @@ func TestCGWT_Run_InvalidFolderStructure(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
@@ -253,8 +258,8 @@ func TestCGWT_Run_DuplicatePaths(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
@@ -293,8 +298,8 @@ func TestCGWT_Run_BrokenSymlink(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
@@ -328,8 +333,8 @@ func TestCGWT_Run_NullValuesInFolders(t *testing.T) {
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock single repo detection - no .git found (called twice: detectProjectMode and validateProjectStructure)
+	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(2)
 
 	// Mock workspace detection - find workspace file
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
