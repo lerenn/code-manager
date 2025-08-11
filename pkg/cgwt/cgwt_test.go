@@ -28,9 +28,9 @@ func TestCGWT_Run_SingleRepository(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 
-	// Mock single repo detection - .git found (called 3 times: detectProjectMode, validateProjectStructure, validateGitDirectory)
-	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(3)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(3) // Called in detectSingleRepoMode (2x) and validateGitDirectory (1x)
+	// Mock single repo detection - .git found (called 2 times: detectProjectType and validateGitDirectory)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(2)
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(2) // Called in detectSingleRepoMode and validateGitDirectory
 
 	// Mock Git status for validation (called 2 times: validateGitStatus and validateGitConfiguration)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
@@ -56,9 +56,9 @@ func TestCGWT_Run_VerboseMode(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 
-	// Mock single repo detection - .git found (called 3 times: detectProjectMode, validateProjectStructure, validateGitDirectory)
-	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(3)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(3) // Called in detectSingleRepoMode (2x) and validateGitDirectory (1x)
+	// Mock single repo detection - .git found (called 2 times: detectProjectType and validateGitDirectory)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(2)
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(2) // Called in detectSingleRepoMode and validateGitDirectory
 
 	// Mock Git status for validation (called 2 times: validateGitStatus and validateGitConfiguration)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
@@ -69,9 +69,6 @@ func TestCGWT_Run_VerboseMode(t *testing.T) {
 	mockLogger.EXPECT().Logf("Verifying .git is a directory...")
 	mockLogger.EXPECT().Logf("Git repository detected")
 	mockLogger.EXPECT().Logf("Starting project structure validation")
-	mockLogger.EXPECT().Logf("Checking for .git directory...")
-	mockLogger.EXPECT().Logf("Verifying .git is a directory...")
-	mockLogger.EXPECT().Logf("Git repository detected")
 	mockLogger.EXPECT().Logf("Validating single repository mode")
 	mockLogger.EXPECT().Logf("Validating repository: %s", ".")
 	mockLogger.EXPECT().Logf("Executing git status in: %s", ".")

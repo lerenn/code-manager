@@ -57,16 +57,25 @@ func (c *realCGWT) Run() error {
 		c.logger.Logf("Starting CGWT execution")
 	}
 
-	// Existing detection logic (Features 001, 002, 003)
-	if err := c.detectProjectMode(); err != nil {
+	// Detect project mode once and store results
+	projectType, workspaceFiles, err := c.detectProjectType()
+	if err != nil {
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
 		return err
 	}
 
-	// NEW: Validation logic (Feature 004)
-	if err := c.validateProjectStructure(); err != nil {
+	// Handle detection output (Features 001, 002, 003)
+	if err := c.handleProjectDetection(projectType, workspaceFiles); err != nil {
+		if c.verbose {
+			c.logger.Logf("Error: %v", err)
+		}
+		return err
+	}
+
+	// Validation logic (Feature 004)
+	if err := c.validateProjectStructureWithResults(projectType, workspaceFiles); err != nil {
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
@@ -149,48 +158,6 @@ func (c *realCGWT) handleWorkspaceMode(workspaceFile string) error {
 // handleNoProjectFound handles the output when no project is found.
 func (c *realCGWT) handleNoProjectFound() {
 	fmt.Println("No Git repository or workspace found")
-}
-
-// validateProjectStructure validates the project structure and Git configuration.
-func (c *realCGWT) validateProjectStructure() error {
-	if c.verbose {
-		c.logger.Logf("Starting project structure validation")
-	}
-
-	// First check for single repository mode
-	isSingleRepo, err := c.detectSingleRepoMode()
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return err
-	}
-
-	if isSingleRepo {
-		if c.verbose {
-			c.logger.Logf("Validating single repository mode")
-		}
-		return c.ValidateSingleRepository()
-	}
-
-	// If no single repo found, check for workspace mode
-	workspaceFiles, err := c.detectWorkspaceMode()
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return err
-	}
-
-	if len(workspaceFiles) > 0 {
-		if c.verbose {
-			c.logger.Logf("Validating workspace mode with %d workspace files", len(workspaceFiles))
-		}
-		return c.validateWorkspaceRepositories(workspaceFiles)
-	}
-
-	// No repository or workspace found
-	return fmt.Errorf("no Git repository or workspace found")
 }
 
 // ValidateSingleRepository validates that the current directory is a working Git repository.
@@ -400,38 +367,84 @@ func (c *realCGWT) validateGitConfiguration(workDir string) error {
 	return nil
 }
 
-// detectProjectMode combines the existing detection logic from Features 001, 002, 003.
-func (c *realCGWT) detectProjectMode() error {
+// ProjectType represents the type of project detected
+type ProjectType int
+
+const (
+	ProjectTypeNone ProjectType = iota
+	ProjectTypeSingleRepo
+	ProjectTypeWorkspace
+)
+
+// detectProjectType detects the project type and returns the type and workspace files if applicable
+func (c *realCGWT) detectProjectType() (ProjectType, []string, error) {
 	// First check for single repository mode
 	isSingleRepo, err := c.detectSingleRepoMode()
 	if err != nil {
-		return fmt.Errorf("failed to detect repository mode: %w", err)
+		return ProjectTypeNone, nil, fmt.Errorf("failed to detect repository mode: %w", err)
 	}
 
 	if isSingleRepo {
-		c.handleSingleRepoMode()
-		return nil
+		return ProjectTypeSingleRepo, nil, nil
 	}
 
 	// If no single repo found, check for workspace mode
 	workspaceFiles, err := c.detectWorkspaceMode()
 	if err != nil {
-		return fmt.Errorf("failed to detect workspace mode: %w", err)
+		return ProjectTypeNone, nil, fmt.Errorf("failed to detect workspace mode: %w", err)
 	}
 
-	if len(workspaceFiles) > 1 {
-		selectedFile, err := c.handleMultipleWorkspaces(workspaceFiles)
-		if err != nil {
-			return fmt.Errorf("failed to handle multiple workspaces: %w", err)
-		}
-		return c.handleWorkspaceMode(selectedFile)
-	}
-
-	if len(workspaceFiles) == 1 {
-		return c.handleWorkspaceMode(workspaceFiles[0])
+	if len(workspaceFiles) > 0 {
+		return ProjectTypeWorkspace, workspaceFiles, nil
 	}
 
 	// No repository or workspace found
-	c.handleNoProjectFound()
+	return ProjectTypeNone, nil, nil
+}
+
+// handleProjectDetection handles the output for the detected project type
+func (c *realCGWT) handleProjectDetection(projectType ProjectType, workspaceFiles []string) error {
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		c.handleSingleRepoMode()
+		return nil
+	case ProjectTypeWorkspace:
+		if len(workspaceFiles) > 1 {
+			selectedFile, err := c.handleMultipleWorkspaces(workspaceFiles)
+			if err != nil {
+				return fmt.Errorf("failed to handle multiple workspaces: %w", err)
+			}
+			return c.handleWorkspaceMode(selectedFile)
+		}
+		if len(workspaceFiles) == 1 {
+			return c.handleWorkspaceMode(workspaceFiles[0])
+		}
+	case ProjectTypeNone:
+		c.handleNoProjectFound()
+		return nil
+	}
+	return nil
+}
+
+// validateProjectStructureWithResults validates the project structure using pre-detected results
+func (c *realCGWT) validateProjectStructureWithResults(projectType ProjectType, workspaceFiles []string) error {
+	if c.verbose {
+		c.logger.Logf("Starting project structure validation")
+	}
+
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		if c.verbose {
+			c.logger.Logf("Validating single repository mode")
+		}
+		return c.ValidateSingleRepository()
+	case ProjectTypeWorkspace:
+		if c.verbose {
+			c.logger.Logf("Validating workspace mode with %d workspace files", len(workspaceFiles))
+		}
+		return c.validateWorkspaceRepositories(workspaceFiles)
+	case ProjectTypeNone:
+		return fmt.Errorf("no Git repository or workspace found")
+	}
 	return nil
 }
