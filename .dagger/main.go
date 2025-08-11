@@ -16,6 +16,7 @@ package main
 
 import (
 	"dagger/cgwt/internal/dagger"
+	"runtime"
 )
 
 type Cgwt struct{}
@@ -48,6 +49,15 @@ func (ci *Cgwt) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 	return c
 }
 
+// UnitTests returns a container that runs the unit tests.
+func (ci *Cgwt) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
+	c := dag.Container().From("golang:" + goVersion() + "-alpine")
+	return ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir).
+		WithExec([]string{"sh", "-c",
+			"go test -tags=unit ./... | grep -v 'no test files'",
+		})
+}
+
 func (ci *Cgwt) withGoCodeAndCacheAsWorkDirectory(
 	c *dagger.Container,
 	sourceDir *dagger.Directory,
@@ -63,4 +73,8 @@ func (ci *Cgwt) withGoCodeAndCacheAsWorkDirectory(
 
 		// Add workdir
 		WithWorkdir(containerPath)
+}
+
+func goVersion() string {
+	return runtime.Version()[2:]
 }
