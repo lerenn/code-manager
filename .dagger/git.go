@@ -41,7 +41,7 @@ func NewGit(ctx context.Context, opts NewGitOptions) (Git, error) {
 		// Change the url to use the token
 		container, err = container.WithExec([]string{
 			"git", "remote", "set-url", "origin",
-			"https://" + *opts.User + ":" + tokenString + "@github.com/cryptellation/candlesticks.git",
+			"https://" + *opts.User + ":" + tokenString + "@github.com/lerenn/cgwt.git",
 		}).Sync(ctx)
 		if err != nil {
 			return Git{}, err
@@ -164,13 +164,13 @@ func setGitAuthor(
 ) (*dagger.Container, error) {
 	// Add infos on author
 	container, err := container.
-		WithExec([]string{"git", "config", "--global", "user.email", "louis.fradin+cryptellation-ci@gmail.com"}).
+		WithExec([]string{"git", "config", "--global", "user.email", "louis.fradin+cgwt-ci@gmail.com"}).
 		Sync(ctx)
 	if err != nil {
 		return nil, err
 	}
 	container, err = container.
-		WithExec([]string{"git", "config", "--global", "user.name", "Cryptellation CI"}).
+		WithExec([]string{"git", "config", "--global", "user.name", "CGWT CI"}).
 		Sync(ctx)
 	if err != nil {
 		return nil, err

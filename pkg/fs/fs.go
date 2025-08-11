@@ -2,6 +2,7 @@ package fs
 
 import (
 	"os"
+	"path/filepath"
 )
 
 //go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=fs.go -destination=mockfs.gen.go -package=fs
@@ -13,6 +14,15 @@ type FS interface {
 
 	// IsDir checks if the path is a directory.
 	IsDir(path string) (bool, error)
+
+	// ReadFile reads the contents of a file.
+	ReadFile(path string) ([]byte, error)
+
+	// ReadDir reads the contents of a directory.
+	ReadDir(path string) ([]os.DirEntry, error)
+
+	// Glob finds files matching the pattern.
+	Glob(pattern string) ([]string, error)
 }
 
 type fs struct {
@@ -43,4 +53,19 @@ func (f *fs) IsDir(path string) (bool, error) {
 		return false, err
 	}
 	return info.IsDir(), nil
+}
+
+// ReadFile reads the contents of a file.
+func (f *fs) ReadFile(path string) ([]byte, error) {
+	return os.ReadFile(path)
+}
+
+// ReadDir reads the contents of a directory.
+func (f *fs) ReadDir(path string) ([]os.DirEntry, error) {
+	return os.ReadDir(path)
+}
+
+// Glob finds files matching the pattern.
+func (f *fs) Glob(pattern string) ([]string, error) {
+	return filepath.Glob(pattern)
 }

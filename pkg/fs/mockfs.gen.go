@@ -10,6 +10,7 @@
 package fs
 
 import (
+	os "os"
 	reflect "reflect"
 
 	gomock "go.uber.org/mock/gomock"
@@ -54,6 +55,21 @@ func (mr *MockFSMockRecorder) Exists(path any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockFS)(nil).Exists), path)
 }
 
+// Glob mocks base method.
+func (m *MockFS) Glob(pattern string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Glob", pattern)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Glob indicates an expected call of Glob.
+func (mr *MockFSMockRecorder) Glob(pattern any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Glob", reflect.TypeOf((*MockFS)(nil).Glob), pattern)
+}
+
 // IsDir mocks base method.
 func (m *MockFS) IsDir(path string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -67,4 +83,34 @@ func (m *MockFS) IsDir(path string) (bool, error) {
 func (mr *MockFSMockRecorder) IsDir(path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDir", reflect.TypeOf((*MockFS)(nil).IsDir), path)
+}
+
+// ReadDir mocks base method.
+func (m *MockFS) ReadDir(path string) ([]os.DirEntry, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadDir", path)
+	ret0, _ := ret[0].([]os.DirEntry)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadDir indicates an expected call of ReadDir.
+func (mr *MockFSMockRecorder) ReadDir(path any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadDir", reflect.TypeOf((*MockFS)(nil).ReadDir), path)
+}
+
+// ReadFile mocks base method.
+func (m *MockFS) ReadFile(path string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReadFile", path)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ReadFile indicates an expected call of ReadFile.
+func (mr *MockFSMockRecorder) ReadFile(path any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockFS)(nil).ReadFile), path)
 }
