@@ -62,7 +62,11 @@ func (c *cgwt) Run() error {
 	}
 
 	if len(workspaceFiles) > 1 {
-		return fmt.Errorf("%d .code-workspace files found in current directory", len(workspaceFiles))
+		selectedFile, err := c.handleMultipleWorkspaces(workspaceFiles)
+		if err != nil {
+			return fmt.Errorf("failed to handle multiple workspaces: %w", err)
+		}
+		return c.handleWorkspaceMode(selectedFile)
 	}
 
 	if len(workspaceFiles) == 1 {

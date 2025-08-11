@@ -1,8 +1,5 @@
 # Cursor Git WorkTree Manager - Backlog
 
-- **2. Detect workspace mode (`.code-workspace` files)**
-  - **Blocked by:** 1
-
 - **3. Handle multiple workspace files with selection prompt**
   - **Blocked by:** 1, 2
 

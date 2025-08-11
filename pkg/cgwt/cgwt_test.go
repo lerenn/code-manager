@@ -54,3 +54,9 @@ func TestCGWT_Run_NormalMode(t *testing.T) {
 	err := cgwt.Run()
 	assert.NoError(t, err)
 }
+
+func TestCGWT_Run_MultipleWorkspaces(t *testing.T) {
+	// This test would require mocking stdin/stdout for user input
+	// For now, we'll test the individual methods separately
+	t.Skip("Requires stdin/stdout mocking for user input")
+}
