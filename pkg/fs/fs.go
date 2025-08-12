@@ -23,6 +23,15 @@ type FS interface {
 
 	// Glob finds files matching the pattern.
 	Glob(pattern string) ([]string, error)
+
+	// MkdirAll creates a directory and all parent directories.
+	MkdirAll(path string, perm os.FileMode) error
+
+	// GetHomeDir returns the user's home directory path.
+	GetHomeDir() (string, error)
+
+	// IsNotExist checks if an error indicates that a file or directory doesn't exist.
+	IsNotExist(err error) bool
 }
 
 type realFS struct {
@@ -68,4 +77,19 @@ func (f *realFS) ReadDir(path string) ([]os.DirEntry, error) {
 // Glob finds files matching the pattern.
 func (f *realFS) Glob(pattern string) ([]string, error) {
 	return filepath.Glob(pattern)
+}
+
+// MkdirAll creates a directory and all parent directories.
+func (f *realFS) MkdirAll(path string, perm os.FileMode) error {
+	return os.MkdirAll(path, perm)
+}
+
+// GetHomeDir returns the user's home directory path.
+func (f *realFS) GetHomeDir() (string, error) {
+	return os.UserHomeDir()
+}
+
+// IsNotExist checks if an error indicates that a file or directory doesn't exist.
+func (f *realFS) IsNotExist(err error) bool {
+	return os.IsNotExist(err)
 }

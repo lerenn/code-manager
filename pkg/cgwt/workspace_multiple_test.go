@@ -7,7 +7,7 @@ import (
 )
 
 func TestDisplayWorkspaceSelection(t *testing.T) {
-	c := NewCGWT()
+	c := NewCGWT(createTestConfig())
 
 	workspaceFiles := []string{
 		"project.code-workspace",

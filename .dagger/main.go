@@ -16,8 +16,9 @@ package main
 
 import (
 	"context"
-	"dagger/cgwt/internal/dagger"
 	"runtime"
+
+	"dagger/cgwt/internal/dagger"
 )
 
 type Cgwt struct{}

@@ -17,7 +17,7 @@ func TestCGWT_Run_ValidWorkspace(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 	c.git = mockGit
@@ -64,7 +64,7 @@ func TestCGWT_Run_InvalidWorkspaceJSON(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
@@ -87,7 +87,7 @@ func TestCGWT_Run_MissingRepository(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
@@ -122,7 +122,7 @@ func TestCGWT_Run_InvalidRepository(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 	c.git = mockGit
@@ -158,7 +158,7 @@ func TestCGWT_Run_NoWorkspaceFile(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
@@ -178,7 +178,7 @@ func TestCGWT_Run_MultipleWorkspaceFiles(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
@@ -200,7 +200,7 @@ func TestCGWT_Run_EmptyFolders(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
@@ -226,7 +226,7 @@ func TestCGWT_Run_InvalidFolderStructure(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 
@@ -257,7 +257,7 @@ func TestCGWT_Run_DuplicatePaths(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 	c.git = mockGit
@@ -300,7 +300,7 @@ func TestCGWT_Run_BrokenSymlink(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 	c.git = mockGit
@@ -339,7 +339,7 @@ func TestCGWT_Run_NullValuesInFolders(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	cgwt := NewCGWT()
+	cgwt := NewCGWT(createTestConfig())
 	c := cgwt.(*realCGWT)
 	c.fs = mockFS
 	c.git = mockGit

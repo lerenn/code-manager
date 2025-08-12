@@ -290,3 +290,65 @@ func TestFS_ReadFile_PermissionErrors(t *testing.T) {
 	// Note: Testing actual permission errors would require changing file permissions
 	// which might not work on all systems, so we test the happy path
 }
+
+func TestFS_MkdirAll(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-mkdir-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test creating nested directories
+	nestedPath := filepath.Join(tmpDir, "level1", "level2", "level3")
+	err = fs.MkdirAll(nestedPath, 0755)
+	assert.NoError(t, err)
+
+	// Verify directories were created
+	exists, err := fs.Exists(nestedPath)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	isDir, err := fs.IsDir(nestedPath)
+	assert.NoError(t, err)
+	assert.True(t, isDir)
+
+	// Test creating existing directory (should not error)
+	err = fs.MkdirAll(nestedPath, 0755)
+	assert.NoError(t, err)
+}
+
+func TestFS_GetHomeDir(t *testing.T) {
+	fs := NewFS()
+
+	homeDir, err := fs.GetHomeDir()
+	assert.NoError(t, err)
+	assert.NotEmpty(t, homeDir)
+
+	// Verify it's a directory
+	exists, err := fs.Exists(homeDir)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	isDir, err := fs.IsDir(homeDir)
+	assert.NoError(t, err)
+	assert.True(t, isDir)
+}
+
+func TestFS_IsNotExist(t *testing.T) {
+	fs := NewFS()
+
+	// Test with non-existent file error
+	_, err := fs.ReadFile("non-existent-file.txt")
+	assert.Error(t, err)
+	assert.True(t, fs.IsNotExist(err))
+
+	// Test with existing file (should not be IsNotExist)
+	tmpFile, err := os.CreateTemp("", "test-*.txt")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	_, err = fs.ReadFile(tmpFile.Name())
+	assert.NoError(t, err)
+	assert.False(t, fs.IsNotExist(err))
+}
