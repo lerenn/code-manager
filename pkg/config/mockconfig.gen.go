@@ -15,32 +15,32 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockConfigManager is a mock of ConfigManager interface.
-type MockConfigManager struct {
+// MockManager is a mock of Manager interface.
+type MockManager struct {
 	ctrl     *gomock.Controller
-	recorder *MockConfigManagerMockRecorder
+	recorder *MockManagerMockRecorder
 	isgomock struct{}
 }
 
-// MockConfigManagerMockRecorder is the mock recorder for MockConfigManager.
-type MockConfigManagerMockRecorder struct {
-	mock *MockConfigManager
+// MockManagerMockRecorder is the mock recorder for MockManager.
+type MockManagerMockRecorder struct {
+	mock *MockManager
 }
 
-// NewMockConfigManager creates a new mock instance.
-func NewMockConfigManager(ctrl *gomock.Controller) *MockConfigManager {
-	mock := &MockConfigManager{ctrl: ctrl}
-	mock.recorder = &MockConfigManagerMockRecorder{mock}
+// NewMockManager creates a new mock instance.
+func NewMockManager(ctrl *gomock.Controller) *MockManager {
+	mock := &MockManager{ctrl: ctrl}
+	mock.recorder = &MockManagerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockConfigManager) EXPECT() *MockConfigManagerMockRecorder {
+func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
 // DefaultConfig mocks base method.
-func (m *MockConfigManager) DefaultConfig() *Config {
+func (m *MockManager) DefaultConfig() *Config {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DefaultConfig")
 	ret0, _ := ret[0].(*Config)
@@ -48,13 +48,13 @@ func (m *MockConfigManager) DefaultConfig() *Config {
 }
 
 // DefaultConfig indicates an expected call of DefaultConfig.
-func (mr *MockConfigManagerMockRecorder) DefaultConfig() *gomock.Call {
+func (mr *MockManagerMockRecorder) DefaultConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultConfig", reflect.TypeOf((*MockConfigManager)(nil).DefaultConfig))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultConfig", reflect.TypeOf((*MockManager)(nil).DefaultConfig))
 }
 
 // LoadConfig mocks base method.
-func (m *MockConfigManager) LoadConfig(configPath string) (*Config, error) {
+func (m *MockManager) LoadConfig(configPath string) (*Config, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadConfig", configPath)
 	ret0, _ := ret[0].(*Config)
@@ -63,7 +63,7 @@ func (m *MockConfigManager) LoadConfig(configPath string) (*Config, error) {
 }
 
 // LoadConfig indicates an expected call of LoadConfig.
-func (mr *MockConfigManagerMockRecorder) LoadConfig(configPath any) *gomock.Call {
+func (mr *MockManagerMockRecorder) LoadConfig(configPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfig", reflect.TypeOf((*MockConfigManager)(nil).LoadConfig), configPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfig", reflect.TypeOf((*MockManager)(nil).LoadConfig), configPath)
 }
