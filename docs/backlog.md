@@ -1,11 +1,5 @@
 # Cursor Git WorkTree Manager - Backlog
 
-- **9. Workspace name extraction from `.code-workspace` files**
-  - **Blocked by:** 8
-
-- **10. Multi-repo workspace support**
-  - **Blocked by:** 8, 9
-
 - **11. Create worktrees for single repositories**
   - **Blocked by:** 4, 5, 6, 7
 

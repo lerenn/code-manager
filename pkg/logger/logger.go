@@ -5,8 +5,6 @@ import (
 	"sync"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=logger.go -destination=mocklogger.gen.go -package=logger
-
 // Logger interface provides logging capabilities.
 type Logger interface {
 	// Logf logs a formatted message.

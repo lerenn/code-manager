@@ -15,22 +15,10 @@ import (
 
 // CGWT interface provides Git repository detection functionality.
 type CGWT interface {
-	// Run executes the main application logic.
-	Run() error
+	// CreateWorkTree executes the main application logic.
+	CreateWorkTree() error
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
-	// SetLogger sets a custom logger for verbose output.
-	SetLogger(logger logger.Logger)
-	// ValidateSingleRepository validates that the current directory is a working Git repository.
-	ValidateSingleRepository() error
-	// AddWorktreeToStatus adds a worktree entry to the status file.
-	AddWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error
-	// RemoveWorktreeFromStatus removes a worktree entry from the status file.
-	RemoveWorktreeFromStatus(repoName, branch string) error
-	// GetWorktreeStatus retrieves the status of a specific worktree.
-	GetWorktreeStatus(repoName, branch string) (*status.Repository, error)
-	// ListAllWorktrees lists all tracked worktrees.
-	ListAllWorktrees() ([]status.Repository, error)
 }
 
 type realCGWT struct {
@@ -57,19 +45,15 @@ func NewCGWT(cfg *config.Config) CGWT {
 
 func (c *realCGWT) SetVerbose(verbose bool) {
 	c.verbose = verbose
-	if verbose && c.logger == logger.NewNoopLogger() {
+	if verbose {
 		c.logger = logger.NewDefaultLogger()
-	} else if !verbose {
+	} else {
 		c.logger = logger.NewNoopLogger()
 	}
 }
 
-func (c *realCGWT) SetLogger(logger logger.Logger) {
-	c.logger = logger
-}
-
-// Run executes the main application logic.
-func (c *realCGWT) Run() error {
+// CreateWorkTree executes the main application logic.
+func (c *realCGWT) CreateWorkTree() error {
 	if c.verbose {
 		c.logger.Logf("Starting CGWT execution")
 	}
@@ -177,8 +161,8 @@ func (c *realCGWT) handleNoProjectFound() {
 	fmt.Println("No Git repository or workspace found")
 }
 
-// ValidateSingleRepository validates that the current directory is a working Git repository.
-func (c *realCGWT) ValidateSingleRepository() error {
+// validateSingleRepository validates that the current directory is a working Git repository.
+func (c *realCGWT) validateSingleRepository() error {
 	if c.verbose {
 		c.logger.Logf("Validating repository: %s", ".")
 	}
@@ -454,7 +438,7 @@ func (c *realCGWT) validateProjectStructureWithResults(projectType ProjectType, 
 		if c.verbose {
 			c.logger.Logf("Validating single repository mode")
 		}
-		return c.ValidateSingleRepository()
+		return c.validateSingleRepository()
 	case ProjectTypeWorkspace:
 		if c.verbose {
 			c.logger.Logf("Validating workspace mode with %d workspace files", len(workspaceFiles))
@@ -613,8 +597,10 @@ func (c *realCGWT) getBasePath() (string, error) {
 	return c.config.BasePath, nil
 }
 
-// AddWorktreeToStatus adds a worktree entry to the status file.
-func (c *realCGWT) AddWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error {
+// addWorktreeToStatus adds a worktree entry to the status file.
+//
+//nolint:unused // This method is used internally
+func (c *realCGWT) addWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error {
 	if c.verbose {
 		c.logger.Logf("Adding worktree to status: repo=%s, branch=%s, path=%s, workspace=%s",
 			repoName, branch, worktreePath, workspacePath)
@@ -632,8 +618,10 @@ func (c *realCGWT) AddWorktreeToStatus(repoName, branch, worktreePath, workspace
 	return nil
 }
 
-// RemoveWorktreeFromStatus removes a worktree entry from the status file.
-func (c *realCGWT) RemoveWorktreeFromStatus(repoName, branch string) error {
+// removeWorktreeFromStatus removes a worktree entry from the status file.
+//
+//nolint:unused // This method is used internally
+func (c *realCGWT) removeWorktreeFromStatus(repoName, branch string) error {
 	if c.verbose {
 		c.logger.Logf("Removing worktree from status: repo=%s, branch=%s", repoName, branch)
 	}
@@ -650,8 +638,10 @@ func (c *realCGWT) RemoveWorktreeFromStatus(repoName, branch string) error {
 	return nil
 }
 
-// GetWorktreeStatus retrieves the status of a specific worktree.
-func (c *realCGWT) GetWorktreeStatus(repoName, branch string) (*status.Repository, error) {
+// getWorktreeStatus retrieves the status of a specific worktree.
+//
+//nolint:unused // This method is used internally
+func (c *realCGWT) getWorktreeStatus(repoName, branch string) (*status.Repository, error) {
 	if c.verbose {
 		c.logger.Logf("Getting worktree status: repo=%s, branch=%s", repoName, branch)
 	}
@@ -664,8 +654,10 @@ func (c *realCGWT) GetWorktreeStatus(repoName, branch string) (*status.Repositor
 	return repo, nil
 }
 
-// ListAllWorktrees lists all tracked worktrees.
-func (c *realCGWT) ListAllWorktrees() ([]status.Repository, error) {
+// listAllWorktrees lists all tracked worktrees.
+//
+//nolint:unused // This method is used internally
+func (c *realCGWT) listAllWorktrees() ([]status.Repository, error) {
 	if c.verbose {
 		c.logger.Logf("Listing all worktrees")
 	}
