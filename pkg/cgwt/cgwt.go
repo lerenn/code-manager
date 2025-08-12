@@ -194,7 +194,7 @@ func (c *realCGWT) validateGitDirectory() error {
 		if c.verbose {
 			c.logger.Logf("Error: .git directory not found")
 		}
-		return fmt.Errorf("not a valid Git repository: .git directory not found")
+		return ErrGitRepositoryNotFound
 	}
 
 	// Verify .git is a directory
@@ -210,7 +210,7 @@ func (c *realCGWT) validateGitDirectory() error {
 		if c.verbose {
 			c.logger.Logf("Error: .git exists but is not a directory")
 		}
-		return fmt.Errorf("not a valid Git repository: .git exists but is not a directory")
+		return ErrGitRepositoryNotDirectory
 	}
 
 	return nil
@@ -227,7 +227,7 @@ func (c *realCGWT) validateGitStatus() error {
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
-		return fmt.Errorf("not a valid Git repository: %w", err)
+		return fmt.Errorf("%w: %w", ErrGitRepositoryInvalid, err)
 	}
 
 	return nil
@@ -248,7 +248,7 @@ func (c *realCGWT) validateWorkspaceRepositories(workspaceFiles []string) error 
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
-		return fmt.Errorf("failed to parse workspace file: %w", err)
+		return fmt.Errorf("%w: %w", ErrWorkspaceFileRead, err)
 	}
 
 	// Get workspace file directory for resolving relative paths
@@ -286,7 +286,7 @@ func (c *realCGWT) validateWorkspaceRepository(folder WorkspaceFolder, workspace
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
-		return fmt.Errorf("invalid repository in workspace: %s - %w", folder.Path, err)
+		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
 	}
 
 	return nil
@@ -307,7 +307,7 @@ func (c *realCGWT) validateWorkspaceRepositoryPath(folder WorkspaceFolder, resol
 		if c.verbose {
 			c.logger.Logf("Error: repository path does not exist")
 		}
-		return fmt.Errorf("repository not found in workspace: %s", folder.Path)
+		return fmt.Errorf("%w: %s", ErrRepositoryNotFoundInWorkspace, folder.Path)
 	}
 
 	return nil
@@ -322,14 +322,14 @@ func (c *realCGWT) validateWorkspaceRepositoryGit(folder WorkspaceFolder, resolv
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
-		return fmt.Errorf("invalid repository in workspace: %s - %w", folder.Path, err)
+		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
 	}
 
 	if !exists {
 		if c.verbose {
 			c.logger.Logf("Error: .git directory not found in repository")
 		}
-		return fmt.Errorf("invalid repository in workspace: %s - .git directory not found", folder.Path)
+		return fmt.Errorf("%w: %s", ErrInvalidRepositoryInWorkspaceNoGit, folder.Path)
 	}
 
 	// Execute git status to ensure repository is working
@@ -341,7 +341,7 @@ func (c *realCGWT) validateWorkspaceRepositoryGit(folder WorkspaceFolder, resolv
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
-		return fmt.Errorf("invalid repository in workspace: %s - %w", folder.Path, err)
+		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
 	}
 
 	return nil
@@ -392,7 +392,7 @@ func (c *realCGWT) detectProjectType() (ProjectType, []string, error) {
 	// If no single repo found, check for workspace mode
 	workspaceFiles, err := c.detectWorkspaceMode()
 	if err != nil {
-		return ProjectTypeNone, nil, fmt.Errorf("failed to detect workspace mode: %w", err)
+		return ProjectTypeNone, nil, fmt.Errorf("%w: %w", ErrWorkspaceDetection, err)
 	}
 
 	if len(workspaceFiles) > 0 {
@@ -413,7 +413,7 @@ func (c *realCGWT) handleProjectDetection(projectType ProjectType, workspaceFile
 		if len(workspaceFiles) > 1 {
 			selectedFile, err := c.handleMultipleWorkspaces(workspaceFiles)
 			if err != nil {
-				return fmt.Errorf("failed to handle multiple workspaces: %w", err)
+				return fmt.Errorf("%w: %w", ErrMultipleWorkspaces, err)
 			}
 			return c.handleWorkspaceMode(selectedFile)
 		}
@@ -500,7 +500,7 @@ func (c *realCGWT) createReposDirectoryStructure(repoName, branchName string) (s
 //nolint:unused // This method will be used in the Run() method in future features
 func (c *realCGWT) sanitizeRepositoryName(remoteURL string) (string, error) {
 	if remoteURL == "" {
-		return "", fmt.Errorf("repository URL cannot be empty")
+		return "", ErrRepositoryURLEmpty
 	}
 
 	// Remove .git suffix if present
@@ -518,7 +518,7 @@ func (c *realCGWT) sanitizeRepositoryName(remoteURL string) (string, error) {
 	sanitized = strings.Trim(sanitized, "._")
 
 	if sanitized == "" {
-		return "", fmt.Errorf("repository name is empty after sanitization")
+		return "", ErrRepositoryNameEmptyAfterSanitization
 	}
 
 	return sanitized, nil
@@ -558,7 +558,7 @@ func (c *realCGWT) extractRepoPathFromURL(repoName string) string {
 //nolint:unused // This method will be used in the Run() method in future features
 func (c *realCGWT) sanitizeBranchName(branchName string) (string, error) {
 	if branchName == "" {
-		return "", fmt.Errorf("branch name cannot be empty")
+		return "", ErrBranchNameEmpty
 	}
 
 	// Replace invalid characters with underscores
@@ -576,7 +576,7 @@ func (c *realCGWT) sanitizeBranchName(branchName string) (string, error) {
 	}
 
 	if sanitized == "" {
-		return "", fmt.Errorf("branch name is empty after sanitization")
+		return "", ErrBranchNameEmptyAfterSanitization
 	}
 
 	return sanitized, nil
@@ -587,7 +587,7 @@ func (c *realCGWT) sanitizeBranchName(branchName string) (string, error) {
 //nolint:unused // This method will be used in the Run() method in future features
 func (c *realCGWT) getBasePath() (string, error) {
 	if c.config == nil {
-		return "", fmt.Errorf("configuration is not initialized")
+		return "", ErrConfigurationNotInitialized
 	}
 
 	if c.config.BasePath == "" {
@@ -608,7 +608,7 @@ func (c *realCGWT) addWorktreeToStatus(repoName, branch, worktreePath, workspace
 
 	err := c.statusManager.AddWorktree(repoName, branch, worktreePath, workspacePath)
 	if err != nil {
-		return fmt.Errorf("failed to add worktree to status: %w", err)
+		return fmt.Errorf("%w: %w", ErrAddWorktreeToStatus, err)
 	}
 
 	if c.verbose {
@@ -628,7 +628,7 @@ func (c *realCGWT) removeWorktreeFromStatus(repoName, branch string) error {
 
 	err := c.statusManager.RemoveWorktree(repoName, branch)
 	if err != nil {
-		return fmt.Errorf("failed to remove worktree from status: %w", err)
+		return fmt.Errorf("%w: %w", ErrRemoveWorktreeFromStatus, err)
 	}
 
 	if c.verbose {
@@ -648,7 +648,7 @@ func (c *realCGWT) getWorktreeStatus(repoName, branch string) (*status.Repositor
 
 	repo, err := c.statusManager.GetWorktree(repoName, branch)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get worktree status: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrGetWorktreeStatus, err)
 	}
 
 	return repo, nil
@@ -664,7 +664,7 @@ func (c *realCGWT) listAllWorktrees() ([]status.Repository, error) {
 
 	repos, err := c.statusManager.ListAllWorktrees()
 	if err != nil {
-		return nil, fmt.Errorf("failed to list worktrees: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrListWorktrees, err)
 	}
 
 	if c.verbose {

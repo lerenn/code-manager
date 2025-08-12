@@ -112,8 +112,7 @@ func TestCGWT_ValidateSingleRepository_NoGitDir(t *testing.T) {
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 
 	err := cgwt.(*realCGWT).validateSingleRepository()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not a valid Git repository: .git directory not found")
+	assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
 }
 
 func TestCGWT_ValidateSingleRepository_GitStatusError(t *testing.T) {
@@ -137,8 +136,7 @@ func TestCGWT_ValidateSingleRepository_GitStatusError(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("", assert.AnError)
 
 	err := cgwt.(*realCGWT).validateSingleRepository()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not a valid Git repository")
+	assert.ErrorIs(t, err, ErrGitRepositoryInvalid)
 }
 
 func TestRealCGWT_CreateReposDirectoryStructure(t *testing.T) {
@@ -180,8 +178,7 @@ func TestRealCGWT_CreateReposDirectoryStructure_EmptyRepoName(t *testing.T) {
 	c.git = mockGit
 
 	_, err := cgwt.(*realCGWT).createReposDirectoryStructure("", "feature/new-branch")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "repository URL cannot be empty")
+	assert.ErrorIs(t, err, ErrRepositoryURLEmpty)
 }
 
 func TestRealCGWT_CreateReposDirectoryStructure_EmptyBranchName(t *testing.T) {
@@ -200,8 +197,7 @@ func TestRealCGWT_CreateReposDirectoryStructure_EmptyBranchName(t *testing.T) {
 	c.git = mockGit
 
 	_, err := cgwt.(*realCGWT).createReposDirectoryStructure("github.com/lerenn/cgwt", "")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "branch name cannot be empty")
+	assert.ErrorIs(t, err, ErrBranchNameEmpty)
 }
 
 func TestRealCGWT_CreateReposDirectoryStructure_NoConfig(t *testing.T) {
@@ -221,8 +217,7 @@ func TestRealCGWT_CreateReposDirectoryStructure_NoConfig(t *testing.T) {
 	c.git = mockGit
 
 	_, err := cgwt.(*realCGWT).createReposDirectoryStructure("github.com/lerenn/cgwt", "feature/new-branch")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "configuration is not initialized")
+	assert.ErrorIs(t, err, ErrConfigurationNotInitialized)
 }
 
 func TestRealCGWT_sanitizeRepositoryName(t *testing.T) {
@@ -287,7 +282,11 @@ func TestRealCGWT_sanitizeRepositoryName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := cgwt.(*realCGWT).sanitizeRepositoryName(tt.input)
 			if tt.wantErr {
-				assert.Error(t, err)
+				if tt.input == "" {
+					assert.ErrorIs(t, err, ErrRepositoryURLEmpty)
+				} else {
+					assert.Error(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
@@ -352,7 +351,11 @@ func TestRealCGWT_sanitizeBranchName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := cgwt.(*realCGWT).sanitizeBranchName(tt.input)
 			if tt.wantErr {
-				assert.Error(t, err)
+				if tt.input == "" {
+					assert.ErrorIs(t, err, ErrBranchNameEmpty)
+				} else {
+					assert.Error(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
@@ -409,7 +412,11 @@ func TestRealCGWT_getBasePath(t *testing.T) {
 
 			result, err := cgwt.(*realCGWT).getBasePath()
 			if tt.wantErr {
-				assert.Error(t, err)
+				if tt.config == nil {
+					assert.ErrorIs(t, err, ErrConfigurationNotInitialized)
+				} else {
+					assert.Error(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)

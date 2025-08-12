@@ -78,8 +78,7 @@ func TestCGWT_Run_InvalidWorkspaceJSON(t *testing.T) {
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(`{invalid json`), nil).Times(1)
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid .code-workspace file: malformed JSON")
+	assert.ErrorIs(t, err, ErrWorkspaceFileMalformed)
 }
 
 func TestCGWT_Run_MissingRepository(t *testing.T) {
@@ -112,8 +111,7 @@ func TestCGWT_Run_MissingRepository(t *testing.T) {
 	mockFS.EXPECT().Exists("frontend").Return(false, nil).AnyTimes()
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "repository not found in workspace: ./frontend")
+	assert.ErrorIs(t, err, ErrRepositoryNotFoundInWorkspace)
 }
 
 func TestCGWT_Run_InvalidRepository(t *testing.T) {
@@ -149,8 +147,7 @@ func TestCGWT_Run_InvalidRepository(t *testing.T) {
 	mockFS.EXPECT().Exists("frontend/.git").Return(false, nil).AnyTimes()
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid repository in workspace: ./frontend - .git directory not found")
+	assert.ErrorIs(t, err, ErrInvalidRepositoryInWorkspaceNoGit)
 }
 
 func TestCGWT_Run_GitStatusError(t *testing.T) {
@@ -189,8 +186,7 @@ func TestCGWT_Run_GitStatusError(t *testing.T) {
 	mockGit.EXPECT().Status("frontend").Return("", assert.AnError).AnyTimes()
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "invalid repository in workspace: ./frontend - assert.AnError general error for testing")
+	assert.ErrorIs(t, err, ErrInvalidRepositoryInWorkspace)
 }
 
 func TestCGWT_Run_MultipleWorkspaceFiles(t *testing.T) {
@@ -209,8 +205,7 @@ func TestCGWT_Run_MultipleWorkspaceFiles(t *testing.T) {
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project1.code-workspace", "project2.code-workspace"}, nil).Times(1)
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to handle multiple workspaces")
+	assert.ErrorIs(t, err, ErrMultipleWorkspaces)
 }
 
 func TestCGWT_Run_WorkspaceFileReadError(t *testing.T) {
@@ -232,8 +227,7 @@ func TestCGWT_Run_WorkspaceFileReadError(t *testing.T) {
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return(nil, assert.AnError).Times(1)
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to parse workspace file")
+	assert.ErrorIs(t, err, ErrWorkspaceFileReadError)
 }
 
 func TestCGWT_Run_WorkspaceGlobError(t *testing.T) {
@@ -252,8 +246,7 @@ func TestCGWT_Run_WorkspaceGlobError(t *testing.T) {
 	mockFS.EXPECT().Glob("*.code-workspace").Return(nil, assert.AnError).Times(1)
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to detect workspace mode")
+	assert.ErrorIs(t, err, ErrWorkspaceDetection)
 }
 
 func TestCGWT_Run_WorkspaceVerboseMode(t *testing.T) {
@@ -318,6 +311,5 @@ func TestCGWT_Run_EmptyWorkspace(t *testing.T) {
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil).AnyTimes()
 
 	err := cgwt.CreateWorkTree()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "workspace file must contain non-empty folders array")
+	assert.ErrorIs(t, err, ErrWorkspaceEmptyFolders)
 }

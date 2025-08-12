@@ -35,7 +35,7 @@ func NewManager() Manager {
 func (c *realManager) LoadConfig(configPath string) (*Config, error) {
 	// Check if config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("config file not found: %s", configPath)
+		return nil, fmt.Errorf("%w: %s", ErrConfigFileNotFound, configPath)
 	}
 
 	// Read config file
@@ -47,7 +47,7 @@ func (c *realManager) LoadConfig(configPath string) (*Config, error) {
 	// Parse YAML
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrConfigFileParse, err)
 	}
 
 	// Validate configuration
@@ -78,7 +78,7 @@ func (c *realManager) DefaultConfig() *Config {
 // Validate validates the configuration values.
 func (c *Config) Validate() error {
 	if c.BasePath == "" {
-		return fmt.Errorf("base_path cannot be empty")
+		return ErrBasePathEmpty
 	}
 
 	// Check if base path is accessible (can be created if it doesn't exist)

@@ -84,8 +84,7 @@ func TestAddWorktreeToStatus_Error(t *testing.T) {
 	err := cgwt.(*realCGWT).addWorktreeToStatus(repoName, branch, worktreePath, workspacePath)
 
 	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to add worktree to status")
+	assert.ErrorIs(t, err, ErrAddWorktreeToStatus)
 }
 
 func TestRemoveWorktreeFromStatus(t *testing.T) {
@@ -147,8 +146,7 @@ func TestRemoveWorktreeFromStatus_Error(t *testing.T) {
 	err := cgwt.(*realCGWT).removeWorktreeFromStatus(repoName, branch)
 
 	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to remove worktree from status")
+	assert.ErrorIs(t, err, ErrRemoveWorktreeFromStatus)
 }
 
 func TestGetWorktreeStatus(t *testing.T) {
@@ -217,9 +215,8 @@ func TestGetWorktreeStatus_Error(t *testing.T) {
 	repo, err := cgwt.(*realCGWT).getWorktreeStatus(repoName, branch)
 
 	// Assert
-	assert.Error(t, err)
 	assert.Nil(t, repo)
-	assert.Contains(t, err.Error(), "failed to get worktree status")
+	assert.ErrorIs(t, err, ErrGetWorktreeStatus)
 }
 
 func TestListAllWorktrees(t *testing.T) {
@@ -290,7 +287,6 @@ func TestListAllWorktrees_Error(t *testing.T) {
 	repos, err := cgwt.(*realCGWT).listAllWorktrees()
 
 	// Assert
-	assert.Error(t, err)
 	assert.Nil(t, repos)
-	assert.Contains(t, err.Error(), "failed to list worktrees")
+	assert.ErrorIs(t, err, ErrListWorktrees)
 }
