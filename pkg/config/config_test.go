@@ -36,7 +36,11 @@ func TestConfig_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate()
 			if tt.wantErr {
-				assert.Error(t, err)
+				if tt.config.BasePath == "" {
+					assert.ErrorIs(t, err, ErrBasePathEmpty)
+				} else {
+					assert.Error(t, err)
+				}
 			} else {
 				assert.NoError(t, err)
 			}
@@ -76,9 +80,8 @@ func TestRealManager_LoadConfig_FileNotFound(t *testing.T) {
 	manager := NewManager()
 	config, err := manager.LoadConfig("/nonexistent/path/config.yaml")
 
-	assert.Error(t, err)
 	assert.Nil(t, config)
-	assert.Contains(t, err.Error(), "config file not found")
+	assert.ErrorIs(t, err, ErrConfigFileNotFound)
 }
 
 func TestRealManager_LoadConfig_InvalidYAML(t *testing.T) {
@@ -95,9 +98,8 @@ invalid: yaml: structure: here`
 	manager := NewManager()
 	config, err := manager.LoadConfig(configPath)
 
-	assert.Error(t, err)
 	assert.Nil(t, config)
-	assert.Contains(t, err.Error(), "failed to parse config file")
+	assert.ErrorIs(t, err, ErrConfigFileParse)
 }
 
 func TestLoadConfigWithFallback_WithValidFile(t *testing.T) {

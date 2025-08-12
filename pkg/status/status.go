@@ -59,7 +59,7 @@ func (s *realManager) AddWorktree(repoName, branch, worktreePath, workspacePath 
 	// Check for duplicate entry
 	for _, repo := range status.Repositories {
 		if repo.Name == repoName && repo.Branch == branch {
-			return fmt.Errorf("worktree already exists for repository %s branch %s", repoName, branch)
+			return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeAlreadyExists, repoName, branch)
 		}
 	}
 
@@ -102,7 +102,7 @@ func (s *realManager) RemoveWorktree(repoName, branch string) error {
 	}
 
 	if !found {
-		return fmt.Errorf("worktree not found for repository %s branch %s", repoName, branch)
+		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoName, branch)
 	}
 
 	// Update repositories list
@@ -131,7 +131,7 @@ func (s *realManager) GetWorktree(repoName, branch string) (*Repository, error) 
 		}
 	}
 
-	return nil, fmt.Errorf("worktree not found for repository %s branch %s", repoName, branch)
+	return nil, fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoName, branch)
 }
 
 // ListAllWorktrees lists all tracked worktrees.
@@ -148,7 +148,7 @@ func (s *realManager) ListAllWorktrees() ([]Repository, error) {
 // getStatusFilePath returns the status file path from configuration.
 func (s *realManager) getStatusFilePath() (string, error) {
 	if s.config == nil {
-		return "", fmt.Errorf("configuration is not initialized")
+		return "", ErrConfigurationNotInitialized
 	}
 
 	if s.config.StatusFile == "" {

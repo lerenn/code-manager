@@ -106,8 +106,7 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	err := manager.AddWorktree(repoName, branch, worktreePath, workspacePath)
 
 	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "worktree already exists")
+	assert.ErrorIs(t, err, ErrWorktreeAlreadyExists)
 }
 
 func TestRemoveWorktree(t *testing.T) {
@@ -218,8 +217,7 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	err := manager.RemoveWorktree(repoName, branch)
 
 	// Assert
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "worktree not found")
+	assert.ErrorIs(t, err, ErrWorktreeNotFound)
 }
 
 func TestGetWorktree(t *testing.T) {
@@ -317,9 +315,8 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	repo, err := manager.GetWorktree(repoName, branch)
 
 	// Assert
-	assert.Error(t, err)
 	assert.Nil(t, repo)
-	assert.Contains(t, err.Error(), "worktree not found")
+	assert.ErrorIs(t, err, ErrWorktreeNotFound)
 }
 
 func TestListAllWorktrees(t *testing.T) {

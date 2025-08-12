@@ -138,7 +138,7 @@ func TestFileLock(t *testing.T) {
 		unlock2, err := fs.FileLock(testFile)
 		if err != nil {
 			// Lock acquisition failed as expected
-			assert.Contains(t, err.Error(), "lock")
+			assert.ErrorIs(t, err, ErrFileLock)
 		} else {
 			// Lock acquisition succeeded (system doesn't enforce locks)
 			unlock2()

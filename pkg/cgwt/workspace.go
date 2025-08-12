@@ -47,18 +47,18 @@ func (c *realCGWT) parseWorkspaceFile(filename string) (*WorkspaceConfig, error)
 	// Read workspace file
 	content, err := c.fs.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read workspace file: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrWorkspaceFileReadError, err)
 	}
 
 	// Parse JSON
 	var config WorkspaceConfig
 	if err := json.Unmarshal(content, &config); err != nil {
-		return nil, fmt.Errorf("invalid .code-workspace file: malformed JSON")
+		return nil, ErrWorkspaceFileMalformed
 	}
 
 	// Validate folders array
 	if config.Folders == nil {
-		return nil, fmt.Errorf("workspace file must contain non-empty folders array")
+		return nil, ErrWorkspaceEmptyFolders
 	}
 
 	// Filter out null values and validate structure
@@ -83,7 +83,7 @@ func (c *realCGWT) parseWorkspaceFile(filename string) (*WorkspaceConfig, error)
 
 	// Check if we have any valid folders after filtering
 	if len(validFolders) == 0 {
-		return nil, fmt.Errorf("workspace file must contain non-empty folders array")
+		return nil, ErrWorkspaceEmptyFolders
 	}
 
 	config.Folders = validFolders

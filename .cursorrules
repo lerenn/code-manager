@@ -27,6 +27,29 @@
 - Test both positive and negative cases
 - Verify error messages and user output
 
+### Error Testing Best Practices
+- **ALWAYS use `assert.ErrorIs()` for checking specific errors** instead of `assert.Contains(t, err.Error(), "error message")`
+- **NEVER use both `assert.Error(t, err)` and `assert.ErrorIs(t, err, specificError)`** - `assert.ErrorIs()` already checks that the error is not nil
+- Create specific error variables in `*_errors.go` files for each error type
+- Use `errors.New()` or `fmt.Errorf()` with `%w` to wrap errors with context
+- Example:
+  ```go
+  // ✅ GOOD: Use specific errors with assert.ErrorIs()
+  assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
+  
+  // ❌ BAD: Don't use string matching with assert.Contains()
+  assert.Contains(t, err.Error(), "not a valid Git repository: .git directory not found")
+  
+  // ❌ BAD: Don't use redundant error checking
+  assert.Error(t, err)
+  assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
+  ```
+- Define errors in package-specific `errors.go` files:
+  ```go
+  // pkg/cgwt/errors.go
+  var ErrGitRepositoryNotFound = errors.New("not a valid Git repository: .git directory not found")
+  ```
+
 ### What Constitutes an Adapter
 - **Adapters**: Interfaces that abstract external systems (file system, network, databases)
 - Examples: `pkg/fs` (file system operations), future network clients, database clients
