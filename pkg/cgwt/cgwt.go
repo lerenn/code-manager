@@ -3,7 +3,10 @@ package cgwt
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
+	"strings"
 
+	"github.com/lerenn/cgwt/pkg/config"
 	"github.com/lerenn/cgwt/pkg/fs"
 	"github.com/lerenn/cgwt/pkg/git"
 	"github.com/lerenn/cgwt/pkg/logger"
@@ -24,15 +27,17 @@ type CGWT interface {
 type realCGWT struct {
 	fs      fs.FS
 	git     git.Git
+	config  *config.Config
 	verbose bool
 	logger  logger.Logger
 }
 
 // NewCGWT creates a new CGWT instance.
-func NewCGWT() CGWT {
+func NewCGWT(cfg *config.Config) CGWT {
 	return &realCGWT{
 		fs:      fs.NewFS(),
 		git:     git.NewGit(),
+		config:  cfg,
 		verbose: false,
 		logger:  logger.NewNoopLogger(),
 	}
@@ -447,4 +452,151 @@ func (c *realCGWT) validateProjectStructureWithResults(projectType ProjectType, 
 		return fmt.Errorf("no Git repository or workspace found")
 	}
 	return nil
+}
+
+// createReposDirectoryStructure creates the directory structure for repository worktrees.
+//
+//nolint:unused // This method will be used in the Run() method in future features
+func (c *realCGWT) createReposDirectoryStructure(repoName, branchName string) (string, error) {
+	if c.verbose {
+		c.logger.Logf("Creating directory structure for repo: %s, branch: %s", repoName, branchName)
+	}
+
+	// Sanitize repository and branch names
+	sanitizedRepo, err := c.sanitizeRepositoryName(repoName)
+	if err != nil {
+		return "", fmt.Errorf("failed to sanitize repository name: %w", err)
+	}
+
+	sanitizedBranch, err := c.sanitizeBranchName(branchName)
+	if err != nil {
+		return "", fmt.Errorf("failed to sanitize branch name: %w", err)
+	}
+
+	// Get base path from config
+	basePath, err := c.getBasePath()
+	if err != nil {
+		return "", fmt.Errorf("failed to get base path: %w", err)
+	}
+
+	// Construct full path
+	fullPath := filepath.Join(basePath, "repos", sanitizedRepo, sanitizedBranch)
+
+	if c.verbose {
+		c.logger.Logf("Creating directory structure: %s", fullPath)
+	}
+
+	// Create directory structure
+	err = c.fs.MkdirAll(fullPath, 0755)
+	if err != nil {
+		return "", fmt.Errorf("failed to create directory structure: %w", err)
+	}
+
+	if c.verbose {
+		c.logger.Logf("Successfully created directory structure: %s", fullPath)
+	}
+
+	return fullPath, nil
+}
+
+// sanitizeRepositoryName extracts and sanitizes repository name from Git remote URL.
+//
+//nolint:unused // This method will be used in the Run() method in future features
+func (c *realCGWT) sanitizeRepositoryName(remoteURL string) (string, error) {
+	if remoteURL == "" {
+		return "", fmt.Errorf("repository URL cannot be empty")
+	}
+
+	// Remove .git suffix if present
+	repoName := strings.TrimSuffix(remoteURL, ".git")
+
+	// Extract repository path from URL
+	repoName = c.extractRepoPathFromURL(repoName)
+
+	// Sanitize repository name for filesystem
+	// Replace invalid characters with underscores (but preserve forward slashes)
+	invalidChars := regexp.MustCompile(`[<>:"\\|?*]`)
+	sanitized := invalidChars.ReplaceAllString(repoName, "_")
+
+	// Remove leading/trailing underscores and dots
+	sanitized = strings.Trim(sanitized, "._")
+
+	if sanitized == "" {
+		return "", fmt.Errorf("repository name is empty after sanitization")
+	}
+
+	return sanitized, nil
+}
+
+// extractRepoPathFromURL extracts the repository path from various URL formats.
+//
+//nolint:unused // This method will be used in the Run() method in future features
+func (c *realCGWT) extractRepoPathFromURL(repoName string) string {
+	// Handle SSH format: git@github.com:user/repo.git
+	if strings.Contains(repoName, "git@") {
+		parts := strings.Split(repoName, ":")
+		if len(parts) == 2 {
+			return parts[1]
+		}
+		return repoName
+	}
+
+	// Handle HTTPS format: https://github.com/user/repo
+	// Extract everything after the domain
+	urlParts := strings.Split(repoName, "://")
+	if len(urlParts) != 2 {
+		return repoName
+	}
+
+	pathParts := strings.Split(urlParts[1], "/")
+	if len(pathParts) >= 3 {
+		// Remove domain and take user/repo parts
+		return strings.Join(pathParts[1:], "/")
+	}
+
+	return repoName
+}
+
+// sanitizeBranchName validates and sanitizes branch name for safe directory creation.
+//
+//nolint:unused // This method will be used in the Run() method in future features
+func (c *realCGWT) sanitizeBranchName(branchName string) (string, error) {
+	if branchName == "" {
+		return "", fmt.Errorf("branch name cannot be empty")
+	}
+
+	// Replace invalid characters with underscores
+	invalidChars := regexp.MustCompile(`[<>:"/\\|?*#]`)
+	sanitized := invalidChars.ReplaceAllString(branchName, "_")
+
+	// Remove leading/trailing underscores and dots
+	sanitized = strings.Trim(sanitized, "._")
+
+	// Limit length to 255 characters (filesystem limit)
+	if len(sanitized) > 255 {
+		sanitized = sanitized[:255]
+		// Ensure we don't end with a dot or underscore
+		sanitized = strings.TrimRight(sanitized, "._")
+	}
+
+	if sanitized == "" {
+		return "", fmt.Errorf("branch name is empty after sanitization")
+	}
+
+	return sanitized, nil
+}
+
+// getBasePath returns the base path from configuration.
+//
+//nolint:unused // This method will be used in the Run() method in future features
+func (c *realCGWT) getBasePath() (string, error) {
+	if c.config == nil {
+		return "", fmt.Errorf("configuration is not initialized")
+	}
+
+	if c.config.BasePath == "" {
+		return "", fmt.Errorf("base path is not configured")
+	}
+
+	return c.config.BasePath, nil
 }

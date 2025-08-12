@@ -1,15 +1,12 @@
 # Cursor Git WorkTree Manager - Backlog
 
-- **5. Implement `$HOME/.cursor/cgwt/repos/<repo>/<branch>/` structure**
-  - **Blocked by:** 4
-
 - **6. Handle repository name extraction and sanitization**
   - **Blocked by:** 5
 
 - **7. Branch name validation and sanitization**
   - **Blocked by:** 5
 
-- **8. Implement `$HOME/.cursor/cgwt/workspaces/<workspace>/<branch>/<repo>/` structure**
+- **8. Implement `$HOME/.cursor/cgwt/status.yaml` structure**
   - **Blocked by:** 4, 5
 
 - **9. Workspace name extraction from `.code-workspace` files**

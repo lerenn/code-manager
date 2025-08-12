@@ -55,6 +55,21 @@ func (mr *MockFSMockRecorder) Exists(path any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockFS)(nil).Exists), path)
 }
 
+// GetHomeDir mocks base method.
+func (m *MockFS) GetHomeDir() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHomeDir")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetHomeDir indicates an expected call of GetHomeDir.
+func (mr *MockFSMockRecorder) GetHomeDir() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHomeDir", reflect.TypeOf((*MockFS)(nil).GetHomeDir))
+}
+
 // Glob mocks base method.
 func (m *MockFS) Glob(pattern string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -83,6 +98,34 @@ func (m *MockFS) IsDir(path string) (bool, error) {
 func (mr *MockFSMockRecorder) IsDir(path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDir", reflect.TypeOf((*MockFS)(nil).IsDir), path)
+}
+
+// IsNotExist mocks base method.
+func (m *MockFS) IsNotExist(err error) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsNotExist", err)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsNotExist indicates an expected call of IsNotExist.
+func (mr *MockFSMockRecorder) IsNotExist(err any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNotExist", reflect.TypeOf((*MockFS)(nil).IsNotExist), err)
+}
+
+// MkdirAll mocks base method.
+func (m *MockFS) MkdirAll(path string, perm os.FileMode) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MkdirAll", path, perm)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MkdirAll indicates an expected call of MkdirAll.
+func (mr *MockFSMockRecorder) MkdirAll(path, perm any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MkdirAll", reflect.TypeOf((*MockFS)(nil).MkdirAll), path, perm)
 }
 
 // ReadDir mocks base method.
