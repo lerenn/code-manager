@@ -8,7 +8,6 @@ import (
 	"github.com/lerenn/cgwt/pkg/config"
 	"github.com/lerenn/cgwt/pkg/fs"
 	"github.com/lerenn/cgwt/pkg/git"
-	"github.com/lerenn/cgwt/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -26,10 +25,8 @@ func TestCGWT_Run_SingleRepository(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
 	cgwt := NewCGWT(createTestConfig())
-	cgwt.SetLogger(mockLogger)
 
 	// Override adapters with mocks
 	c := cgwt.(*realCGWT)
@@ -43,7 +40,7 @@ func TestCGWT_Run_SingleRepository(t *testing.T) {
 	// Mock Git status for validation (called 2 times: validateGitStatus and validateGitConfiguration)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
 
-	err := cgwt.Run()
+	err := cgwt.CreateWorkTree()
 	assert.NoError(t, err)
 }
 
@@ -53,11 +50,9 @@ func TestCGWT_Run_VerboseMode(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
 	cgwt := NewCGWT(createTestConfig())
 	cgwt.SetVerbose(true)
-	cgwt.SetLogger(mockLogger)
 
 	// Override adapters with mocks
 	c := cgwt.(*realCGWT)
@@ -71,20 +66,7 @@ func TestCGWT_Run_VerboseMode(t *testing.T) {
 	// Mock Git status for validation (called 2 times: validateGitStatus and validateGitConfiguration)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
 
-	// Mock verbose logging
-	mockLogger.EXPECT().Logf("Starting CGWT execution")
-	mockLogger.EXPECT().Logf("Checking for .git directory...")
-	mockLogger.EXPECT().Logf("Verifying .git is a directory...")
-	mockLogger.EXPECT().Logf("Git repository detected")
-	mockLogger.EXPECT().Logf("Starting project structure validation")
-	mockLogger.EXPECT().Logf("Validating single repository mode")
-	mockLogger.EXPECT().Logf("Validating repository: %s", ".")
-	mockLogger.EXPECT().Logf("Executing git status in: %s", ".")
-	mockLogger.EXPECT().Logf("Validating Git configuration in: %s", ".")
-	mockLogger.EXPECT().Logf("Executing git status in: %s", ".")
-	mockLogger.EXPECT().Logf("CGWT execution completed successfully")
-
-	err := cgwt.Run()
+	err := cgwt.CreateWorkTree()
 	assert.NoError(t, err)
 }
 
@@ -94,11 +76,9 @@ func TestCGWT_ValidateSingleRepository_Success(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
 	cgwt := NewCGWT(createTestConfig())
 	cgwt.SetVerbose(true)
-	cgwt.SetLogger(mockLogger)
 
 	// Override adapters with mocks
 	c := cgwt.(*realCGWT)
@@ -111,13 +91,7 @@ func TestCGWT_ValidateSingleRepository_Success(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("On branch main", nil)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil) // Called twice for validation
 
-	// Mock verbose logging
-	mockLogger.EXPECT().Logf("Validating repository: %s", ".")
-	mockLogger.EXPECT().Logf("Executing git status in: %s", ".")
-	mockLogger.EXPECT().Logf("Validating Git configuration in: %s", ".")
-	mockLogger.EXPECT().Logf("Executing git status in: %s", ".")
-
-	err := cgwt.ValidateSingleRepository()
+	err := cgwt.(*realCGWT).validateSingleRepository()
 	assert.NoError(t, err)
 }
 
@@ -126,11 +100,9 @@ func TestCGWT_ValidateSingleRepository_NoGitDir(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
 	cgwt := NewCGWT(createTestConfig())
 	cgwt.SetVerbose(true)
-	cgwt.SetLogger(mockLogger)
 
 	// Override adapters with mocks
 	c := cgwt.(*realCGWT)
@@ -139,11 +111,7 @@ func TestCGWT_ValidateSingleRepository_NoGitDir(t *testing.T) {
 	// Mock repository validation - .git not found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 
-	// Mock verbose logging
-	mockLogger.EXPECT().Logf("Validating repository: %s", ".")
-	mockLogger.EXPECT().Logf("Error: .git directory not found")
-
-	err := cgwt.ValidateSingleRepository()
+	err := cgwt.(*realCGWT).validateSingleRepository()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not a valid Git repository: .git directory not found")
 }
@@ -154,11 +122,9 @@ func TestCGWT_ValidateSingleRepository_GitStatusError(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
 	cgwt := NewCGWT(createTestConfig())
 	cgwt.SetVerbose(true)
-	cgwt.SetLogger(mockLogger)
 
 	// Override adapters with mocks
 	c := cgwt.(*realCGWT)
@@ -170,12 +136,7 @@ func TestCGWT_ValidateSingleRepository_GitStatusError(t *testing.T) {
 	mockFS.EXPECT().IsDir(".git").Return(true, nil)
 	mockGit.EXPECT().Status(".").Return("", assert.AnError)
 
-	// Mock verbose logging
-	mockLogger.EXPECT().Logf("Validating repository: %s", ".")
-	mockLogger.EXPECT().Logf("Executing git status in: %s", ".")
-	mockLogger.EXPECT().Logf("Error: %v", gomock.Any())
-
-	err := cgwt.ValidateSingleRepository()
+	err := cgwt.(*realCGWT).validateSingleRepository()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not a valid Git repository")
 }
@@ -186,27 +147,19 @@ func TestRealCGWT_CreateReposDirectoryStructure(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
-	cfg := &config.Config{
-		BasePath: "/test/base/path",
-	}
+	cgwt := NewCGWT(createTestConfig())
+	cgwt.SetVerbose(true)
 
-	cgwt := &realCGWT{
-		fs:      mockFS,
-		git:     mockGit,
-		config:  cfg,
-		verbose: true,
-		logger:  mockLogger,
-	}
+	// Override adapters with mocks
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
+	c.git = mockGit
 
 	// Test successful directory creation
-	mockLogger.EXPECT().Logf("Creating directory structure for repo: %s, branch: %s", "github.com/lerenn/cgwt", "feature/new-branch")
-	mockLogger.EXPECT().Logf("Creating directory structure: %s", "/test/base/path/repos/github.com/lerenn/cgwt/feature_new-branch")
 	mockFS.EXPECT().MkdirAll("/test/base/path/repos/github.com/lerenn/cgwt/feature_new-branch", gomock.Any()).Return(nil)
-	mockLogger.EXPECT().Logf("Successfully created directory structure: %s", "/test/base/path/repos/github.com/lerenn/cgwt/feature_new-branch")
 
-	path, err := cgwt.createReposDirectoryStructure("github.com/lerenn/cgwt", "feature/new-branch")
+	path, err := cgwt.(*realCGWT).createReposDirectoryStructure("github.com/lerenn/cgwt", "feature/new-branch")
 	assert.NoError(t, err)
 	assert.Equal(t, "/test/base/path/repos/github.com/lerenn/cgwt/feature_new-branch", path)
 }
@@ -217,24 +170,16 @@ func TestRealCGWT_CreateReposDirectoryStructure_EmptyRepoName(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
-	cfg := &config.Config{
-		BasePath: "/test/base/path",
-	}
+	cgwt := NewCGWT(createTestConfig())
+	cgwt.SetVerbose(true)
 
-	cgwt := &realCGWT{
-		fs:      mockFS,
-		git:     mockGit,
-		config:  cfg,
-		verbose: true,
-		logger:  mockLogger,
-	}
+	// Override adapters with mocks
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
+	c.git = mockGit
 
-	// Expect the initial log message before the error
-	mockLogger.EXPECT().Logf("Creating directory structure for repo: %s, branch: %s", "", "feature/new-branch")
-
-	_, err := cgwt.createReposDirectoryStructure("", "feature/new-branch")
+	_, err := cgwt.(*realCGWT).createReposDirectoryStructure("", "feature/new-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "repository URL cannot be empty")
 }
@@ -245,24 +190,16 @@ func TestRealCGWT_CreateReposDirectoryStructure_EmptyBranchName(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
-	cfg := &config.Config{
-		BasePath: "/test/base/path",
-	}
+	cgwt := NewCGWT(createTestConfig())
+	cgwt.SetVerbose(true)
 
-	cgwt := &realCGWT{
-		fs:      mockFS,
-		git:     mockGit,
-		config:  cfg,
-		verbose: true,
-		logger:  mockLogger,
-	}
+	// Override adapters with mocks
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
+	c.git = mockGit
 
-	// Expect the initial log message before the error
-	mockLogger.EXPECT().Logf("Creating directory structure for repo: %s, branch: %s", "github.com/lerenn/cgwt", "")
-
-	_, err := cgwt.createReposDirectoryStructure("github.com/lerenn/cgwt", "")
+	_, err := cgwt.(*realCGWT).createReposDirectoryStructure("github.com/lerenn/cgwt", "")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "branch name cannot be empty")
 }
@@ -273,20 +210,17 @@ func TestRealCGWT_CreateReposDirectoryStructure_NoConfig(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
-	cgwt := &realCGWT{
-		fs:      mockFS,
-		git:     mockGit,
-		config:  nil,
-		verbose: true,
-		logger:  mockLogger,
-	}
+	// Create CGWT with nil config
+	cgwt := NewCGWT(nil)
+	cgwt.SetVerbose(true)
 
-	// Expect the initial log message before the error
-	mockLogger.EXPECT().Logf("Creating directory structure for repo: %s, branch: %s", "github.com/lerenn/cgwt", "feature/new-branch")
+	// Override adapters with mocks
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
+	c.git = mockGit
 
-	_, err := cgwt.createReposDirectoryStructure("github.com/lerenn/cgwt", "feature/new-branch")
+	_, err := cgwt.(*realCGWT).createReposDirectoryStructure("github.com/lerenn/cgwt", "feature/new-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "configuration is not initialized")
 }
@@ -297,19 +231,13 @@ func TestRealCGWT_sanitizeRepositoryName(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
-	cfg := &config.Config{
-		BasePath: "/test/base/path",
-	}
+	cgwt := NewCGWT(createTestConfig())
 
-	cgwt := &realCGWT{
-		fs:      mockFS,
-		git:     mockGit,
-		config:  cfg,
-		verbose: false,
-		logger:  mockLogger,
-	}
+	// Override adapters with mocks
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
+	c.git = mockGit
 
 	tests := []struct {
 		name     string
@@ -357,7 +285,7 @@ func TestRealCGWT_sanitizeRepositoryName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := cgwt.sanitizeRepositoryName(tt.input)
+			result, err := cgwt.(*realCGWT).sanitizeRepositoryName(tt.input)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -374,19 +302,13 @@ func TestRealCGWT_sanitizeBranchName(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
-	cfg := &config.Config{
-		BasePath: "/test/base/path",
-	}
+	cgwt := NewCGWT(createTestConfig())
 
-	cgwt := &realCGWT{
-		fs:      mockFS,
-		git:     mockGit,
-		config:  cfg,
-		verbose: false,
-		logger:  mockLogger,
-	}
+	// Override adapters with mocks
+	c := cgwt.(*realCGWT)
+	c.fs = mockFS
+	c.git = mockGit
 
 	tests := []struct {
 		name     string
@@ -428,7 +350,7 @@ func TestRealCGWT_sanitizeBranchName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := cgwt.sanitizeBranchName(tt.input)
+			result, err := cgwt.(*realCGWT).sanitizeBranchName(tt.input)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -445,7 +367,6 @@ func TestRealCGWT_getBasePath(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
 
 	tests := []struct {
 		name     string
@@ -479,15 +400,14 @@ func TestRealCGWT_getBasePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cgwt := &realCGWT{
-				fs:      mockFS,
-				git:     mockGit,
-				config:  tt.config,
-				verbose: false,
-				logger:  mockLogger,
-			}
+			cgwt := NewCGWT(tt.config)
 
-			result, err := cgwt.getBasePath()
+			// Override adapters with mocks
+			c := cgwt.(*realCGWT)
+			c.fs = mockFS
+			c.git = mockGit
+
+			result, err := cgwt.(*realCGWT).getBasePath()
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {

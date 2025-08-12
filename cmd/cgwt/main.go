@@ -53,7 +53,7 @@ func main() {
 			if verbose {
 				cgwtManager.SetVerbose(true)
 			}
-			return cgwtManager.Run()
+			return cgwtManager.CreateWorkTree()
 		},
 	}
 
