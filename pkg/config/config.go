@@ -12,7 +12,8 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	BasePath string `yaml:"base_path"`
+	BasePath   string `yaml:"base_path"`
+	StatusFile string `yaml:"status_file"`
 }
 
 // Manager interface provides configuration management functionality.
@@ -65,8 +66,12 @@ func (c *realManager) DefaultConfig() *Config {
 		homeDir = "."
 	}
 
+	basePath := filepath.Join(homeDir, ".cursor", "cgwt")
+	statusFile := filepath.Join(basePath, "status.yaml")
+
 	return &Config{
-		BasePath: filepath.Join(homeDir, ".cursor", "cgwt"),
+		BasePath:   basePath,
+		StatusFile: statusFile,
 	}
 }
 

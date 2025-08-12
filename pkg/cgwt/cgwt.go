@@ -10,6 +10,7 @@ import (
 	"github.com/lerenn/cgwt/pkg/fs"
 	"github.com/lerenn/cgwt/pkg/git"
 	"github.com/lerenn/cgwt/pkg/logger"
+	"github.com/lerenn/cgwt/pkg/status"
 )
 
 // CGWT interface provides Git repository detection functionality.
@@ -22,24 +23,35 @@ type CGWT interface {
 	SetLogger(logger logger.Logger)
 	// ValidateSingleRepository validates that the current directory is a working Git repository.
 	ValidateSingleRepository() error
+	// AddWorktreeToStatus adds a worktree entry to the status file.
+	AddWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error
+	// RemoveWorktreeFromStatus removes a worktree entry from the status file.
+	RemoveWorktreeFromStatus(repoName, branch string) error
+	// GetWorktreeStatus retrieves the status of a specific worktree.
+	GetWorktreeStatus(repoName, branch string) (*status.Repository, error)
+	// ListAllWorktrees lists all tracked worktrees.
+	ListAllWorktrees() ([]status.Repository, error)
 }
 
 type realCGWT struct {
-	fs      fs.FS
-	git     git.Git
-	config  *config.Config
-	verbose bool
-	logger  logger.Logger
+	fs            fs.FS
+	git           git.Git
+	config        *config.Config
+	statusManager status.Manager
+	verbose       bool
+	logger        logger.Logger
 }
 
 // NewCGWT creates a new CGWT instance.
 func NewCGWT(cfg *config.Config) CGWT {
+	fsInstance := fs.NewFS()
 	return &realCGWT{
-		fs:      fs.NewFS(),
-		git:     git.NewGit(),
-		config:  cfg,
-		verbose: false,
-		logger:  logger.NewNoopLogger(),
+		fs:            fsInstance,
+		git:           git.NewGit(),
+		config:        cfg,
+		statusManager: status.NewManager(fsInstance, cfg),
+		verbose:       false,
+		logger:        logger.NewNoopLogger(),
 	}
 }
 
@@ -599,4 +611,73 @@ func (c *realCGWT) getBasePath() (string, error) {
 	}
 
 	return c.config.BasePath, nil
+}
+
+// AddWorktreeToStatus adds a worktree entry to the status file.
+func (c *realCGWT) AddWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error {
+	if c.verbose {
+		c.logger.Logf("Adding worktree to status: repo=%s, branch=%s, path=%s, workspace=%s",
+			repoName, branch, worktreePath, workspacePath)
+	}
+
+	err := c.statusManager.AddWorktree(repoName, branch, worktreePath, workspacePath)
+	if err != nil {
+		return fmt.Errorf("failed to add worktree to status: %w", err)
+	}
+
+	if c.verbose {
+		c.logger.Logf("Successfully added worktree to status")
+	}
+
+	return nil
+}
+
+// RemoveWorktreeFromStatus removes a worktree entry from the status file.
+func (c *realCGWT) RemoveWorktreeFromStatus(repoName, branch string) error {
+	if c.verbose {
+		c.logger.Logf("Removing worktree from status: repo=%s, branch=%s", repoName, branch)
+	}
+
+	err := c.statusManager.RemoveWorktree(repoName, branch)
+	if err != nil {
+		return fmt.Errorf("failed to remove worktree from status: %w", err)
+	}
+
+	if c.verbose {
+		c.logger.Logf("Successfully removed worktree from status")
+	}
+
+	return nil
+}
+
+// GetWorktreeStatus retrieves the status of a specific worktree.
+func (c *realCGWT) GetWorktreeStatus(repoName, branch string) (*status.Repository, error) {
+	if c.verbose {
+		c.logger.Logf("Getting worktree status: repo=%s, branch=%s", repoName, branch)
+	}
+
+	repo, err := c.statusManager.GetWorktree(repoName, branch)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get worktree status: %w", err)
+	}
+
+	return repo, nil
+}
+
+// ListAllWorktrees lists all tracked worktrees.
+func (c *realCGWT) ListAllWorktrees() ([]status.Repository, error) {
+	if c.verbose {
+		c.logger.Logf("Listing all worktrees")
+	}
+
+	repos, err := c.statusManager.ListAllWorktrees()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list worktrees: %w", err)
+	}
+
+	if c.verbose {
+		c.logger.Logf("Found %d worktrees", len(repos))
+	}
+
+	return repos, nil
 }

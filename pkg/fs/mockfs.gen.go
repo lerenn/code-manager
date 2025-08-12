@@ -40,6 +40,20 @@ func (m *MockFS) EXPECT() *MockFSMockRecorder {
 	return m.recorder
 }
 
+// CreateFileIfNotExists mocks base method.
+func (m *MockFS) CreateFileIfNotExists(filename string, initialContent []byte, perm os.FileMode) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateFileIfNotExists", filename, initialContent, perm)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateFileIfNotExists indicates an expected call of CreateFileIfNotExists.
+func (mr *MockFSMockRecorder) CreateFileIfNotExists(filename, initialContent, perm any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFileIfNotExists", reflect.TypeOf((*MockFS)(nil).CreateFileIfNotExists), filename, initialContent, perm)
+}
+
 // Exists mocks base method.
 func (m *MockFS) Exists(path string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -53,6 +67,21 @@ func (m *MockFS) Exists(path string) (bool, error) {
 func (mr *MockFSMockRecorder) Exists(path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockFS)(nil).Exists), path)
+}
+
+// FileLock mocks base method.
+func (m *MockFS) FileLock(filename string) (func(), error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FileLock", filename)
+	ret0, _ := ret[0].(func())
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FileLock indicates an expected call of FileLock.
+func (mr *MockFSMockRecorder) FileLock(filename any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FileLock", reflect.TypeOf((*MockFS)(nil).FileLock), filename)
 }
 
 // GetHomeDir mocks base method.
@@ -156,4 +185,18 @@ func (m *MockFS) ReadFile(path string) ([]byte, error) {
 func (mr *MockFSMockRecorder) ReadFile(path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockFS)(nil).ReadFile), path)
+}
+
+// WriteFileAtomic mocks base method.
+func (m *MockFS) WriteFileAtomic(filename string, data []byte, perm os.FileMode) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WriteFileAtomic", filename, data, perm)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// WriteFileAtomic indicates an expected call of WriteFileAtomic.
+func (mr *MockFSMockRecorder) WriteFileAtomic(filename, data, perm any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WriteFileAtomic", reflect.TypeOf((*MockFS)(nil).WriteFileAtomic), filename, data, perm)
 }
