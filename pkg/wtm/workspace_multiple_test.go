@@ -1,13 +1,13 @@
 //go:build unit
 
-package cgwt
+package wtm
 
 import (
 	"testing"
 )
 
 func TestDisplayWorkspaceSelection(t *testing.T) {
-	c := NewCGWT(createTestConfig())
+	c := NewWTM(createTestConfig())
 
 	workspaceFiles := []string{
 		"project.code-workspace",
@@ -16,7 +16,7 @@ func TestDisplayWorkspaceSelection(t *testing.T) {
 	}
 
 	// Test that the method doesn't panic
-	c.(*realCGWT).displayWorkspaceSelection(workspaceFiles)
+	c.(*realWTM).displayWorkspaceSelection(workspaceFiles)
 }
 
 func TestGetUserSelection_ValidInput(t *testing.T) {

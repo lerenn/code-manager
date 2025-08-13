@@ -1,14 +1,14 @@
 //go:build unit
 
-package cgwt
+package wtm
 
 import (
 	"testing"
 
-	"github.com/lerenn/cgwt/pkg/config"
-	"github.com/lerenn/cgwt/pkg/fs"
-	"github.com/lerenn/cgwt/pkg/git"
-	"github.com/lerenn/cgwt/pkg/status"
+	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/fs"
+	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -16,8 +16,8 @@ import (
 // createStatusTestConfig creates a test configuration for status tests.
 func createStatusTestConfig() *config.Config {
 	return &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm",
+		StatusFile: "/home/user/.wtm/status.yaml",
 	}
 }
 
@@ -29,11 +29,11 @@ func TestAddWorktreeToStatus(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -41,14 +41,14 @@ func TestAddWorktreeToStatus(t *testing.T) {
 	// Test data
 	repoName := "github.com/lerenn/example"
 	branch := "feature-a"
-	worktreePath := "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a"
+	worktreePath := "/home/user/.wtm/repos/github.com/lerenn/example/feature-a"
 	workspacePath := ""
 
 	// Mock expectations
 	mockStatusManager.EXPECT().AddWorktree(repoName, branch, worktreePath, workspacePath).Return(nil)
 
 	// Execute
-	err := cgwt.(*realCGWT).addWorktreeToStatus(repoName, branch, worktreePath, workspacePath)
+	err := wtm.(*realWTM).addWorktreeToStatus(repoName, branch, worktreePath, workspacePath)
 
 	// Assert
 	assert.NoError(t, err)
@@ -62,11 +62,11 @@ func TestAddWorktreeToStatus_Error(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -74,14 +74,14 @@ func TestAddWorktreeToStatus_Error(t *testing.T) {
 	// Test data
 	repoName := "github.com/lerenn/example"
 	branch := "feature-a"
-	worktreePath := "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a"
+	worktreePath := "/home/user/.wtm/repos/github.com/lerenn/example/feature-a"
 	workspacePath := ""
 
 	// Mock expectations
 	mockStatusManager.EXPECT().AddWorktree(repoName, branch, worktreePath, workspacePath).Return(assert.AnError)
 
 	// Execute
-	err := cgwt.(*realCGWT).addWorktreeToStatus(repoName, branch, worktreePath, workspacePath)
+	err := wtm.(*realWTM).addWorktreeToStatus(repoName, branch, worktreePath, workspacePath)
 
 	// Assert
 	assert.ErrorIs(t, err, ErrAddWorktreeToStatus)
@@ -95,11 +95,11 @@ func TestRemoveWorktreeFromStatus(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -112,7 +112,7 @@ func TestRemoveWorktreeFromStatus(t *testing.T) {
 	mockStatusManager.EXPECT().RemoveWorktree(repoName, branch).Return(nil)
 
 	// Execute
-	err := cgwt.(*realCGWT).removeWorktreeFromStatus(repoName, branch)
+	err := wtm.(*realWTM).removeWorktreeFromStatus(repoName, branch)
 
 	// Assert
 	assert.NoError(t, err)
@@ -126,11 +126,11 @@ func TestRemoveWorktreeFromStatus_Error(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -143,7 +143,7 @@ func TestRemoveWorktreeFromStatus_Error(t *testing.T) {
 	mockStatusManager.EXPECT().RemoveWorktree(repoName, branch).Return(assert.AnError)
 
 	// Execute
-	err := cgwt.(*realCGWT).removeWorktreeFromStatus(repoName, branch)
+	err := wtm.(*realWTM).removeWorktreeFromStatus(repoName, branch)
 
 	// Assert
 	assert.ErrorIs(t, err, ErrRemoveWorktreeFromStatus)
@@ -157,11 +157,11 @@ func TestGetWorktreeStatus(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -172,7 +172,7 @@ func TestGetWorktreeStatus(t *testing.T) {
 	expectedRepo := &status.Repository{
 		Name:      repoName,
 		Branch:    branch,
-		Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a",
+		Path:      "/home/user/.wtm/repos/github.com/lerenn/example/feature-a",
 		Workspace: "",
 	}
 
@@ -180,7 +180,7 @@ func TestGetWorktreeStatus(t *testing.T) {
 	mockStatusManager.EXPECT().GetWorktree(repoName, branch).Return(expectedRepo, nil)
 
 	// Execute
-	repo, err := cgwt.(*realCGWT).getWorktreeStatus(repoName, branch)
+	repo, err := wtm.(*realWTM).getWorktreeStatus(repoName, branch)
 
 	// Assert
 	assert.NoError(t, err)
@@ -195,11 +195,11 @@ func TestGetWorktreeStatus_Error(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -212,7 +212,7 @@ func TestGetWorktreeStatus_Error(t *testing.T) {
 	mockStatusManager.EXPECT().GetWorktree(repoName, branch).Return(nil, assert.AnError)
 
 	// Execute
-	repo, err := cgwt.(*realCGWT).getWorktreeStatus(repoName, branch)
+	repo, err := wtm.(*realWTM).getWorktreeStatus(repoName, branch)
 
 	// Assert
 	assert.Nil(t, repo)
@@ -227,11 +227,11 @@ func TestListAllWorktrees(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -241,13 +241,13 @@ func TestListAllWorktrees(t *testing.T) {
 		{
 			Name:      "github.com/lerenn/example",
 			Branch:    "feature-a",
-			Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a",
+			Path:      "/home/user/.wtm/repos/github.com/lerenn/example/feature-a",
 			Workspace: "",
 		},
 		{
 			Name:      "github.com/lerenn/other",
 			Branch:    "feature-b",
-			Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/other/feature-b",
+			Path:      "/home/user/.wtm/repos/github.com/lerenn/other/feature-b",
 			Workspace: "/home/user/workspace.code-workspace",
 		},
 	}
@@ -256,7 +256,7 @@ func TestListAllWorktrees(t *testing.T) {
 	mockStatusManager.EXPECT().ListAllWorktrees().Return(expectedRepos, nil)
 
 	// Execute
-	repos, err := cgwt.(*realCGWT).listAllWorktrees()
+	repos, err := wtm.(*realWTM).listAllWorktrees()
 
 	// Assert
 	assert.NoError(t, err)
@@ -271,11 +271,11 @@ func TestListAllWorktrees_Error(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatusManager := status.NewMockManager(ctrl)
 
-	cgwt := NewCGWT(createStatusTestConfig())
-	cgwt.SetVerbose(true)
+	wtm := NewWTM(createStatusTestConfig())
+	wtm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := cgwt.(*realCGWT)
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatusManager
@@ -284,7 +284,7 @@ func TestListAllWorktrees_Error(t *testing.T) {
 	mockStatusManager.EXPECT().ListAllWorktrees().Return(nil, assert.AnError)
 
 	// Execute
-	repos, err := cgwt.(*realCGWT).listAllWorktrees()
+	repos, err := wtm.(*realWTM).listAllWorktrees()
 
 	// Assert
 	assert.Nil(t, repos)

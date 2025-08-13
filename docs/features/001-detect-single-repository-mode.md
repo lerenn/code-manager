@@ -4,7 +4,7 @@
 Implement functionality to detect when the current working directory is a single Git repository by checking for the presence of a `.git` folder.
 
 ## Background
-The Cursor Git WorkTree Manager (cgwt) needs to distinguish between different project types to provide appropriate worktree management. The first step is detecting single repository mode, which is the foundation for all other features.
+The Git WorkTree Manager (wtm) needs to distinguish between different project types to provide appropriate worktree management. The first step is detecting single repository mode, which is the foundation for all other features.
 
 ## Requirements
 
@@ -36,7 +36,7 @@ The Cursor Git WorkTree Manager (cgwt) needs to distinguish between different pr
 - No state management required
 - Cross-platform compatibility
 
-#### CGWT Package (Business Logic)
+#### WTM Package (Business Logic)
 **Interface Design:**
 - `Run() error`: Main entry point for application logic
 
@@ -54,7 +54,7 @@ The Cursor Git WorkTree Manager (cgwt) needs to distinguish between different pr
 ### Implementation Details
 
 #### 1. FS Package Implementation
-The FS package provides simple file system operations that can be used by the CGWT package:
+The FS package provides simple file system operations that can be used by the WTM package:
 
 **Key Components:**
 - Interface with methods: `Exists()`, `IsDir()`
@@ -68,8 +68,8 @@ The FS package provides simple file system operations that can be used by the CG
 - Add `//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=fs.go -destination=mockfs.gen.go -package=fs` directive
 - Generate mock files as `mockfs.gen.go` in same directory
 
-#### 2. CGWT Package Implementation
-The CGWT package uses the FS adapter to implement Git repository detection:
+#### 2. WTM Package Implementation
+The WTM package uses the FS adapter to implement Git repository detection:
 
 **Key Components:**
 - Public `Run()` method as the main entry point
@@ -110,13 +110,13 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 #### 1. Main Application Flow
 **Key Components:**
 - Cobra root command setup
-- Dependency injection: FS adapter → CGWT manager
+- Dependency injection: FS adapter → WTM manager
 - Error handling with `log.Fatal()`
 - Clean separation of concerns
 
 **Implementation Notes:**
 - Use Cobra for command-line argument parsing with root command and `create` subcommand
-- Create FS adapter and CGWT manager in the command's `RunE` function
+- Create FS adapter and WTM manager in the command's `RunE` function
 - Handle errors at the top level with `log.Fatal()` and exit code 1
 - Keep main function simple and focused on orchestration
 - Add global quiet mode flag for silent operation (only errors to stderr)
@@ -126,7 +126,7 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 - `create` subcommand takes exactly one argument (branch name) but not used yet
 - Help text: "Create worktree(s) for the specified branch"
 
-#### 2. CGWT Package Integration
+#### 2. WTM Package Integration
 **Key Components:**
 - Simple interface with single `Run()` method
 - Future types for project classification
@@ -161,7 +161,7 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 - Verify error conditions and edge cases
 - Use standard `fs_test.go` naming
 
-#### 2. CGWT Package Tests (with Mocked FS)
+#### 2. WTM Package Tests (with Mocked FS)
 **Test Strategy:**
 - Use Uber gomock for mocking FS interface
 - Test the public `Run()` method with various scenarios
@@ -170,12 +170,12 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 - Unit tests only (not an adapter)
 
 **Test Cases:**
-- `TestCGWT_Run_ValidRepo`: Test successful Git repository detection in current directory
-- `TestCGWT_Run_NoRepo`: Test when no Git repository is found in current directory
-- `TestCGWT_Run_Error`: Test FS error propagation
-- `TestCGWT_Run_QuietMode`: Test quiet mode operation (only errors to stderr)
-- `TestCGWT_Run_VerboseMode`: Test verbose mode operation (detailed steps)
-- `TestCGWT_Run_NormalMode`: Test normal mode operation (user interaction only)
+- `TestWTM_Run_ValidRepo`: Test successful Git repository detection in current directory
+- `TestWTM_Run_NoRepo`: Test when no Git repository is found in current directory
+- `TestWTM_Run_Error`: Test FS error propagation
+- `TestWTM_Run_QuietMode`: Test quiet mode operation (only errors to stderr)
+- `TestWTM_Run_VerboseMode`: Test verbose mode operation (detailed steps)
+- `TestWTM_Run_NormalMode`: Test normal mode operation (user interaction only)
 
 **Implementation Notes:**
 - Use `gomock.NewController(t)` for mock setup
@@ -194,8 +194,8 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 - Unit tests only (not an adapter)
 
 **Test Cases:**
-- `TestCGWT_detectSingleRepoMode_ValidRepo`: Test successful detection in current directory
-- `TestCGWT_detectSingleRepoMode_NoRepo`: Test when no repository found in current directory
+- `TestWTM_detectSingleRepoMode_ValidRepo`: Test successful detection in current directory
+- `TestWTM_detectSingleRepoMode_NoRepo`: Test when no repository found in current directory
 
 **Implementation Notes:**
 - Test private methods by accessing them directly in test package
@@ -214,8 +214,8 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 - Integration tests for adapters only
 
 **Test Cases:**
-- `TestCGWT_Run_RealRepository`: Test with cloned repositories in current directory
-- `TestCGWT_Run_DifferentRepoTypes`: Test various Git repository configurations
+- `TestWTM_Run_RealRepository`: Test with cloned repositories in current directory
+- `TestWTM_Run_DifferentRepoTypes`: Test various Git repository configurations
 
 **Implementation Notes:**
 - Clone real repositories for testing (e.g., small test repos)
@@ -232,9 +232,9 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 - Integration tests for adapters only
 
 **Test Cases:**
-- `TestCGWT_Run_Symlinks`: Test with symbolic links
-- `TestCGWT_Run_BrokenPermissions`: Test with permission issues
-- `TestCGWT_Run_NetworkDrives`: Test with network-mounted directories
+- `TestWTM_Run_Symlinks`: Test with symbolic links
+- `TestWTM_Run_BrokenPermissions`: Test with permission issues
+- `TestWTM_Run_NetworkDrives`: Test with network-mounted directories
 
 **Implementation Notes:**
 - Create controlled edge case scenarios
@@ -252,7 +252,7 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 4. Ensure cross-platform compatibility
 5. Generate mock files as `mockfs.gen.go` using `go generate` and commit them
 
-### Phase 2: CGWT Package Implementation (Priority: High)
+### Phase 2: WTM Package Implementation (Priority: High)
 1. Implement `Run()` function with basic Git repository detection
 2. Add private helper functions (`detectSingleRepoMode()`)
 3. Create error types and messages
@@ -260,7 +260,7 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 5. Add Cobra integration in main.go with root command, `create` subcommand, and mode flags
 
 ### Phase 3: Integration (Priority: Medium)
-1. Integrate FS and CGWT packages in main application
+1. Integrate FS and WTM packages in main application
 2. Add integration tests with real file system using build tags
 3. Performance optimization
 4. Documentation updates
@@ -317,7 +317,7 @@ The CGWT package uses the FS adapter to implement Git repository detection:
 - Mock files should be committed to the repository as `mockfs.gen.go`
 - Exit immediately with exit code 1 on errors
 - FS package uses integration tests only (adapter)
-- CGWT package uses unit tests only (business logic)
+- WTM package uses unit tests only (business logic)
 - Support three output modes: quiet (errors to stderr only), verbose (detailed steps), normal (user interaction only)
 - Only adapters should have integration tests
 - Separate test files: integration tests for adapters, unit tests for business logic

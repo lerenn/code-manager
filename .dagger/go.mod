@@ -1,4 +1,4 @@
-module dagger/cgwt
+module dagger/wtm
 
 go 1.23.8
 

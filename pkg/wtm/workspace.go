@@ -1,4 +1,4 @@
-package cgwt
+package wtm
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// WorkspaceConfig represents a VS Code/Cursor workspace configuration.
+// WorkspaceConfig represents a VS Code-like workspace configuration.
 type WorkspaceConfig struct {
 	Name       string                 `json:"name,omitempty"`
 	Folders    []WorkspaceFolder      `json:"folders"`
@@ -22,7 +22,7 @@ type WorkspaceFolder struct {
 }
 
 // detectWorkspaceMode checks if the current directory contains workspace files.
-func (c *realCGWT) detectWorkspaceMode() ([]string, error) {
+func (c *realWTM) detectWorkspaceMode() ([]string, error) {
 	c.verbosePrint("Checking for .code-workspace files...")
 
 	// Check for workspace files
@@ -41,7 +41,7 @@ func (c *realCGWT) detectWorkspaceMode() ([]string, error) {
 }
 
 // parseWorkspaceFile parses a workspace configuration file.
-func (c *realCGWT) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) {
+func (c *realWTM) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) {
 	c.verbosePrint("Parsing workspace configuration...")
 
 	// Read workspace file
@@ -91,7 +91,7 @@ func (c *realCGWT) parseWorkspaceFile(filename string) (*WorkspaceConfig, error)
 }
 
 // getWorkspaceName extracts the workspace name from configuration or filename.
-func (c *realCGWT) getWorkspaceName(config *WorkspaceConfig, filename string) string {
+func (c *realWTM) getWorkspaceName(config *WorkspaceConfig, filename string) string {
 	// First try to get name from workspace configuration
 	if config.Name != "" {
 		return config.Name
@@ -102,7 +102,7 @@ func (c *realCGWT) getWorkspaceName(config *WorkspaceConfig, filename string) st
 }
 
 // handleMultipleWorkspaces handles the selection of workspace files when multiple are found.
-func (c *realCGWT) handleMultipleWorkspaces(workspaceFiles []string) (string, error) {
+func (c *realWTM) handleMultipleWorkspaces(workspaceFiles []string) (string, error) {
 	c.verbosePrint(fmt.Sprintf("Multiple workspace files found: %d", len(workspaceFiles)))
 
 	// Display selection prompt
@@ -132,7 +132,7 @@ func (c *realCGWT) handleMultipleWorkspaces(workspaceFiles []string) (string, er
 }
 
 // displayWorkspaceSelection displays the workspace selection prompt.
-func (c *realCGWT) displayWorkspaceSelection(workspaceFiles []string) {
+func (c *realWTM) displayWorkspaceSelection(workspaceFiles []string) {
 	fmt.Println("Multiple workspace files found. Please select one:")
 	fmt.Println()
 
@@ -145,12 +145,12 @@ func (c *realCGWT) displayWorkspaceSelection(workspaceFiles []string) {
 }
 
 // getUserSelection gets and validates user input for workspace selection.
-func (c *realCGWT) getUserSelection(maxChoice int) (int, error) {
+func (c *realWTM) getUserSelection(maxChoice int) (int, error) {
 	return c.getUserSelectionWithRetries(maxChoice, 3)
 }
 
 // getUserSelectionWithRetries gets and validates user input with retry limit.
-func (c *realCGWT) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
+func (c *realWTM) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
 	if retries <= 0 {
 		return 0, fmt.Errorf("too many invalid inputs, user cancelled selection")
 	}
@@ -182,7 +182,7 @@ func (c *realCGWT) getUserSelectionWithRetries(maxChoice int, retries int) (int,
 }
 
 // isQuitCommand checks if the input is a quit command.
-func (c *realCGWT) isQuitCommand(input string) bool {
+func (c *realWTM) isQuitCommand(input string) bool {
 	quitCommands := []string{"q", "quit", "exit", "cancel"}
 	for _, cmd := range quitCommands {
 		if input == cmd {
@@ -193,24 +193,24 @@ func (c *realCGWT) isQuitCommand(input string) bool {
 }
 
 // parseNumericInput parses numeric input from string.
-func (c *realCGWT) parseNumericInput(input string) (int, error) {
+func (c *realWTM) parseNumericInput(input string) (int, error) {
 	var choice int
 	_, err := fmt.Sscanf(input, "%d", &choice)
 	return choice, err
 }
 
 // isValidChoice checks if the choice is within valid range.
-func (c *realCGWT) isValidChoice(choice, maxChoice int) bool {
+func (c *realWTM) isValidChoice(choice, maxChoice int) bool {
 	return choice >= 1 && choice <= maxChoice
 }
 
 // confirmSelection asks the user to confirm their workspace selection.
-func (c *realCGWT) confirmSelection(workspaceFile string) (bool, error) {
+func (c *realWTM) confirmSelection(workspaceFile string) (bool, error) {
 	return c.confirmSelectionWithRetries(workspaceFile, 3)
 }
 
 // confirmSelectionWithRetries asks the user to confirm their workspace selection with retry limit.
-func (c *realCGWT) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
+func (c *realWTM) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
 	if retries <= 0 {
 		return false, fmt.Errorf("too many invalid inputs, user cancelled confirmation")
 	}
@@ -235,7 +235,7 @@ func (c *realCGWT) confirmSelectionWithRetries(workspaceFile string, retries int
 }
 
 // parseConfirmationInput parses confirmation input.
-func (c *realCGWT) parseConfirmationInput(input string) (bool, error) {
+func (c *realWTM) parseConfirmationInput(input string) (bool, error) {
 	switch input {
 	case "y", "yes", "Y", "YES":
 		return true, nil

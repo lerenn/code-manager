@@ -1,6 +1,6 @@
-# Default configuration for CGWT
+# Default configuration for WTM
 # This file shows the default configuration structure
 
-# Base path for CGWT data storage
-# Default: $HOME/.cursor/cgwt
-base_path: ~/.cursor/cgwt
+# Base path for WTM data storage
+# Default: $HOME/.wtm
+base_path: ~/.wtm
