@@ -66,7 +66,7 @@ func (c *realManager) DefaultConfig() *Config {
 		homeDir = "."
 	}
 
-	basePath := filepath.Join(homeDir, ".cursor", "wtm")
+	basePath := filepath.Join(homeDir, "wtm")
 	statusFile := filepath.Join(basePath, "status.yaml")
 
 	return &Config{

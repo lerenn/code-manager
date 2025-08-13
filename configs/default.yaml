@@ -2,5 +2,9 @@
 # This file shows the default configuration structure
 
 # Base path for WTM data storage
-# Default: $HOME/.wtm
+# Default: $HOME/.cursor/wtm
 base_path: ~/.wtm
+
+# Status file path (auto-generated from base_path)
+# Default: $HOME/.cursor/wtm/status.yaml
+status_file: ~/.wtm/status.yaml

@@ -54,7 +54,6 @@ func TestRealManager_DefaultConfig(t *testing.T) {
 
 	assert.NotNil(t, config)
 	assert.NotEmpty(t, config.BasePath)
-	assert.Contains(t, config.BasePath, ".cursor")
 	assert.Contains(t, config.BasePath, "wtm")
 }
 
@@ -126,6 +125,5 @@ func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
 
 	assert.NoError(t, err) // Should not error, should fallback to default
 	assert.NotNil(t, config)
-	assert.Contains(t, config.BasePath, ".cursor")
 	assert.Contains(t, config.BasePath, "wtm")
 }
