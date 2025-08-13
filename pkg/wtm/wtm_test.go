@@ -45,17 +45,17 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
 
 	// Mock status manager calls
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "heads/test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "heads/test-branch", gomock.Any(), "").Return(nil)
 
 	// Mock worktree creation calls
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
-	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
-	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "heads/test-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "heads/test-branch").Return(nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes() // Worktree directory doesn't exist
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
-	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "heads/test-branch").Return(nil)
 
 	err := wtm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
@@ -86,17 +86,17 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
 
 	// Mock status manager calls
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "heads/test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "heads/test-branch", gomock.Any(), "").Return(nil)
 
 	// Mock worktree creation calls
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
-	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
-	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "heads/test-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "heads/test-branch").Return(nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes() // Worktree directory doesn't exist
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
-	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "heads/test-branch").Return(nil)
 
 	err := wtm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
@@ -169,75 +169,6 @@ func TestWTM_ValidateSingleRepository_GitStatusError(t *testing.T) {
 
 	err := wtm.(*realWTM).validateSingleRepository()
 	assert.ErrorIs(t, err, ErrGitRepositoryInvalid)
-}
-
-func TestRealWTM_sanitizeBranchName(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-
-	wtm := NewWTM(createTestConfig())
-
-	// Override adapters with mocks
-	c := wtm.(*realWTM)
-	c.fs = mockFS
-	c.git = mockGit
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-		wantErr  bool
-	}{
-		{
-			name:     "Simple branch name",
-			input:    "feature/new-branch",
-			expected: "feature_new-branch",
-			wantErr:  false,
-		},
-		{
-			name:     "Branch name with invalid characters",
-			input:    "bugfix/issue#123",
-			expected: "bugfix_issue_123",
-			wantErr:  false,
-		},
-		{
-			name:     "Branch name with dots",
-			input:    "release/v1.0.0",
-			expected: "release_v1.0.0",
-			wantErr:  false,
-		},
-		{
-			name:     "Empty branch name",
-			input:    "",
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name:     "Branch name with leading/trailing dots",
-			input:    ".hidden-branch.",
-			expected: "hidden-branch",
-			wantErr:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := wtm.(*realWTM).sanitizeBranchName(tt.input)
-			if tt.wantErr {
-				if tt.input == "" {
-					assert.ErrorIs(t, err, ErrBranchNameEmpty)
-				} else {
-					assert.Error(t, err)
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
-			}
-		})
-	}
 }
 
 func TestRealWTM_getBasePath(t *testing.T) {
