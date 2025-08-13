@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// WorkspaceConfig represents a VS Code/Cursor workspace configuration.
+// WorkspaceConfig represents a VS Code-like workspace configuration.
 type WorkspaceConfig struct {
 	Name       string                 `json:"name,omitempty"`
 	Folders    []WorkspaceFolder      `json:"folders"`

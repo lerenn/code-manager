@@ -1,10 +1,10 @@
 # Feature 002: Detect Workspace Mode
 
 ## Overview
-Implement functionality to detect when the current working directory contains a `.code-workspace` file, indicating a multi-repository workspace configuration for VS Code/Cursor.
+Implement functionality to detect when the current working directory contains a `.code-workspace` file, indicating a multi-repository workspace configuration for VS Code like IDEs.
 
 ## Background
-The Cursor Git WorkTree Manager (wtm) needs to distinguish between single repository mode and workspace mode. Workspace mode is indicated by the presence of a `.code-workspace` file, which contains configuration for managing multiple repositories within a single workspace. This feature builds upon the single repository detection from Feature 001.
+The Git WorkTree Manager (wtm) needs to distinguish between single repository mode and workspace mode. Workspace mode is indicated by the presence of a `.code-workspace` file, which contains configuration for managing multiple repositories within a single workspace. This feature builds upon the single repository detection from Feature 001.
 
 ## Requirements
 

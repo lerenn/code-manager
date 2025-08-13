@@ -4,7 +4,7 @@
 Implement comprehensive validation for both single repository and workspace modes to ensure all Git repositories are properly configured and accessible before proceeding with worktree operations.
 
 ## Background
-The Cursor Git WorkTree Manager (wtm) needs to validate that the project structure and Git configuration are in a working state before creating or managing worktrees. This validation serves as a prerequisite for all worktree operations and ensures that the tool can safely interact with Git repositories.
+The Git WorkTree Manager (wtm) needs to validate that the project structure and Git configuration are in a working state before creating or managing worktrees. This validation serves as a prerequisite for all worktree operations and ensures that the tool can safely interact with Git repositories.
 
 ## Requirements
 

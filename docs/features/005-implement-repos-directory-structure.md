@@ -4,7 +4,7 @@
 Implement functionality to create and manage the directory structure `$HOME/.wtm/repos/<repo>/<branch>/` for organizing Git worktrees for individual repositories.
 
 ## Background
-The Cursor Git WorkTree Manager (wtm) needs a standardized directory structure to organize and manage Git worktrees. This feature establishes the foundation for storing worktrees for single repositories, providing a clean separation between different repos and branches.
+The Git WorkTree Manager (wtm) needs a standardized directory structure to organize and manage Git worktrees. This feature establishes the foundation for storing worktrees for single repositories, providing a clean separation between different repos and branches.
 
 ## Requirements
 

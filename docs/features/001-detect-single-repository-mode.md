@@ -4,7 +4,7 @@
 Implement functionality to detect when the current working directory is a single Git repository by checking for the presence of a `.git` folder.
 
 ## Background
-The Cursor Git WorkTree Manager (wtm) needs to distinguish between different project types to provide appropriate worktree management. The first step is detecting single repository mode, which is the foundation for all other features.
+The Git WorkTree Manager (wtm) needs to distinguish between different project types to provide appropriate worktree management. The first step is detecting single repository mode, which is the foundation for all other features.
 
 ## Requirements
 

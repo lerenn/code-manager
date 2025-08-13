@@ -1,4 +1,4 @@
-# Cursor Git WorkTree Manager - Backlog
+# Git WorkTree Manager - Backlog
 
 - **11. Create worktrees for single repositories**
   - **Blocked by:** 4, 5, 6, 7

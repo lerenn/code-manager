@@ -4,7 +4,7 @@
 Implement functionality to create and manage a `status.yaml` file that tracks worktrees present in `$HOME/.wtm` and links them to their original repositories. This provides a centralized registry of all worktrees and their metadata for future worktree management features.
 
 ## Background
-The Cursor Git WorkTree Manager (wtm) needs a persistent state tracking mechanism to maintain information about created worktrees and their relationships to original repositories. This status file will serve as the authoritative source for worktree locations, branch information, and workspace associations, enabling efficient worktree management operations.
+The Git WorkTree Manager (wtm) needs a persistent state tracking mechanism to maintain information about created worktrees and their relationships to original repositories. This status file will serve as the authoritative source for worktree locations, branch information, and workspace associations, enabling efficient worktree management operations.
 
 ## Requirements
 

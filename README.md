@@ -1,10 +1,10 @@
-# Cursor Git WorkTree Manager (wtm)
+# Git WorkTree Manager (wtm)
 
-A powerful Go CLI tool for managing Git worktrees specifically designed for Cursor IDE. Enables parallel development across different branches and repositories with seamless Cursor integration.
+A powerful Go CLI tool for managing Git worktrees specifically designed for IDE. Enables parallel development across different branches and repositories with seamless IDE integration.
 
 ## Overview
 
-`wtm` is a command-line interface that simplifies Git worktree management for both single repositories and multi-repo workspaces. It automatically detects your project type and provides intelligent worktree creation, management, and Cursor integration.
+`wtm` is a command-line interface that simplifies Git worktree management for both single repositories and multi-repo workspaces. It automatically detects your project type and provides intelligent worktree creation, management, and IDE integration.
 
 ## Features
 
@@ -18,10 +18,10 @@ A powerful Go CLI tool for managing Git worktrees specifically designed for Curs
 - Automatic cleanup for ephemeral worktrees
 - Support for both single repos and multi-repo workspaces
 
-### 🚀 Cursor Integration
-- Direct Cursor launch with `-C` flag
+### 🚀 IDE Integration
+- Direct IDE launch with `-i` flag
 - Seamless workspace duplication
-- Optimized for Cursor's workflow
+- Optimized for VSCode Based IDE's workflow
 
 ### 📊 Flexible Output
 - Human-readable output for terminal usage
@@ -52,8 +52,8 @@ wtm create <branch-name>
 # Create an ephemeral worktree
 wtm create <branch-name> -e
 
-# Open worktree in Cursor
-wtm create <branch-name> -C
+# Open worktree in IDE
+wtm create <branch-name> -i cursor
 
 # List all worktrees
 wtm list
@@ -85,8 +85,7 @@ $HOME/.wtm/workspaces/<workspace-name>/<branch-name>/<repo-name>/
 Creates a new worktree for the specified branch.
 
 **Options:**
-- `-e, --ephemeral`: Create an ephemeral worktree (auto-cleanup on Cursor exit)
-- `-C, --cursor`: Open the worktree in Cursor after creation
+- `-i, --ide`: Open the worktree in IDE after creation
 - `--json`: Output creation details in JSON format
 
 **Examples:**
@@ -94,8 +93,8 @@ Creates a new worktree for the specified branch.
 # Create persistent worktree
 wtm create feature/new-feature
 
-# Create ephemeral worktree and open in Cursor
-wtm create hotfix/bug-fix -e -C
+# Create worktree and open in Cursor IDE
+wtm create hotfix/bug-fix -i cursor
 ```
 
 ### `list [options]`
@@ -130,14 +129,9 @@ Safely removes a worktree and cleans up Git state.
 ## Worktree Types
 
 ### Persistent Worktrees
-- Survive Cursor restarts
+- Survive IDE restarts
 - Manual cleanup required
 - Ideal for long-term feature development
-
-### Ephemeral Worktrees
-- Automatically cleaned up when Cursor exits
-- Perfect for quick experiments and testing
-- Reduces disk space usage
 
 ## Safety Features
 

@@ -1,6 +1,6 @@
 # WTM Configuration
 
-This directory contains example configuration files for the Cursor Git WorkTree Manager (WTM).
+This directory contains example configuration files for the Git WorkTree Manager (WTM).
 
 ## Configuration Files
 

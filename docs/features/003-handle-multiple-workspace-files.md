@@ -4,7 +4,7 @@
 Implement functionality to handle scenarios where multiple `.code-workspace` files are found in the current working directory, providing an interactive selection prompt to allow users to choose which workspace file to use.
 
 ## Background
-The Cursor Git WorkTree Manager (wtm) needs to handle cases where users have multiple workspace configurations in the same directory. This can happen when:
+The Git WorkTree Manager (wtm) needs to handle cases where users have multiple workspace configurations in the same directory. This can happen when:
 - Users maintain different workspace configurations for different purposes
 - Legacy workspace files are not cleaned up
 - Users are experimenting with different workspace setups
