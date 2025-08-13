@@ -16,7 +16,7 @@ import (
 // WTM interface provides Git repository detection functionality.
 type WTM interface {
 	// CreateWorkTree executes the main application logic.
-	CreateWorkTree() error
+	CreateWorkTree(branch string) error
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
 }
@@ -53,13 +53,24 @@ func (c *realWTM) SetVerbose(verbose bool) {
 }
 
 // CreateWorkTree executes the main application logic.
-func (c *realWTM) CreateWorkTree() error {
-	if c.verbose {
-		c.logger.Logf("Starting WTM execution")
+func (c *realWTM) CreateWorkTree(branch string) error {
+	// Sanitize branch name first
+	sanitizedBranch, err := c.sanitizeBranchName(branch)
+	if err != nil {
+		return err
 	}
 
-	// Detect project mode once and store results
-	projectType, workspaceFiles, err := c.detectProjectType()
+	// Log if branch name was sanitized (appears in normal and verbose modes, but not quiet)
+	if sanitizedBranch != branch {
+		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
+	}
+
+	if c.verbose {
+		c.logger.Logf("Starting WTM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
+	}
+
+	// Detect and validate project
+	projectType, _, err := c.detectAndValidateProject()
 	if err != nil {
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
@@ -67,16 +78,8 @@ func (c *realWTM) CreateWorkTree() error {
 		return err
 	}
 
-	// Handle detection output (Features 001, 002, 003)
-	if err := c.handleProjectDetection(projectType, workspaceFiles); err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return err
-	}
-
-	// Validation logic (Feature 004)
-	if err := c.validateProjectStructureWithResults(projectType, workspaceFiles); err != nil {
+	// Create worktree for single repository (Feature 011)
+	if err := c.handleWorktreeCreation(sanitizedBranch, projectType); err != nil {
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
@@ -85,6 +88,38 @@ func (c *realWTM) CreateWorkTree() error {
 
 	if c.verbose {
 		c.logger.Logf("WTM execution completed successfully")
+	}
+
+	return nil
+}
+
+// detectAndValidateProject handles project detection and validation.
+func (c *realWTM) detectAndValidateProject() (ProjectType, []string, error) {
+	// Detect project mode once and store results
+	projectType, workspaceFiles, err := c.detectProjectType()
+	if err != nil {
+		return ProjectTypeNone, nil, err
+	}
+
+	// Handle detection output (Features 001, 002, 003)
+	if err := c.handleProjectDetection(projectType, workspaceFiles); err != nil {
+		return ProjectTypeNone, nil, err
+	}
+
+	// Validation logic (Feature 004)
+	if err := c.validateProjectStructureWithResults(projectType, workspaceFiles); err != nil {
+		return ProjectTypeNone, nil, err
+	}
+
+	return projectType, workspaceFiles, nil
+}
+
+// handleWorktreeCreation handles worktree creation for single repositories.
+func (c *realWTM) handleWorktreeCreation(branch string, projectType ProjectType) error {
+	if projectType == ProjectTypeSingleRepo {
+		if err := c.createWorktreeForSingleRepo(branch); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -131,7 +166,7 @@ func (c *realWTM) detectSingleRepoMode() (bool, error) {
 
 // handleSingleRepoMode handles the output for single repository mode.
 func (c *realWTM) handleSingleRepoMode() {
-	fmt.Println("Single repository mode detected")
+	c.verbosePrint("Single repository mode detected")
 }
 
 // handleWorkspaceMode handles the output for workspace mode.
@@ -144,7 +179,7 @@ func (c *realWTM) handleWorkspaceMode(workspaceFile string) error {
 	c.verbosePrint("Workspace mode detected")
 
 	workspaceName := c.getWorkspaceName(workspaceConfig, workspaceFile)
-	fmt.Printf("Found workspace: %s\n", workspaceName)
+	c.verbosePrint(fmt.Sprintf("Found workspace: %s", workspaceName))
 
 	if c.verbose {
 		c.verbosePrint("Workspace configuration:")
@@ -158,7 +193,7 @@ func (c *realWTM) handleWorkspaceMode(workspaceFile string) error {
 
 // handleNoProjectFound handles the output when no project is found.
 func (c *realWTM) handleNoProjectFound() {
-	fmt.Println("No Git repository or workspace found")
+	c.logger.Logf("No Git repository or workspace found")
 }
 
 // validateSingleRepository validates that the current directory is a working Git repository.
@@ -371,6 +406,7 @@ func (c *realWTM) validateGitConfiguration(workDir string) error {
 // ProjectType represents the type of project detected.
 type ProjectType int
 
+// Project type constants.
 const (
 	ProjectTypeNone ProjectType = iota
 	ProjectTypeSingleRepo
@@ -450,112 +486,7 @@ func (c *realWTM) validateProjectStructureWithResults(projectType ProjectType, w
 	return nil
 }
 
-// createReposDirectoryStructure creates the directory structure for repository worktrees.
-//
-//nolint:unused // This method will be used in the Run() method in future features
-func (c *realWTM) createReposDirectoryStructure(repoName, branchName string) (string, error) {
-	if c.verbose {
-		c.logger.Logf("Creating directory structure for repo: %s, branch: %s", repoName, branchName)
-	}
-
-	// Sanitize repository and branch names
-	sanitizedRepo, err := c.sanitizeRepositoryName(repoName)
-	if err != nil {
-		return "", fmt.Errorf("failed to sanitize repository name: %w", err)
-	}
-
-	sanitizedBranch, err := c.sanitizeBranchName(branchName)
-	if err != nil {
-		return "", fmt.Errorf("failed to sanitize branch name: %w", err)
-	}
-
-	// Get base path from config
-	basePath, err := c.getBasePath()
-	if err != nil {
-		return "", fmt.Errorf("failed to get base path: %w", err)
-	}
-
-	// Construct full path
-	fullPath := filepath.Join(basePath, "repos", sanitizedRepo, sanitizedBranch)
-
-	if c.verbose {
-		c.logger.Logf("Creating directory structure: %s", fullPath)
-	}
-
-	// Create directory structure
-	err = c.fs.MkdirAll(fullPath, 0755)
-	if err != nil {
-		return "", fmt.Errorf("failed to create directory structure: %w", err)
-	}
-
-	if c.verbose {
-		c.logger.Logf("Successfully created directory structure: %s", fullPath)
-	}
-
-	return fullPath, nil
-}
-
-// sanitizeRepositoryName extracts and sanitizes repository name from Git remote URL.
-//
-//nolint:unused // This method will be used in the Run() method in future features
-func (c *realWTM) sanitizeRepositoryName(remoteURL string) (string, error) {
-	if remoteURL == "" {
-		return "", ErrRepositoryURLEmpty
-	}
-
-	// Remove .git suffix if present
-	repoName := strings.TrimSuffix(remoteURL, ".git")
-
-	// Extract repository path from URL
-	repoName = c.extractRepoPathFromURL(repoName)
-
-	// Sanitize repository name for filesystem
-	// Replace invalid characters with underscores (but preserve forward slashes)
-	invalidChars := regexp.MustCompile(`[<>:"\\|?*]`)
-	sanitized := invalidChars.ReplaceAllString(repoName, "_")
-
-	// Remove leading/trailing underscores and dots
-	sanitized = strings.Trim(sanitized, "._")
-
-	if sanitized == "" {
-		return "", ErrRepositoryNameEmptyAfterSanitization
-	}
-
-	return sanitized, nil
-}
-
-// extractRepoPathFromURL extracts the repository path from various URL formats.
-//
-//nolint:unused // This method will be used in the Run() method in future features
-func (c *realWTM) extractRepoPathFromURL(repoName string) string {
-	// Handle SSH format: git@github.com:user/repo.git
-	if strings.Contains(repoName, "git@") {
-		parts := strings.Split(repoName, ":")
-		if len(parts) == 2 {
-			return parts[1]
-		}
-		return repoName
-	}
-
-	// Handle HTTPS format: https://github.com/user/repo
-	// Extract everything after the domain
-	urlParts := strings.Split(repoName, "://")
-	if len(urlParts) != 2 {
-		return repoName
-	}
-
-	pathParts := strings.Split(urlParts[1], "/")
-	if len(pathParts) >= 3 {
-		// Remove domain and take user/repo parts
-		return strings.Join(pathParts[1:], "/")
-	}
-
-	return repoName
-}
-
 // sanitizeBranchName validates and sanitizes branch name for safe directory creation.
-//
-//nolint:unused // This method will be used in the Run() method in future features
 func (c *realWTM) sanitizeBranchName(branchName string) (string, error) {
 	if branchName == "" {
 		return "", ErrBranchNameEmpty
@@ -583,8 +514,6 @@ func (c *realWTM) sanitizeBranchName(branchName string) (string, error) {
 }
 
 // getBasePath returns the base path from configuration.
-//
-//nolint:unused // This method will be used in the Run() method in future features
 func (c *realWTM) getBasePath() (string, error) {
 	if c.config == nil {
 		return "", ErrConfigurationNotInitialized
@@ -597,79 +526,207 @@ func (c *realWTM) getBasePath() (string, error) {
 	return c.config.BasePath, nil
 }
 
-// addWorktreeToStatus adds a worktree entry to the status file.
-//
-//nolint:unused // This method is used internally
-func (c *realWTM) addWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error {
+// createWorktreeForSingleRepo creates a worktree for a single repository.
+func (c *realWTM) createWorktreeForSingleRepo(branch string) error {
 	if c.verbose {
-		c.logger.Logf("Adding worktree to status: repo=%s, branch=%s, path=%s, workspace=%s",
-			repoName, branch, worktreePath, workspacePath)
+		c.logger.Logf("Creating worktree for single repository with branch: %s", branch)
 	}
 
-	err := c.statusManager.AddWorktree(repoName, branch, worktreePath, workspacePath)
+	// Validate and prepare repository
+	repoURL, worktreePath, err := c.prepareWorktreeCreation(branch)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrAddWorktreeToStatus, err)
+		return err
+	}
+
+	// Create the worktree
+	if err := c.executeWorktreeCreation(repoURL, branch, worktreePath); err != nil {
+		return err
 	}
 
 	if c.verbose {
-		c.logger.Logf("Successfully added worktree to status")
+		c.logger.Logf("Successfully created worktree for branch %s at %s", branch, worktreePath)
 	}
 
 	return nil
 }
 
-// removeWorktreeFromStatus removes a worktree entry from the status file.
-//
-//nolint:unused // This method is used internally
-func (c *realWTM) removeWorktreeFromStatus(repoName, branch string) error {
-	if c.verbose {
-		c.logger.Logf("Removing worktree from status: repo=%s, branch=%s", repoName, branch)
-	}
-
-	err := c.statusManager.RemoveWorktree(repoName, branch)
+// prepareWorktreeCreation validates the repository and prepares the worktree path.
+func (c *realWTM) prepareWorktreeCreation(branch string) (string, string, error) {
+	// Validate repository
+	repoURL, err := c.validateRepository(branch)
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrRemoveWorktreeFromStatus, err)
+		return "", "", err
+	}
+
+	// Prepare worktree path
+	worktreePath, err := c.prepareWorktreePath(repoURL, branch)
+	if err != nil {
+		return "", "", err
+	}
+
+	return repoURL, worktreePath, nil
+}
+
+// validateRepository validates the repository and gets the repository name.
+func (c *realWTM) validateRepository(branch string) (string, error) {
+	// Get current working directory
+	currentDir, err := filepath.Abs(".")
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Validate that we're in a Git repository
+	isSingleRepo, err := c.detectSingleRepoMode()
+	if err != nil {
+		return "", fmt.Errorf("failed to validate Git repository: %w", err)
+	}
+	if !isSingleRepo {
+		return "", fmt.Errorf("current directory is not a Git repository")
+	}
+
+	// Get repository URL from remote origin URL with fallback to local path
+	repoURL, err := c.git.GetRepositoryName(currentDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to get repository URL: %w", err)
 	}
 
 	if c.verbose {
-		c.logger.Logf("Successfully removed worktree from status")
+		c.logger.Logf("Repository URL: %s", repoURL)
+	}
+
+	// Check if worktree already exists in status file
+	existingWorktree, err := c.statusManager.GetWorktree(repoURL, branch)
+	if err == nil && existingWorktree != nil {
+		return "", fmt.Errorf("%w for repository %s branch %s", ErrWorktreeExists, repoURL, branch)
+	}
+
+	// Validate repository state (placeholder for future validation)
+	isClean, err := c.git.IsClean(currentDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to check repository state: %w", err)
+	}
+	if !isClean {
+		return "", fmt.Errorf("%w: repository is not in a clean state", ErrRepositoryNotClean)
+	}
+
+	return repoURL, nil
+}
+
+// prepareWorktreePath prepares the worktree directory path.
+func (c *realWTM) prepareWorktreePath(repoURL, branch string) (string, error) {
+	// Get base path from configuration
+	basePath, err := c.getBasePath()
+	if err != nil {
+		return "", fmt.Errorf("failed to get base path: %w", err)
+	}
+
+	// Create worktree directory path
+	worktreePath := filepath.Join(basePath, repoURL, branch)
+
+	if c.verbose {
+		c.logger.Logf("Worktree path: %s", worktreePath)
+	}
+
+	// Check if worktree directory already exists
+	exists, err := c.fs.Exists(worktreePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to check if worktree directory exists: %w", err)
+	}
+	if exists {
+		return "", fmt.Errorf("%w: worktree directory already exists at %s", ErrDirectoryExists, worktreePath)
+	}
+
+	// Create worktree directory structure
+	if err := c.fs.MkdirAll(filepath.Dir(worktreePath), 0755); err != nil {
+		return "", fmt.Errorf("failed to create worktree directory structure: %w", err)
+	}
+
+	return worktreePath, nil
+}
+
+// executeWorktreeCreation creates the branch and worktree.
+func (c *realWTM) executeWorktreeCreation(repoURL, branch, worktreePath string) error {
+	currentDir, err := filepath.Abs(".")
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Ensure branch exists
+	if err := c.ensureBranchExists(currentDir, branch); err != nil {
+		return err
+	}
+
+	// Create worktree with cleanup
+	if err := c.createWorktreeWithCleanup(repoURL, branch, worktreePath, currentDir); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-// getWorktreeStatus retrieves the status of a specific worktree.
-//
-//nolint:unused // This method is used internally
-func (c *realWTM) getWorktreeStatus(repoName, branch string) (*status.Repository, error) {
-	if c.verbose {
-		c.logger.Logf("Getting worktree status: repo=%s, branch=%s", repoName, branch)
-	}
-
-	repo, err := c.statusManager.GetWorktree(repoName, branch)
+// ensureBranchExists ensures the branch exists, creating it if necessary.
+func (c *realWTM) ensureBranchExists(currentDir, branch string) error {
+	branchExists, err := c.git.BranchExists(currentDir, branch)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrGetWorktreeStatus, err)
+		return fmt.Errorf("failed to check if branch exists: %w", err)
 	}
 
-	return repo, nil
+	if !branchExists {
+		if c.verbose {
+			c.logger.Logf("Branch %s does not exist, creating from current branch", branch)
+		}
+		if err := c.git.CreateBranch(currentDir, branch); err != nil {
+			return fmt.Errorf("failed to create branch %s: %w", branch, err)
+		}
+	}
+
+	return nil
 }
 
-// listAllWorktrees lists all tracked worktrees.
-//
-//nolint:unused // This method is used internally
-func (c *realWTM) listAllWorktrees() ([]status.Repository, error) {
-	if c.verbose {
-		c.logger.Logf("Listing all worktrees")
+// createWorktreeWithCleanup creates the worktree with proper cleanup on failure.
+func (c *realWTM) createWorktreeWithCleanup(repoURL, branch, worktreePath, currentDir string) error {
+	// Update status file with worktree entry (before creating the worktree for proper cleanup)
+	if err := c.statusManager.AddWorktree(repoURL, branch, currentDir, ""); err != nil {
+		// Clean up created directory on status update failure
+		if cleanupErr := c.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+			c.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
+		}
+		return fmt.Errorf("failed to add worktree to status: %w", err)
 	}
 
-	repos, err := c.statusManager.ListAllWorktrees()
+	// Create the Git worktree
+	if err := c.git.CreateWorktree(currentDir, worktreePath, branch); err != nil {
+		// Clean up on worktree creation failure
+		if cleanupErr := c.statusManager.RemoveWorktree(repoURL, branch); cleanupErr != nil {
+			c.logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
+		}
+		if cleanupErr := c.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+			c.logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
+		}
+		return fmt.Errorf("failed to create Git worktree: %w", err)
+	}
+
+	return nil
+}
+
+// cleanupWorktreeDirectory removes the worktree directory and parent directories if empty.
+func (c *realWTM) cleanupWorktreeDirectory(worktreePath string) error {
+	if c.verbose {
+		c.logger.Logf("Cleaning up worktree directory: %s", worktreePath)
+	}
+
+	// Remove the worktree directory if it exists
+	exists, err := c.fs.Exists(worktreePath)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrListWorktrees, err)
+		return fmt.Errorf("failed to check if worktree directory exists: %w", err)
 	}
 
-	if c.verbose {
-		c.logger.Logf("Found %d worktrees", len(repos))
+	if exists {
+		// Remove the worktree directory
+		if err := c.fs.RemoveAll(worktreePath); err != nil {
+			return fmt.Errorf("failed to remove worktree directory: %w", err)
+		}
 	}
 
-	return repos, nil
+	return nil
 }

@@ -187,6 +187,20 @@ func (mr *MockFSMockRecorder) ReadFile(path any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReadFile", reflect.TypeOf((*MockFS)(nil).ReadFile), path)
 }
 
+// RemoveAll mocks base method.
+func (m *MockFS) RemoveAll(path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveAll", path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveAll indicates an expected call of RemoveAll.
+func (mr *MockFSMockRecorder) RemoveAll(path any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAll", reflect.TypeOf((*MockFS)(nil).RemoveAll), path)
+}
+
 // WriteFileAtomic mocks base method.
 func (m *MockFS) WriteFileAtomic(filename string, data []byte, perm os.FileMode) error {
 	m.ctrl.T.Helper()

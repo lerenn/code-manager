@@ -1,3 +1,4 @@
+// Package fs provides file system operations and error definitions.
 package fs
 
 import "errors"

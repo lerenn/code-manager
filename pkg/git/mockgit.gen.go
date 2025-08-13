@@ -39,6 +39,21 @@ func (m *MockGit) EXPECT() *MockGitMockRecorder {
 	return m.recorder
 }
 
+// BranchExists mocks base method.
+func (m *MockGit) BranchExists(repoPath, branch string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BranchExists", repoPath, branch)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BranchExists indicates an expected call of BranchExists.
+func (mr *MockGitMockRecorder) BranchExists(repoPath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchExists", reflect.TypeOf((*MockGit)(nil).BranchExists), repoPath, branch)
+}
+
 // ConfigGet mocks base method.
 func (m *MockGit) ConfigGet(workDir, key string) (string, error) {
 	m.ctrl.T.Helper()
@@ -54,6 +69,79 @@ func (mr *MockGitMockRecorder) ConfigGet(workDir, key any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfigGet", reflect.TypeOf((*MockGit)(nil).ConfigGet), workDir, key)
 }
 
+// CreateBranch mocks base method.
+func (m *MockGit) CreateBranch(repoPath, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateBranch", repoPath, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateBranch indicates an expected call of CreateBranch.
+func (mr *MockGitMockRecorder) CreateBranch(repoPath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBranch", reflect.TypeOf((*MockGit)(nil).CreateBranch), repoPath, branch)
+}
+
+// CreateWorktree mocks base method.
+func (m *MockGit) CreateWorktree(repoPath, worktreePath, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWorktree", repoPath, worktreePath, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateWorktree indicates an expected call of CreateWorktree.
+func (mr *MockGitMockRecorder) CreateWorktree(repoPath, worktreePath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktree", reflect.TypeOf((*MockGit)(nil).CreateWorktree), repoPath, worktreePath, branch)
+}
+
+// GetCurrentBranch mocks base method.
+func (m *MockGit) GetCurrentBranch(repoPath string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCurrentBranch", repoPath)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCurrentBranch indicates an expected call of GetCurrentBranch.
+func (mr *MockGitMockRecorder) GetCurrentBranch(repoPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentBranch", reflect.TypeOf((*MockGit)(nil).GetCurrentBranch), repoPath)
+}
+
+// GetRepositoryName mocks base method.
+func (m *MockGit) GetRepositoryName(repoPath string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRepositoryName", repoPath)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRepositoryName indicates an expected call of GetRepositoryName.
+func (mr *MockGitMockRecorder) GetRepositoryName(repoPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepositoryName", reflect.TypeOf((*MockGit)(nil).GetRepositoryName), repoPath)
+}
+
+// IsClean mocks base method.
+func (m *MockGit) IsClean(repoPath string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsClean", repoPath)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsClean indicates an expected call of IsClean.
+func (mr *MockGitMockRecorder) IsClean(repoPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClean", reflect.TypeOf((*MockGit)(nil).IsClean), repoPath)
+}
+
 // Status mocks base method.
 func (m *MockGit) Status(workDir string) (string, error) {
 	m.ctrl.T.Helper()
@@ -67,4 +155,19 @@ func (m *MockGit) Status(workDir string) (string, error) {
 func (mr *MockGitMockRecorder) Status(workDir any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Status", reflect.TypeOf((*MockGit)(nil).Status), workDir)
+}
+
+// WorktreeExists mocks base method.
+func (m *MockGit) WorktreeExists(repoPath, branch string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WorktreeExists", repoPath, branch)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// WorktreeExists indicates an expected call of WorktreeExists.
+func (mr *MockGitMockRecorder) WorktreeExists(repoPath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorktreeExists", reflect.TypeOf((*MockGit)(nil).WorktreeExists), repoPath, branch)
 }

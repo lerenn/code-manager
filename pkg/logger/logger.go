@@ -1,3 +1,4 @@
+// Package logger provides logging functionality for the WTM application.
 package logger
 
 import (

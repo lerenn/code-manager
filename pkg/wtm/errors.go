@@ -1,3 +1,4 @@
+// Package wtm provides worktree management functionality and error definitions.
 package wtm
 
 import "errors"
@@ -29,9 +30,8 @@ var (
 	ErrWorkspaceDetection                = errors.New("failed to detect workspace mode")
 	ErrWorkspaceEmptyFolders             = errors.New("workspace file must contain non-empty folders array")
 
-	// Status management errors.
-	ErrAddWorktreeToStatus      = errors.New("failed to add worktree to status")
-	ErrRemoveWorktreeFromStatus = errors.New("failed to remove worktree from status")
-	ErrGetWorktreeStatus        = errors.New("failed to get worktree status")
-	ErrListWorktrees            = errors.New("failed to list worktrees")
+	// Worktree creation errors.
+	ErrWorktreeExists     = errors.New("worktree already exists for this branch")
+	ErrRepositoryNotClean = errors.New("repository is not in a clean state")
+	ErrDirectoryExists    = errors.New("worktree directory already exists")
 )

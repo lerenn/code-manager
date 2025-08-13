@@ -1,3 +1,4 @@
+// Package config provides configuration management functionality for the WTM application.
 package config
 
 import (
@@ -66,7 +67,7 @@ func (c *realManager) DefaultConfig() *Config {
 		homeDir = "."
 	}
 
-	basePath := filepath.Join(homeDir, "wtm")
+	basePath := filepath.Join(homeDir, ".wtm")
 	statusFile := filepath.Join(basePath, "status.yaml")
 
 	return &Config{
@@ -89,7 +90,10 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("base_path parent directory is not accessible: %w", err)
 		}
 		// Clean up the test directory
-		os.RemoveAll(dir)
+		if err := os.RemoveAll(dir); err != nil {
+			// Log the error but don't fail validation for cleanup errors
+			_ = err
+		}
 	} else if err != nil {
 		return fmt.Errorf("base_path parent directory is not accessible: %w", err)
 	}

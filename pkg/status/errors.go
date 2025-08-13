@@ -1,3 +1,4 @@
+// Package status provides status management functionality and error definitions.
 package status
 
 import "errors"

@@ -38,7 +38,7 @@ func TestAddWorktree(t *testing.T) {
 	expectedStatus := &Status{
 		Repositories: []Repository{
 			{
-				Name:      repoName,
+				URL:       repoName,
 				Branch:    branch,
 				Path:      worktreePath,
 				Workspace: workspacePath,
@@ -88,7 +88,7 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	existingStatus := &Status{
 		Repositories: []Repository{
 			{
-				Name:      repoName,
+				URL:       repoName,
 				Branch:    branch,
 				Path:      "/existing/path",
 				Workspace: "",
@@ -133,13 +133,13 @@ func TestRemoveWorktree(t *testing.T) {
 	existingStatus := &Status{
 		Repositories: []Repository{
 			{
-				Name:      repoName,
+				URL:       repoName,
 				Branch:    branch,
 				Path:      "/home/user/.wtmrepos/github.com/lerenn/example/feature-a",
 				Workspace: "",
 			},
 			{
-				Name:      "github.com/lerenn/other",
+				URL:       "github.com/lerenn/other",
 				Branch:    "feature-b",
 				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
@@ -151,7 +151,7 @@ func TestRemoveWorktree(t *testing.T) {
 	expectedStatus := &Status{
 		Repositories: []Repository{
 			{
-				Name:      "github.com/lerenn/other",
+				URL:       "github.com/lerenn/other",
 				Branch:    "feature-b",
 				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
@@ -199,7 +199,7 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	existingStatus := &Status{
 		Repositories: []Repository{
 			{
-				Name:      "github.com/lerenn/other",
+				URL:       "github.com/lerenn/other",
 				Branch:    "feature-b",
 				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
@@ -240,7 +240,7 @@ func TestGetWorktree(t *testing.T) {
 	repoName := "github.com/lerenn/example"
 	branch := "feature-a"
 	expectedRepo := Repository{
-		Name:      repoName,
+		URL:       repoName,
 		Branch:    branch,
 		Path:      "/home/user/.wtmrepos/github.com/lerenn/example/feature-a",
 		Workspace: "",
@@ -251,7 +251,7 @@ func TestGetWorktree(t *testing.T) {
 		Repositories: []Repository{
 			expectedRepo,
 			{
-				Name:      "github.com/lerenn/other",
+				URL:       "github.com/lerenn/other",
 				Branch:    "feature-b",
 				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
@@ -297,7 +297,7 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	existingStatus := &Status{
 		Repositories: []Repository{
 			{
-				Name:      "github.com/lerenn/other",
+				URL:       "github.com/lerenn/other",
 				Branch:    "feature-b",
 				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
@@ -338,13 +338,13 @@ func TestListAllWorktrees(t *testing.T) {
 	// Expected repositories
 	expectedRepos := []Repository{
 		{
-			Name:      "github.com/lerenn/example",
+			URL:       "github.com/lerenn/example",
 			Branch:    "feature-a",
 			Path:      "/home/user/.wtmrepos/github.com/lerenn/example/feature-a",
 			Workspace: "",
 		},
 		{
-			Name:      "github.com/lerenn/other",
+			URL:       "github.com/lerenn/other",
 			Branch:    "feature-b",
 			Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 			Workspace: "/home/user/workspace.code-workspace",

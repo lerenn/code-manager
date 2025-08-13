@@ -54,7 +54,7 @@ func TestRealManager_DefaultConfig(t *testing.T) {
 
 	assert.NotNil(t, config)
 	assert.NotEmpty(t, config.BasePath)
-	assert.Contains(t, config.BasePath, "wtm")
+	assert.Contains(t, config.BasePath, ".wtm")
 }
 
 func TestRealManager_LoadConfig(t *testing.T) {

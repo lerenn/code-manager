@@ -8,6 +8,7 @@ import (
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -15,7 +16,8 @@ import (
 // createTestConfig creates a test configuration for unit tests.
 func createTestConfig() *config.Config {
 	return &config.Config{
-		BasePath: "/test/base/path",
+		BasePath:   "/test/base/path",
+		StatusFile: "/test/base/path/status.yaml",
 	}
 }
 
@@ -25,6 +27,7 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
 
 	wtm := NewWTM(createTestConfig())
 
@@ -32,15 +35,29 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
+	c.statusManager = mockStatus
 
-	// Mock single repo detection - .git found (called 2 times: detectProjectType and validateGitDirectory)
-	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(2)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(2) // Called in detectSingleRepoMode and validateGitDirectory
+	// Mock single repo detection - .git found (called multiple times: detectProjectType, validateGitDirectory, and createWorktreeForSingleRepo)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes() // detectProjectType, validateGitDirectory, createWorktreeForSingleRepo (validateRepository), prepareWorktreePath, and additional validation
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()  // Called in detectSingleRepoMode, validateGitDirectory, createWorktreeForSingleRepo (validateRepository), prepareWorktreePath, and additional validation
 
 	// Mock Git status for validation (called 2 times: validateGitStatus and validateGitConfiguration)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
 
-	err := wtm.CreateWorkTree()
+	// Mock status manager calls
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+
+	// Mock worktree creation calls
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes() // Worktree directory doesn't exist
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
+
+	err := wtm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
 }
 
@@ -50,6 +67,7 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
 
 	wtm := NewWTM(createTestConfig())
 	wtm.SetVerbose(true)
@@ -58,15 +76,29 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 	c.git = mockGit
+	c.statusManager = mockStatus
 
-	// Mock single repo detection - .git found (called 2 times: detectProjectType and validateGitDirectory)
-	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(2)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(2) // Called in detectSingleRepoMode and validateGitDirectory
+	// Mock single repo detection - .git found (called multiple times: detectProjectType, validateGitDirectory, and createWorktreeForSingleRepo)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes() // detectProjectType, validateGitDirectory, createWorktreeForSingleRepo (validateRepository), prepareWorktreePath, and additional validation
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()  // Called in detectSingleRepoMode, validateGitDirectory, createWorktreeForSingleRepo (validateRepository), prepareWorktreePath, and additional validation
 
 	// Mock Git status for validation (called 2 times: validateGitStatus and validateGitConfiguration)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
 
-	err := wtm.CreateWorkTree()
+	// Mock status manager calls
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+
+	// Mock worktree creation calls
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes() // Worktree directory doesn't exist
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
+
+	err := wtm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
 }
 
@@ -137,162 +169,6 @@ func TestWTM_ValidateSingleRepository_GitStatusError(t *testing.T) {
 
 	err := wtm.(*realWTM).validateSingleRepository()
 	assert.ErrorIs(t, err, ErrGitRepositoryInvalid)
-}
-
-func TestRealWTM_CreateReposDirectoryStructure(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-
-	wtm := NewWTM(createTestConfig())
-	wtm.SetVerbose(true)
-
-	// Override adapters with mocks
-	c := wtm.(*realWTM)
-	c.fs = mockFS
-	c.git = mockGit
-
-	// Test successful directory creation
-	mockFS.EXPECT().MkdirAll("/test/base/path/repos/github.com/lerenn/wtm/feature_new-branch", gomock.Any()).Return(nil)
-
-	path, err := wtm.(*realWTM).createReposDirectoryStructure("github.com/lerenn/wtm", "feature/new-branch")
-	assert.NoError(t, err)
-	assert.Equal(t, "/test/base/path/repos/github.com/lerenn/wtm/feature_new-branch", path)
-}
-
-func TestRealWTM_CreateReposDirectoryStructure_EmptyRepoName(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-
-	wtm := NewWTM(createTestConfig())
-	wtm.SetVerbose(true)
-
-	// Override adapters with mocks
-	c := wtm.(*realWTM)
-	c.fs = mockFS
-	c.git = mockGit
-
-	_, err := wtm.(*realWTM).createReposDirectoryStructure("", "feature/new-branch")
-	assert.ErrorIs(t, err, ErrRepositoryURLEmpty)
-}
-
-func TestRealWTM_CreateReposDirectoryStructure_EmptyBranchName(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-
-	wtm := NewWTM(createTestConfig())
-	wtm.SetVerbose(true)
-
-	// Override adapters with mocks
-	c := wtm.(*realWTM)
-	c.fs = mockFS
-	c.git = mockGit
-
-	_, err := wtm.(*realWTM).createReposDirectoryStructure("github.com/lerenn/wtm", "")
-	assert.ErrorIs(t, err, ErrBranchNameEmpty)
-}
-
-func TestRealWTM_CreateReposDirectoryStructure_NoConfig(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-
-	// Create WTM with nil config
-	wtm := NewWTM(nil)
-	wtm.SetVerbose(true)
-
-	// Override adapters with mocks
-	c := wtm.(*realWTM)
-	c.fs = mockFS
-	c.git = mockGit
-
-	_, err := wtm.(*realWTM).createReposDirectoryStructure("github.com/lerenn/wtm", "feature/new-branch")
-	assert.ErrorIs(t, err, ErrConfigurationNotInitialized)
-}
-
-func TestRealWTM_sanitizeRepositoryName(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-
-	wtm := NewWTM(createTestConfig())
-
-	// Override adapters with mocks
-	c := wtm.(*realWTM)
-	c.fs = mockFS
-	c.git = mockGit
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-		wantErr  bool
-	}{
-		{
-			name:     "HTTPS URL with .git",
-			input:    "https://github.com/lerenn/wtm.git",
-			expected: "lerenn/wtm",
-			wantErr:  false,
-		},
-		{
-			name:     "HTTPS URL without .git",
-			input:    "https://github.com/lerenn/wtm",
-			expected: "lerenn/wtm",
-			wantErr:  false,
-		},
-		{
-			name:     "SSH URL with .git",
-			input:    "git@github.com:lerenn/wtm.git",
-			expected: "lerenn/wtm",
-			wantErr:  false,
-		},
-		{
-			name:     "SSH URL without .git",
-			input:    "git@github.com:lerenn/wtm",
-			expected: "lerenn/wtm",
-			wantErr:  false,
-		},
-		{
-			name:     "Repository with invalid characters",
-			input:    "https://github.com/user/repo:name",
-			expected: "user/repo_name",
-			wantErr:  false,
-		},
-		{
-			name:     "Empty repository URL",
-			input:    "",
-			expected: "",
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := wtm.(*realWTM).sanitizeRepositoryName(tt.input)
-			if tt.wantErr {
-				if tt.input == "" {
-					assert.ErrorIs(t, err, ErrRepositoryURLEmpty)
-				} else {
-					assert.Error(t, err)
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
-			}
-		})
-	}
 }
 
 func TestRealWTM_sanitizeBranchName(t *testing.T) {

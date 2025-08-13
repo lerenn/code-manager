@@ -1,8 +1,5 @@
 # Git WorkTree Manager - Backlog
 
-- **11. Create worktrees for single repositories**
-  - **Blocked by:** 4, 5, 6, 7
-
 - **12. Create worktrees for multi-repo workspaces**
   - **Blocked by:** 4, 8, 9, 10, 11
 

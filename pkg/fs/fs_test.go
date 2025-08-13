@@ -171,3 +171,258 @@ func TestFS_IsNotExist(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, fs.IsNotExist(err))
 }
+
+func TestFS_WriteFileAtomic(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-atomic-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test writing file atomically
+	testFile := filepath.Join(tmpDir, "atomic-test.txt")
+	testContent := []byte("atomic test content")
+
+	err = fs.WriteFileAtomic(testFile, testContent, 0644)
+	assert.NoError(t, err)
+
+	// Verify file was created with correct content
+	readContent, err := fs.ReadFile(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, testContent, readContent)
+
+	// Verify file permissions
+	info, err := os.Stat(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0644), info.Mode().Perm())
+
+	// Test overwriting existing file
+	newContent := []byte("new atomic content")
+	err = fs.WriteFileAtomic(testFile, newContent, 0644)
+	assert.NoError(t, err)
+
+	// Verify file was updated
+	readContent, err = fs.ReadFile(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, newContent, readContent)
+
+	// Test writing to non-existent directory (should fail)
+	nonExistentFile := filepath.Join("/non/existent/path", "test.txt")
+	err = fs.WriteFileAtomic(nonExistentFile, testContent, 0644)
+	assert.Error(t, err)
+}
+
+func TestFS_FileLock(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-lock-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test acquiring a file lock
+	testFile := filepath.Join(tmpDir, "test-file.txt")
+	unlock, err := fs.FileLock(testFile)
+	assert.NoError(t, err)
+	assert.NotNil(t, unlock)
+
+	// Verify lock file was created
+	lockFile := testFile + ".lock"
+	exists, err := fs.Exists(lockFile)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	// Test that we can't acquire the same lock again
+	_, err = fs.FileLock(testFile)
+	assert.Error(t, err)
+
+	// Release the lock
+	unlock()
+
+	// Verify lock file was removed
+	exists, err = fs.Exists(lockFile)
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	// Test that we can acquire the lock again after release
+	unlock2, err := fs.FileLock(testFile)
+	assert.NoError(t, err)
+	assert.NotNil(t, unlock2)
+	unlock2()
+
+	// Test acquiring lock on non-existent directory (should fail)
+	nonExistentFile := filepath.Join("/non/existent/path", "test.txt")
+	_, err = fs.FileLock(nonExistentFile)
+	assert.Error(t, err)
+}
+
+func TestFS_CreateFileIfNotExists(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-create-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test creating a new file
+	testFile := filepath.Join(tmpDir, "new-file.txt")
+	initialContent := []byte("initial content")
+
+	err = fs.CreateFileIfNotExists(testFile, initialContent, 0644)
+	assert.NoError(t, err)
+
+	// Verify file was created with correct content
+	readContent, err := fs.ReadFile(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, initialContent, readContent)
+
+	// Test creating the same file again (should not error and not overwrite)
+	newContent := []byte("new content")
+	err = fs.CreateFileIfNotExists(testFile, newContent, 0644)
+	assert.NoError(t, err)
+
+	// Verify content was not changed
+	readContent, err = fs.ReadFile(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, initialContent, readContent)
+
+	// Test creating file in nested directory
+	nestedFile := filepath.Join(tmpDir, "level1", "level2", "nested-file.txt")
+	err = fs.CreateFileIfNotExists(nestedFile, initialContent, 0644)
+	assert.NoError(t, err)
+
+	// Verify nested file was created
+	readContent, err = fs.ReadFile(nestedFile)
+	assert.NoError(t, err)
+	assert.Equal(t, initialContent, readContent)
+
+	// Test creating file with different permissions
+	permFile := filepath.Join(tmpDir, "perm-file.txt")
+	err = fs.CreateFileIfNotExists(permFile, initialContent, 0755)
+	assert.NoError(t, err)
+
+	// Verify file permissions
+	info, err := os.Stat(permFile)
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0755), info.Mode().Perm())
+}
+
+func TestFS_RemoveAll(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-remove-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Create a nested directory structure with files
+	nestedDir := filepath.Join(tmpDir, "level1", "level2", "level3")
+	err = fs.MkdirAll(nestedDir, 0755)
+	require.NoError(t, err)
+
+	// Create some files in the nested structure
+	file1 := filepath.Join(nestedDir, "file1.txt")
+	file2 := filepath.Join(tmpDir, "level1", "file2.txt")
+
+	err = os.WriteFile(file1, []byte("content1"), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(file2, []byte("content2"), 0644)
+	require.NoError(t, err)
+
+	// Test removing a file
+	err = fs.RemoveAll(file1)
+	assert.NoError(t, err)
+
+	// Verify file was removed
+	exists, err := fs.Exists(file1)
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	// Test removing a directory and all its contents
+	level1Dir := filepath.Join(tmpDir, "level1")
+	err = fs.RemoveAll(level1Dir)
+	assert.NoError(t, err)
+
+	// Verify directory and all its contents were removed
+	exists, err = fs.Exists(level1Dir)
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	exists, err = fs.Exists(file2)
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	// Test removing non-existent path (should not error)
+	err = fs.RemoveAll(filepath.Join(tmpDir, "non-existent"))
+	assert.NoError(t, err)
+
+	// Test removing the entire temp directory
+	err = fs.RemoveAll(tmpDir)
+	assert.NoError(t, err)
+
+	// Verify temp directory was removed
+	exists, err = fs.Exists(tmpDir)
+	assert.NoError(t, err)
+	assert.False(t, exists)
+}
+
+func TestFS_Exists(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary file for testing
+	tmpFile, err := os.CreateTemp("", "test-exists-*")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	// Test existing file
+	exists, err := fs.Exists(tmpFile.Name())
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	// Test non-existing file
+	exists, err = fs.Exists("non-existing-file.txt")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+
+	// Test existing directory
+	tmpDir, err := os.MkdirTemp("", "test-exists-dir-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	exists, err = fs.Exists(tmpDir)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	// Test non-existing directory
+	exists, err = fs.Exists("non-existing-directory")
+	assert.NoError(t, err)
+	assert.False(t, exists)
+}
+
+func TestFS_IsDir(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary file and directory for testing
+	tmpFile, err := os.CreateTemp("", "test-isdir-*")
+	require.NoError(t, err)
+	defer os.Remove(tmpFile.Name())
+
+	tmpDir, err := os.MkdirTemp("", "test-isdir-dir-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test file (should not be a directory)
+	isDir, err := fs.IsDir(tmpFile.Name())
+	assert.NoError(t, err)
+	assert.False(t, isDir)
+
+	// Test directory (should be a directory)
+	isDir, err = fs.IsDir(tmpDir)
+	assert.NoError(t, err)
+	assert.True(t, isDir)
+
+	// Test non-existing path
+	_, err = fs.IsDir("non-existing-path")
+	assert.Error(t, err)
+}

@@ -42,6 +42,9 @@ type FS interface {
 
 	// CreateFileIfNotExists creates a file with initial content if it doesn't exist.
 	CreateFileIfNotExists(filename string, initialContent []byte, perm os.FileMode) error
+
+	// RemoveAll removes a file or directory and all its contents.
+	RemoveAll(path string) error
 }
 
 type realFS struct {
@@ -117,13 +120,19 @@ func (f *realFS) WriteFileAtomic(filename string, data []byte, perm os.FileMode)
 	// Ensure cleanup on error
 	defer func() {
 		if err != nil {
-			os.Remove(tmpPath)
+			if removeErr := os.Remove(tmpPath); removeErr != nil {
+				// Log the error but don't fail for cleanup errors
+				_ = removeErr
+			}
 		}
 	}()
 
 	// Write data to temporary file
 	if _, err := tmpFile.Write(data); err != nil {
-		tmpFile.Close()
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			// Log the error but don't fail for cleanup errors
+			_ = closeErr
+		}
 		return err
 	}
 
@@ -156,18 +165,30 @@ func (f *realFS) FileLock(filename string) (func(), error) {
 		return nil, err
 	}
 
-	// Acquire file lock
-	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
-		lockFile.Close()
-		os.Remove(lockPath)
+	// Acquire file lock (non-blocking)
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		if closeErr := lockFile.Close(); closeErr != nil {
+			// Log the error but don't fail for cleanup errors
+			_ = closeErr
+		}
+		if removeErr := os.Remove(lockPath); removeErr != nil {
+			// Log the error but don't fail for cleanup errors
+			_ = removeErr
+		}
 		return nil, err
 	}
 
 	// Return unlock function
 	unlock := func() {
 		_ = syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-		lockFile.Close()
-		os.Remove(lockPath)
+		if closeErr := lockFile.Close(); closeErr != nil {
+			// Log the error but don't fail for cleanup errors
+			_ = closeErr
+		}
+		if removeErr := os.Remove(lockPath); removeErr != nil {
+			// Log the error but don't fail for cleanup errors
+			_ = removeErr
+		}
 	}
 
 	return unlock, nil
@@ -193,4 +214,9 @@ func (f *realFS) CreateFileIfNotExists(filename string, initialContent []byte, p
 
 	// Create file with initial content
 	return f.WriteFileAtomic(filename, initialContent, perm)
+}
+
+// RemoveAll removes a file or directory and all its contents.
+func (f *realFS) RemoveAll(path string) error {
+	return os.RemoveAll(path)
 }

@@ -17,20 +17,20 @@ type Status struct {
 
 // Repository represents a repository entry in the status file.
 type Repository struct {
-	Name      string `yaml:"name"`
-	Branch    string `yaml:"branch"`
-	Path      string `yaml:"path"`
-	Workspace string `yaml:"workspace,omitempty"`
+	URL       string `yaml:"url"`                 // Repository URL (e.g., "github.com/lerenn/wtm")
+	Branch    string `yaml:"branch"`              // Branch name
+	Path      string `yaml:"path"`                // Original repository path (not worktree path)
+	Workspace string `yaml:"workspace,omitempty"` // Workspace path (if applicable)
 }
 
 // Manager interface provides status file management functionality.
 type Manager interface {
 	// AddWorktree adds a worktree entry to the status file.
-	AddWorktree(repoName, branch, worktreePath, workspacePath string) error
+	AddWorktree(repoURL, branch, worktreePath, workspacePath string) error
 	// RemoveWorktree removes a worktree entry from the status file.
-	RemoveWorktree(repoName, branch string) error
+	RemoveWorktree(repoURL, branch string) error
 	// GetWorktree retrieves the status of a specific worktree.
-	GetWorktree(repoName, branch string) (*Repository, error)
+	GetWorktree(repoURL, branch string) (*Repository, error)
 	// ListAllWorktrees lists all tracked worktrees.
 	ListAllWorktrees() ([]Repository, error)
 }
@@ -49,7 +49,7 @@ func NewManager(fs fs.FS, config *config.Config) Manager {
 }
 
 // AddWorktree adds a worktree entry to the status file.
-func (s *realManager) AddWorktree(repoName, branch, worktreePath, workspacePath string) error {
+func (s *realManager) AddWorktree(repoURL, branch, worktreePath, workspacePath string) error {
 	// Load current status
 	status, err := s.loadStatus()
 	if err != nil {
@@ -58,14 +58,14 @@ func (s *realManager) AddWorktree(repoName, branch, worktreePath, workspacePath 
 
 	// Check for duplicate entry
 	for _, repo := range status.Repositories {
-		if repo.Name == repoName && repo.Branch == branch {
-			return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeAlreadyExists, repoName, branch)
+		if repo.URL == repoURL && repo.Branch == branch {
+			return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeAlreadyExists, repoURL, branch)
 		}
 	}
 
 	// Create new repository entry
 	newRepo := Repository{
-		Name:      repoName,
+		URL:       repoURL,
 		Branch:    branch,
 		Path:      worktreePath,
 		Workspace: workspacePath,
@@ -83,7 +83,7 @@ func (s *realManager) AddWorktree(repoName, branch, worktreePath, workspacePath 
 }
 
 // RemoveWorktree removes a worktree entry from the status file.
-func (s *realManager) RemoveWorktree(repoName, branch string) error {
+func (s *realManager) RemoveWorktree(repoURL, branch string) error {
 	// Load current status
 	status, err := s.loadStatus()
 	if err != nil {
@@ -94,7 +94,7 @@ func (s *realManager) RemoveWorktree(repoName, branch string) error {
 	found := false
 	var newRepositories []Repository
 	for _, repo := range status.Repositories {
-		if repo.Name == repoName && repo.Branch == branch {
+		if repo.URL == repoURL && repo.Branch == branch {
 			found = true
 			continue // Skip this entry
 		}
@@ -102,7 +102,7 @@ func (s *realManager) RemoveWorktree(repoName, branch string) error {
 	}
 
 	if !found {
-		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoName, branch)
+		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoURL, branch)
 	}
 
 	// Update repositories list
@@ -117,7 +117,7 @@ func (s *realManager) RemoveWorktree(repoName, branch string) error {
 }
 
 // GetWorktree retrieves the status of a specific worktree.
-func (s *realManager) GetWorktree(repoName, branch string) (*Repository, error) {
+func (s *realManager) GetWorktree(repoURL, branch string) (*Repository, error) {
 	// Load current status
 	status, err := s.loadStatus()
 	if err != nil {
@@ -126,12 +126,12 @@ func (s *realManager) GetWorktree(repoName, branch string) (*Repository, error) 
 
 	// Find the repository entry
 	for _, repo := range status.Repositories {
-		if repo.Name == repoName && repo.Branch == branch {
+		if repo.URL == repoURL && repo.Branch == branch {
 			return &repo, nil
 		}
 	}
 
-	return nil, fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoName, branch)
+	return nil, fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoURL, branch)
 }
 
 // ListAllWorktrees lists all tracked worktrees.
