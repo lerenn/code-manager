@@ -87,7 +87,7 @@ func TestWTM_Run_MissingRepository(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	wtm := NewWTM(createTestConfig())
-	c := wtm.(*realWTM
+	c := wtm.(*realWTM)
 	c.fs = mockFS
 
 	// Mock single repo detection - no .git found (called once: detectProjectType)

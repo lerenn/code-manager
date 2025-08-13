@@ -64,7 +64,8 @@ func TestRealManager_LoadConfig(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write valid YAML config with a path that can be created
-	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "wtm)
+	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "wtm") + `
+`
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
 	assert.NoError(t, err)
 
@@ -73,7 +74,7 @@ func TestRealManager_LoadConfig(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "wtm), config.BasePath)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "wtm"), config.BasePath)
 }
 
 func TestRealManager_LoadConfig_FileNotFound(t *testing.T) {
@@ -108,7 +109,8 @@ func TestLoadConfigWithFallback_WithValidFile(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write valid YAML config with a path that can be created
-	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "wtm)
+	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "wtm") + `
+`
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
 	assert.NoError(t, err)
 
@@ -116,7 +118,7 @@ func TestLoadConfigWithFallback_WithValidFile(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "wtm), config.BasePath)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "wtm"), config.BasePath)
 }
 
 func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
@@ -125,5 +127,5 @@ func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
 	assert.NoError(t, err) // Should not error, should fallback to default
 	assert.NotNil(t, config)
 	assert.Contains(t, config.BasePath, ".cursor")
-	assert.Contains(t, config.BasePath, "wtm)
+	assert.Contains(t, config.BasePath, "wtm")
 }

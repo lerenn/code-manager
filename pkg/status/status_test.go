@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtmpkg/fs"
+	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v3"
@@ -19,7 +19,7 @@ func TestAddWorktree(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -69,7 +69,7 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -116,7 +116,7 @@ func TestRemoveWorktree(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -182,7 +182,7 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -227,7 +227,7 @@ func TestGetWorktree(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -280,7 +280,7 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -326,7 +326,7 @@ func TestListAllWorktrees(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -377,7 +377,7 @@ func TestListAllWorktrees_Empty(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
@@ -411,7 +411,7 @@ func TestNewManager(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	cfg := &config.Config{
-		BasePath:   "/home/user/.wtm,
+		BasePath:   "/home/user/.wtm",
 		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
