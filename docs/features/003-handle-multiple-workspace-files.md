@@ -4,7 +4,7 @@
 Implement functionality to handle scenarios where multiple `.code-workspace` files are found in the current working directory, providing an interactive selection prompt to allow users to choose which workspace file to use.
 
 ## Background
-The Cursor Git WorkTree Manager (cgwt) needs to handle cases where users have multiple workspace configurations in the same directory. This can happen when:
+The Cursor Git WorkTree Manager (wtm) needs to handle cases where users have multiple workspace configurations in the same directory. This can happen when:
 - Users maintain different workspace configurations for different purposes
 - Legacy workspace files are not cleaned up
 - Users are experimenting with different workspace setups
@@ -36,7 +36,7 @@ When multiple workspace files are detected, the system should provide a clear, u
 #### FS Package Extension (File System Adapter)
 **No new interface methods required** - uses existing `Glob()` method from Feature 002.
 
-#### CGWT Package Extension (Business Logic)
+#### WTM Package Extension (Business Logic)
 **New Interface Methods:**
 - `handleMultipleWorkspaces(workspaceFiles []string) (string, error)`: Handle multiple workspace file selection
 - `displayWorkspaceSelection(workspaceFiles []string)`: Display the selection prompt
@@ -44,7 +44,7 @@ When multiple workspace files are detected, the system should provide a clear, u
 - `confirmSelection(workspaceFile string) (bool, error)`: Confirm user's selection
 
 **Implementation Structure:**
-- Extends existing CGWT package with multiple workspace handling
+- Extends existing WTM package with multiple workspace handling
 - Private helper methods for selection UI and input validation
 - Error handling with wrapped errors
 - Clean separation of concerns
@@ -157,7 +157,7 @@ The multiple workspace handling integrates seamlessly with the main detection fl
 
 ### Testing Strategy
 
-#### Unit Tests (CGWT Package)
+#### Unit Tests (WTM Package)
 **Test Cases:**
 1. **Multiple workspace detection**: Test with 2, 3, 5 workspace files
 2. **User input validation**: Test valid numbers, invalid numbers, quit commands

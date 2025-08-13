@@ -9,8 +9,7 @@
 - **13. Implement collision detection and prevention**
   - **Blocked by:** 11
 
-- **14. Support for ephemeral worktrees (`-e` flag)**
-  - **Blocked by:** 11
+- **14. When config doesn't exists, then copy the default one in place (should be embedded from configs/default.yaml)**
 
 - **15. Support for persistent worktrees (default)**
   - **Blocked by:** 11

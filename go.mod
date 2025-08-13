@@ -1,4 +1,4 @@
-module github.com/lerenn/cgwt
+module github.com/lerenn/wtm
 
 go 1.23.8
 

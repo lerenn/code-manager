@@ -3,8 +3,8 @@ package status
 import (
 	"fmt"
 
-	"github.com/lerenn/cgwt/pkg/config"
-	"github.com/lerenn/cgwt/pkg/fs"
+	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/fs"
 	"gopkg.in/yaml.v3"
 )
 

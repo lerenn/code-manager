@@ -5,8 +5,8 @@ package status
 import (
 	"testing"
 
-	"github.com/lerenn/cgwt/pkg/config"
-	"github.com/lerenn/cgwt/pkg/fs"
+	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtmpkg/fs"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v3"
@@ -19,8 +19,8 @@ func TestAddWorktree(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -31,7 +31,7 @@ func TestAddWorktree(t *testing.T) {
 	// Test data
 	repoName := "github.com/lerenn/example"
 	branch := "feature-a"
-	worktreePath := "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a"
+	worktreePath := "/home/user/.wtmrepos/github.com/lerenn/example/feature-a"
 	workspacePath := ""
 
 	// Expected status file content
@@ -49,11 +49,11 @@ func TestAddWorktree(t *testing.T) {
 	expectedData, _ := yaml.Marshal(expectedStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(false, nil)
-	mockFS.EXPECT().FileLock("/home/user/.cursor/cgwt/status.yaml").Return(func() {}, nil)
-	mockFS.EXPECT().WriteFileAtomic("/home/user/.cursor/cgwt/status.yaml", gomock.Any(), gomock.Any()).Return(nil)
-	mockFS.EXPECT().FileLock("/home/user/.cursor/cgwt/status.yaml").Return(func() {}, nil)
-	mockFS.EXPECT().WriteFileAtomic("/home/user/.cursor/cgwt/status.yaml", expectedData, gomock.Any()).Return(nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(false, nil)
+	mockFS.EXPECT().FileLock("/home/user/.wtmstatus.yaml").Return(func() {}, nil)
+	mockFS.EXPECT().WriteFileAtomic("/home/user/.wtmstatus.yaml", gomock.Any(), gomock.Any()).Return(nil)
+	mockFS.EXPECT().FileLock("/home/user/.wtmstatus.yaml").Return(func() {}, nil)
+	mockFS.EXPECT().WriteFileAtomic("/home/user/.wtmstatus.yaml", expectedData, gomock.Any()).Return(nil)
 
 	// Execute
 	err := manager.AddWorktree(repoName, branch, worktreePath, workspacePath)
@@ -69,8 +69,8 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -81,7 +81,7 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	// Test data
 	repoName := "github.com/lerenn/example"
 	branch := "feature-a"
-	worktreePath := "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a"
+	worktreePath := "/home/user/.wtmrepos/github.com/lerenn/example/feature-a"
 	workspacePath := ""
 
 	// Existing status with duplicate
@@ -99,8 +99,8 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	existingData, _ := yaml.Marshal(existingStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cursor/cgwt/status.yaml").Return(existingData, nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
 
 	// Execute
 	err := manager.AddWorktree(repoName, branch, worktreePath, workspacePath)
@@ -116,8 +116,8 @@ func TestRemoveWorktree(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -135,13 +135,13 @@ func TestRemoveWorktree(t *testing.T) {
 			{
 				Name:      repoName,
 				Branch:    branch,
-				Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a",
+				Path:      "/home/user/.wtmrepos/github.com/lerenn/example/feature-a",
 				Workspace: "",
 			},
 			{
 				Name:      "github.com/lerenn/other",
 				Branch:    "feature-b",
-				Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/other/feature-b",
+				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
 			},
 		},
@@ -153,7 +153,7 @@ func TestRemoveWorktree(t *testing.T) {
 			{
 				Name:      "github.com/lerenn/other",
 				Branch:    "feature-b",
-				Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/other/feature-b",
+				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
 			},
 		},
@@ -163,10 +163,10 @@ func TestRemoveWorktree(t *testing.T) {
 	expectedData, _ := yaml.Marshal(expectedStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cursor/cgwt/status.yaml").Return(existingData, nil)
-	mockFS.EXPECT().FileLock("/home/user/.cursor/cgwt/status.yaml").Return(func() {}, nil)
-	mockFS.EXPECT().WriteFileAtomic("/home/user/.cursor/cgwt/status.yaml", expectedData, gomock.Any()).Return(nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
+	mockFS.EXPECT().FileLock("/home/user/.wtmstatus.yaml").Return(func() {}, nil)
+	mockFS.EXPECT().WriteFileAtomic("/home/user/.wtmstatus.yaml", expectedData, gomock.Any()).Return(nil)
 
 	// Execute
 	err := manager.RemoveWorktree(repoName, branch)
@@ -182,8 +182,8 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -201,7 +201,7 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 			{
 				Name:      "github.com/lerenn/other",
 				Branch:    "feature-b",
-				Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/other/feature-b",
+				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
 			},
 		},
@@ -210,8 +210,8 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	existingData, _ := yaml.Marshal(existingStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cursor/cgwt/status.yaml").Return(existingData, nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
 
 	// Execute
 	err := manager.RemoveWorktree(repoName, branch)
@@ -227,8 +227,8 @@ func TestGetWorktree(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -242,7 +242,7 @@ func TestGetWorktree(t *testing.T) {
 	expectedRepo := Repository{
 		Name:      repoName,
 		Branch:    branch,
-		Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a",
+		Path:      "/home/user/.wtmrepos/github.com/lerenn/example/feature-a",
 		Workspace: "",
 	}
 
@@ -253,7 +253,7 @@ func TestGetWorktree(t *testing.T) {
 			{
 				Name:      "github.com/lerenn/other",
 				Branch:    "feature-b",
-				Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/other/feature-b",
+				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
 			},
 		},
@@ -262,8 +262,8 @@ func TestGetWorktree(t *testing.T) {
 	existingData, _ := yaml.Marshal(existingStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cursor/cgwt/status.yaml").Return(existingData, nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
 
 	// Execute
 	repo, err := manager.GetWorktree(repoName, branch)
@@ -280,8 +280,8 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -299,7 +299,7 @@ func TestGetWorktree_NotFound(t *testing.T) {
 			{
 				Name:      "github.com/lerenn/other",
 				Branch:    "feature-b",
-				Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/other/feature-b",
+				Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 				Workspace: "",
 			},
 		},
@@ -308,8 +308,8 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	existingData, _ := yaml.Marshal(existingStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cursor/cgwt/status.yaml").Return(existingData, nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
 
 	// Execute
 	repo, err := manager.GetWorktree(repoName, branch)
@@ -326,8 +326,8 @@ func TestListAllWorktrees(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -340,13 +340,13 @@ func TestListAllWorktrees(t *testing.T) {
 		{
 			Name:      "github.com/lerenn/example",
 			Branch:    "feature-a",
-			Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/example/feature-a",
+			Path:      "/home/user/.wtmrepos/github.com/lerenn/example/feature-a",
 			Workspace: "",
 		},
 		{
 			Name:      "github.com/lerenn/other",
 			Branch:    "feature-b",
-			Path:      "/home/user/.cursor/cgwt/repos/github.com/lerenn/other/feature-b",
+			Path:      "/home/user/.wtmrepos/github.com/lerenn/other/feature-b",
 			Workspace: "/home/user/workspace.code-workspace",
 		},
 	}
@@ -359,8 +359,8 @@ func TestListAllWorktrees(t *testing.T) {
 	existingData, _ := yaml.Marshal(existingStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cursor/cgwt/status.yaml").Return(existingData, nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
 
 	// Execute
 	repos, err := manager.ListAllWorktrees()
@@ -377,8 +377,8 @@ func TestListAllWorktrees_Empty(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -394,8 +394,8 @@ func TestListAllWorktrees_Empty(t *testing.T) {
 	existingData, _ := yaml.Marshal(existingStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cursor/cgwt/status.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cursor/cgwt/status.yaml").Return(existingData, nil)
+	mockFS.EXPECT().Exists("/home/user/.wtmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
 
 	// Execute
 	repos, err := manager.ListAllWorktrees()
@@ -411,8 +411,8 @@ func TestNewManager(t *testing.T) {
 
 	mockFS := fs.NewMockFS(ctrl)
 	cfg := &config.Config{
-		BasePath:   "/home/user/.cursor/cgwt",
-		StatusFile: "/home/user/.cursor/cgwt/status.yaml",
+		BasePath:   "/home/user/.wtm,
+		StatusFile: "/home/user/.wtmstatus.yaml",
 	}
 
 	manager := NewManager(mockFS, cfg)

@@ -4,7 +4,7 @@
 Implement comprehensive validation for both single repository and workspace modes to ensure all Git repositories are properly configured and accessible before proceeding with worktree operations.
 
 ## Background
-The Cursor Git WorkTree Manager (cgwt) needs to validate that the project structure and Git configuration are in a working state before creating or managing worktrees. This validation serves as a prerequisite for all worktree operations and ensures that the tool can safely interact with Git repositories.
+The Cursor Git WorkTree Manager (wtm) needs to validate that the project structure and Git configuration are in a working state before creating or managing worktrees. This validation serves as a prerequisite for all worktree operations and ensures that the tool can safely interact with Git repositories.
 
 ## Requirements
 
@@ -53,7 +53,7 @@ The Cursor Git WorkTree Manager (cgwt) needs to validate that the project struct
 - Cross-platform compatibility
 - **Single source of truth** for all Git operations
 
-#### CGWT Package Extension (Business Logic)
+#### WTM Package Extension (Business Logic)
 **New Interface Methods:**
 - `validateProjectStructure() error`: Main validation method
 - `validateSingleRepository() error`: Validate single repository mode
@@ -99,7 +99,7 @@ func (d *defaultLogger) Logf(format string, args ...interface{}) {
 - **Single source of truth** for all logging operations
 
 **Implementation Structure:**
-- Extends existing CGWT package with validation logic
+- Extends existing WTM package with validation logic
 - Private helper methods for different validation types
 - Error handling with wrapped errors
 - Clean separation of concerns
@@ -170,8 +170,8 @@ The Git package provides Git command execution capabilities:
 - **ALL Git operations** must be implemented here
 - **Integration tests only** - no unit tests for this adapter
 
-#### 4. CGWT Package Extension
-The CGWT package extends with comprehensive validation logic:
+#### 4. WTM Package Extension
+The WTM package extends with comprehensive validation logic:
 
 **Key Components:**
 - `validateProjectStructure()`: Main validation orchestrator
@@ -193,7 +193,7 @@ The CGWT package extends with comprehensive validation logic:
 - **NO direct file system access** - all operations go through FS adapter
 - **NO direct Git access** - all operations go through Git adapter
 - **Verbose mode shows**: which repositories are being validated, exact Git commands being executed, resolved paths for workspace repositories
-- **Verbose mode integration**: Field in CGWT struct and separate logging interface
+- **Verbose mode integration**: Field in WTM struct and separate logging interface
 - **Validation methods use struct fields**: No verbose parameter needed in method signatures
 - **Verbose output examples**: "Validating repository: /path/to/repo", "Executing git status in: /path/to/repo", "Resolved workspace path: /path/to/repo"
 - **Error logging**: Log error details before returning them using same format as verbose messages
@@ -255,7 +255,7 @@ The CGWT package extends with comprehensive validation logic:
 The validation should be integrated into the existing `Run()` method:
 
 ```go
-type CGWT struct {
+type WTM struct {
     fs      fs.FS
     git     git.Git
     verbose bool
@@ -263,8 +263,8 @@ type CGWT struct {
     // ... other fields
 }
 
-func NewCGWT() *CGWT {
-    return &CGWT{
+func NewWTM() *WTM {
+    return &WTM{
         fs:      fs.NewFS(),
         git:     git.NewGit(),
         verbose: false,
@@ -274,7 +274,7 @@ func NewCGWT() *CGWT {
 
 
 
-func (c *CGWT) SetVerbose(verbose bool) {
+func (c *WTM) SetVerbose(verbose bool) {
     c.verbose = verbose
     if verbose && c.logger == logger.NewNoopLogger() {
         c.logger = logger.NewDefaultLogger()
@@ -283,13 +283,13 @@ func (c *CGWT) SetVerbose(verbose bool) {
     }
 }
 
-func (c *CGWT) SetLogger(logger logger.Logger) {
+func (c *WTM) SetLogger(logger logger.Logger) {
     c.logger = logger
 }
 
-func (c *CGWT) Run() error {
+func (c *WTM) Run() error {
     if c.verbose {
-        c.logger.Logf("Starting CGWT execution")
+        c.logger.Logf("Starting WTM execution")
     }
     
     // Existing detection logic (Features 001, 002, 003)
@@ -309,7 +309,7 @@ func (c *CGWT) Run() error {
     }
     
     if c.verbose {
-        c.logger.Logf("CGWT execution completed successfully")
+        c.logger.Logf("WTM execution completed successfully")
     }
     
     // Continue with existing logic...
@@ -324,10 +324,10 @@ Validation should work with both detection modes:
 
 ### Testing Strategy
 
-#### Unit Tests (CGWT Package)
+#### Unit Tests (WTM Package)
 - Mock FS adapter for all file system operations
 - Mock Git adapter for all Git operations
-- Override adapters after `NewCGWT()` call in tests
+- Override adapters after `NewWTM()` call in tests
 - Test verbose mode and logging functionality
 - Test validation logic with various scenarios:
   - Valid single repository
@@ -364,4 +364,4 @@ Validation should work with both detection modes:
 - **Uses**: FS package for all file system operations
 - **Uses**: Git package for all Git operations
 - **Uses**: Logger package for all logging operations
-- **Extends**: CGWT package with validation capabilities
+- **Extends**: WTM package with validation capabilities

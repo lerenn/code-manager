@@ -1,10 +1,10 @@
-# Cursor Rules for CGWT Project
+# Cursor Rules for WTM Project
 
 ## Testing Conventions
 
 ### Test Organization
 - **Adapters** (like `pkg/fs`) should have **integration tests only** using real file system operations
-- **Business Logic** (like `pkg/cgwt`) should have **unit tests only** using mocked dependencies
+- **Business Logic** (like `pkg/wtm`) should have **unit tests only** using mocked dependencies
 - Use build tags to organize tests:
   - `//go:build unit` for unit tests with mocked dependencies
   - `//go:build integration` for integration tests with real file system
@@ -46,7 +46,7 @@
   ```
 - Define errors in package-specific `errors.go` files:
   ```go
-  // pkg/cgwt/errors.go
+  // pkg/wtm/errors.go
   var ErrGitRepositoryNotFound = errors.New("not a valid Git repository: .git directory not found")
   ```
 
@@ -54,7 +54,7 @@
 - **Adapters**: Interfaces that abstract external systems (file system, network, databases)
 - Examples: `pkg/fs` (file system operations), future network clients, database clients
 - **Business Logic**: Core application logic that uses adapters
-- Examples: `pkg/cgwt` (Git repository detection logic)
+- Examples: `pkg/wtm` (Git repository detection logic)
 
 ### Running Tests
 - Unit tests: `go test -tags=unit ./...`
@@ -86,5 +86,5 @@ When asked to "ship" the code or when shipping is mentioned, systematically exec
 
 ### Commit Message Format
 - Use conventional commit format: `type(scope): description`
-- Examples: `feat(cgwt): add git repository detection`, `fix(lint): resolve godot comment issues`
+- Examples: `feat(wtm): add git repository detection`, `fix(lint): resolve godot comment issues`
 - Keep descriptions concise but descriptive

@@ -1,6 +1,6 @@
-# CGWT Configuration
+# WTM Configuration
 
-This directory contains example configuration files for the Cursor Git WorkTree Manager (CGWT).
+This directory contains example configuration files for the Cursor Git WorkTree Manager (WTM).
 
 ## Configuration Files
 
@@ -11,38 +11,38 @@ Default configuration example showing the standard configuration structure.
 
 #### base_path
 - **Type**: string
-- **Default**: `$HOME/.cursor/cgwt`
-- **Description**: The base directory where CGWT will store its data, including repository worktrees.
+- **Default**: `$HOME/.wtm`
+- **Description**: The base directory where WTM will store its data, including repository worktrees.
 
 ## Usage
 
 1. Copy the example configuration file to your home directory:
    ```bash
-   cp configs/default.yaml ~/.cursor/cgwt/config.yaml
+   cp configs/default.yaml ~/.wtm/config.yaml
    ```
 
 2. Edit the configuration file to customize your settings:
    ```bash
-   nano ~/.cursor/cgwt/config.yaml
+   nano ~/.wtm/config.yaml
    ```
 
-3. CGWT will automatically load the configuration from `~/.cursor/cgwt/config.yaml` when it starts.
+3. WTM will automatically load the configuration from `~/.wtm/config.yaml` when it starts.
 
 ## File Format
 
-CGWT uses YAML format for configuration files. The configuration file should be located at:
-`$HOME/.cursor/cgwt/config.yaml`
+WTM uses YAML format for configuration files. The configuration file should be located at:
+`$HOME/.wtm/config.yaml`
 
 ## Example Configuration
 
 ```yaml
-# Base path for CGWT data storage
-base_path: /custom/path/to/cgwt
+# Base path for WTM data storage
+base_path: /custom/path/to/wtm
 ```
 
 ## Validation
 
-CGWT validates the configuration on startup:
+WTM validates the configuration on startup:
 - The `base_path` must not be empty
 - The parent directory of `base_path` must be accessible and writable
-- If validation fails, CGWT will fall back to the default configuration
+- If validation fails, WTM will fall back to the default configuration

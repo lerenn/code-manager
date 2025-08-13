@@ -1,10 +1,10 @@
-# Cursor Git WorkTree Manager (cgwt)
+# Cursor Git WorkTree Manager (wtm)
 
 A powerful Go CLI tool for managing Git worktrees specifically designed for Cursor IDE. Enables parallel development across different branches and repositories with seamless Cursor integration.
 
 ## Overview
 
-`cgwt` is a command-line interface that simplifies Git worktree management for both single repositories and multi-repo workspaces. It automatically detects your project type and provides intelligent worktree creation, management, and Cursor integration.
+`wtm` is a command-line interface that simplifies Git worktree management for both single repositories and multi-repo workspaces. It automatically detects your project type and provides intelligent worktree creation, management, and Cursor integration.
 
 ## Features
 
@@ -31,10 +31,10 @@ A powerful Go CLI tool for managing Git worktrees specifically designed for Curs
 
 ```bash
 # Install directly from GitHub
-go install github.com/lerenn/cgwt@latest
+go install github.com/lerenn/wtm@latest
 
 # Verify installation
-cgwt --help
+wtm --help
 ```
 
 **Prerequisites:**
@@ -47,22 +47,22 @@ cgwt --help
 
 ```bash
 # Create a worktree for a branch
-cgwt create <branch-name>
+wtm create <branch-name>
 
 # Create an ephemeral worktree
-cgwt create <branch-name> -e
+wtm create <branch-name> -e
 
 # Open worktree in Cursor
-cgwt create <branch-name> -C
+wtm create <branch-name> -C
 
 # List all worktrees
-cgwt list
+wtm list
 
 # List worktrees in JSON format
-cgwt list --json
+wtm list --json
 
 # Delete a worktree
-cgwt delete <branch-name>
+wtm delete <branch-name>
 ```
 
 ### Project Structure
@@ -70,13 +70,13 @@ cgwt delete <branch-name>
 #### Single Repository Mode
 Worktrees are created at:
 ```
-$HOME/.cursor/cgwt/repos/<repo-name>/<branch-name>/
+$HOME/.wtm/repos/<repo-name>/<branch-name>/
 ```
 
 #### Workspace Mode
 Worktrees are created at:
 ```
-$HOME/.cursor/cgwt/workspaces/<workspace-name>/<branch-name>/<repo-name>/
+$HOME/.wtm/workspaces/<workspace-name>/<branch-name>/<repo-name>/
 ```
 
 ## Command Reference
@@ -92,10 +92,10 @@ Creates a new worktree for the specified branch.
 **Examples:**
 ```bash
 # Create persistent worktree
-cgwt create feature/new-feature
+wtm create feature/new-feature
 
 # Create ephemeral worktree and open in Cursor
-cgwt create hotfix/bug-fix -e -C
+wtm create hotfix/bug-fix -e -C
 ```
 
 ### `list [options]`
@@ -112,7 +112,7 @@ Lists all active worktrees for the current project.
     {
       "repo": "my-project",
       "branch": "feature/new-feature",
-      "path": "/home/user/.cursor/cgwt/repos/my-project/feature/new-feature",
+      "path": "/home/user/.wtm/repos/my-project/feature/new-feature",
       "type": "persistent",
       "workspace": "my-workspace"
     }
@@ -152,15 +152,15 @@ The `--json` flag enables structured output for extension development:
 
 ```bash
 # Get worktree list in JSON format
-cgwt list --json
+wtm list --json
 
 # Create worktree with JSON response
-cgwt create feature-branch --json
+wtm create feature-branch --json
 ```
 
 ## Configuration
 
-Configuration files are stored in `$HOME/.cursor/cgwt/config/`:
+Configuration files are stored in `$HOME/.wtm/config/`:
 
 - `settings.json`: Global settings
 - `workspaces.json`: Workspace-specific configurations

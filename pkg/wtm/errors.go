@@ -1,8 +1,8 @@
-package cgwt
+package wtm
 
 import "errors"
 
-// Error definitions for CGWT package.
+// Error definitions for WTM package.
 var (
 	// Git repository errors.
 	ErrGitRepositoryNotFound     = errors.New("not a valid Git repository: .git directory not found")

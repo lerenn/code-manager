@@ -1,4 +1,4 @@
-package cgwt
+package wtm
 
 import (
 	"fmt"
@@ -6,22 +6,22 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lerenn/cgwt/pkg/config"
-	"github.com/lerenn/cgwt/pkg/fs"
-	"github.com/lerenn/cgwt/pkg/git"
-	"github.com/lerenn/cgwt/pkg/logger"
-	"github.com/lerenn/cgwt/pkg/status"
+	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/fs"
+	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/logger"
+	"github.com/lerenn/wtm/pkg/status"
 )
 
-// CGWT interface provides Git repository detection functionality.
-type CGWT interface {
+// WTM interface provides Git repository detection functionality.
+type WTM interface {
 	// CreateWorkTree executes the main application logic.
 	CreateWorkTree() error
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
 }
 
-type realCGWT struct {
+type realWTM struct {
 	fs            fs.FS
 	git           git.Git
 	config        *config.Config
@@ -30,10 +30,10 @@ type realCGWT struct {
 	logger        logger.Logger
 }
 
-// NewCGWT creates a new CGWT instance.
-func NewCGWT(cfg *config.Config) CGWT {
+// NewWTM creates a new WTM instance.
+func NewWTM(cfg *config.Config) WTM {
 	fsInstance := fs.NewFS()
-	return &realCGWT{
+	return &realWTM{
 		fs:            fsInstance,
 		git:           git.NewGit(),
 		config:        cfg,
@@ -43,7 +43,7 @@ func NewCGWT(cfg *config.Config) CGWT {
 	}
 }
 
-func (c *realCGWT) SetVerbose(verbose bool) {
+func (c *realWTM) SetVerbose(verbose bool) {
 	c.verbose = verbose
 	if verbose {
 		c.logger = logger.NewDefaultLogger()
@@ -53,9 +53,9 @@ func (c *realCGWT) SetVerbose(verbose bool) {
 }
 
 // CreateWorkTree executes the main application logic.
-func (c *realCGWT) CreateWorkTree() error {
+func (c *realWTM) CreateWorkTree() error {
 	if c.verbose {
-		c.logger.Logf("Starting CGWT execution")
+		c.logger.Logf("Starting WTM execution")
 	}
 
 	// Detect project mode once and store results
@@ -84,21 +84,21 @@ func (c *realCGWT) CreateWorkTree() error {
 	}
 
 	if c.verbose {
-		c.logger.Logf("CGWT execution completed successfully")
+		c.logger.Logf("WTM execution completed successfully")
 	}
 
 	return nil
 }
 
 // verbosePrint prints a message only in verbose mode.
-func (c *realCGWT) verbosePrint(message string) {
+func (c *realWTM) verbosePrint(message string) {
 	if c.verbose {
 		c.logger.Logf(message)
 	}
 }
 
 // detectSingleRepoMode checks if the current directory is a single Git repository.
-func (c *realCGWT) detectSingleRepoMode() (bool, error) {
+func (c *realWTM) detectSingleRepoMode() (bool, error) {
 	c.verbosePrint("Checking for .git directory...")
 
 	// Check if .git exists
@@ -130,12 +130,12 @@ func (c *realCGWT) detectSingleRepoMode() (bool, error) {
 }
 
 // handleSingleRepoMode handles the output for single repository mode.
-func (c *realCGWT) handleSingleRepoMode() {
+func (c *realWTM) handleSingleRepoMode() {
 	fmt.Println("Single repository mode detected")
 }
 
 // handleWorkspaceMode handles the output for workspace mode.
-func (c *realCGWT) handleWorkspaceMode(workspaceFile string) error {
+func (c *realWTM) handleWorkspaceMode(workspaceFile string) error {
 	workspaceConfig, err := c.parseWorkspaceFile(workspaceFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
@@ -157,12 +157,12 @@ func (c *realCGWT) handleWorkspaceMode(workspaceFile string) error {
 }
 
 // handleNoProjectFound handles the output when no project is found.
-func (c *realCGWT) handleNoProjectFound() {
+func (c *realWTM) handleNoProjectFound() {
 	fmt.Println("No Git repository or workspace found")
 }
 
 // validateSingleRepository validates that the current directory is a working Git repository.
-func (c *realCGWT) validateSingleRepository() error {
+func (c *realWTM) validateSingleRepository() error {
 	if c.verbose {
 		c.logger.Logf("Validating repository: %s", ".")
 	}
@@ -180,7 +180,7 @@ func (c *realCGWT) validateSingleRepository() error {
 }
 
 // validateGitDirectory validates that .git directory exists and is a directory.
-func (c *realCGWT) validateGitDirectory() error {
+func (c *realWTM) validateGitDirectory() error {
 	// Check current directory contains .git folder
 	exists, err := c.fs.Exists(".git")
 	if err != nil {
@@ -217,7 +217,7 @@ func (c *realCGWT) validateGitDirectory() error {
 }
 
 // validateGitStatus validates that git status works in the repository.
-func (c *realCGWT) validateGitStatus() error {
+func (c *realWTM) validateGitStatus() error {
 	// Execute git status to ensure repository is working
 	if c.verbose {
 		c.logger.Logf("Executing git status in: %s", ".")
@@ -234,7 +234,7 @@ func (c *realCGWT) validateGitStatus() error {
 }
 
 // validateWorkspaceRepositories validates all repositories in a workspace.
-func (c *realCGWT) validateWorkspaceRepositories(workspaceFiles []string) error {
+func (c *realWTM) validateWorkspaceRepositories(workspaceFiles []string) error {
 	// For now, validate the first workspace file
 	// TODO: Handle multiple workspace files selection
 	workspaceFile := workspaceFiles[0]
@@ -264,7 +264,7 @@ func (c *realCGWT) validateWorkspaceRepositories(workspaceFiles []string) error 
 }
 
 // validateWorkspaceRepository validates a single repository in a workspace.
-func (c *realCGWT) validateWorkspaceRepository(folder WorkspaceFolder, workspaceDir string) error {
+func (c *realWTM) validateWorkspaceRepository(folder WorkspaceFolder, workspaceDir string) error {
 	// Resolve relative path from workspace file location
 	resolvedPath := filepath.Join(workspaceDir, folder.Path)
 
@@ -293,7 +293,7 @@ func (c *realCGWT) validateWorkspaceRepository(folder WorkspaceFolder, workspace
 }
 
 // validateWorkspaceRepositoryPath validates that the repository path exists.
-func (c *realCGWT) validateWorkspaceRepositoryPath(folder WorkspaceFolder, resolvedPath string) error {
+func (c *realWTM) validateWorkspaceRepositoryPath(folder WorkspaceFolder, resolvedPath string) error {
 	// Check repository path exists
 	exists, err := c.fs.Exists(resolvedPath)
 	if err != nil {
@@ -314,7 +314,7 @@ func (c *realCGWT) validateWorkspaceRepositoryPath(folder WorkspaceFolder, resol
 }
 
 // validateWorkspaceRepositoryGit validates that the repository has a .git directory and git status works.
-func (c *realCGWT) validateWorkspaceRepositoryGit(folder WorkspaceFolder, resolvedPath string) error {
+func (c *realWTM) validateWorkspaceRepositoryGit(folder WorkspaceFolder, resolvedPath string) error {
 	// Verify path contains .git folder
 	gitPath := filepath.Join(resolvedPath, ".git")
 	exists, err := c.fs.Exists(gitPath)
@@ -348,7 +348,7 @@ func (c *realCGWT) validateWorkspaceRepositoryGit(folder WorkspaceFolder, resolv
 }
 
 // validateGitConfiguration validates that Git is properly configured and working.
-func (c *realCGWT) validateGitConfiguration(workDir string) error {
+func (c *realWTM) validateGitConfiguration(workDir string) error {
 	if c.verbose {
 		c.logger.Logf("Validating Git configuration in: %s", workDir)
 	}
@@ -378,7 +378,7 @@ const (
 )
 
 // detectProjectType detects the project type and returns the type and workspace files if applicable.
-func (c *realCGWT) detectProjectType() (ProjectType, []string, error) {
+func (c *realWTM) detectProjectType() (ProjectType, []string, error) {
 	// First check for single repository mode
 	isSingleRepo, err := c.detectSingleRepoMode()
 	if err != nil {
@@ -404,7 +404,7 @@ func (c *realCGWT) detectProjectType() (ProjectType, []string, error) {
 }
 
 // handleProjectDetection handles the output for the detected project type.
-func (c *realCGWT) handleProjectDetection(projectType ProjectType, workspaceFiles []string) error {
+func (c *realWTM) handleProjectDetection(projectType ProjectType, workspaceFiles []string) error {
 	switch projectType {
 	case ProjectTypeSingleRepo:
 		c.handleSingleRepoMode()
@@ -428,7 +428,7 @@ func (c *realCGWT) handleProjectDetection(projectType ProjectType, workspaceFile
 }
 
 // validateProjectStructureWithResults validates the project structure using pre-detected results.
-func (c *realCGWT) validateProjectStructureWithResults(projectType ProjectType, workspaceFiles []string) error {
+func (c *realWTM) validateProjectStructureWithResults(projectType ProjectType, workspaceFiles []string) error {
 	if c.verbose {
 		c.logger.Logf("Starting project structure validation")
 	}
@@ -453,7 +453,7 @@ func (c *realCGWT) validateProjectStructureWithResults(projectType ProjectType, 
 // createReposDirectoryStructure creates the directory structure for repository worktrees.
 //
 //nolint:unused // This method will be used in the Run() method in future features
-func (c *realCGWT) createReposDirectoryStructure(repoName, branchName string) (string, error) {
+func (c *realWTM) createReposDirectoryStructure(repoName, branchName string) (string, error) {
 	if c.verbose {
 		c.logger.Logf("Creating directory structure for repo: %s, branch: %s", repoName, branchName)
 	}
@@ -498,7 +498,7 @@ func (c *realCGWT) createReposDirectoryStructure(repoName, branchName string) (s
 // sanitizeRepositoryName extracts and sanitizes repository name from Git remote URL.
 //
 //nolint:unused // This method will be used in the Run() method in future features
-func (c *realCGWT) sanitizeRepositoryName(remoteURL string) (string, error) {
+func (c *realWTM) sanitizeRepositoryName(remoteURL string) (string, error) {
 	if remoteURL == "" {
 		return "", ErrRepositoryURLEmpty
 	}
@@ -527,7 +527,7 @@ func (c *realCGWT) sanitizeRepositoryName(remoteURL string) (string, error) {
 // extractRepoPathFromURL extracts the repository path from various URL formats.
 //
 //nolint:unused // This method will be used in the Run() method in future features
-func (c *realCGWT) extractRepoPathFromURL(repoName string) string {
+func (c *realWTM) extractRepoPathFromURL(repoName string) string {
 	// Handle SSH format: git@github.com:user/repo.git
 	if strings.Contains(repoName, "git@") {
 		parts := strings.Split(repoName, ":")
@@ -556,7 +556,7 @@ func (c *realCGWT) extractRepoPathFromURL(repoName string) string {
 // sanitizeBranchName validates and sanitizes branch name for safe directory creation.
 //
 //nolint:unused // This method will be used in the Run() method in future features
-func (c *realCGWT) sanitizeBranchName(branchName string) (string, error) {
+func (c *realWTM) sanitizeBranchName(branchName string) (string, error) {
 	if branchName == "" {
 		return "", ErrBranchNameEmpty
 	}
@@ -585,7 +585,7 @@ func (c *realCGWT) sanitizeBranchName(branchName string) (string, error) {
 // getBasePath returns the base path from configuration.
 //
 //nolint:unused // This method will be used in the Run() method in future features
-func (c *realCGWT) getBasePath() (string, error) {
+func (c *realWTM) getBasePath() (string, error) {
 	if c.config == nil {
 		return "", ErrConfigurationNotInitialized
 	}
@@ -600,7 +600,7 @@ func (c *realCGWT) getBasePath() (string, error) {
 // addWorktreeToStatus adds a worktree entry to the status file.
 //
 //nolint:unused // This method is used internally
-func (c *realCGWT) addWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error {
+func (c *realWTM) addWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error {
 	if c.verbose {
 		c.logger.Logf("Adding worktree to status: repo=%s, branch=%s, path=%s, workspace=%s",
 			repoName, branch, worktreePath, workspacePath)
@@ -621,7 +621,7 @@ func (c *realCGWT) addWorktreeToStatus(repoName, branch, worktreePath, workspace
 // removeWorktreeFromStatus removes a worktree entry from the status file.
 //
 //nolint:unused // This method is used internally
-func (c *realCGWT) removeWorktreeFromStatus(repoName, branch string) error {
+func (c *realWTM) removeWorktreeFromStatus(repoName, branch string) error {
 	if c.verbose {
 		c.logger.Logf("Removing worktree from status: repo=%s, branch=%s", repoName, branch)
 	}
@@ -641,7 +641,7 @@ func (c *realCGWT) removeWorktreeFromStatus(repoName, branch string) error {
 // getWorktreeStatus retrieves the status of a specific worktree.
 //
 //nolint:unused // This method is used internally
-func (c *realCGWT) getWorktreeStatus(repoName, branch string) (*status.Repository, error) {
+func (c *realWTM) getWorktreeStatus(repoName, branch string) (*status.Repository, error) {
 	if c.verbose {
 		c.logger.Logf("Getting worktree status: repo=%s, branch=%s", repoName, branch)
 	}
@@ -657,7 +657,7 @@ func (c *realCGWT) getWorktreeStatus(repoName, branch string) (*status.Repositor
 // listAllWorktrees lists all tracked worktrees.
 //
 //nolint:unused // This method is used internally
-func (c *realCGWT) listAllWorktrees() ([]status.Repository, error) {
+func (c *realWTM) listAllWorktrees() ([]status.Repository, error) {
 	if c.verbose {
 		c.logger.Logf("Listing all worktrees")
 	}
