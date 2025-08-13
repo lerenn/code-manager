@@ -3,8 +3,6 @@ package wtm
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
-	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
@@ -487,31 +485,6 @@ func (c *realWTM) validateProjectStructureWithResults(projectType ProjectType, w
 }
 
 // sanitizeBranchName validates and sanitizes branch name for safe directory creation.
-func (c *realWTM) sanitizeBranchName(branchName string) (string, error) {
-	if branchName == "" {
-		return "", ErrBranchNameEmpty
-	}
-
-	// Replace invalid characters with underscores
-	invalidChars := regexp.MustCompile(`[<>:"/\\|?*#]`)
-	sanitized := invalidChars.ReplaceAllString(branchName, "_")
-
-	// Remove leading/trailing underscores and dots
-	sanitized = strings.Trim(sanitized, "._")
-
-	// Limit length to 255 characters (filesystem limit)
-	if len(sanitized) > 255 {
-		sanitized = sanitized[:255]
-		// Ensure we don't end with a dot or underscore
-		sanitized = strings.TrimRight(sanitized, "._")
-	}
-
-	if sanitized == "" {
-		return "", ErrBranchNameEmptyAfterSanitization
-	}
-
-	return sanitized, nil
-}
 
 // getBasePath returns the base path from configuration.
 func (c *realWTM) getBasePath() (string, error) {
