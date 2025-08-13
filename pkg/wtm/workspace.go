@@ -5,53 +5,76 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/lerenn/wtm/pkg/fs"
+	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/logger"
 )
 
-// WorkspaceConfig represents a VS Code-like workspace configuration.
-type WorkspaceConfig struct {
+// workspaceConfig represents a VS Code-like workspace configuration.
+type workspaceConfig struct {
 	Name       string                 `json:"name,omitempty"`
-	Folders    []WorkspaceFolder      `json:"folders"`
+	Folders    []workspaceFolder      `json:"folders"`
 	Settings   map[string]interface{} `json:"settings,omitempty"`
 	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
-// WorkspaceFolder represents a folder in a workspace configuration.
-type WorkspaceFolder struct {
+// workspaceFolder represents a folder in a workspace configuration.
+type workspaceFolder struct {
 	Name string `json:"name,omitempty"`
 	Path string `json:"path"`
 }
 
-// detectWorkspaceMode checks if the current directory contains workspace files.
-func (c *realWTM) detectWorkspaceMode() ([]string, error) {
-	c.verbosePrint("Checking for .code-workspace files...")
+// workspace represents a workspace and provides methods for workspace operations.
+type workspace struct {
+	fs           fs.FS
+	git          git.Git
+	logger       logger.Logger
+	verbose      bool
+	originalFile string
+}
+
+// newWorkspace creates a new Workspace instance.
+func newWorkspace(fs fs.FS, git git.Git, logger logger.Logger, verbose bool) *workspace {
+	return &workspace{
+		fs:      fs,
+		git:     git,
+		logger:  logger,
+		verbose: verbose,
+	}
+}
+
+// detectWorkspaceFiles checks if the current directory contains workspace files.
+func (w *workspace) detectWorkspaceFiles() ([]string, error) {
+	w.verbosePrint("Checking for .code-workspace files...")
 
 	// Check for workspace files
-	workspaceFiles, err := c.fs.Glob("*.code-workspace")
+	workspaceFiles, err := w.fs.Glob("*.code-workspace")
 	if err != nil {
 		return nil, fmt.Errorf("failed to check for workspace files: %w", err)
 	}
 
 	if len(workspaceFiles) == 0 {
-		c.verbosePrint("No .code-workspace files found")
+		w.verbosePrint("No .code-workspace files found")
 		return nil, nil
 	}
 
-	c.verbosePrint(fmt.Sprintf("Found %d workspace file(s)", len(workspaceFiles)))
+	w.verbosePrint(fmt.Sprintf("Found %d workspace file(s)", len(workspaceFiles)))
 	return workspaceFiles, nil
 }
 
-// parseWorkspaceFile parses a workspace configuration file.
-func (c *realWTM) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) {
-	c.verbosePrint("Parsing workspace configuration...")
+// parseFile parses a workspace configuration file.
+func (w *workspace) parseFile(filename string) (*workspaceConfig, error) {
+	w.verbosePrint("Parsing workspace configuration...")
 
 	// Read workspace file
-	content, err := c.fs.ReadFile(filename)
+	content, err := w.fs.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrWorkspaceFileReadError, err)
 	}
 
 	// Parse JSON
-	var config WorkspaceConfig
+	var config workspaceConfig
 	if err := json.Unmarshal(content, &config); err != nil {
 		return nil, ErrWorkspaceFileMalformed
 	}
@@ -62,7 +85,7 @@ func (c *realWTM) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) 
 	}
 
 	// Filter out null values and validate structure
-	var validFolders []WorkspaceFolder
+	var validFolders []workspaceFolder
 	for _, folder := range config.Folders {
 		// Skip null values
 		if folder.Path == "" {
@@ -90,8 +113,8 @@ func (c *realWTM) parseWorkspaceFile(filename string) (*WorkspaceConfig, error) 
 	return &config, nil
 }
 
-// getWorkspaceName extracts the workspace name from configuration or filename.
-func (c *realWTM) getWorkspaceName(config *WorkspaceConfig, filename string) string {
+// getName extracts the workspace name from configuration or filename.
+func (w *workspace) getName(config *workspaceConfig, filename string) string {
 	// First try to get name from workspace configuration
 	if config.Name != "" {
 		return config.Name
@@ -101,15 +124,15 @@ func (c *realWTM) getWorkspaceName(config *WorkspaceConfig, filename string) str
 	return strings.TrimSuffix(filepath.Base(filename), ".code-workspace")
 }
 
-// handleMultipleWorkspaces handles the selection of workspace files when multiple are found.
-func (c *realWTM) handleMultipleWorkspaces(workspaceFiles []string) (string, error) {
-	c.verbosePrint(fmt.Sprintf("Multiple workspace files found: %d", len(workspaceFiles)))
+// HandleMultipleFiles handles the selection of workspace files when multiple are found.
+func (w *workspace) HandleMultipleFiles(workspaceFiles []string) (string, error) {
+	w.verbosePrint(fmt.Sprintf("Multiple workspace files found: %d", len(workspaceFiles)))
 
 	// Display selection prompt
-	c.displayWorkspaceSelection(workspaceFiles)
+	w.displaySelection(workspaceFiles)
 
 	// Get user selection
-	selection, err := c.getUserSelection(len(workspaceFiles))
+	selection, err := w.getUserSelection(len(workspaceFiles))
 	if err != nil {
 		return "", fmt.Errorf("user cancelled selection: %w", err)
 	}
@@ -117,22 +140,153 @@ func (c *realWTM) handleMultipleWorkspaces(workspaceFiles []string) (string, err
 	selectedFile := workspaceFiles[selection-1] // Convert to 0-based index
 
 	// Confirm selection
-	confirmed, err := c.confirmSelection(selectedFile)
+	confirmed, err := w.confirmSelection(selectedFile)
 	if err != nil {
 		return "", fmt.Errorf("user cancelled confirmation: %w", err)
 	}
 
 	if !confirmed {
 		// User wants to go back to selection
-		return c.handleMultipleWorkspaces(workspaceFiles)
+		return w.HandleMultipleFiles(workspaceFiles)
 	}
 
-	c.verbosePrint(fmt.Sprintf("Selected workspace file: %s", selectedFile))
+	w.verbosePrint(fmt.Sprintf("Selected workspace file: %s", selectedFile))
 	return selectedFile, nil
 }
 
-// displayWorkspaceSelection displays the workspace selection prompt.
-func (c *realWTM) displayWorkspaceSelection(workspaceFiles []string) {
+// Validate validates all repositories in a workspace.
+func (w *workspace) Validate() error {
+	if w.verbose {
+		w.logger.Logf("Validating workspace: %s", w.originalFile)
+	}
+
+	workspaceConfig, err := w.parseFile(w.originalFile)
+	if err != nil {
+		if w.verbose {
+			w.logger.Logf("Error: %v", err)
+		}
+		return fmt.Errorf("%w: %w", ErrWorkspaceFileRead, err)
+	}
+
+	// Get workspace file directory for resolving relative paths
+	workspaceDir := filepath.Dir(w.originalFile)
+
+	for _, folder := range workspaceConfig.Folders {
+		if err := w.validateRepository(folder, workspaceDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateRepository validates a single repository in a workspace.
+func (w *workspace) validateRepository(folder workspaceFolder, workspaceDir string) error {
+	// Resolve relative path from workspace file location
+	resolvedPath := filepath.Join(workspaceDir, folder.Path)
+
+	if w.verbose {
+		w.logger.Logf("Validating repository: %s", resolvedPath)
+	}
+
+	if err := w.validateRepositoryPath(folder, resolvedPath); err != nil {
+		return err
+	}
+
+	if err := w.validateRepositoryGit(folder, resolvedPath); err != nil {
+		return err
+	}
+
+	// Validate Git configuration is functional
+	err := w.validateGitConfiguration(resolvedPath)
+	if err != nil {
+		if w.verbose {
+			w.logger.Logf("Error: %v", err)
+		}
+		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
+	}
+
+	return nil
+}
+
+// validateRepositoryPath validates that the repository path exists.
+func (w *workspace) validateRepositoryPath(folder workspaceFolder, resolvedPath string) error {
+	// Check repository path exists
+	exists, err := w.fs.Exists(resolvedPath)
+	if err != nil {
+		if w.verbose {
+			w.logger.Logf("Error: %v", err)
+		}
+		return fmt.Errorf("repository not found in workspace: %s - %w", folder.Path, err)
+	}
+
+	if !exists {
+		if w.verbose {
+			w.logger.Logf("Error: repository path does not exist")
+		}
+		return fmt.Errorf("%w: %s", ErrRepositoryNotFoundInWorkspace, folder.Path)
+	}
+
+	return nil
+}
+
+// validateRepositoryGit validates that the repository has a .git directory and git status works.
+func (w *workspace) validateRepositoryGit(folder workspaceFolder, resolvedPath string) error {
+	// Verify path contains .git folder
+	gitPath := filepath.Join(resolvedPath, ".git")
+	exists, err := w.fs.Exists(gitPath)
+	if err != nil {
+		if w.verbose {
+			w.logger.Logf("Error: %v", err)
+		}
+		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
+	}
+
+	if !exists {
+		if w.verbose {
+			w.logger.Logf("Error: .git directory not found in repository")
+		}
+		return fmt.Errorf("%w: %s", ErrInvalidRepositoryInWorkspaceNoGit, folder.Path)
+	}
+
+	// Execute git status to ensure repository is working
+	if w.verbose {
+		w.logger.Logf("Executing git status in: %s", resolvedPath)
+	}
+	_, err = w.git.Status(resolvedPath)
+	if err != nil {
+		if w.verbose {
+			w.logger.Logf("Error: %v", err)
+		}
+		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
+	}
+
+	return nil
+}
+
+// validateGitConfiguration validates that Git is properly configured and working.
+func (w *workspace) validateGitConfiguration(workDir string) error {
+	if w.verbose {
+		w.logger.Logf("Validating Git configuration in: %s", workDir)
+	}
+
+	// Execute git status to ensure basic Git functionality
+	if w.verbose {
+		w.logger.Logf("Executing git status in: %s", workDir)
+	}
+	_, err := w.git.Status(workDir)
+	if err != nil {
+		if w.verbose {
+			w.logger.Logf("Error: %v", err)
+		}
+		return fmt.Errorf("git configuration error: %w", err)
+	}
+
+	return nil
+}
+
+// displaySelection displays the workspace selection prompt.
+func (w *workspace) displaySelection(workspaceFiles []string) {
 	fmt.Println("Multiple workspace files found. Please select one:")
 	fmt.Println()
 
@@ -145,12 +299,12 @@ func (c *realWTM) displayWorkspaceSelection(workspaceFiles []string) {
 }
 
 // getUserSelection gets and validates user input for workspace selection.
-func (c *realWTM) getUserSelection(maxChoice int) (int, error) {
-	return c.getUserSelectionWithRetries(maxChoice, 3)
+func (w *workspace) getUserSelection(maxChoice int) (int, error) {
+	return w.getUserSelectionWithRetries(maxChoice, 3)
 }
 
 // getUserSelectionWithRetries gets and validates user input with retry limit.
-func (c *realWTM) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
+func (w *workspace) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
 	if retries <= 0 {
 		return 0, fmt.Errorf("too many invalid inputs, user cancelled selection")
 	}
@@ -161,28 +315,28 @@ func (c *realWTM) getUserSelectionWithRetries(maxChoice int, retries int) (int, 
 	}
 
 	// Handle quit commands
-	if c.isQuitCommand(input) {
+	if w.isQuitCommand(input) {
 		return 0, fmt.Errorf("user cancelled selection")
 	}
 
 	// Parse numeric input
-	choice, err := c.parseNumericInput(input)
+	choice, err := w.parseNumericInput(input)
 	if err != nil {
 		fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
-		return c.getUserSelectionWithRetries(maxChoice, retries-1)
+		return w.getUserSelectionWithRetries(maxChoice, retries-1)
 	}
 
 	// Validate range
-	if !c.isValidChoice(choice, maxChoice) {
+	if !w.isValidChoice(choice, maxChoice) {
 		fmt.Printf("Please enter a number between 1 and %d or 'q' to quit: ", maxChoice)
-		return c.getUserSelectionWithRetries(maxChoice, retries-1)
+		return w.getUserSelectionWithRetries(maxChoice, retries-1)
 	}
 
 	return choice, nil
 }
 
 // isQuitCommand checks if the input is a quit command.
-func (c *realWTM) isQuitCommand(input string) bool {
+func (w *workspace) isQuitCommand(input string) bool {
 	quitCommands := []string{"q", "quit", "exit", "cancel"}
 	for _, cmd := range quitCommands {
 		if input == cmd {
@@ -193,24 +347,24 @@ func (c *realWTM) isQuitCommand(input string) bool {
 }
 
 // parseNumericInput parses numeric input from string.
-func (c *realWTM) parseNumericInput(input string) (int, error) {
+func (w *workspace) parseNumericInput(input string) (int, error) {
 	var choice int
 	_, err := fmt.Sscanf(input, "%d", &choice)
 	return choice, err
 }
 
 // isValidChoice checks if the choice is within valid range.
-func (c *realWTM) isValidChoice(choice, maxChoice int) bool {
+func (w *workspace) isValidChoice(choice, maxChoice int) bool {
 	return choice >= 1 && choice <= maxChoice
 }
 
 // confirmSelection asks the user to confirm their workspace selection.
-func (c *realWTM) confirmSelection(workspaceFile string) (bool, error) {
-	return c.confirmSelectionWithRetries(workspaceFile, 3)
+func (w *workspace) confirmSelection(workspaceFile string) (bool, error) {
+	return w.confirmSelectionWithRetries(workspaceFile, 3)
 }
 
 // confirmSelectionWithRetries asks the user to confirm their workspace selection with retry limit.
-func (c *realWTM) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
+func (w *workspace) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
 	if retries <= 0 {
 		return false, fmt.Errorf("too many invalid inputs, user cancelled confirmation")
 	}
@@ -225,17 +379,17 @@ func (c *realWTM) confirmSelectionWithRetries(workspaceFile string, retries int)
 	}
 
 	// Handle confirmation
-	result, err := c.parseConfirmationInput(input)
+	result, err := w.parseConfirmationInput(input)
 	if err != nil {
 		fmt.Print("Please enter 'y' for yes, 'n' for no, or 'q' to quit: ")
-		return c.confirmSelectionWithRetries(workspaceFile, retries-1)
+		return w.confirmSelectionWithRetries(workspaceFile, retries-1)
 	}
 
 	return result, nil
 }
 
 // parseConfirmationInput parses confirmation input.
-func (c *realWTM) parseConfirmationInput(input string) (bool, error) {
+func (w *workspace) parseConfirmationInput(input string) (bool, error) {
 	switch input {
 	case "y", "yes", "Y", "YES":
 		return true, nil
@@ -245,5 +399,61 @@ func (c *realWTM) parseConfirmationInput(input string) (bool, error) {
 		return false, fmt.Errorf("user cancelled confirmation")
 	default:
 		return false, fmt.Errorf("invalid input")
+	}
+}
+
+// Load handles the complete workspace loading workflow.
+// It detects workspace files, handles user selection if multiple files are found,
+// and loads the workspace configuration for display.
+func (w *workspace) Load() error {
+	// Detect workspace files
+	workspaceFiles, err := w.detectWorkspaceFiles()
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrWorkspaceDetection, err)
+	}
+
+	if len(workspaceFiles) == 0 {
+		w.originalFile = ""
+		return nil
+	}
+
+	// If only one workspace file, store it directly
+	if len(workspaceFiles) == 1 {
+		w.originalFile = workspaceFiles[0]
+	} else {
+		// If multiple workspace files, handle user selection
+		selectedFile, err := w.HandleMultipleFiles(workspaceFiles)
+		if err != nil {
+			return err
+		}
+		w.originalFile = selectedFile
+	}
+
+	// Load and display workspace configuration
+	workspaceConfig, err := w.parseFile(w.originalFile)
+	if err != nil {
+		return fmt.Errorf("failed to parse workspace file: %w", err)
+	}
+
+	w.verbosePrint("Workspace mode detected")
+
+	workspaceName := w.getName(workspaceConfig, w.originalFile)
+	w.verbosePrint(fmt.Sprintf("Found workspace: %s", workspaceName))
+
+	if w.verbose {
+		w.verbosePrint("Workspace configuration:")
+		w.verbosePrint(fmt.Sprintf("  Folders: %d", len(workspaceConfig.Folders)))
+		for _, folder := range workspaceConfig.Folders {
+			w.verbosePrint(fmt.Sprintf("    - %s: %s", folder.Name, folder.Path))
+		}
+	}
+
+	return nil
+}
+
+// verbosePrint prints a message only in verbose mode.
+func (w *workspace) verbosePrint(message string) {
+	if w.verbose {
+		w.logger.Logf(message)
 	}
 }

@@ -33,13 +33,16 @@ type realWTM struct {
 // NewWTM creates a new WTM instance.
 func NewWTM(cfg *config.Config) WTM {
 	fsInstance := fs.NewFS()
+	gitInstance := git.NewGit()
+	loggerInstance := logger.NewNoopLogger()
+
 	return &realWTM{
 		fs:            fsInstance,
-		git:           git.NewGit(),
+		git:           gitInstance,
 		config:        cfg,
 		statusManager: status.NewManager(fsInstance, cfg),
 		verbose:       false,
-		logger:        logger.NewNoopLogger(),
+		logger:        loggerInstance,
 	}
 }
 
@@ -69,8 +72,8 @@ func (c *realWTM) CreateWorkTree(branch string) error {
 		c.logger.Logf("Starting WTM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
 	}
 
-	// Detect and validate project
-	projectType, _, err := c.detectAndValidateProject()
+	// 1. Detect project mode (repository or workspace)
+	projectType, err := c.detectProjectMode()
 	if err != nil {
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
@@ -78,11 +81,58 @@ func (c *realWTM) CreateWorkTree(branch string) error {
 		return err
 	}
 
-	// Create worktree for single repository (Feature 011)
-	if err := c.handleWorktreeCreation(sanitizedBranch, projectType); err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
+	// 2. Handle based on project type
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		return c.handleRepositoryMode(sanitizedBranch)
+	case ProjectTypeWorkspace:
+		return c.handleWorkspaceMode(sanitizedBranch)
+	case ProjectTypeNone:
+		return fmt.Errorf("no Git repository or workspace found")
+	default:
+		return fmt.Errorf("unknown project type")
+	}
+}
+
+// detectProjectMode detects if this is a repository or workspace mode.
+func (c *realWTM) detectProjectMode() (ProjectType, error) {
+	// First check for single repository mode
+	isSingleRepo, err := c.checkGitDirExists()
+	if err != nil {
+		return ProjectTypeNone, fmt.Errorf("failed to detect repository mode: %w", err)
+	}
+
+	if isSingleRepo {
+		return ProjectTypeSingleRepo, nil
+	}
+
+	// If no single repo found, check for workspace mode
+	workspaceFiles, err := c.fs.Glob("*.code-workspace")
+	if err != nil {
+		return ProjectTypeNone, fmt.Errorf("failed to check for workspace files: %w", err)
+	}
+
+	if len(workspaceFiles) > 0 {
+		return ProjectTypeWorkspace, nil
+	}
+
+	// No repository or workspace found
+	return ProjectTypeNone, nil
+}
+
+// handleRepositoryMode handles repository mode: validation and worktree creation.
+func (c *realWTM) handleRepositoryMode(branch string) error {
+	if c.verbose {
+		c.logger.Logf("Handling repository mode")
+	}
+
+	// 1. Validate repository
+	if err := c.validateCurrentDirIsGitRepository(); err != nil {
+		return err
+	}
+
+	// 2. Create worktree for single repository
+	if err := c.createWorktreeForSingleRepo(branch); err != nil {
 		return err
 	}
 
@@ -93,33 +143,32 @@ func (c *realWTM) CreateWorkTree(branch string) error {
 	return nil
 }
 
-// detectAndValidateProject handles project detection and validation.
-func (c *realWTM) detectAndValidateProject() (ProjectType, []string, error) {
-	// Detect project mode once and store results
-	projectType, workspaceFiles, err := c.detectProjectType()
-	if err != nil {
-		return ProjectTypeNone, nil, err
+// handleWorkspaceMode handles workspace mode: validation and placeholder for worktree creation.
+func (c *realWTM) handleWorkspaceMode(_ string) error {
+	if c.verbose {
+		c.logger.Logf("Handling workspace mode")
 	}
 
-	// Handle detection output (Features 001, 002, 003)
-	if err := c.handleProjectDetection(projectType, workspaceFiles); err != nil {
-		return ProjectTypeNone, nil, err
+	// Create a single workspace instance for all workspace operations
+	workspace := newWorkspace(c.fs, c.git, c.logger, c.verbose)
+
+	// 1. Load workspace (detection, selection, and display)
+	if err := workspace.Load(); err != nil {
+		return err
 	}
 
-	// Validation logic (Feature 004)
-	if err := c.validateProjectStructureWithResults(projectType, workspaceFiles); err != nil {
-		return ProjectTypeNone, nil, err
+	// 2. Validate all repositories in workspace
+	if err := workspace.Validate(); err != nil {
+		return err
 	}
 
-	return projectType, workspaceFiles, nil
-}
+	// 4. TODO: Create worktrees for workspace repositories (placeholder)
+	if c.verbose {
+		c.logger.Logf("Workspace worktree creation not yet implemented")
+	}
 
-// handleWorktreeCreation handles worktree creation for single repositories.
-func (c *realWTM) handleWorktreeCreation(branch string, projectType ProjectType) error {
-	if projectType == ProjectTypeSingleRepo {
-		if err := c.createWorktreeForSingleRepo(branch); err != nil {
-			return err
-		}
+	if c.verbose {
+		c.logger.Logf("WTM execution completed successfully")
 	}
 
 	return nil
@@ -132,8 +181,8 @@ func (c *realWTM) verbosePrint(message string) {
 	}
 }
 
-// detectSingleRepoMode checks if the current directory is a single Git repository.
-func (c *realWTM) detectSingleRepoMode() (bool, error) {
+// checkGitDirExists checks if the current directory is a single Git repository.
+func (c *realWTM) checkGitDirExists() (bool, error) {
 	c.verbosePrint("Checking for .git directory...")
 
 	// Check if .git exists
@@ -164,46 +213,19 @@ func (c *realWTM) detectSingleRepoMode() (bool, error) {
 	return true, nil
 }
 
-// handleSingleRepoMode handles the output for single repository mode.
-func (c *realWTM) handleSingleRepoMode() {
-	c.verbosePrint("Single repository mode detected")
-}
-
-// handleWorkspaceMode handles the output for workspace mode.
-func (c *realWTM) handleWorkspaceMode(workspaceFile string) error {
-	workspaceConfig, err := c.parseWorkspaceFile(workspaceFile)
-	if err != nil {
-		return fmt.Errorf("failed to parse workspace file: %w", err)
-	}
-
-	c.verbosePrint("Workspace mode detected")
-
-	workspaceName := c.getWorkspaceName(workspaceConfig, workspaceFile)
-	c.verbosePrint(fmt.Sprintf("Found workspace: %s", workspaceName))
-
-	if c.verbose {
-		c.verbosePrint("Workspace configuration:")
-		c.verbosePrint(fmt.Sprintf("  Folders: %d", len(workspaceConfig.Folders)))
-		for _, folder := range workspaceConfig.Folders {
-			c.verbosePrint(fmt.Sprintf("    - %s: %s", folder.Name, folder.Path))
-		}
-	}
-	return nil
-}
-
-// handleNoProjectFound handles the output when no project is found.
-func (c *realWTM) handleNoProjectFound() {
-	c.logger.Logf("No Git repository or workspace found")
-}
-
-// validateSingleRepository validates that the current directory is a working Git repository.
-func (c *realWTM) validateSingleRepository() error {
+// validateCurrentDirIsGitRepository validates that the current directory is a working Git repository.
+func (c *realWTM) validateCurrentDirIsGitRepository() error {
 	if c.verbose {
 		c.logger.Logf("Validating repository: %s", ".")
 	}
 
-	if err := c.validateGitDirectory(); err != nil {
+	// Check if .git directory exists and is a directory
+	exists, err := c.checkGitDirExists()
+	if err != nil {
 		return err
+	}
+	if !exists {
+		return ErrGitRepositoryNotFound
 	}
 
 	if err := c.validateGitStatus(); err != nil {
@@ -212,43 +234,6 @@ func (c *realWTM) validateSingleRepository() error {
 
 	// Validate Git configuration is functional
 	return c.validateGitConfiguration(".")
-}
-
-// validateGitDirectory validates that .git directory exists and is a directory.
-func (c *realWTM) validateGitDirectory() error {
-	// Check current directory contains .git folder
-	exists, err := c.fs.Exists(".git")
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return fmt.Errorf("failed to check .git existence: %w", err)
-	}
-
-	if !exists {
-		if c.verbose {
-			c.logger.Logf("Error: .git directory not found")
-		}
-		return ErrGitRepositoryNotFound
-	}
-
-	// Verify .git is a directory
-	isDir, err := c.fs.IsDir(".git")
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return fmt.Errorf("failed to check .git directory: %w", err)
-	}
-
-	if !isDir {
-		if c.verbose {
-			c.logger.Logf("Error: .git exists but is not a directory")
-		}
-		return ErrGitRepositoryNotDirectory
-	}
-
-	return nil
 }
 
 // validateGitStatus validates that git status works in the repository.
@@ -268,136 +253,19 @@ func (c *realWTM) validateGitStatus() error {
 	return nil
 }
 
-// validateWorkspaceRepositories validates all repositories in a workspace.
-func (c *realWTM) validateWorkspaceRepositories(workspaceFiles []string) error {
-	// For now, validate the first workspace file
-	// TODO: Handle multiple workspace files selection
-	workspaceFile := workspaceFiles[0]
-
-	if c.verbose {
-		c.logger.Logf("Validating workspace: %s", workspaceFile)
-	}
-
-	workspaceConfig, err := c.parseWorkspaceFile(workspaceFile)
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return fmt.Errorf("%w: %w", ErrWorkspaceFileRead, err)
-	}
-
-	// Get workspace file directory for resolving relative paths
-	workspaceDir := filepath.Dir(workspaceFile)
-
-	for _, folder := range workspaceConfig.Folders {
-		if err := c.validateWorkspaceRepository(folder, workspaceDir); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// validateWorkspaceRepository validates a single repository in a workspace.
-func (c *realWTM) validateWorkspaceRepository(folder WorkspaceFolder, workspaceDir string) error {
-	// Resolve relative path from workspace file location
-	resolvedPath := filepath.Join(workspaceDir, folder.Path)
-
-	if c.verbose {
-		c.logger.Logf("Validating repository: %s", resolvedPath)
-	}
-
-	if err := c.validateWorkspaceRepositoryPath(folder, resolvedPath); err != nil {
-		return err
-	}
-
-	if err := c.validateWorkspaceRepositoryGit(folder, resolvedPath); err != nil {
-		return err
-	}
-
-	// Validate Git configuration is functional
-	err := c.validateGitConfiguration(resolvedPath)
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
-	}
-
-	return nil
-}
-
-// validateWorkspaceRepositoryPath validates that the repository path exists.
-func (c *realWTM) validateWorkspaceRepositoryPath(folder WorkspaceFolder, resolvedPath string) error {
-	// Check repository path exists
-	exists, err := c.fs.Exists(resolvedPath)
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return fmt.Errorf("repository not found in workspace: %s - %w", folder.Path, err)
-	}
-
-	if !exists {
-		if c.verbose {
-			c.logger.Logf("Error: repository path does not exist")
-		}
-		return fmt.Errorf("%w: %s", ErrRepositoryNotFoundInWorkspace, folder.Path)
-	}
-
-	return nil
-}
-
-// validateWorkspaceRepositoryGit validates that the repository has a .git directory and git status works.
-func (c *realWTM) validateWorkspaceRepositoryGit(folder WorkspaceFolder, resolvedPath string) error {
-	// Verify path contains .git folder
-	gitPath := filepath.Join(resolvedPath, ".git")
-	exists, err := c.fs.Exists(gitPath)
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
-	}
-
-	if !exists {
-		if c.verbose {
-			c.logger.Logf("Error: .git directory not found in repository")
-		}
-		return fmt.Errorf("%w: %s", ErrInvalidRepositoryInWorkspaceNoGit, folder.Path)
-	}
-
-	// Execute git status to ensure repository is working
-	if c.verbose {
-		c.logger.Logf("Executing git status in: %s", resolvedPath)
-	}
-	_, err = c.git.Status(resolvedPath)
-	if err != nil {
-		if c.verbose {
-			c.logger.Logf("Error: %v", err)
-		}
-		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
-	}
-
-	return nil
-}
-
-// validateGitConfiguration validates that Git is properly configured and working.
+// validateGitConfiguration validates that Git configuration is functional.
 func (c *realWTM) validateGitConfiguration(workDir string) error {
 	if c.verbose {
 		c.logger.Logf("Validating Git configuration in: %s", workDir)
 	}
 
-	// Execute git status to ensure basic Git functionality
-	if c.verbose {
-		c.logger.Logf("Executing git status in: %s", workDir)
-	}
+	// Execute git status to ensure Git is working
 	_, err := c.git.Status(workDir)
 	if err != nil {
 		if c.verbose {
 			c.logger.Logf("Error: %v", err)
 		}
-		return fmt.Errorf("git configuration error: %w", err)
+		return fmt.Errorf("%w: %w", ErrGitRepositoryInvalid, err)
 	}
 
 	return nil
@@ -412,79 +280,6 @@ const (
 	ProjectTypeSingleRepo
 	ProjectTypeWorkspace
 )
-
-// detectProjectType detects the project type and returns the type and workspace files if applicable.
-func (c *realWTM) detectProjectType() (ProjectType, []string, error) {
-	// First check for single repository mode
-	isSingleRepo, err := c.detectSingleRepoMode()
-	if err != nil {
-		return ProjectTypeNone, nil, fmt.Errorf("failed to detect repository mode: %w", err)
-	}
-
-	if isSingleRepo {
-		return ProjectTypeSingleRepo, nil, nil
-	}
-
-	// If no single repo found, check for workspace mode
-	workspaceFiles, err := c.detectWorkspaceMode()
-	if err != nil {
-		return ProjectTypeNone, nil, fmt.Errorf("%w: %w", ErrWorkspaceDetection, err)
-	}
-
-	if len(workspaceFiles) > 0 {
-		return ProjectTypeWorkspace, workspaceFiles, nil
-	}
-
-	// No repository or workspace found
-	return ProjectTypeNone, nil, nil
-}
-
-// handleProjectDetection handles the output for the detected project type.
-func (c *realWTM) handleProjectDetection(projectType ProjectType, workspaceFiles []string) error {
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		c.handleSingleRepoMode()
-		return nil
-	case ProjectTypeWorkspace:
-		if len(workspaceFiles) > 1 {
-			selectedFile, err := c.handleMultipleWorkspaces(workspaceFiles)
-			if err != nil {
-				return fmt.Errorf("%w: %w", ErrMultipleWorkspaces, err)
-			}
-			return c.handleWorkspaceMode(selectedFile)
-		}
-		if len(workspaceFiles) == 1 {
-			return c.handleWorkspaceMode(workspaceFiles[0])
-		}
-	case ProjectTypeNone:
-		c.handleNoProjectFound()
-		return nil
-	}
-	return nil
-}
-
-// validateProjectStructureWithResults validates the project structure using pre-detected results.
-func (c *realWTM) validateProjectStructureWithResults(projectType ProjectType, workspaceFiles []string) error {
-	if c.verbose {
-		c.logger.Logf("Starting project structure validation")
-	}
-
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		if c.verbose {
-			c.logger.Logf("Validating single repository mode")
-		}
-		return c.validateSingleRepository()
-	case ProjectTypeWorkspace:
-		if c.verbose {
-			c.logger.Logf("Validating workspace mode with %d workspace files", len(workspaceFiles))
-		}
-		return c.validateWorkspaceRepositories(workspaceFiles)
-	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
-	}
-	return nil
-}
 
 // sanitizeBranchName validates and sanitizes branch name for safe directory creation.
 func (c *realWTM) sanitizeBranchName(branchName string) (string, error) {
@@ -576,7 +371,7 @@ func (c *realWTM) validateRepository(branch string) (string, error) {
 	}
 
 	// Validate that we're in a Git repository
-	isSingleRepo, err := c.detectSingleRepoMode()
+	isSingleRepo, err := c.checkGitDirExists()
 	if err != nil {
 		return "", fmt.Errorf("failed to validate Git repository: %w", err)
 	}
