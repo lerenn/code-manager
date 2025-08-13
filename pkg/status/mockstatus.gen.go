@@ -40,32 +40,32 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 }
 
 // AddWorktree mocks base method.
-func (m *MockManager) AddWorktree(repoName, branch, worktreePath, workspacePath string) error {
+func (m *MockManager) AddWorktree(repoURL, branch, worktreePath, workspacePath string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddWorktree", repoName, branch, worktreePath, workspacePath)
+	ret := m.ctrl.Call(m, "AddWorktree", repoURL, branch, worktreePath, workspacePath)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // AddWorktree indicates an expected call of AddWorktree.
-func (mr *MockManagerMockRecorder) AddWorktree(repoName, branch, worktreePath, workspacePath any) *gomock.Call {
+func (mr *MockManagerMockRecorder) AddWorktree(repoURL, branch, worktreePath, workspacePath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddWorktree", reflect.TypeOf((*MockManager)(nil).AddWorktree), repoName, branch, worktreePath, workspacePath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddWorktree", reflect.TypeOf((*MockManager)(nil).AddWorktree), repoURL, branch, worktreePath, workspacePath)
 }
 
 // GetWorktree mocks base method.
-func (m *MockManager) GetWorktree(repoName, branch string) (*Repository, error) {
+func (m *MockManager) GetWorktree(repoURL, branch string) (*Repository, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetWorktree", repoName, branch)
+	ret := m.ctrl.Call(m, "GetWorktree", repoURL, branch)
 	ret0, _ := ret[0].(*Repository)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetWorktree indicates an expected call of GetWorktree.
-func (mr *MockManagerMockRecorder) GetWorktree(repoName, branch any) *gomock.Call {
+func (mr *MockManagerMockRecorder) GetWorktree(repoURL, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorktree", reflect.TypeOf((*MockManager)(nil).GetWorktree), repoName, branch)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorktree", reflect.TypeOf((*MockManager)(nil).GetWorktree), repoURL, branch)
 }
 
 // ListAllWorktrees mocks base method.
@@ -84,15 +84,15 @@ func (mr *MockManagerMockRecorder) ListAllWorktrees() *gomock.Call {
 }
 
 // RemoveWorktree mocks base method.
-func (m *MockManager) RemoveWorktree(repoName, branch string) error {
+func (m *MockManager) RemoveWorktree(repoURL, branch string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveWorktree", repoName, branch)
+	ret := m.ctrl.Call(m, "RemoveWorktree", repoURL, branch)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RemoveWorktree indicates an expected call of RemoveWorktree.
-func (mr *MockManagerMockRecorder) RemoveWorktree(repoName, branch any) *gomock.Call {
+func (mr *MockManagerMockRecorder) RemoveWorktree(repoURL, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockManager)(nil).RemoveWorktree), repoName, branch)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockManager)(nil).RemoveWorktree), repoURL, branch)
 }

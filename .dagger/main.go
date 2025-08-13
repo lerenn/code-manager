@@ -83,7 +83,10 @@ func (ci *Wtm) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
 
 // IntegrationTests returns a container that runs the integration tests.
 func (ci *Wtm) IntegrationTests(sourceDir *dagger.Directory) *dagger.Container {
-	c := dag.Container().From("golang:" + goVersion() + "-alpine")
+	c := dag.Container().From("golang:" + goVersion() + "-alpine").
+		// Install git for integration tests
+		WithExec([]string{"apk", "add", "--no-cache", "git"})
+
 	return ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir).
 		WithExec([]string{"sh", "-c",
 			"go test -tags=integration ./...",
