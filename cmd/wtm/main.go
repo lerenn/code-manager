@@ -164,10 +164,35 @@ func createListCmd() *cobra.Command {
 			fmt.Printf("Worktrees for %s:\n", repoName)
 
 			for _, worktree := range worktrees {
-				fmt.Printf("  %s: %s\n", worktree.Branch, worktree.Path)
+				// Format: [remote] branch: path
+				fmt.Printf("  [%s] %s: %s\n", worktree.Remote, worktree.Branch, worktree.Path)
 			}
 
 			return nil
+		},
+	}
+}
+
+func createLoadCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "load [remote-source:]<branch-name>",
+		Short: "Load branch from remote source",
+		Long: `Load a branch from a remote source and create a worktree. Supports loading from 
+origin or other users/organizations.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			// Load configuration and create WTM instance
+			cfg := loadConfig()
+			wtmManager := wtm.NewWTM(cfg)
+			wtmManager.SetVerbose(verbose)
+
+			// Load worktree with IDE if specified
+			if ideName != "" {
+				return wtmManager.LoadWorktree(args[0], &ideName)
+			}
+
+			// Just load worktree without IDE
+			return wtmManager.LoadWorktree(args[0], nil)
 		},
 	}
 }
@@ -189,12 +214,16 @@ func main() {
 	openCmd := createOpenCmd()
 	deleteCmd := createDeleteCmd()
 	listCmd := createListCmd()
+	loadCmd := createLoadCmd()
 
 	// Add IDE flag to create command
 	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
 
+	// Add IDE flag to load command
+	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
+
 	// Add subcommands
-	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd)
+	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)

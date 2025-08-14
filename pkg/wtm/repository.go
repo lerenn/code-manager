@@ -3,6 +3,7 @@ package wtm
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
@@ -10,6 +11,8 @@ import (
 	"github.com/lerenn/wtm/pkg/logger"
 	"github.com/lerenn/wtm/pkg/status"
 )
+
+const defaultRemote = "origin"
 
 // repository represents a single Git repository and provides methods for repository operations.
 type repository struct {
@@ -104,11 +107,21 @@ func (r *repository) ListWorktrees() ([]status.Repository, error) {
 
 	r.verbosePrint(fmt.Sprintf("Found %d total worktrees in status file", len(allWorktrees)))
 
-	// 3. Filter worktrees to only include those for the current repository
+	// 3. Filter worktrees to only include those for the current repository and add remote information
 	var filteredWorktrees []status.Repository
 	for _, worktree := range allWorktrees {
 		if worktree.URL == repoName {
-			filteredWorktrees = append(filteredWorktrees, worktree)
+			// Get the remote for this branch
+			remote, err := r.git.GetBranchRemote(".", worktree.Branch)
+			if err != nil {
+				// If we can't determine the remote, use "origin" as default
+				remote = defaultRemote
+			}
+
+			// Create a copy with remote information
+			worktreeWithRemote := worktree
+			worktreeWithRemote.Remote = remote
+			filteredWorktrees = append(filteredWorktrees, worktreeWithRemote)
 		}
 	}
 
@@ -484,4 +497,163 @@ func (r *repository) promptForConfirmation(branch, worktreePath string) error {
 		fmt.Print("Please enter 'y' for yes or 'n' for no: ")
 		return r.promptForConfirmation(branch, worktreePath)
 	}
+}
+
+// LoadWorktree loads a branch from a remote source and creates a worktree.
+func (r *repository) LoadWorktree(remoteSource, branchName string) error {
+	r.verbosePrint(fmt.Sprintf("Loading branch: remote=%s, branch=%s", remoteSource, branchName))
+
+	// 1. Validate current directory is a Git repository
+	gitExists, err := r.CheckGitDirExists()
+	if err != nil {
+		return fmt.Errorf("failed to validate Git repository: %w", err)
+	}
+	if !gitExists {
+		return ErrGitRepositoryNotFound
+	}
+
+	// 2. Validate origin remote exists and is a valid GitHub URL
+	if err := r.validateOriginRemote(); err != nil {
+		return err
+	}
+
+	// 3. Parse remote source (default to "origin" if not specified)
+	if remoteSource == "" {
+		remoteSource = "origin"
+	}
+
+	// 4. Handle remote management
+	if err := r.handleRemoteManagement(remoteSource); err != nil {
+		return err
+	}
+
+	// 5. Fetch from the remote
+	r.verbosePrint(fmt.Sprintf("Fetching from remote '%s'", remoteSource))
+	if err := r.git.FetchRemote(".", remoteSource); err != nil {
+		return fmt.Errorf("%w: %w", git.ErrFetchFailed, err)
+	}
+
+	// 6. Validate branch exists on remote
+	r.verbosePrint(fmt.Sprintf("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource))
+	exists, err := r.git.BranchExistsOnRemote(".", remoteSource, branchName)
+	if err != nil {
+		return fmt.Errorf("failed to check branch existence: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("%w: branch '%s' not found on remote '%s'", git.ErrBranchNotFoundOnRemote, branchName, remoteSource)
+	}
+
+	// 7. Create worktree for the branch (using existing worktree creation logic directly)
+	r.verbosePrint(fmt.Sprintf("Creating worktree for branch '%s'", branchName))
+	return r.CreateWorktree(branchName)
+}
+
+// validateOriginRemote validates that the origin remote exists and is a valid GitHub URL.
+func (r *repository) validateOriginRemote() error {
+	r.verbosePrint("Validating origin remote")
+
+	// Check if origin remote exists
+	exists, err := r.git.RemoteExists(".", "origin")
+	if err != nil {
+		return fmt.Errorf("failed to check origin remote: %w", err)
+	}
+	if !exists {
+		return ErrOriginRemoteNotFound
+	}
+
+	// Get origin remote URL
+	originURL, err := r.git.GetRemoteURL(".", "origin")
+	if err != nil {
+		return fmt.Errorf("failed to get origin remote URL: %w", err)
+	}
+
+	// Validate that it's a GitHub URL
+	if !r.isGitHubURL(originURL) {
+		return ErrOriginRemoteInvalidURL
+	}
+
+	return nil
+}
+
+// handleRemoteManagement handles remote addition if the remote doesn't exist.
+func (r *repository) handleRemoteManagement(remoteSource string) error {
+	// If remote source is "origin", no need to add it
+	if remoteSource == "origin" {
+		r.verbosePrint("Using existing origin remote")
+		return nil
+	}
+
+	// Check if remote already exists
+	exists, err := r.git.RemoteExists(".", remoteSource)
+	if err != nil {
+		return fmt.Errorf("failed to check if remote '%s' exists: %w", remoteSource, err)
+	}
+
+	if exists {
+		// Validate that the existing remote URL matches expected format
+		remoteURL, err := r.git.GetRemoteURL(".", remoteSource)
+		if err != nil {
+			return fmt.Errorf("failed to get remote URL: %w", err)
+		}
+
+		// For now, just log that we're using existing remote
+		r.verbosePrint(fmt.Sprintf("Using existing remote '%s' with URL: %s", remoteSource, remoteURL))
+		return nil
+	}
+
+	// Add new remote
+	r.verbosePrint(fmt.Sprintf("Adding new remote '%s'", remoteSource))
+
+	// Get repository name from origin remote
+	repoName, err := r.git.GetRepositoryName(".")
+	if err != nil {
+		return fmt.Errorf("failed to get repository name: %w", err)
+	}
+
+	// Determine protocol from origin remote
+	originURL, err := r.git.GetRemoteURL(".", "origin")
+	if err != nil {
+		return fmt.Errorf("failed to get origin remote URL: %w", err)
+	}
+
+	protocol := r.determineProtocol(originURL)
+
+	// Construct remote URL
+	var remoteURL string
+	if protocol == "ssh" {
+		remoteURL = fmt.Sprintf("git@github.com:%s/%s.git", remoteSource, r.extractRepoNameFromFullPath(repoName))
+	} else {
+		remoteURL = fmt.Sprintf("https://github.com/%s/%s.git", remoteSource, r.extractRepoNameFromFullPath(repoName))
+	}
+
+	r.verbosePrint(fmt.Sprintf("Constructed remote URL: %s", remoteURL))
+
+	// Add the remote
+	if err := r.git.AddRemote(".", remoteSource, remoteURL); err != nil {
+		return fmt.Errorf("%w: %w", git.ErrRemoteAddFailed, err)
+	}
+
+	return nil
+}
+
+// isGitHubURL checks if the URL is a GitHub URL.
+func (r *repository) isGitHubURL(url string) bool {
+	return strings.Contains(url, "github.com")
+}
+
+// determineProtocol determines the protocol (https or ssh) from the origin URL.
+func (r *repository) determineProtocol(originURL string) string {
+	if strings.HasPrefix(originURL, "git@") || strings.HasPrefix(originURL, "ssh://") {
+		return "ssh"
+	}
+	return "https"
+}
+
+// extractRepoNameFromFullPath extracts just the repository name from the full path.
+func (r *repository) extractRepoNameFromFullPath(fullPath string) string {
+	parts := strings.Split(fullPath, "/")
+	if len(parts) >= 2 {
+		return parts[len(parts)-1] // Return the last part (repo name)
+	}
+	return fullPath
 }

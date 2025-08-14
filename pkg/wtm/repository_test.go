@@ -422,6 +422,10 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)
 
+	// Mock GetBranchRemote calls for the filtered worktrees
+	mockGit.EXPECT().GetBranchRemote(".", "feature/test-branch").Return("origin", nil)
+	mockGit.EXPECT().GetBranchRemote(".", "bugfix/issue-123").Return("origin", nil)
+
 	result, err := repo.ListWorktrees()
 	assert.NoError(t, err)
 	assert.Len(t, result, 2, "Should only return worktrees for current repository")
@@ -541,6 +545,10 @@ func TestRepository_ListWorktrees_Filtering(t *testing.T) {
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)
 
+	// Mock GetBranchRemote calls for the filtered worktrees
+	mockGit.EXPECT().GetBranchRemote(".", "feature/test-branch").Return("origin", nil)
+	mockGit.EXPECT().GetBranchRemote(".", "bugfix/issue-123").Return("origin", nil)
+
 	result, err := repo.ListWorktrees()
 	assert.NoError(t, err)
 	assert.Len(t, result, 2, "Should only return worktrees for current repository")
@@ -559,4 +567,501 @@ func TestRepository_ListWorktrees_Filtering(t *testing.T) {
 	assert.Contains(t, branchNames, "bugfix/issue-123")
 	assert.NotContains(t, branchNames, "feature/other-branch")
 	assert.NotContains(t, branchNames, "feature/another-branch")
+}
+
+func TestRepository_LoadWorktree_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock fetch from remote
+	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
+
+	// Mock branch existence check
+	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(true, nil)
+
+	// Mock worktree creation (reusing existing logic) - called by CreateWorktree
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
+
+	err := repo.LoadWorktree("origin", "feature-branch")
+	assert.NoError(t, err)
+}
+
+func TestRepository_LoadBranch_NewRemote(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadBranch and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock remote management (new remote)
+	mockGit.EXPECT().RemoteExists(".", "otheruser").Return(false, nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().AddRemote(".", "otheruser", "https://github.com/otheruser/example.git").Return(nil)
+
+	// Mock fetch from remote
+	mockGit.EXPECT().FetchRemote(".", "otheruser").Return(nil)
+
+	// Mock branch existence check
+	mockGit.EXPECT().BranchExistsOnRemote(".", "otheruser", "feature-branch").Return(true, nil)
+
+	// Mock worktree creation (reusing existing logic)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
+
+	err := repo.LoadWorktree("otheruser", "feature-branch")
+	assert.NoError(t, err)
+}
+
+func TestRepository_LoadWorktree_SSHProtocol(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation (SSH)
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("git@github.com:lerenn/example.git", nil)
+
+	// Mock remote management (new remote with SSH)
+	mockGit.EXPECT().RemoteExists(".", "otheruser").Return(false, nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("git@github.com:lerenn/example.git", nil)
+	mockGit.EXPECT().AddRemote(".", "otheruser", "git@github.com:otheruser/example.git").Return(nil)
+
+	// Mock fetch from remote
+	mockGit.EXPECT().FetchRemote(".", "otheruser").Return(nil)
+
+	// Mock branch existence check
+	mockGit.EXPECT().BranchExistsOnRemote(".", "otheruser", "feature-branch").Return(true, nil)
+
+	// Mock worktree creation (reusing existing logic)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
+
+	err := repo.LoadWorktree("otheruser", "feature-branch")
+	assert.NoError(t, err)
+}
+
+// TestRepository_URLConstruction tests the URL construction logic for different protocols
+func TestRepository_URLConstruction(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	tests := []struct {
+		name         string
+		originURL    string
+		remoteSource string
+		repoName     string
+		expectedURL  string
+	}{
+		{
+			name:         "HTTPS protocol",
+			originURL:    "https://github.com/lerenn/example.git",
+			remoteSource: "otheruser",
+			repoName:     "github.com/lerenn/example",
+			expectedURL:  "https://github.com/otheruser/example.git",
+		},
+		{
+			name:         "SSH protocol",
+			originURL:    "git@github.com:lerenn/example.git",
+			remoteSource: "otheruser",
+			repoName:     "github.com/lerenn/example",
+			expectedURL:  "git@github.com:otheruser/example.git",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock Git repository validation
+			mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+			mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+			mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+			// Mock origin remote validation
+			mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+			mockGit.EXPECT().GetRemoteURL(".", "origin").Return(tt.originURL, nil)
+
+			// Mock remote management
+			mockGit.EXPECT().RemoteExists(".", tt.remoteSource).Return(false, nil)
+			mockGit.EXPECT().GetRepositoryName(".").Return(tt.repoName, nil)
+			mockGit.EXPECT().GetRemoteURL(".", "origin").Return(tt.originURL, nil)
+			mockGit.EXPECT().AddRemote(".", tt.remoteSource, tt.expectedURL).Return(nil)
+
+			// Mock fetch and branch check
+			mockGit.EXPECT().FetchRemote(".", tt.remoteSource).Return(nil)
+			mockGit.EXPECT().BranchExistsOnRemote(".", tt.remoteSource, "feature-branch").Return(true, nil)
+
+			// Mock worktree creation
+			mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return(tt.repoName, nil)
+			mockStatus.EXPECT().GetWorktree(tt.repoName, "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+			mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+			mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+			mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+			mockStatus.EXPECT().AddWorktree(tt.repoName, "feature-branch", gomock.Any(), "").Return(nil)
+			mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
+			mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
+			mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
+
+			err := repo.LoadWorktree(tt.remoteSource, "feature-branch")
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestRepository_LoadWorktree_DefaultRemote(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock fetch from remote
+	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
+
+	// Mock branch existence check
+	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(true, nil)
+
+	// Mock worktree creation (reusing existing logic)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
+
+	// Test with empty remote source (should default to "origin")
+	err := repo.LoadWorktree("", "feature-branch")
+	assert.NoError(t, err)
+}
+
+func TestRepository_LoadWorktree_GitRepositoryNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository not found
+	mockFS.EXPECT().Exists(".git").Return(false, nil)
+
+	err := repo.LoadWorktree("origin", "feature-branch")
+	assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
+}
+
+func TestRepository_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation
+	mockFS.EXPECT().Exists(".git").Return(true, nil)
+	mockFS.EXPECT().IsDir(".git").Return(true, nil)
+
+	// Mock origin remote not found
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(false, nil)
+
+	err := repo.LoadWorktree("origin", "feature-branch")
+	assert.ErrorIs(t, err, ErrOriginRemoteNotFound)
+}
+
+func TestRepository_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation
+	mockFS.EXPECT().Exists(".git").Return(true, nil)
+	mockFS.EXPECT().IsDir(".git").Return(true, nil)
+
+	// Mock origin remote exists but invalid URL
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://gitlab.com/lerenn/example.git", nil)
+
+	err := repo.LoadWorktree("origin", "feature-branch")
+	assert.ErrorIs(t, err, ErrOriginRemoteInvalidURL)
+}
+
+func TestRepository_LoadWorktree_FetchFailed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock fetch from remote fails
+	mockGit.EXPECT().FetchRemote(".", "origin").Return(assert.AnError)
+
+	err := repo.LoadWorktree("origin", "feature-branch")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to fetch from remote")
+}
+
+func TestRepository_LoadWorktree_BranchNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock fetch from remote
+	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
+
+	// Mock branch existence check fails
+	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(false, nil)
+
+	err := repo.LoadWorktree("origin", "feature-branch")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "branch not found on remote")
+}
+
+func TestRepository_LoadWorktree_AddRemoteFailed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadBranch and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock remote management (new remote fails to add)
+	mockGit.EXPECT().RemoteExists(".", "otheruser").Return(false, nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().AddRemote(".", "otheruser", "https://github.com/otheruser/example.git").Return(assert.AnError)
+
+	err := repo.LoadWorktree("otheruser", "feature-branch")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to add remote")
+}
+
+func TestRepository_LoadWorktree_ExistingRemote(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock remote management (existing remote)
+	mockGit.EXPECT().RemoteExists(".", "otheruser").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "otheruser").Return("https://github.com/otheruser/example.git", nil)
+
+	// Mock fetch from remote
+	mockGit.EXPECT().FetchRemote(".", "otheruser").Return(nil)
+
+	// Mock branch existence check
+	mockGit.EXPECT().BranchExistsOnRemote(".", "otheruser", "feature-branch").Return(true, nil)
+
+	// Mock worktree creation (reusing existing logic)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
+
+	err := repo.LoadWorktree("otheruser", "feature-branch")
+	assert.NoError(t, err)
+}
+
+func TestRepository_LoadWorktree_WorktreeCreationError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock Git status for validation (called by CreateWorktree)
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock origin remote validation
+	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+
+	// Mock fetch from remote
+	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
+
+	// Mock branch existence check
+	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(true, nil)
+
+	// Mock worktree creation fails
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(assert.AnError)
+	// Mock cleanup calls
+	mockStatus.EXPECT().RemoveWorktree("github.com/lerenn/example", "feature-branch").Return(nil)
+
+	err := repo.LoadWorktree("origin", "feature-branch")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to create Git worktree")
 }
