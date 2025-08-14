@@ -31,7 +31,8 @@ func listWorktrees(t *testing.T, setup *TestSetup) ([]Repository, error) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.ListWorktrees()
+	worktrees, _, err := wtmInstance.ListWorktrees()
+	return worktrees, err
 }
 
 // runListCommand runs the wtm list command and captures output

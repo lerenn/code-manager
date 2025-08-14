@@ -122,7 +122,9 @@
 
 ## Shipping Process
 
-When asked to "ship" the code or when shipping is mentioned, systematically execute these commands in order:
+**IMPORTANT**: The shipping process should ONLY be executed when the user explicitly asks to "ship" the code or mentions shipping. Do NOT automatically execute the shipping process after implementing features.
+
+When explicitly asked to "ship" the code or when shipping is mentioned, systematically execute these commands in order:
 
 1. **Generate Code**: Execute `go generate ./...` to ensure all generated files are up to date
 2. **Lint and Fix**: Execute `dagger call lint --source-dir=.` and automatically fix any linting errors that are found

@@ -17,7 +17,7 @@ func TestDisplayWorkspaceSelection(t *testing.T) {
 
 	// Test that the method doesn't panic
 	realWTM := c.(*realWTM)
-	workspace := newWorkspace(realWTM.fs, realWTM.git, realWTM.logger, realWTM.verbose)
+	workspace := newWorkspace(realWTM.fs, realWTM.git, realWTM.config, realWTM.statusManager, realWTM.logger, realWTM.verbose)
 	workspace.displaySelection(workspaceFiles)
 }
 

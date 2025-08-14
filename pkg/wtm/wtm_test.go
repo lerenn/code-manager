@@ -368,7 +368,7 @@ func TestWTM_ListWorktrees_NoRepository(t *testing.T) {
 	// Mock workspace detection - no workspace files found
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
-	result, err := wtm.ListWorktrees()
+	result, _, err := wtm.ListWorktrees()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no Git repository or workspace found")
 	assert.Nil(t, result)
