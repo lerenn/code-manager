@@ -81,6 +81,42 @@ func (r *repository) CreateWorktree(branch string) error {
 	return nil
 }
 
+// ListWorktrees lists all worktrees for the current repository.
+func (r *repository) ListWorktrees() ([]status.Repository, error) {
+	r.verbosePrint("Listing worktrees for single repository mode")
+
+	// Note: Repository validation is already done in mode detection, so we skip it here
+	// to avoid duplicate validation calls
+
+	// 1. Extract repository name from remote origin URL (fallback to local path if no remote)
+	repoName, err := r.git.GetRepositoryName(".")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get repository name: %w", err)
+	}
+
+	r.verbosePrint(fmt.Sprintf("Repository name: %s", repoName))
+
+	// 2. Load all worktrees from status file
+	allWorktrees, err := r.statusManager.ListAllWorktrees()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load worktrees from status file: %w", err)
+	}
+
+	r.verbosePrint(fmt.Sprintf("Found %d total worktrees in status file", len(allWorktrees)))
+
+	// 3. Filter worktrees to only include those for the current repository
+	var filteredWorktrees []status.Repository
+	for _, worktree := range allWorktrees {
+		if worktree.URL == repoName {
+			filteredWorktrees = append(filteredWorktrees, worktree)
+		}
+	}
+
+	r.verbosePrint(fmt.Sprintf("Found %d worktrees for current repository", len(filteredWorktrees)))
+
+	return filteredWorktrees, nil
+}
+
 // CheckGitDirExists checks if the current directory is a single Git repository.
 func (r *repository) CheckGitDirExists() (bool, error) {
 	r.verbosePrint("Checking for .git directory...")
