@@ -22,11 +22,11 @@ func TestWTM_Run_WorkspaceMode(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
 	// Mock reading workspace file (called twice: once for display, once for validation)
 	workspaceJSON := `{
@@ -68,13 +68,13 @@ func TestWTM_Run_InvalidWorkspaceJSON(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
-	// Mock reading workspace file with invalid JSON (called once: detectProjectType)
+	// Mock reading workspace file with invalid JSON (called once: handleWorkspaceMode)
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(`{invalid json`), nil).Times(1)
 
 	err := wtm.CreateWorkTree("test-branch")
@@ -90,11 +90,11 @@ func TestWTM_Run_MissingRepository(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
 	// Mock reading workspace file (called twice: once for display, once for validation)
 	workspaceJSON := `{
@@ -125,11 +125,11 @@ func TestWTM_Run_InvalidRepository(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
 	// Mock reading workspace file (called twice: once for display, once for validation)
 	workspaceJSON := `{
@@ -161,11 +161,11 @@ func TestWTM_Run_GitStatusError(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
 	// Mock reading workspace file (called twice: once for display, once for validation)
 	workspaceJSON := `{
@@ -198,14 +198,15 @@ func TestWTM_Run_MultipleWorkspaceFiles(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find multiple workspace files (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project1.code-workspace", "project2.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find multiple workspace files (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project1.code-workspace", "project2.code-workspace"}, nil).Times(2)
 
 	err := wtm.CreateWorkTree("test-branch")
-	assert.ErrorIs(t, err, ErrMultipleWorkspaces)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "user cancelled selection")
 }
 
 func TestWTM_Run_WorkspaceFileReadError(t *testing.T) {
@@ -217,13 +218,13 @@ func TestWTM_Run_WorkspaceFileReadError(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
-	// Mock reading workspace file error (called once: detectProjectType)
+	// Mock reading workspace file error (called once: handleWorkspaceMode)
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return(nil, assert.AnError).Times(1)
 
 	err := wtm.CreateWorkTree("test-branch")
@@ -239,14 +240,15 @@ func TestWTM_Run_WorkspaceGlobError(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection error (called once: detectProjectType)
+	// Mock workspace detection error (called once: detectProjectMode)
 	mockFS.EXPECT().Glob("*.code-workspace").Return(nil, assert.AnError).Times(1)
 
 	err := wtm.CreateWorkTree("test-branch")
-	assert.ErrorIs(t, err, ErrWorkspaceDetection)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to check for workspace files")
 }
 
 func TestWTM_Run_WorkspaceVerboseMode(t *testing.T) {
@@ -261,11 +263,11 @@ func TestWTM_Run_WorkspaceVerboseMode(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
 	// Mock reading workspace file (called twice: once for display, once for validation)
 	workspaceJSON := `{
@@ -298,11 +300,11 @@ func TestWTM_Run_EmptyWorkspace(t *testing.T) {
 	c := wtm.(*realWTM)
 	c.fs = mockFS
 
-	// Mock single repo detection - no .git found (called once: detectProjectType)
+	// Mock single repo detection - no .git found (called once: detectProjectMode)
 	mockFS.EXPECT().Exists(".git").Return(false, nil).Times(1)
 
-	// Mock workspace detection - find workspace file (called once: detectProjectType)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(1)
+	// Mock workspace detection - find workspace file (called twice: once in detectProjectMode, once in handleWorkspaceMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil).Times(2)
 
 	// Mock reading workspace file with empty folders (called multiple times for display and validation)
 	workspaceJSON := `{

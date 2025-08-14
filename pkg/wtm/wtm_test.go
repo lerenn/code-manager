@@ -123,7 +123,7 @@ func TestWTM_ValidateSingleRepository_Success(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("On branch main", nil)
 	mockGit.EXPECT().Status(".").Return("On branch main", nil) // Called twice for validation
 
-	err := wtm.(*realWTM).validateSingleRepository()
+	err := wtm.(*realWTM).validateCurrentDirIsGitRepository()
 	assert.NoError(t, err)
 }
 
@@ -143,7 +143,7 @@ func TestWTM_ValidateSingleRepository_NoGitDir(t *testing.T) {
 	// Mock repository validation - .git not found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 
-	err := wtm.(*realWTM).validateSingleRepository()
+	err := wtm.(*realWTM).validateCurrentDirIsGitRepository()
 	assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
 }
 
@@ -167,7 +167,7 @@ func TestWTM_ValidateSingleRepository_GitStatusError(t *testing.T) {
 	mockFS.EXPECT().IsDir(".git").Return(true, nil)
 	mockGit.EXPECT().Status(".").Return("", assert.AnError)
 
-	err := wtm.(*realWTM).validateSingleRepository()
+	err := wtm.(*realWTM).validateCurrentDirIsGitRepository()
 	assert.ErrorIs(t, err, ErrGitRepositoryInvalid)
 }
 
