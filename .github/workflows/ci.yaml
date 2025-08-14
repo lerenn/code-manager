@@ -50,6 +50,20 @@ jobs:
           verb: call
           args: integration-tests --source-dir=. stdout
 
+  end-to-end-tests:
+    name: Run end-to-end tests
+    needs: ["lint", "unit-tests", "integration-tests"]
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dagger/dagger-for-github@8.0.0
+        with:
+          version: latest
+          verb: call
+          args: end-to-end-tests --source-dir=. stdout
+
   publish-tag:
     name: Publish the tag of the new version
     permissions:

@@ -12,23 +12,39 @@ import (
 )
 
 var (
-	quiet   bool
-	verbose bool
+	quiet      bool
+	verbose    bool
+	configPath string
 )
 
 // loadConfig loads the configuration with fallback to default.
 func loadConfig() *config.Config {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		// Fallback to current directory if home directory cannot be determined
-		homeDir = "."
-	}
+	var cfg *config.Config
+	var err error
 
-	configPath := filepath.Join(homeDir, ".cgwt", "config.yaml")
-	cfg, err := config.LoadConfigWithFallback(configPath)
-	if err != nil {
-		// If there's an error, use default config
-		cfg = config.NewManager().DefaultConfig()
+	if configPath != "" {
+		// Use custom config path if provided
+		manager := config.NewManager()
+		cfg, err = manager.LoadConfig(configPath)
+		if err != nil {
+			log.Printf("Failed to load custom config from %s: %v", configPath, err)
+			// Fall back to default config
+			cfg = manager.DefaultConfig()
+		}
+	} else {
+		// Use default config loading logic
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			// Fallback to current directory if home directory cannot be determined
+			homeDir = "."
+		}
+
+		defaultConfigPath := filepath.Join(homeDir, ".cgwt", "config.yaml")
+		cfg, err = config.LoadConfigWithFallback(defaultConfigPath)
+		if err != nil {
+			// If there's an error, use default config
+			cfg = config.NewManager().DefaultConfig()
+		}
 	}
 
 	return cfg
@@ -60,6 +76,7 @@ func main() {
 	// Add global flags
 	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Specify a custom config file path")
 
 	// Add subcommands
 	rootCmd.AddCommand(createCmd)

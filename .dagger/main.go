@@ -93,6 +93,21 @@ func (ci *Wtm) IntegrationTests(sourceDir *dagger.Directory) *dagger.Container {
 		})
 }
 
+// EndToEndTests returns a container that runs the end-to-end tests.
+func (ci *Wtm) EndToEndTests(sourceDir *dagger.Directory) *dagger.Container {
+	c := dag.Container().From("golang:" + goVersion() + "-alpine").
+		// Install git for end-to-end tests
+		WithExec([]string{"apk", "add", "--no-cache", "git"}).
+		// Configure git for testing
+		WithExec([]string{"git", "config", "--global", "user.name", "Test User"}).
+		WithExec([]string{"git", "config", "--global", "user.email", "test@example.com"})
+
+	return ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir).
+		WithExec([]string{"sh", "-c",
+			"go test -tags=e2e ./test/ -v",
+		})
+}
+
 func (ci *Wtm) withGoCodeAndCacheAsWorkDirectory(
 	c *dagger.Container,
 	sourceDir *dagger.Directory,

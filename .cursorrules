@@ -5,14 +5,17 @@
 ### Test Organization
 - **Adapters** (like `pkg/fs`) should have **integration tests only** using real file system operations
 - **Business Logic** (like `pkg/wtm`) should have **unit tests only** using mocked dependencies
+- **End-to-End Tests** (in `test/` directory) should test the complete CLI workflow using real Git operations
 - Use build tags to organize tests:
   - `//go:build unit` for unit tests with mocked dependencies
   - `//go:build integration` for integration tests with real file system
+  - `//go:build e2e` for end-to-end tests with real CLI and Git operations
 
 ### Test File Naming
 - Standard test files: `*_test.go` (for integration tests in adapters)
 - Unit test files: `*_test.go` with `//go:build unit` tag
 - Integration test files: `*_integration_test.go` with `//go:build integration` tag
+- End-to-end test files: `*_test.go` with `//go:build e2e` tag in `test/` directory
 
 ### Mock Generation
 - Use Uber gomock for mocking: `go.uber.org/mock v0.5.2`
@@ -59,6 +62,7 @@
 ### Running Tests
 - Unit tests: `go test -tags=unit ./...`
 - Integration tests: `go test -tags=integration ./...`
+- End-to-end tests: `go test -tags=e2e ./test/`
 - All tests: `go test ./...`
 
 ### Code Quality
@@ -74,10 +78,11 @@ When asked to "ship" the code or when shipping is mentioned, systematically exec
 1. **Generate Code**: Execute `go generate ./...` to ensure all generated files are up to date
 2. **Lint and Fix**: Execute `dagger call lint --source-dir=.` and automatically fix any linting errors that are found
 3. **Unit tests**: Execute `dagger call unit-tests --source-dir .`  and automatically fix any errors that are found
-3. **Integration tests**: Execute `dagger call integration-tests --source-dir .`  and automatically fix any errors that are found
-4. **Create Branch**: Create a new branch with a descriptive name based on the changes made
-5. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format
-6. **Push Branch**: Push the new branch to the remote repository
+4. **Integration tests**: Execute `dagger call integration-tests --source-dir .`  and automatically fix any errors that are found
+5. **End-to-end tests**: Execute `dagger call end-to-end-tests --source-dir .`  and automatically fix any errors that are found
+6. **Create Branch**: Create a new branch with a descriptive name based on the changes made
+7. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format
+8. **Push Branch**: Push the new branch to the remote repository
 
 ### Branch Naming Convention
 - Use descriptive names like: `feat/add-new-feature`, `fix/resolve-linting-issues`, `docs/update-readme`
