@@ -120,6 +120,41 @@
 - Add comments for complex logic
 - Handle errors properly with wrapped errors using `fmt.Errorf` with `%w`
 
+### CLI Architecture
+- **CLI (`cmd/wtm/main.go`) should ONLY contain boilerplate code**:
+  - Command definitions and flag parsing
+  - Configuration loading
+  - Basic argument validation (existence, count)
+  - Calling WTM methods with parsed arguments
+  - Displaying results
+- **NO business logic in CLI**: All parsing, validation, and processing should be in the WTM package
+- **WTM methods should be self-contained**: They should handle all internal parsing and validation
+- **CLI should be thin**: Just pass arguments to WTM methods and display results
+- Example:
+  ```go
+  // ✅ GOOD: CLI only handles basic parsing and calls WTM
+  func createLoadCmd() *cobra.Command {
+      return &cobra.Command{
+          RunE: func(_ *cobra.Command, args []string) error {
+              cfg := loadConfig()
+              wtmManager := wtm.NewWTM(cfg)
+              return wtmManager.LoadWorktree(args[0], ideName) // WTM handles all parsing
+          },
+      }
+  }
+  
+  // ❌ BAD: CLI contains business logic
+  func createLoadCmd() *cobra.Command {
+      return &cobra.Command{
+          RunE: func(_ *cobra.Command, args []string) error {
+              // Business logic here - should be in WTM
+              parts := strings.SplitN(args[0], ":", 2)
+              // ... more parsing logic
+          },
+      }
+  }
+  ```
+
 ## Shipping Process
 
 **IMPORTANT**: The shipping process should ONLY be executed when the user explicitly asks to "ship" the code or mentions shipping. Do NOT automatically execute the shipping process after implementing features.
@@ -131,16 +166,32 @@ When explicitly asked to "ship" the code or when shipping is mentioned, systemat
 3. **Unit tests**: Execute `dagger call unit-tests --source-dir .`  and automatically fix any errors that are found
 4. **Integration tests**: Execute `dagger call integration-tests --source-dir .`  and automatically fix any errors that are found
 5. **End-to-end tests**: Execute `dagger call end-to-end-tests --source-dir .`  and automatically fix any errors that are found
-6. **Create Branch**: Create a new branch with a descriptive name based on the changes made from the beginning of the chat, not only the last ones. ONLY if you're on main branch so check before hand.
-7. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format based on the changes made from the beginning of the chat, not only the last ones.
+6. **Create Branch**: Create a new branch with a descriptive name based on the first request of the chat. ONLY if you're on main branch so check before hand.
+7. **Commit Changes**: Commit all changes with a descriptive commit message where:
+   - **Title**: Use the first request of the chat as the commit title following conventional commit format
+   - **Description**: Use the complete summary of everything done in the chat as the commit description
 8. **Push Branch**: Push the new branch to the remote repository
 
 ### Branch Naming Convention
 - Use descriptive names like: `feat/add-new-feature`, `fix/resolve-linting-issues`, `docs/update-readme`
 - Use kebab-case for branch names
 - Include the type of change (feat, fix, docs, refactor, etc.)
+- Base the branch name on the first request of the chat
 
 ### Commit Message Format
-- Use conventional commit format: `type(scope): description`
-- Examples: `feat(wtm): add git repository detection`, `fix(lint): resolve godot comment issues`
-- Keep descriptions concise but descriptive
+- **Title**: Use conventional commit format: `type(scope): description` based on the first request
+- **Description**: Include the complete summary of all changes made throughout the chat
+- Examples:
+  ```
+  feat(wtm): implement load command for remote branches
+  
+  - Created feature file for wtm load [remote-source:branch-name] command
+  - Implemented LoadWorktree method in WTM package with remote parsing
+  - Added remote management functionality (add/fetch/validate)
+  - Refactored CLI to be boilerplate-only, moved business logic to WTM
+  - Added comprehensive unit tests for all new functionality
+  - Fixed SSH URL construction for remote addition
+  - Updated list command to display remote names in brackets
+  - Added proper error handling and validation
+  - Updated .cursorrules to enforce CLI architecture patterns
+  ```

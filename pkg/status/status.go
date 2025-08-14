@@ -23,6 +23,7 @@ type Repository struct {
 	Branch    string `yaml:"branch"`              // Branch name
 	Path      string `yaml:"path"`                // Original repository path (not worktree path)
 	Workspace string `yaml:"workspace,omitempty"` // Workspace path (if applicable)
+	Remote    string `yaml:"remote,omitempty"`    // Remote name (e.g., "origin", "justenstall")
 }
 
 // Manager interface provides status file management functionality.

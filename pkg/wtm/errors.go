@@ -39,4 +39,12 @@ var (
 	ErrWorktreeNotInStatus      = errors.New("worktree not found in status file")
 	ErrDeletionCancelled        = errors.New("deletion cancelled by user")
 	ErrWorktreeValidationFailed = errors.New("worktree validation failed")
+
+	// Load branch errors.
+	ErrInvalidArgumentFormat   = errors.New("invalid argument format")
+	ErrEmptyRemoteSource       = errors.New("empty remote source")
+	ErrEmptyBranchName         = errors.New("empty branch name")
+	ErrBranchNameContainsColon = errors.New("branch name contains invalid character ':'")
+	ErrOriginRemoteNotFound    = errors.New("origin remote not found or invalid")
+	ErrOriginRemoteInvalidURL  = errors.New("origin remote URL is not a valid GitHub URL")
 )

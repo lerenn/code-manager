@@ -13,4 +13,8 @@ var (
 	ErrWorktreePathNotFound   = errors.New("worktree path not found")
 	ErrRepositoryNotClean     = errors.New("repository is not clean")
 	ErrRemoteOriginNotFound   = errors.New("remote origin not found")
+	ErrRemoteNotFound         = errors.New("remote not found")
+	ErrRemoteAddFailed        = errors.New("failed to add remote")
+	ErrFetchFailed            = errors.New("failed to fetch from remote")
+	ErrBranchNotFoundOnRemote = errors.New("branch not found on remote")
 )

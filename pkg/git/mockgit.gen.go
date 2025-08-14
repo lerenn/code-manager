@@ -200,3 +200,91 @@ func (mr *MockGitMockRecorder) WorktreeExists(repoPath, branch any) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WorktreeExists", reflect.TypeOf((*MockGit)(nil).WorktreeExists), repoPath, branch)
 }
+
+// AddRemote mocks base method.
+func (m *MockGit) AddRemote(repoPath, remoteName, remoteURL string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddRemote", repoPath, remoteName, remoteURL)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddRemote indicates an expected call of AddRemote.
+func (mr *MockGitMockRecorder) AddRemote(repoPath, remoteName, remoteURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRemote", reflect.TypeOf((*MockGit)(nil).AddRemote), repoPath, remoteName, remoteURL)
+}
+
+// FetchRemote mocks base method.
+func (m *MockGit) FetchRemote(repoPath, remoteName string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FetchRemote", repoPath, remoteName)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// FetchRemote indicates an expected call of FetchRemote.
+func (mr *MockGitMockRecorder) FetchRemote(repoPath, remoteName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchRemote", reflect.TypeOf((*MockGit)(nil).FetchRemote), repoPath, remoteName)
+}
+
+// BranchExistsOnRemote mocks base method.
+func (m *MockGit) BranchExistsOnRemote(repoPath, remoteName, branch string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BranchExistsOnRemote", repoPath, remoteName, branch)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BranchExistsOnRemote indicates an expected call of BranchExistsOnRemote.
+func (mr *MockGitMockRecorder) BranchExistsOnRemote(repoPath, remoteName, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchExistsOnRemote", reflect.TypeOf((*MockGit)(nil).BranchExistsOnRemote), repoPath, remoteName, branch)
+}
+
+// GetRemoteURL mocks base method.
+func (m *MockGit) GetRemoteURL(repoPath, remoteName string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRemoteURL", repoPath, remoteName)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRemoteURL indicates an expected call of GetRemoteURL.
+func (mr *MockGitMockRecorder) GetRemoteURL(repoPath, remoteName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRemoteURL", reflect.TypeOf((*MockGit)(nil).GetRemoteURL), repoPath, remoteName)
+}
+
+// RemoteExists mocks base method.
+func (m *MockGit) RemoteExists(repoPath, remoteName string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoteExists", repoPath, remoteName)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RemoteExists indicates an expected call of RemoteExists.
+func (mr *MockGitMockRecorder) RemoteExists(repoPath, remoteName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoteExists", reflect.TypeOf((*MockGit)(nil).RemoteExists), repoPath, remoteName)
+}
+
+// GetBranchRemote mocks base method.
+func (m *MockGit) GetBranchRemote(repoPath, branch string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBranchRemote", repoPath, branch)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBranchRemote indicates an expected call of GetBranchRemote.
+func (mr *MockGitMockRecorder) GetBranchRemote(repoPath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBranchRemote", reflect.TypeOf((*MockGit)(nil).GetBranchRemote), repoPath, branch)
+}
