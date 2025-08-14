@@ -55,7 +55,7 @@ func TestWTM_Run_WorkspaceMode(t *testing.T) {
 	mockGit.EXPECT().Status("frontend").Return("On branch main", nil).AnyTimes()
 	mockGit.EXPECT().Status("backend").Return("On branch main", nil).AnyTimes()
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.NoError(t, err)
 }
 
@@ -77,7 +77,7 @@ func TestWTM_Run_InvalidWorkspaceJSON(t *testing.T) {
 	// Mock reading workspace file with invalid JSON (called once: handleWorkspaceMode)
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(`{invalid json`), nil).Times(1)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.ErrorIs(t, err, ErrWorkspaceFileMalformed)
 }
 
@@ -110,7 +110,7 @@ func TestWTM_Run_MissingRepository(t *testing.T) {
 	// Mock repository validation - repository not found
 	mockFS.EXPECT().Exists("frontend").Return(false, nil).AnyTimes()
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.ErrorIs(t, err, ErrRepositoryNotFoundInWorkspace)
 }
 
@@ -146,7 +146,7 @@ func TestWTM_Run_InvalidRepository(t *testing.T) {
 	mockFS.EXPECT().Exists("frontend").Return(true, nil).AnyTimes()
 	mockFS.EXPECT().Exists("frontend/.git").Return(false, nil).AnyTimes()
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.ErrorIs(t, err, ErrInvalidRepositoryInWorkspaceNoGit)
 }
 
@@ -185,7 +185,7 @@ func TestWTM_Run_GitStatusError(t *testing.T) {
 	// Mock Git status error
 	mockGit.EXPECT().Status("frontend").Return("", assert.AnError).AnyTimes()
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.ErrorIs(t, err, ErrInvalidRepositoryInWorkspace)
 }
 
@@ -204,7 +204,7 @@ func TestWTM_Run_MultipleWorkspaceFiles(t *testing.T) {
 	// Mock workspace detection - find multiple workspace files (called twice: once in detectProjectMode, once in handleWorkspaceMode)
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project1.code-workspace", "project2.code-workspace"}, nil).Times(2)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "user cancelled selection")
 }
@@ -227,7 +227,7 @@ func TestWTM_Run_WorkspaceFileReadError(t *testing.T) {
 	// Mock reading workspace file error (called once: handleWorkspaceMode)
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return(nil, assert.AnError).Times(1)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.ErrorIs(t, err, ErrWorkspaceFileReadError)
 }
 
@@ -246,7 +246,7 @@ func TestWTM_Run_WorkspaceGlobError(t *testing.T) {
 	// Mock workspace detection error (called once: detectProjectMode)
 	mockFS.EXPECT().Glob("*.code-workspace").Return(nil, assert.AnError).Times(1)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to check for workspace files")
 }
@@ -287,7 +287,7 @@ func TestWTM_Run_WorkspaceVerboseMode(t *testing.T) {
 	// Mock Git status for validation
 	mockGit.EXPECT().Status("frontend").Return("On branch main", nil).AnyTimes()
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.NoError(t, err)
 }
 
@@ -312,6 +312,6 @@ func TestWTM_Run_EmptyWorkspace(t *testing.T) {
 	}`
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil).AnyTimes()
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.ErrorIs(t, err, ErrWorkspaceEmptyFolders)
 }

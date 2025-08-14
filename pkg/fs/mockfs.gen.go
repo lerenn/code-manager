@@ -54,6 +54,25 @@ func (mr *MockFSMockRecorder) CreateFileIfNotExists(filename, initialContent, pe
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFileIfNotExists", reflect.TypeOf((*MockFS)(nil).CreateFileIfNotExists), filename, initialContent, perm)
 }
 
+// ExecuteCommand mocks base method.
+func (m *MockFS) ExecuteCommand(command string, args ...string) error {
+	m.ctrl.T.Helper()
+	varargs := []any{command}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "ExecuteCommand", varargs...)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExecuteCommand indicates an expected call of ExecuteCommand.
+func (mr *MockFSMockRecorder) ExecuteCommand(command any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{command}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteCommand", reflect.TypeOf((*MockFS)(nil).ExecuteCommand), varargs...)
+}
+
 // Exists mocks base method.
 func (m *MockFS) Exists(path string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -199,6 +218,21 @@ func (m *MockFS) RemoveAll(path string) error {
 func (mr *MockFSMockRecorder) RemoveAll(path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAll", reflect.TypeOf((*MockFS)(nil).RemoveAll), path)
+}
+
+// Which mocks base method.
+func (m *MockFS) Which(command string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Which", command)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Which indicates an expected call of Which.
+func (mr *MockFSMockRecorder) Which(command any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Which", reflect.TypeOf((*MockFS)(nil).Which), command)
 }
 
 // WriteFileAtomic mocks base method.

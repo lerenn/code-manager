@@ -4,6 +4,7 @@ package test
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/lerenn/wtm/pkg/config"
@@ -28,7 +29,7 @@ func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.CreateWorkTree(branch)
+	return wtmInstance.CreateWorkTree(branch, nil)
 }
 
 // TestCreateWorktreeSingleRepo tests creating a worktree in single repository mode
@@ -159,7 +160,7 @@ func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = wtmInstance.CreateWorkTree("feature/test-branch")
+	err = wtmInstance.CreateWorkTree("feature/test-branch", nil)
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created successfully
@@ -182,4 +183,73 @@ func TestCreateWorktreeWithQuietFlag(t *testing.T) {
 	// Verify the worktree was created successfully
 	assertWorktreeExists(t, setup, "feature/test-branch")
 	assertWorktreeInRepo(t, setup, "feature/test-branch")
+}
+
+// TestCreateWorktreeWithIDE tests creating a worktree with IDE opening
+func TestCreateWorktreeWithIDE(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Test creating a worktree with IDE opening
+	wtmInstance := wtm.NewWTM(&config.Config{
+		BasePath:   setup.WtmPath,
+		StatusFile: setup.StatusPath,
+	})
+
+	// Change to repo directory and create worktree
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(setup.RepoPath)
+	require.NoError(t, err)
+	defer os.Chdir(originalDir)
+
+	ideName := "dummy"
+
+	// Create worktree with IDE (dummy IDE will print the path to stdout)
+	err = wtmInstance.CreateWorkTree("feature/test-ide", &ideName)
+	require.NoError(t, err, "Command should succeed")
+
+	// Verify the worktree was created
+	assertWorktreeExists(t, setup, "feature/test-ide")
+	assertWorktreeInRepo(t, setup, "feature/test-ide")
+
+	// Verify status.yaml was updated
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+	require.Len(t, status.Repositories, 1, "Should have one repository entry")
+
+	// Verify that the worktree path in status.yaml is correct (not the original repo path)
+	worktreeEntry := status.Repositories[0]
+	expectedPath := filepath.Join(setup.WtmPath, "repo", "feature", "test-ide")
+	assert.Equal(t, expectedPath, worktreeEntry.Path, "Worktree path should be the worktree directory, not the original repository")
+}
+
+// TestCreateWorktreeWithUnsupportedIDE tests creating a worktree with unsupported IDE
+func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Test creating a worktree with unsupported IDE
+	wtmInstance := wtm.NewWTM(&config.Config{
+		BasePath:   setup.WtmPath,
+		StatusFile: setup.StatusPath,
+	})
+
+	// Change to repo directory and create worktree
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(setup.RepoPath)
+	require.NoError(t, err)
+	defer os.Chdir(originalDir)
+
+	ideName := "unsupported-ide"
+	err = wtmInstance.CreateWorkTree("feature/unsupported-ide", &ideName)
+	assert.Error(t, err, "Command should fail with unsupported IDE")
+	assert.Contains(t, err.Error(), "unsupported IDE", "Error should mention unsupported IDE")
 }

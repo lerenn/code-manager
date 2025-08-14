@@ -2,6 +2,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ var (
 	quiet      bool
 	verbose    bool
 	configPath string
+	ideName    string
 )
 
 // loadConfig loads the configuration with fallback to default.
@@ -50,14 +52,8 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
-func main() {
-	var rootCmd = &cobra.Command{
-		Use:   "cgwt",
-		Short: "Cursor Git WorkTree Manager",
-		Long:  `A powerful CLI tool for managing Git worktrees specifically designed for Cursor IDE.`,
-	}
-
-	var createCmd = &cobra.Command{
+func createCreateCmd() *cobra.Command {
+	return &cobra.Command{
 		Use:   "create [branch]",
 		Short: "Create worktree(s) for the specified branch",
 		Long:  `Create worktree(s) for the specified branch. Currently supports single repository mode.`,
@@ -66,11 +62,57 @@ func main() {
 			branch := args[0]
 			cfg := loadConfig()
 			cgwtManager := wtm.NewWTM(cfg)
-			if verbose {
-				cgwtManager.SetVerbose(true)
+			cgwtManager.SetVerbose(verbose)
+
+			// Create worktree with IDE if specified
+			if ideName != "" {
+				return cgwtManager.CreateWorkTree(branch, &ideName)
 			}
-			return cgwtManager.CreateWorkTree(branch)
+
+			// Just create worktree without IDE
+			return cgwtManager.CreateWorkTree(branch, nil)
 		},
+	}
+}
+
+func createOpenCmd() *cobra.Command {
+	openCmd := &cobra.Command{
+		Use:   "open [worktree-name]",
+		Short: "Open existing worktree in IDE",
+		Long:  "Open an existing worktree in the specified IDE",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			worktreeName := args[0]
+
+			if ideName == "" {
+				return fmt.Errorf("IDE name is required. Use -i or --ide flag")
+			}
+
+			// Load configuration and create WTM instance
+			cfg := loadConfig()
+			wtmManager := wtm.NewWTM(cfg)
+			wtmManager.SetVerbose(verbose)
+
+			// Open worktree in IDE
+			return wtmManager.OpenWorktree(worktreeName, ideName)
+		},
+	}
+
+	// Add IDE flag to open command
+	openCmd.Flags().StringVarP(&ideName, "ide", "i", "", "IDE to open worktree in")
+	err := openCmd.MarkFlagRequired("ide")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return openCmd
+}
+
+func main() {
+	var rootCmd = &cobra.Command{
+		Use:   "cgwt",
+		Short: "Cursor Git WorkTree Manager",
+		Long:  `A powerful CLI tool for managing Git worktrees specifically designed for Cursor IDE.`,
 	}
 
 	// Add global flags
@@ -78,8 +120,15 @@ func main() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
 	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Specify a custom config file path")
 
+	// Create commands
+	createCmd := createCreateCmd()
+	openCmd := createOpenCmd()
+
+	// Add IDE flag to create command
+	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
+
 	// Add subcommands
-	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(createCmd, openCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
