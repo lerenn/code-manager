@@ -1,4 +1,4 @@
-# Feature 011: Create Worktrees for Single Repositories
+# Feature 009: Create Worktrees for Single Repositories
 
 ## Overview
 Implement functionality to create Git worktrees for single repositories. This feature will allow users to create worktrees from their current Git repository, managing branch creation, worktree directory creation, and status tracking.

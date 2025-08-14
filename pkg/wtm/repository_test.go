@@ -212,3 +212,175 @@ func TestRepository_getBasePath(t *testing.T) {
 		})
 	}
 }
+
+func TestRepository_ListWorktrees_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock repository name extraction
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+
+	// Mock status manager to return worktrees
+	allWorktrees := []status.Repository{
+		{
+			URL:    "github.com/lerenn/example",
+			Branch: "feature/test-branch",
+			Path:   "/test/base/path/github.com/lerenn/example/feature/test-branch",
+		},
+		{
+			URL:    "github.com/other/repo",
+			Branch: "feature/other-branch",
+			Path:   "/test/base/path/github.com/other/repo/feature/other-branch",
+		},
+		{
+			URL:    "github.com/lerenn/example",
+			Branch: "bugfix/issue-123",
+			Path:   "/test/base/path/github.com/lerenn/example/bugfix/issue-123",
+		},
+	}
+	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)
+
+	result, err := repo.ListWorktrees()
+	assert.NoError(t, err)
+	assert.Len(t, result, 2, "Should only return worktrees for current repository")
+
+	// Verify only current repository worktrees are returned
+	for _, wt := range result {
+		assert.Equal(t, "github.com/lerenn/example", wt.URL)
+	}
+
+	// Verify specific branches are present
+	branchNames := make([]string, len(result))
+	for i, wt := range result {
+		branchNames[i] = wt.Branch
+	}
+	assert.Contains(t, branchNames, "feature/test-branch")
+	assert.Contains(t, branchNames, "bugfix/issue-123")
+	assert.NotContains(t, branchNames, "feature/other-branch")
+}
+
+func TestRepository_ListWorktrees_NoWorktrees(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock repository name extraction
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+
+	// Mock status manager to return empty list
+	mockStatus.EXPECT().ListAllWorktrees().Return([]status.Repository{}, nil)
+
+	result, err := repo.ListWorktrees()
+	assert.NoError(t, err)
+	assert.Len(t, result, 0)
+}
+
+func TestRepository_ListWorktrees_RepositoryNameError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock repository name extraction to fail
+	mockGit.EXPECT().GetRepositoryName(".").Return("", assert.AnError)
+
+	result, err := repo.ListWorktrees()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to get repository name")
+	assert.Nil(t, result)
+}
+
+func TestRepository_ListWorktrees_StatusFileError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock repository name extraction
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+
+	// Mock status manager to return error
+	mockStatus.EXPECT().ListAllWorktrees().Return(nil, assert.AnError)
+
+	result, err := repo.ListWorktrees()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load worktrees from status file")
+	assert.Nil(t, result)
+}
+
+func TestRepository_ListWorktrees_Filtering(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock repository name extraction
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+
+	// Mock status manager to return worktrees from multiple repositories
+	allWorktrees := []status.Repository{
+		{
+			URL:    "github.com/lerenn/example",
+			Branch: "feature/test-branch",
+			Path:   "/test/base/path/github.com/lerenn/example/feature/test-branch",
+		},
+		{
+			URL:    "github.com/other/repo",
+			Branch: "feature/other-branch",
+			Path:   "/test/base/path/github.com/other/repo/feature/other-branch",
+		},
+		{
+			URL:    "github.com/another/repo",
+			Branch: "feature/another-branch",
+			Path:   "/test/base/path/github.com/another/repo/feature/another-branch",
+		},
+		{
+			URL:    "github.com/lerenn/example",
+			Branch: "bugfix/issue-123",
+			Path:   "/test/base/path/github.com/lerenn/example/bugfix/issue-123",
+		},
+	}
+	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)
+
+	result, err := repo.ListWorktrees()
+	assert.NoError(t, err)
+	assert.Len(t, result, 2, "Should only return worktrees for current repository")
+
+	// Verify only current repository worktrees are returned
+	for _, wt := range result {
+		assert.Equal(t, "github.com/lerenn/example", wt.URL)
+	}
+
+	// Verify specific branches are present
+	branchNames := make([]string, len(result))
+	for i, wt := range result {
+		branchNames[i] = wt.Branch
+	}
+	assert.Contains(t, branchNames, "feature/test-branch")
+	assert.Contains(t, branchNames, "bugfix/issue-123")
+	assert.NotContains(t, branchNames, "feature/other-branch")
+	assert.NotContains(t, branchNames, "feature/another-branch")
+}

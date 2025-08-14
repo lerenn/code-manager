@@ -1,4 +1,4 @@
-# Feature 012: Integrate IDE Opening Functionality
+# Feature 010: Integrate IDE Opening Functionality
 
 ## Overview
 

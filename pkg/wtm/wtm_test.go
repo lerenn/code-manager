@@ -227,3 +227,33 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.NoError(t, err)
 }
+
+func TestWTM_ListWorktrees_NoRepository(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
+
+	wtm := NewWTM(createTestConfig())
+
+	// Override adapters with mocks
+	c := wtm.(*realWTM)
+	c.fs = mockFS
+	c.git = mockGit
+	c.statusManager = mockStatus
+	c.ideManager = mockIDE
+
+	// Mock single repo detection - no .git found
+	mockFS.EXPECT().Exists(".git").Return(false, nil)
+
+	// Mock workspace detection - no workspace files found
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
+
+	result, err := wtm.ListWorktrees()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "no Git repository or workspace found")
+	assert.Nil(t, result)
+}
