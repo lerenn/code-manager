@@ -59,25 +59,25 @@ func TestRealWTM_sanitizeBranchName(t *testing.T) {
 		{
 			name:     "Branch name with leading/trailing dots",
 			input:    ".hidden-branch.",
-			expected: "heads/hidden-branch",
+			expected: "hidden-branch",
 			wantErr:  false,
 		},
 		{
-			name:     "Branch name without slash (gets heads/ prefix)",
+			name:     "Branch name without slash",
 			input:    "main",
-			expected: "heads/main",
+			expected: "main",
 			wantErr:  false,
 		},
 		{
 			name:     "Branch name with leading dash",
 			input:    "-invalid-branch",
-			expected: "heads/invalid-branch",
+			expected: "invalid-branch",
 			wantErr:  false,
 		},
 		{
 			name:     "Branch name with consecutive dots",
 			input:    "feature..test",
-			expected: "heads/feature_test",
+			expected: "feature_test",
 			wantErr:  false,
 		},
 		{
@@ -107,13 +107,13 @@ func TestRealWTM_sanitizeBranchName(t *testing.T) {
 		{
 			name:     "Branch name with spaces and special chars",
 			input:    "feature test~with^special:chars",
-			expected: "heads/feature_test_with_special_chars",
+			expected: "feature_test_with_special_chars",
 			wantErr:  false,
 		},
 		{
 			name:     "Branch name with question marks and asterisks",
 			input:    "feature?test*with[wildcards]",
-			expected: "heads/feature_test_with_wildcards",
+			expected: "feature_test_with_wildcards",
 			wantErr:  false,
 		},
 	}
