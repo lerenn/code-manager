@@ -8,6 +8,7 @@ import (
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/ide"
 	"github.com/lerenn/wtm/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -28,6 +29,7 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	wtm := NewWTM(createTestConfig())
 
@@ -36,6 +38,7 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
+	c.ideManager = mockIDE
 
 	// Mock single repo detection - .git found (called multiple times: detectProjectType, validateGitDirectory, and createWorktreeForSingleRepo)
 	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes() // detectProjectType, validateGitDirectory, createWorktreeForSingleRepo (validateRepository), prepareWorktreePath, and additional validation
@@ -57,8 +60,129 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.NoError(t, err)
+}
+
+func TestWTM_CreateWorkTreeWithIDE(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
+
+	wtm := NewWTM(createTestConfig())
+
+	// Override adapters with mocks
+	c := wtm.(*realWTM)
+	c.fs = mockFS
+	c.git = mockGit
+	c.statusManager = mockStatus
+	c.ideManager = mockIDE
+
+	// Mock single repo detection - .git found
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+
+	// Mock workspace detection - no workspace files found (called in detectProjectMode)
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil).AnyTimes()
+
+	// Mock Git status for validation
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
+
+	// Mock status manager calls
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).Times(1)
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+
+	// Mock GetWorktree for IDE opening (called after worktree creation)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
+		URL:    "github.com/lerenn/example",
+		Branch: "test-branch",
+		Path:   "/test/base/path/github.com/lerenn/example/test-branch",
+	}, nil)
+
+	// Mock worktree creation calls
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil).AnyTimes()
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
+	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
+
+	// Mock IDE opening
+	ideName := "cursor"
+	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
+
+	err := wtm.CreateWorkTree("test-branch", &ideName)
+	assert.NoError(t, err)
+}
+
+func TestWTM_OpenWorktree(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
+
+	wtm := NewWTM(createTestConfig())
+
+	// Override adapters with mocks
+	c := wtm.(*realWTM)
+	c.fs = mockFS
+	c.git = mockGit
+	c.statusManager = mockStatus
+	c.ideManager = mockIDE
+
+	// Mock Git to return repository URL
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+
+	// Mock status manager to return worktree
+	worktree := &status.Repository{
+		URL:    "github.com/lerenn/example",
+		Branch: "test-branch",
+		Path:   "/path/to/worktree",
+	}
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(worktree, nil)
+
+	// Mock IDE opening
+	mockIDE.EXPECT().OpenIDE("cursor", "/path/to/worktree", false).Return(nil)
+
+	err := wtm.OpenWorktree("test-branch", "cursor")
+	assert.NoError(t, err)
+}
+
+func TestWTM_OpenWorktree_NotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
+
+	wtm := NewWTM(createTestConfig())
+
+	// Override adapters with mocks
+	c := wtm.(*realWTM)
+	c.fs = mockFS
+	c.git = mockGit
+	c.statusManager = mockStatus
+	c.ideManager = mockIDE
+
+	// Mock Git to return repository URL
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+
+	// Mock status manager to return error
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+
+	err := wtm.OpenWorktree("test-branch", "cursor")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "worktree not found")
 }
 
 func TestWTM_Run_VerboseMode(t *testing.T) {
@@ -68,6 +192,7 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	wtm := NewWTM(createTestConfig())
 	wtm.SetVerbose(true)
@@ -77,6 +202,7 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
+	c.ideManager = mockIDE
 
 	// Mock single repo detection - .git found (called multiple times: detectProjectType, validateGitDirectory, and createWorktreeForSingleRepo)
 	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes() // detectProjectType, validateGitDirectory, createWorktreeForSingleRepo (validateRepository), prepareWorktreePath, and additional validation
@@ -98,6 +224,6 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.NoError(t, err)
 }

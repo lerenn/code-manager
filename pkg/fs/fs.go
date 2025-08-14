@@ -2,6 +2,7 @@ package fs
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 )
@@ -45,6 +46,12 @@ type FS interface {
 
 	// RemoveAll removes a file or directory and all its contents.
 	RemoveAll(path string) error
+
+	// Which finds the executable path for a command using the system's PATH.
+	Which(command string) (string, error)
+
+	// ExecuteCommand executes a command with arguments in the background.
+	ExecuteCommand(command string, args ...string) error
 }
 
 type realFS struct {
@@ -219,4 +226,28 @@ func (f *realFS) CreateFileIfNotExists(filename string, initialContent []byte, p
 // RemoveAll removes a file or directory and all its contents.
 func (f *realFS) RemoveAll(path string) error {
 	return os.RemoveAll(path)
+}
+
+// Which finds the executable path for a command using the system's PATH.
+func (f *realFS) Which(command string) (string, error) {
+	// Use exec.LookPath to find the executable in PATH
+	path, err := exec.LookPath(command)
+	if err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+// ExecuteCommand executes a command with arguments in the background.
+func (f *realFS) ExecuteCommand(command string, args ...string) error {
+	// Create command
+	cmd := exec.Command(command, args...)
+
+	// Start command in background (don't wait for completion)
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	// Don't wait for the command to finish, let it run in background
+	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/ide"
 	"github.com/lerenn/wtm/pkg/logger"
 	"github.com/lerenn/wtm/pkg/status"
 )
@@ -13,7 +14,10 @@ import (
 // WTM interface provides Git repository detection functionality.
 type WTM interface {
 	// CreateWorkTree executes the main application logic.
-	CreateWorkTree(branch string) error
+	CreateWorkTree(branch string, ideName *string) error
+
+	// OpenWorktree opens an existing worktree in the specified IDE.
+	OpenWorktree(worktreeName, ideName string) error
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
 }
@@ -23,6 +27,7 @@ type realWTM struct {
 	git           git.Git
 	config        *config.Config
 	statusManager status.Manager
+	ideManager    ide.ManagerInterface
 	verbose       bool
 	logger        logger.Logger
 }
@@ -38,6 +43,7 @@ func NewWTM(cfg *config.Config) WTM {
 		git:           gitInstance,
 		config:        cfg,
 		statusManager: status.NewManager(fsInstance, cfg),
+		ideManager:    ide.NewManager(fsInstance, loggerInstance),
 		verbose:       false,
 		logger:        loggerInstance,
 	}
@@ -50,10 +56,13 @@ func (c *realWTM) SetVerbose(verbose bool) {
 	} else {
 		c.logger = logger.NewNoopLogger()
 	}
+
+	// Update the IDE manager with the new logger
+	c.ideManager = ide.NewManager(c.fs, c.logger)
 }
 
 // CreateWorkTree executes the main application logic.
-func (c *realWTM) CreateWorkTree(branch string) error {
+func (c *realWTM) CreateWorkTree(branch string, ideName *string) error {
 	// Sanitize branch name first
 	sanitizedBranch, err := c.sanitizeBranchName(branch)
 	if err != nil {
@@ -75,16 +84,34 @@ func (c *realWTM) CreateWorkTree(branch string) error {
 	}
 
 	// 2. Handle based on project type
+	var worktreeErr error
 	switch projectType {
 	case ProjectTypeSingleRepo:
-		return c.handleRepositoryMode(sanitizedBranch)
+		worktreeErr = c.handleRepositoryMode(sanitizedBranch)
 	case ProjectTypeWorkspace:
-		return c.handleWorkspaceMode(sanitizedBranch)
+		worktreeErr = c.handleWorkspaceMode(sanitizedBranch)
 	case ProjectTypeNone:
 		return fmt.Errorf("no Git repository or workspace found")
 	default:
 		return fmt.Errorf("unknown project type")
 	}
+
+	// 3. Open IDE if specified and worktree creation was successful
+	if err := c.handleIDEOpening(worktreeErr, sanitizedBranch, ideName); err != nil {
+		return err
+	}
+
+	return worktreeErr
+}
+
+// handleIDEOpening handles IDE opening if specified and worktree creation was successful.
+func (c *realWTM) handleIDEOpening(worktreeErr error, branch string, ideName *string) error {
+	if worktreeErr == nil && ideName != nil && *ideName != "" {
+		if err := c.OpenWorktree(branch, *ideName); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // detectProjectMode detects if this is a repository or workspace mode.
@@ -157,6 +184,28 @@ func (c *realWTM) handleWorkspaceMode(_ string) error {
 	c.verbosePrint("Workspace worktree creation not yet implemented")
 
 	c.verbosePrint("WTM execution completed successfully")
+
+	return nil
+}
+
+// OpenWorktree opens an existing worktree in the specified IDE.
+func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
+	// Get repository URL from local .git directory
+	repoURL, err := c.git.GetRepositoryName(".")
+	if err != nil {
+		return fmt.Errorf("failed to get repository URL: %w", err)
+	}
+
+	// Get worktree from status.yaml using repository URL and branch name
+	worktree, err := c.statusManager.GetWorktree(repoURL, worktreeName)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ide.ErrWorktreeNotFound, worktreeName)
+	}
+
+	// Open IDE with the worktree path
+	if err := c.ideManager.OpenIDE(ideName, worktree.Path, c.verbose); err != nil {
+		return err
+	}
 
 	return nil
 }
