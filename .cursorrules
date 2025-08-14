@@ -129,8 +129,8 @@ When asked to "ship" the code or when shipping is mentioned, systematically exec
 3. **Unit tests**: Execute `dagger call unit-tests --source-dir .`  and automatically fix any errors that are found
 4. **Integration tests**: Execute `dagger call integration-tests --source-dir .`  and automatically fix any errors that are found
 5. **End-to-end tests**: Execute `dagger call end-to-end-tests --source-dir .`  and automatically fix any errors that are found
-6. **Create Branch**: Create a new branch with a descriptive name based on the changes made
-7. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format
+6. **Create Branch**: Create a new branch with a descriptive name based on the changes made from the beginning of the chat, not only the last ones.
+7. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format based on the changes made from the beginning of the chat, not only the last ones.
 8. **Push Branch**: Push the new branch to the remote repository
 
 ### Branch Naming Convention
