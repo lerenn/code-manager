@@ -266,3 +266,14 @@ func assertWorktreeInRepo(t *testing.T, setup *TestSetup, branch string) {
 	assert.Contains(t, string(output), branch, "Worktree should be listed in the original repository")
 	assert.Contains(t, string(output), setup.WtmPath, "Worktree should be in the .wtm directory")
 }
+
+// getGitWorktreeList gets the list of worktrees from Git
+func getGitWorktreeList(t *testing.T, repoPath string) string {
+	t.Helper()
+
+	cmd := exec.Command("git", "worktree", "list")
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	require.NoError(t, err)
+	return string(output)
+}

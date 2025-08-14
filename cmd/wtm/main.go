@@ -41,7 +41,7 @@ func loadConfig() *config.Config {
 			homeDir = "."
 		}
 
-		defaultConfigPath := filepath.Join(homeDir, ".cgwt", "config.yaml")
+		defaultConfigPath := filepath.Join(homeDir, ".wtm", "config.yaml")
 		cfg, err = config.LoadConfigWithFallback(defaultConfigPath)
 		if err != nil {
 			// If there's an error, use default config
@@ -108,6 +108,33 @@ func createOpenCmd() *cobra.Command {
 	return openCmd
 }
 
+func createDeleteCmd() *cobra.Command {
+	var force bool
+
+	deleteCmd := &cobra.Command{
+		Use:   "delete [branch-name]",
+		Short: "Delete a worktree",
+		Long:  "Delete a worktree and clean up Git state",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			branch := args[0]
+
+			// Load configuration and create WTM instance
+			cfg := loadConfig()
+			wtmManager := wtm.NewWTM(cfg)
+			wtmManager.SetVerbose(verbose)
+
+			// Delete worktree
+			return wtmManager.DeleteWorkTree(branch, force)
+		},
+	}
+
+	// Add force flag to delete command
+	deleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Force deletion without confirmation")
+
+	return deleteCmd
+}
+
 func createListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
@@ -160,13 +187,14 @@ func main() {
 	// Create commands
 	createCmd := createCreateCmd()
 	openCmd := createOpenCmd()
+	deleteCmd := createDeleteCmd()
 	listCmd := createListCmd()
 
 	// Add IDE flag to create command
 	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
 
 	// Add subcommands
-	rootCmd.AddCommand(createCmd, openCmd, listCmd)
+	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)

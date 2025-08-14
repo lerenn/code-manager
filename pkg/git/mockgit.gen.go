@@ -127,6 +127,21 @@ func (mr *MockGitMockRecorder) GetRepositoryName(repoPath any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepositoryName", reflect.TypeOf((*MockGit)(nil).GetRepositoryName), repoPath)
 }
 
+// GetWorktreePath mocks base method.
+func (m *MockGit) GetWorktreePath(repoPath, branch string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorktreePath", repoPath, branch)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorktreePath indicates an expected call of GetWorktreePath.
+func (mr *MockGitMockRecorder) GetWorktreePath(repoPath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorktreePath", reflect.TypeOf((*MockGit)(nil).GetWorktreePath), repoPath, branch)
+}
+
 // IsClean mocks base method.
 func (m *MockGit) IsClean(repoPath string) (bool, error) {
 	m.ctrl.T.Helper()
@@ -140,6 +155,20 @@ func (m *MockGit) IsClean(repoPath string) (bool, error) {
 func (mr *MockGitMockRecorder) IsClean(repoPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsClean", reflect.TypeOf((*MockGit)(nil).IsClean), repoPath)
+}
+
+// RemoveWorktree mocks base method.
+func (m *MockGit) RemoveWorktree(repoPath, worktreePath string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveWorktree", repoPath, worktreePath)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveWorktree indicates an expected call of RemoveWorktree.
+func (mr *MockGitMockRecorder) RemoveWorktree(repoPath, worktreePath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockGit)(nil).RemoveWorktree), repoPath, worktreePath)
 }
 
 // Status mocks base method.

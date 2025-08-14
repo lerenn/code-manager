@@ -5,11 +5,11 @@
 ### Test Organization
 - **Adapters** (like `pkg/fs`) should have **integration tests only** using real file system operations
 - **Business Logic** (like `pkg/wtm`) should have **unit tests only** using mocked dependencies
-- **End-to-End Tests** (in `test/` directory) should test the complete CLI workflow using real Git operations
+- **End-to-End Tests** (in `test/` directory) should test the complete workflow using the WTM struct directly with real Git operations
 - Use build tags to organize tests:
   - `//go:build unit` for unit tests with mocked dependencies
   - `//go:build integration` for integration tests with real file system
-  - `//go:build e2e` for end-to-end tests with real CLI and Git operations
+  - `//go:build e2e` for end-to-end tests with real WTM struct and Git operations
 
 ### Test File Naming
 - Standard test files: `*_test.go` (for integration tests in adapters)
@@ -29,6 +29,55 @@
 - Always clean up resources with `defer` statements
 - Test both positive and negative cases
 - Verify error messages and user output
+
+### System File Protection
+- **NEVER impact system status and config files** (`~/.wtm/status.yaml`, `~/.wtm/config.yaml`) during testing or manual testing
+- **ALWAYS create temporary directories** with all necessary files inside for testing
+- Use `os.MkdirTemp()` to create isolated test environments
+- Create temporary config files pointing to temporary directories
+- **End-to-end tests should use WTM struct directly** with temporary config, not CLI commands
+- Never use environment variables that could affect system configuration
+- Always clean up temporary directories in test teardown
+- **For manual testing in Cursor shell**: Always use `-c` flag with CLI commands to specify temporary config files
+- Example pattern for end-to-end tests:
+  ```go
+  // ✅ GOOD: Create temporary test environment
+  tempDir, err := os.MkdirTemp("", "wtm-test-*")
+  require.NoError(t, err)
+  defer os.RemoveAll(tempDir)
+  
+  // Create temporary config file
+  configPath := filepath.Join(tempDir, "config.yaml")
+  configData := fmt.Sprintf("base_path: %s\nstatus_file: %s\n", tempDir, filepath.Join(tempDir, "status.yaml"))
+  require.NoError(t, os.WriteFile(configPath, []byte(configData), 0644))
+  
+  // Use WTM struct directly with temporary config
+  wtmInstance := wtm.NewWTM(&config.Config{
+      BasePath:   tempDir,
+      StatusFile: filepath.Join(tempDir, "status.yaml"),
+  })
+  err = wtmInstance.CreateWorkTree("test-branch", nil)
+  
+  // ❌ BAD: Don't use environment variables that affect system
+  os.Setenv("WTM_BASE_PATH", "/some/path")
+  os.Setenv("WTM_STATUS_FILE", "/some/path/status.yaml")
+  ```
+- Example pattern for manual testing in Cursor shell:
+  ```bash
+  # ✅ GOOD: Use temporary config for manual testing
+  tempDir=$(mktemp -d)
+  echo "base_path: $tempDir" > "$tempDir/config.yaml"
+  echo "status_file: $tempDir/status.yaml" >> "$tempDir/config.yaml"
+  
+  # Test with temporary config
+  ./wtm -c "$tempDir/config.yaml" create test-branch
+  
+  # Clean up
+  rm -rf "$tempDir"
+  
+  # ❌ BAD: Don't test without config flag (affects system files)
+  ./wtm create test-branch
+  ```
 
 ### Error Testing Best Practices
 - **ALWAYS use `assert.ErrorIs()` for checking specific errors** instead of `assert.Contains(t, err.Error(), "error message")`
@@ -80,8 +129,8 @@ When asked to "ship" the code or when shipping is mentioned, systematically exec
 3. **Unit tests**: Execute `dagger call unit-tests --source-dir .`  and automatically fix any errors that are found
 4. **Integration tests**: Execute `dagger call integration-tests --source-dir .`  and automatically fix any errors that are found
 5. **End-to-end tests**: Execute `dagger call end-to-end-tests --source-dir .`  and automatically fix any errors that are found
-6. **Create Branch**: Create a new branch with a descriptive name based on the changes made ONLY if you're on main branch so check before hand.
-7. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format
+6. **Create Branch**: Create a new branch with a descriptive name based on the changes made from the beginning of the chat, not only the last ones. ONLY if you're on main branch so check before hand.
+7. **Commit Changes**: Commit all changes with a descriptive commit message following conventional commit format based on the changes made from the beginning of the chat, not only the last ones.
 8. **Push Branch**: Push the new branch to the remote repository
 
 ### Branch Naming Convention

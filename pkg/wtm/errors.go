@@ -34,4 +34,9 @@ var (
 	ErrWorktreeExists     = errors.New("worktree already exists for this branch")
 	ErrRepositoryNotClean = errors.New("repository is not in a clean state")
 	ErrDirectoryExists    = errors.New("worktree directory already exists")
+
+	// Worktree deletion errors.
+	ErrWorktreeNotInStatus      = errors.New("worktree not found in status file")
+	ErrDeletionCancelled        = errors.New("deletion cancelled by user")
+	ErrWorktreeValidationFailed = errors.New("worktree validation failed")
 )

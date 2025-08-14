@@ -16,6 +16,9 @@ type WTM interface {
 	// CreateWorkTree executes the main application logic.
 	CreateWorkTree(branch string, ideName *string) error
 
+	// DeleteWorkTree deletes a worktree for the specified branch.
+	DeleteWorkTree(branch string, force bool) error
+
 	// OpenWorktree opens an existing worktree in the specified IDE.
 	OpenWorktree(worktreeName, ideName string) error
 
@@ -108,6 +111,41 @@ func (c *realWTM) CreateWorkTree(branch string, ideName *string) error {
 	return worktreeErr
 }
 
+// DeleteWorkTree deletes a worktree for the specified branch.
+func (c *realWTM) DeleteWorkTree(branch string, force bool) error {
+	// Sanitize branch name first
+	sanitizedBranch, err := c.sanitizeBranchName(branch)
+	if err != nil {
+		return err
+	}
+
+	// Log if branch name was sanitized (appears in normal and verbose modes, but not quiet)
+	if sanitizedBranch != branch {
+		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
+	}
+
+	c.verbosePrint(fmt.Sprintf("Starting WTM deletion for branch: %s (sanitized: %s)", branch, sanitizedBranch))
+
+	// 1. Detect project mode (repository or workspace)
+	projectType, err := c.detectProjectMode()
+	if err != nil {
+		c.verbosePrint(fmt.Sprintf("Error: %v", err))
+		return err
+	}
+
+	// 2. Handle based on project type
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		return c.handleRepositoryDeletion(sanitizedBranch, force)
+	case ProjectTypeWorkspace:
+		return c.handleWorkspaceDeletion(sanitizedBranch, force)
+	case ProjectTypeNone:
+		return fmt.Errorf("no Git repository or workspace found")
+	default:
+		return fmt.Errorf("unknown project type")
+	}
+}
+
 // handleIDEOpening handles IDE opening if specified and worktree creation was successful.
 func (c *realWTM) handleIDEOpening(worktreeErr error, branch string, ideName *string) error {
 	if worktreeErr == nil && ideName != nil && *ideName != "" {
@@ -115,6 +153,55 @@ func (c *realWTM) handleIDEOpening(worktreeErr error, branch string, ideName *st
 			return err
 		}
 	}
+	return nil
+}
+
+// handleRepositoryDeletion handles repository mode: validation and worktree deletion.
+func (c *realWTM) handleRepositoryDeletion(branch string, force bool) error {
+	c.verbosePrint("Handling repository deletion mode")
+
+	// Create a single repository instance for all repository operations
+	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
+
+	// 1. Validate repository
+	if err := repo.Validate(); err != nil {
+		return err
+	}
+
+	// 2. Delete worktree for single repository
+	if err := repo.DeleteWorktree(branch, force); err != nil {
+		return err
+	}
+
+	c.verbosePrint("WTM deletion completed successfully")
+
+	return nil
+}
+
+// handleWorkspaceDeletion handles workspace mode: validation and placeholder for worktree deletion.
+func (c *realWTM) handleWorkspaceDeletion(branch string, force bool) error {
+	c.verbosePrint("Handling workspace deletion mode")
+
+	// Create a single workspace instance for all workspace operations
+	workspace := newWorkspace(c.fs, c.git, c.logger, c.verbose)
+
+	// 1. Load workspace (detection, selection, and display)
+	if err := workspace.Load(); err != nil {
+		return err
+	}
+
+	// 2. Validate all repositories in workspace
+	if err := workspace.Validate(); err != nil {
+		return err
+	}
+
+	// 3. Delete worktree for workspace (placeholder)
+	if err := workspace.DeleteWorktree(branch, force); err != nil {
+		return err
+	}
+
+	c.verbosePrint("WTM deletion completed successfully")
+
 	return nil
 }
 
