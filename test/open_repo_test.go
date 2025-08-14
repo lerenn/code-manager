@@ -41,14 +41,17 @@ func TestOpenExistingWorktree(t *testing.T) {
 	err = wtmInstance.OpenWorktree("feature/existing-ide", "dummy")
 	require.NoError(t, err, "Opening worktree with IDE should succeed")
 
-	// Verify that the worktree path in status.yaml is correct (not the original repo path)
+	// Verify that the original repository path in status.yaml is correct (not the worktree path)
 	status := readStatusFile(t, setup.StatusPath)
 	require.NotNil(t, status.Repositories, "Status file should have repositories section")
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
 	worktreeEntry := status.Repositories[0]
-	expectedPath := filepath.Join(setup.WtmPath, "repo", "feature", "existing-ide")
-	assert.Equal(t, expectedPath, worktreeEntry.Path, "Worktree path should be the worktree directory, not the original repository")
+	expectedPath, err := filepath.EvalSymlinks(setup.RepoPath)
+	require.NoError(t, err)
+	actualPath, err := filepath.EvalSymlinks(worktreeEntry.Path)
+	require.NoError(t, err)
+	assert.Equal(t, expectedPath, actualPath, "Path should be the original repository directory, not the worktree directory")
 }
 
 // TestOpenNonExistentWorktree tests opening a non-existent worktree
