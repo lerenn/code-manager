@@ -429,3 +429,9 @@ func (w *workspace) verbosePrint(message string) {
 		w.logger.Logf(message)
 	}
 }
+
+// DeleteWorktree deletes a worktree for the workspace with the specified branch.
+// This is a placeholder for future workspace deletion support.
+func (w *workspace) DeleteWorktree(_ string, _ bool) error {
+	return fmt.Errorf("workspace deletion is not yet supported")
+}

@@ -332,3 +332,119 @@ func (r *repository) verbosePrint(message string) {
 		r.logger.Logf(message)
 	}
 }
+
+// DeleteWorktree deletes a worktree for the repository with the specified branch.
+func (r *repository) DeleteWorktree(branch string, force bool) error {
+	r.verbosePrint(fmt.Sprintf("Deleting worktree for single repository with branch: %s", branch))
+
+	// Validate and prepare worktree deletion
+	repoURL, worktreePath, err := r.prepareWorktreeDeletion(branch)
+	if err != nil {
+		return err
+	}
+
+	// Execute the deletion
+	if err := r.executeWorktreeDeletion(repoURL, branch, worktreePath, force); err != nil {
+		return err
+	}
+
+	r.verbosePrint(fmt.Sprintf("Successfully deleted worktree for branch %s", branch))
+
+	return nil
+}
+
+// prepareWorktreeDeletion validates the repository and prepares the worktree deletion.
+func (r *repository) prepareWorktreeDeletion(branch string) (string, string, error) {
+	// Get current working directory
+	currentDir, err := filepath.Abs(".")
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Validate that we're in a Git repository
+	isSingleRepo, err := r.CheckGitDirExists()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to validate Git repository: %w", err)
+	}
+	if !isSingleRepo {
+		return "", "", fmt.Errorf("current directory is not a Git repository")
+	}
+
+	// Get repository URL from remote origin URL with fallback to local path
+	repoURL, err := r.git.GetRepositoryName(currentDir)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get repository URL: %w", err)
+	}
+
+	r.verbosePrint(fmt.Sprintf("Repository URL: %s", repoURL))
+
+	// Check if worktree exists in status file
+	existingWorktree, err := r.statusManager.GetWorktree(repoURL, branch)
+	if err != nil || existingWorktree == nil {
+		return "", "", fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotInStatus, repoURL, branch)
+	}
+
+	// Get worktree path from Git
+	worktreePath, err := r.git.GetWorktreePath(currentDir, branch)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get worktree path: %w", err)
+	}
+
+	r.verbosePrint(fmt.Sprintf("Worktree path: %s", worktreePath))
+
+	return repoURL, worktreePath, nil
+}
+
+// executeWorktreeDeletion deletes the worktree with proper cleanup.
+func (r *repository) executeWorktreeDeletion(repoURL, branch, worktreePath string, force bool) error {
+	currentDir, err := filepath.Abs(".")
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Prompt for confirmation unless force flag is used
+	if !force {
+		if err := r.promptForConfirmation(branch, worktreePath); err != nil {
+			return err
+		}
+	}
+
+	// Remove worktree from Git tracking first
+	if err := r.git.RemoveWorktree(currentDir, worktreePath); err != nil {
+		return fmt.Errorf("failed to remove worktree from Git: %w", err)
+	}
+
+	// Remove worktree directory
+	if err := r.fs.RemoveAll(worktreePath); err != nil {
+		return fmt.Errorf("failed to remove worktree directory: %w", err)
+	}
+
+	// Remove entry from status file
+	if err := r.statusManager.RemoveWorktree(repoURL, branch); err != nil {
+		return fmt.Errorf("failed to remove worktree from status: %w", err)
+	}
+
+	return nil
+}
+
+// promptForConfirmation prompts the user for confirmation before deletion.
+func (r *repository) promptForConfirmation(branch, worktreePath string) error {
+	fmt.Printf("You are about to delete the worktree for branch '%s'\n", branch)
+	fmt.Printf("Worktree path: %s\n", worktreePath)
+	fmt.Print("Are you sure you want to continue? (y/N): ")
+
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		return fmt.Errorf("failed to read user input: %w", err)
+	}
+
+	switch input {
+	case "y", "Y", "yes", "YES":
+		return nil
+	case "n", "N", "no", "NO", "":
+		return ErrDeletionCancelled
+	default:
+		fmt.Print("Please enter 'y' for yes or 'n' for no: ")
+		return r.promptForConfirmation(branch, worktreePath)
+	}
+}
