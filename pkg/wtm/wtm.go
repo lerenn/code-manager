@@ -21,6 +21,10 @@ type WTM interface {
 
 	// OpenWorktree opens an existing worktree in the specified IDE.
 	OpenWorktree(worktreeName, ideName string) error
+
+	// ListWorktrees lists worktrees for the current project with mode detection.
+	ListWorktrees() ([]status.Repository, error)
+
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
 }
@@ -295,6 +299,42 @@ func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
 	}
 
 	return nil
+}
+
+// ListWorktrees lists worktrees for the current project with mode detection.
+func (c *realWTM) ListWorktrees() ([]status.Repository, error) {
+	c.verbosePrint("Starting worktree listing")
+
+	// 1. Detect project mode (repository or workspace)
+	projectType, err := c.detectProjectMode()
+	if err != nil {
+		c.verbosePrint(fmt.Sprintf("Error: %v", err))
+		return nil, fmt.Errorf("failed to detect project mode: %w", err)
+	}
+
+	// 2. Handle based on project type
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		return c.listWorktreesForSingleRepo()
+	case ProjectTypeWorkspace:
+		return c.listWorktreesForWorkspace()
+	case ProjectTypeNone:
+		return nil, fmt.Errorf("no Git repository or workspace found")
+	default:
+		return nil, fmt.Errorf("unknown project type")
+	}
+}
+
+// listWorktreesForSingleRepo lists worktrees for the current repository.
+func (c *realWTM) listWorktreesForSingleRepo() ([]status.Repository, error) {
+	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
+	return repo.ListWorktrees()
+}
+
+// listWorktreesForWorkspace lists worktrees for workspace mode (placeholder for future).
+func (c *realWTM) listWorktreesForWorkspace() ([]status.Repository, error) {
+	workspace := newWorkspace(c.fs, c.git, c.logger, c.verbose)
+	return workspace.ListWorktrees()
 }
 
 // verbosePrint prints a message only in verbose mode.

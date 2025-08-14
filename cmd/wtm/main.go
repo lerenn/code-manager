@@ -135,6 +135,43 @@ func createDeleteCmd() *cobra.Command {
 	return deleteCmd
 }
 
+func createListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List worktrees for the current repository",
+		Long:  `List all worktrees for the current Git repository. Currently supports single repository mode.`,
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			// Load configuration and create WTM instance
+			cfg := loadConfig()
+			wtmManager := wtm.NewWTM(cfg)
+			wtmManager.SetVerbose(verbose)
+
+			// List worktrees
+			worktrees, err := wtmManager.ListWorktrees()
+			if err != nil {
+				return err
+			}
+
+			// Display worktrees in simple text format
+			if len(worktrees) == 0 {
+				fmt.Println("No worktrees found for current repository")
+				return nil
+			}
+
+			// Get repository name for display
+			repoName := worktrees[0].URL
+			fmt.Printf("Worktrees for %s:\n", repoName)
+
+			for _, worktree := range worktrees {
+				fmt.Printf("  %s: %s\n", worktree.Branch, worktree.Path)
+			}
+
+			return nil
+		},
+	}
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "cgwt",
@@ -151,12 +188,13 @@ func main() {
 	createCmd := createCreateCmd()
 	openCmd := createOpenCmd()
 	deleteCmd := createDeleteCmd()
+	listCmd := createListCmd()
 
 	// Add IDE flag to create command
 	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
 
 	// Add subcommands
-	rootCmd.AddCommand(createCmd, openCmd, deleteCmd)
+	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)

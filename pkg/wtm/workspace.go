@@ -9,6 +9,7 @@ import (
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
 	"github.com/lerenn/wtm/pkg/logger"
+	"github.com/lerenn/wtm/pkg/status"
 )
 
 // workspaceConfig represents a VS Code-like workspace configuration.
@@ -421,6 +422,15 @@ func (w *workspace) Load() error {
 	}
 
 	return nil
+}
+
+// ListWorktrees lists worktrees for workspace mode (placeholder for future).
+func (w *workspace) ListWorktrees() ([]status.Repository, error) {
+	w.verbosePrint("Listing worktrees for workspace mode (placeholder)")
+
+	// TODO: Implement workspace worktree listing in future
+	// For now, return empty list as placeholder
+	return []status.Repository{}, nil
 }
 
 // verbosePrint prints a message only in verbose mode.
