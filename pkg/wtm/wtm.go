@@ -2,6 +2,7 @@ package wtm
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
@@ -287,14 +288,17 @@ func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
 		return fmt.Errorf("failed to get repository URL: %w", err)
 	}
 
-	// Get worktree from status.yaml using repository URL and branch name
-	worktree, err := c.statusManager.GetWorktree(repoURL, worktreeName)
+	// Get worktree from status.yaml using repository URL and branch name to verify it exists
+	_, err = c.statusManager.GetWorktree(repoURL, worktreeName)
 	if err != nil {
 		return fmt.Errorf("%w: %s", ide.ErrWorktreeNotFound, worktreeName)
 	}
 
-	// Open IDE with the worktree path
-	if err := c.ideManager.OpenIDE(ideName, worktree.Path, c.verbose); err != nil {
+	// Derive worktree path from original repository path and branch name
+	worktreePath := filepath.Join(c.config.BasePath, repoURL, worktreeName)
+
+	// Open IDE with the derived worktree path
+	if err := c.ideManager.OpenIDE(ideName, worktreePath, c.verbose); err != nil {
 		return err
 	}
 

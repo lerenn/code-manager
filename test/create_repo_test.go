@@ -221,10 +221,13 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	require.NotNil(t, status.Repositories, "Status file should have repositories section")
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
-	// Verify that the worktree path in status.yaml is correct (not the original repo path)
+	// Verify that the original repository path in status.yaml is correct (not the worktree path)
 	worktreeEntry := status.Repositories[0]
-	expectedPath := filepath.Join(setup.WtmPath, "repo", "feature", "test-ide")
-	assert.Equal(t, expectedPath, worktreeEntry.Path, "Worktree path should be the worktree directory, not the original repository")
+	expectedPath, err := filepath.EvalSymlinks(setup.RepoPath)
+	require.NoError(t, err)
+	actualPath, err := filepath.EvalSymlinks(worktreeEntry.Path)
+	require.NoError(t, err)
+	assert.Equal(t, expectedPath, actualPath, "Path should be the original repository directory, not the worktree directory")
 }
 
 // TestCreateWorktreeWithUnsupportedIDE tests creating a worktree with unsupported IDE

@@ -319,7 +319,8 @@ func (r *repository) ensureBranchExists(currentDir, branch string) error {
 // createWorktreeWithCleanup creates the worktree with proper cleanup on failure.
 func (r *repository) createWorktreeWithCleanup(repoURL, branch, worktreePath, currentDir string) error {
 	// Update status file with worktree entry (before creating the worktree for proper cleanup)
-	if err := r.statusManager.AddWorktree(repoURL, branch, worktreePath, ""); err != nil {
+	// Store the original repository path, not the worktree path
+	if err := r.statusManager.AddWorktree(repoURL, branch, currentDir, ""); err != nil {
 		// Clean up created directory on status update failure
 		if cleanupErr := r.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
 			r.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)

@@ -113,7 +113,11 @@ func TestListWorktreesWithWorktrees(t *testing.T) {
 		branchNames[i] = wt.Branch
 		assert.NotEmpty(t, wt.URL, "Repository URL should be set")
 		assert.NotEmpty(t, wt.Path, "Repository path should be set")
-		assert.Contains(t, wt.Path, setup.WtmPath, "Worktree path should be in .wtm directory")
+		expectedPath, err := filepath.EvalSymlinks(setup.RepoPath)
+		require.NoError(t, err)
+		actualPath, err := filepath.EvalSymlinks(wt.Path)
+		require.NoError(t, err)
+		assert.Equal(t, expectedPath, actualPath, "Path should be the original repository directory")
 	}
 
 	// Check that both expected branches are present

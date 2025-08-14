@@ -149,8 +149,8 @@ func TestWTM_OpenWorktree(t *testing.T) {
 	}
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(worktree, nil)
 
-	// Mock IDE opening
-	mockIDE.EXPECT().OpenIDE("cursor", "/path/to/worktree", false).Return(nil)
+	// Mock IDE opening - now uses derived worktree path
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/test-branch", false).Return(nil)
 
 	err := wtm.OpenWorktree("test-branch", "cursor")
 	assert.NoError(t, err)
