@@ -10,8 +10,6 @@ import (
 // Git imposes the following rules on how references are named:
 //   - They can include slash / for hierarchical (directory) grouping, but no slash-separated component
 //     can begin with a dot . or end with the sequence .lock.
-//   - They must contain at least one /. This enforces the presence of a category like heads/, tags/ etc.
-//     but the actual names are not restricted.
 //   - They cannot have two consecutive dots .. anywhere.
 //   - They cannot have ASCII control characters (i.e. bytes whose values are lower than \040, or \177 DEL),
 //     space, tilde ~, caret ^, or colon : anywhere.
@@ -61,13 +59,6 @@ func (c *realWTM) sanitizeBranchName(branchName string) (string, error) {
 
 	// Remove leading dash (not allowed for branch names)
 	sanitized = strings.TrimPrefix(sanitized, "-")
-
-	// Ensure we have at least one slash for hierarchical grouping (Git requirement)
-	// If no slash exists, we'll add a prefix to make it valid
-	// Note: We only add heads/ prefix if there's no slash at all, not for branch names that already have slashes
-	if !strings.Contains(sanitized, "/") {
-		sanitized = "heads/" + sanitized
-	}
 
 	// Limit length to 255 characters (filesystem limit)
 	if len(sanitized) > 255 {

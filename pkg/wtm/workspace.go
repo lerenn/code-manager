@@ -156,15 +156,11 @@ func (w *workspace) HandleMultipleFiles(workspaceFiles []string) (string, error)
 
 // Validate validates all repositories in a workspace.
 func (w *workspace) Validate() error {
-	if w.verbose {
-		w.logger.Logf("Validating workspace: %s", w.originalFile)
-	}
+	w.verbosePrint(fmt.Sprintf("Validating workspace: %s", w.originalFile))
 
 	workspaceConfig, err := w.parseFile(w.originalFile)
 	if err != nil {
-		if w.verbose {
-			w.logger.Logf("Error: %v", err)
-		}
+		w.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return fmt.Errorf("%w: %w", ErrWorkspaceFileRead, err)
 	}
 
@@ -185,9 +181,7 @@ func (w *workspace) validateRepository(folder workspaceFolder, workspaceDir stri
 	// Resolve relative path from workspace file location
 	resolvedPath := filepath.Join(workspaceDir, folder.Path)
 
-	if w.verbose {
-		w.logger.Logf("Validating repository: %s", resolvedPath)
-	}
+	w.verbosePrint(fmt.Sprintf("Validating repository: %s", resolvedPath))
 
 	if err := w.validateRepositoryPath(folder, resolvedPath); err != nil {
 		return err
@@ -200,9 +194,7 @@ func (w *workspace) validateRepository(folder workspaceFolder, workspaceDir stri
 	// Validate Git configuration is functional
 	err := w.validateGitConfiguration(resolvedPath)
 	if err != nil {
-		if w.verbose {
-			w.logger.Logf("Error: %v", err)
-		}
+		w.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
 	}
 
@@ -214,16 +206,12 @@ func (w *workspace) validateRepositoryPath(folder workspaceFolder, resolvedPath 
 	// Check repository path exists
 	exists, err := w.fs.Exists(resolvedPath)
 	if err != nil {
-		if w.verbose {
-			w.logger.Logf("Error: %v", err)
-		}
+		w.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return fmt.Errorf("repository not found in workspace: %s - %w", folder.Path, err)
 	}
 
 	if !exists {
-		if w.verbose {
-			w.logger.Logf("Error: repository path does not exist")
-		}
+		w.verbosePrint("Error: repository path does not exist")
 		return fmt.Errorf("%w: %s", ErrRepositoryNotFoundInWorkspace, folder.Path)
 	}
 
@@ -236,28 +224,20 @@ func (w *workspace) validateRepositoryGit(folder workspaceFolder, resolvedPath s
 	gitPath := filepath.Join(resolvedPath, ".git")
 	exists, err := w.fs.Exists(gitPath)
 	if err != nil {
-		if w.verbose {
-			w.logger.Logf("Error: %v", err)
-		}
+		w.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
 	}
 
 	if !exists {
-		if w.verbose {
-			w.logger.Logf("Error: .git directory not found in repository")
-		}
+		w.verbosePrint("Error: .git directory not found in repository")
 		return fmt.Errorf("%w: %s", ErrInvalidRepositoryInWorkspaceNoGit, folder.Path)
 	}
 
 	// Execute git status to ensure repository is working
-	if w.verbose {
-		w.logger.Logf("Executing git status in: %s", resolvedPath)
-	}
+	w.verbosePrint(fmt.Sprintf("Executing git status in: %s", resolvedPath))
 	_, err = w.git.Status(resolvedPath)
 	if err != nil {
-		if w.verbose {
-			w.logger.Logf("Error: %v", err)
-		}
+		w.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
 	}
 
@@ -266,19 +246,13 @@ func (w *workspace) validateRepositoryGit(folder workspaceFolder, resolvedPath s
 
 // validateGitConfiguration validates that Git is properly configured and working.
 func (w *workspace) validateGitConfiguration(workDir string) error {
-	if w.verbose {
-		w.logger.Logf("Validating Git configuration in: %s", workDir)
-	}
+	w.verbosePrint(fmt.Sprintf("Validating Git configuration in: %s", workDir))
 
 	// Execute git status to ensure basic Git functionality
-	if w.verbose {
-		w.logger.Logf("Executing git status in: %s", workDir)
-	}
+	w.verbosePrint(fmt.Sprintf("Executing git status in: %s", workDir))
 	_, err := w.git.Status(workDir)
 	if err != nil {
-		if w.verbose {
-			w.logger.Logf("Error: %v", err)
-		}
+		w.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return fmt.Errorf("git configuration error: %w", err)
 	}
 
@@ -440,12 +414,10 @@ func (w *workspace) Load() error {
 	workspaceName := w.getName(workspaceConfig, w.originalFile)
 	w.verbosePrint(fmt.Sprintf("Found workspace: %s", workspaceName))
 
-	if w.verbose {
-		w.verbosePrint("Workspace configuration:")
-		w.verbosePrint(fmt.Sprintf("  Folders: %d", len(workspaceConfig.Folders)))
-		for _, folder := range workspaceConfig.Folders {
-			w.verbosePrint(fmt.Sprintf("    - %s: %s", folder.Name, folder.Path))
-		}
+	w.verbosePrint("Workspace configuration:")
+	w.verbosePrint(fmt.Sprintf("  Folders: %d", len(workspaceConfig.Folders)))
+	for _, folder := range workspaceConfig.Folders {
+		w.verbosePrint(fmt.Sprintf("    - %s: %s", folder.Name, folder.Path))
 	}
 
 	return nil
