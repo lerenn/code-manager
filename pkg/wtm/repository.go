@@ -574,52 +574,54 @@ func (r *repository) handleRemoteManagement(remoteSource string) error {
 		return nil
 	}
 
-	// Check if remote already exists
+	// Check if remote already exists and handle existing remote
+	if err := r.handleExistingRemote(remoteSource); err != nil {
+		return err
+	}
+
+	// Add new remote
+	return r.addNewRemote(remoteSource)
+}
+
+// handleExistingRemote checks if remote exists and handles it appropriately.
+func (r *repository) handleExistingRemote(remoteSource string) error {
 	exists, err := r.git.RemoteExists(".", remoteSource)
 	if err != nil {
 		return fmt.Errorf("failed to check if remote '%s' exists: %w", remoteSource, err)
 	}
 
 	if exists {
-		// Validate that the existing remote URL matches expected format
 		remoteURL, err := r.git.GetRemoteURL(".", remoteSource)
 		if err != nil {
 			return fmt.Errorf("failed to get remote URL: %w", err)
 		}
 
-		// For now, just log that we're using existing remote
 		r.verbosePrint("Using existing remote '%s' with URL: %s", remoteSource, remoteURL)
 		return nil
 	}
 
-	// Add new remote
+	return nil
+}
+
+// addNewRemote adds a new remote for the given remote source.
+func (r *repository) addNewRemote(remoteSource string) error {
 	r.verbosePrint("Adding new remote '%s'", remoteSource)
 
-	// Get repository name from origin remote
+	// Get repository information
 	repoName, err := r.git.GetRepositoryName(".")
 	if err != nil {
 		return fmt.Errorf("failed to get repository name: %w", err)
 	}
 
-	// Determine protocol and host from origin remote
 	originURL, err := r.git.GetRemoteURL(".", "origin")
 	if err != nil {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}
 
-	protocol := r.determineProtocol(originURL)
-	host := r.extractHostFromURL(originURL)
-
-	if host == "" {
-		return fmt.Errorf("failed to extract host from origin URL: %s", originURL)
-	}
-
 	// Construct remote URL
-	var remoteURL string
-	if protocol == "ssh" {
-		remoteURL = fmt.Sprintf("git@%s:%s/%s.git", host, remoteSource, r.extractRepoNameFromFullPath(repoName))
-	} else {
-		remoteURL = fmt.Sprintf("https://%s/%s/%s.git", host, remoteSource, r.extractRepoNameFromFullPath(repoName))
+	remoteURL, err := r.constructRemoteURL(originURL, remoteSource, repoName)
+	if err != nil {
+		return err
 	}
 
 	r.verbosePrint("Constructed remote URL: %s", remoteURL)
@@ -630,6 +632,23 @@ func (r *repository) handleRemoteManagement(remoteSource string) error {
 	}
 
 	return nil
+}
+
+// constructRemoteURL constructs the remote URL based on origin URL and remote source.
+func (r *repository) constructRemoteURL(originURL, remoteSource, repoName string) (string, error) {
+	protocol := r.determineProtocol(originURL)
+	host := r.extractHostFromURL(originURL)
+
+	if host == "" {
+		return "", fmt.Errorf("failed to extract host from origin URL: %s", originURL)
+	}
+
+	repoNameShort := r.extractRepoNameFromFullPath(repoName)
+
+	if protocol == "ssh" {
+		return fmt.Sprintf("git@%s:%s/%s.git", host, remoteSource, repoNameShort), nil
+	}
+	return fmt.Sprintf("https://%s/%s/%s.git", host, remoteSource, repoNameShort), nil
 }
 
 // determineProtocol determines the protocol (https or ssh) from the origin URL.

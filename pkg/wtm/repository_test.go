@@ -1001,6 +1001,10 @@ func TestRepository_LoadWorktree_ExistingRemote(t *testing.T) {
 	mockGit.EXPECT().RemoteExists(".", "otheruser").Return(true, nil)
 	mockGit.EXPECT().GetRemoteURL(".", "otheruser").Return("https://github.com/otheruser/example.git", nil)
 
+	// Mock origin remote URL for addNewRemote (in case it's called)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().AddRemote(".", "otheruser", "https://github.com/otheruser/example.git").Return(nil)
+
 	// Mock fetch from remote
 	mockGit.EXPECT().FetchRemote(".", "otheruser").Return(nil)
 
@@ -1008,7 +1012,7 @@ func TestRepository_LoadWorktree_ExistingRemote(t *testing.T) {
 	mockGit.EXPECT().BranchExistsOnRemote(".", "otheruser", "feature-branch").Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic)
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil).AnyTimes()
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()

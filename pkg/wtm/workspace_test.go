@@ -833,8 +833,10 @@ func TestWorkspace_ParseConfirmationInput(t *testing.T) {
 	_, err = workspace.parseConfirmationInput("maybe")
 	assert.Error(t, err)
 
-	_, err = workspace.parseConfirmationInput("")
-	assert.Error(t, err)
+	// Test empty input (should return false, not error)
+	result, err = workspace.parseConfirmationInput("")
+	assert.NoError(t, err)
+	assert.False(t, result)
 }
 
 func TestWTM_ListWorktrees_WorkspaceMode(t *testing.T) {
