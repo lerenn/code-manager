@@ -186,7 +186,12 @@ func displayUniqueBranches(worktrees []status.Repository) {
 	branches := make(map[string]bool)
 	for _, worktree := range worktrees {
 		if !branches[worktree.Branch] {
-			fmt.Printf("  %s\n", worktree.Branch)
+			// Display branch with remote information if available
+			if worktree.Remote != "" {
+				fmt.Printf("  [%s] %s\n", worktree.Remote, worktree.Branch)
+			} else {
+				fmt.Printf("  %s\n", worktree.Branch)
+			}
 			branches[worktree.Branch] = true
 		}
 	}

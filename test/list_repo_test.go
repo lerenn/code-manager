@@ -153,7 +153,7 @@ func TestListWorktreesVerboseMode(t *testing.T) {
 
 	// Should show verbose output
 	assert.Contains(t, output, "Starting worktree listing", "Should show verbose start message")
-	assert.Contains(t, output, "Checking for .git directory", "Should show Git detection")
+	assert.Contains(t, output, "Checking if current directory is a Git repository", "Should show Git detection")
 	assert.Contains(t, output, "Git repository detected", "Should show repository detection")
 	assert.Contains(t, output, "Listing worktrees for single repository mode", "Should show mode detection")
 	assert.Contains(t, output, "Repository name:", "Should show repository name extraction")
@@ -181,7 +181,7 @@ func TestListWorktreesQuietMode(t *testing.T) {
 	assert.Contains(t, output, "Worktrees for", "Should show repository header")
 	assert.Contains(t, output, "feature/test-branch", "Should show worktree")
 	assert.NotContains(t, output, "Starting worktree listing", "Should not show verbose messages")
-	assert.NotContains(t, output, "Checking for .git directory", "Should not show verbose messages")
+	assert.NotContains(t, output, "Checking if current directory is a Git repository", "Should not show verbose messages")
 }
 
 // TestListWorktreesNoRepository tests listing worktrees when not in a Git repository

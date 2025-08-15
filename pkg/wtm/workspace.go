@@ -462,13 +462,23 @@ func (w *workspace) ListWorktrees() ([]status.Repository, error) {
 	w.verbosePrint(fmt.Sprintf("Looking for worktrees with workspace path: %s", workspacePath))
 	w.verbosePrint(fmt.Sprintf("Total worktrees available: %d", len(allWorktrees)))
 
-	// Filter worktrees for this workspace
+	// Filter worktrees for this workspace and add remote information
 	var workspaceWorktrees []status.Repository
 	for _, worktree := range allWorktrees {
 		w.verbosePrint(fmt.Sprintf("Checking worktree: URL=%s, Workspace=%s", worktree.URL, worktree.Workspace))
 		if worktree.Workspace == workspacePath {
-			workspaceWorktrees = append(workspaceWorktrees, worktree)
-			w.verbosePrint(fmt.Sprintf("✓ Found matching worktree: %s", worktree.URL))
+			// Get the remote for this branch
+			remote, err := w.git.GetBranchRemote(".", worktree.Branch)
+			if err != nil {
+				// If we can't determine the remote, use "origin" as default
+				remote = defaultRemote
+			}
+
+			// Create a copy with remote information
+			worktreeWithRemote := worktree
+			worktreeWithRemote.Remote = remote
+			workspaceWorktrees = append(workspaceWorktrees, worktreeWithRemote)
+			w.verbosePrint(fmt.Sprintf("✓ Found matching worktree: %s with remote: %s", worktree.URL, remote))
 		}
 	}
 

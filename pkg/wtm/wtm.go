@@ -214,7 +214,7 @@ func (c *realWTM) handleWorkspaceDeletion(branch string, force bool) error {
 func (c *realWTM) detectProjectMode() (ProjectType, error) {
 	// First check for single repository mode
 	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	exists, err := repo.CheckGitDirExists()
+	exists, err := repo.IsGitRepository()
 	if err != nil {
 		return ProjectTypeNone, fmt.Errorf("failed to detect repository mode: %w", err)
 	}
@@ -224,12 +224,12 @@ func (c *realWTM) detectProjectMode() (ProjectType, error) {
 	}
 
 	// If no single repo found, check for workspace mode
-	workspaceFiles, err := c.fs.Glob("*.code-workspace")
+	hasWorkspace, err := repo.IsWorkspaceFile()
 	if err != nil {
 		return ProjectTypeNone, fmt.Errorf("failed to check for workspace files: %w", err)
 	}
 
-	if len(workspaceFiles) > 0 {
+	if hasWorkspace {
 		return ProjectTypeWorkspace, nil
 	}
 

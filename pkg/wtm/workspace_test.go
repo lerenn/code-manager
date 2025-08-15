@@ -513,6 +513,9 @@ func TestWorkspace_ListWorktrees(t *testing.T) {
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil).Times(1)
 
+	// Mock GetBranchRemote calls for each worktree
+	mockGit.EXPECT().GetBranchRemote(".", "test-branch").Return("origin", nil).Times(2) // Called for both frontend and backend
+
 	worktrees, err := workspace.ListWorktrees()
 	assert.NoError(t, err)
 	// Debug output
@@ -563,6 +566,9 @@ func TestWorkspace_ListWorktrees_LoadWorkspace(t *testing.T) {
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil).Times(1)
+
+	// Mock GetBranchRemote call for the worktree
+	mockGit.EXPECT().GetBranchRemote(".", "test-branch").Return("origin", nil).Times(1)
 
 	worktrees, err := workspace.ListWorktrees()
 	assert.NoError(t, err)
@@ -871,6 +877,9 @@ func TestWTM_ListWorktrees_WorkspaceMode(t *testing.T) {
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(worktrees, nil).AnyTimes()
+
+	// Mock GetBranchRemote call for the worktree
+	mockGit.EXPECT().GetBranchRemote(".", "test-branch").Return("origin", nil).AnyTimes()
 
 	result, _, err := wtm.ListWorktrees()
 	assert.NoError(t, err)

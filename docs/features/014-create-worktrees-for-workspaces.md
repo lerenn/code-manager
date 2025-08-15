@@ -1,4 +1,4 @@
-# Feature 012: Create Worktrees for Workspaces
+# Feature 014: Create Worktrees for Workspaces
 
 ## Overview
 Implement functionality to create Git worktrees for all repositories within a workspace. This feature will extend the existing workspace detection and validation capabilities to provide complete worktree management for multi-repository workspaces, allowing users to create worktrees across all repositories in a workspace simultaneously.
