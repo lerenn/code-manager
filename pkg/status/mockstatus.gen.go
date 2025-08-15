@@ -96,3 +96,33 @@ func (mr *MockManagerMockRecorder) RemoveWorktree(repoURL, branch any) *gomock.C
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockManager)(nil).RemoveWorktree), repoURL, branch)
 }
+
+// GetWorkspaceWorktrees mocks base method.
+func (m *MockManager) GetWorkspaceWorktrees(workspacePath, branchName string) ([]Repository, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkspaceWorktrees", workspacePath, branchName)
+	ret0, _ := ret[0].([]Repository)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkspaceWorktrees indicates an expected call of GetWorkspaceWorktrees.
+func (mr *MockManagerMockRecorder) GetWorkspaceWorktrees(workspacePath, branchName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkspaceWorktrees", reflect.TypeOf((*MockManager)(nil).GetWorkspaceWorktrees), workspacePath, branchName)
+}
+
+// GetWorkspaceBranches mocks base method.
+func (m *MockManager) GetWorkspaceBranches(workspacePath string) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkspaceBranches", workspacePath)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkspaceBranches indicates an expected call of GetWorkspaceBranches.
+func (mr *MockManagerMockRecorder) GetWorkspaceBranches(workspacePath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkspaceBranches", reflect.TypeOf((*MockManager)(nil).GetWorkspaceBranches), workspacePath)
+}

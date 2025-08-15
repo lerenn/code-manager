@@ -1,4 +1,4 @@
-# Feature 011: List Worktrees for Single Repositories
+# Feature 012: List Worktrees for Single Repositories
 
 ## Overview
 Implement functionality to list worktrees for the current Git repository. This feature will allow users to see all worktrees associated with their current repository, providing visibility into their worktree management setup.

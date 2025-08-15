@@ -133,9 +133,13 @@ func TestCreateWorktreeOutsideGitRepo(t *testing.T) {
 	assert.Error(t, err, "Command should fail outside Git repository")
 	assert.Contains(t, err.Error(), "no Git repository or workspace found", "Error should mention no Git repository found")
 
-	// Verify no status file was created
+	// Verify status file exists but is empty (created during WTM initialization)
 	_, err = os.Stat(setup.StatusPath)
-	assert.True(t, os.IsNotExist(err), "Status file should not exist for failed operation")
+	assert.NoError(t, err, "Status file should exist (created during WTM initialization)")
+
+	// Verify status file is empty (no worktrees added)
+	status := readStatusFile(t, setup.StatusPath)
+	assert.Len(t, status.Repositories, 0, "Status file should be empty for failed operation")
 }
 
 // TestCreateWorktreeWithVerboseFlag tests creating a worktree with verbose output

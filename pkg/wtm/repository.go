@@ -47,8 +47,8 @@ func newRepository(
 func (r *repository) Validate() error {
 	r.verbosePrint(fmt.Sprintf("Validating repository: %s", "."))
 
-	// Check if .git directory exists and is a directory
-	exists, err := r.CheckGitDirExists()
+	// Check if we're in a Git repository
+	exists, err := r.IsGitRepository()
 	if err != nil {
 		return err
 	}
@@ -130,9 +130,9 @@ func (r *repository) ListWorktrees() ([]status.Repository, error) {
 	return filteredWorktrees, nil
 }
 
-// CheckGitDirExists checks if the current directory is a single Git repository.
-func (r *repository) CheckGitDirExists() (bool, error) {
-	r.verbosePrint("Checking for .git directory...")
+// IsGitRepository checks if the current directory is a Git repository (including worktrees).
+func (r *repository) IsGitRepository() (bool, error) {
+	r.verbosePrint("Checking if current directory is a Git repository...")
 
 	// Check if .git exists
 	exists, err := r.fs.Exists(".git")
@@ -141,25 +141,58 @@ func (r *repository) CheckGitDirExists() (bool, error) {
 	}
 
 	if !exists {
-		r.verbosePrint("No .git directory found")
+		r.verbosePrint("No .git found")
 		return false, nil
 	}
 
-	r.verbosePrint("Verifying .git is a directory...")
-
-	// Check if .git is a directory
+	// Check if .git is a directory (regular repository)
 	isDir, err := r.fs.IsDir(".git")
 	if err != nil {
 		return false, fmt.Errorf("failed to check .git directory: %w", err)
 	}
 
-	if !isDir {
-		r.verbosePrint(".git exists but is not a directory")
+	if isDir {
+		r.verbosePrint("Git repository detected (.git directory)")
+		return true, nil
+	}
+
+	// If .git is not a directory, it must be a file (worktree)
+	// Validate that it's actually a Git worktree file by checking for 'gitdir:' prefix
+	r.verbosePrint("Checking if .git file is a valid worktree file...")
+
+	content, err := r.fs.ReadFile(".git")
+	if err != nil {
+		r.verbosePrint(fmt.Sprintf("Failed to read .git file: %v", err))
 		return false, nil
 	}
 
-	r.verbosePrint("Git repository detected")
+	contentStr := strings.TrimSpace(string(content))
+	if !strings.HasPrefix(contentStr, "gitdir:") {
+		r.verbosePrint(".git file exists but is not a valid worktree file (missing 'gitdir:' prefix)")
+		return false, nil
+	}
+
+	r.verbosePrint("Git worktree detected (.git file)")
 	return true, nil
+}
+
+// IsWorkspaceFile checks if the current directory contains workspace files.
+func (r *repository) IsWorkspaceFile() (bool, error) {
+	r.verbosePrint("Checking for workspace files...")
+
+	// Check for .code-workspace files
+	workspaceFiles, err := r.fs.Glob("*.code-workspace")
+	if err != nil {
+		return false, fmt.Errorf("failed to check for workspace files: %w", err)
+	}
+
+	if len(workspaceFiles) > 0 {
+		r.verbosePrint(fmt.Sprintf("Workspace files found: %v", workspaceFiles))
+		return true, nil
+	}
+
+	r.verbosePrint("No workspace files found")
+	return false, nil
 }
 
 // validateGitStatus validates that git status works in the repository.
@@ -228,7 +261,7 @@ func (r *repository) validateRepository(branch string) (string, error) {
 	}
 
 	// Validate that we're in a Git repository
-	isSingleRepo, err := r.CheckGitDirExists()
+	isSingleRepo, err := r.IsGitRepository()
 	if err != nil {
 		return "", fmt.Errorf("failed to validate Git repository: %w", err)
 	}
@@ -412,7 +445,7 @@ func (r *repository) prepareWorktreeDeletion(branch string) (string, string, err
 	}
 
 	// Validate that we're in a Git repository
-	isSingleRepo, err := r.CheckGitDirExists()
+	isSingleRepo, err := r.IsGitRepository()
 	if err != nil {
 		return "", "", fmt.Errorf("failed to validate Git repository: %w", err)
 	}
@@ -504,7 +537,7 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 	r.verbosePrint(fmt.Sprintf("Loading branch: remote=%s, branch=%s", remoteSource, branchName))
 
 	// 1. Validate current directory is a Git repository
-	gitExists, err := r.CheckGitDirExists()
+	gitExists, err := r.IsGitRepository()
 	if err != nil {
 		return fmt.Errorf("failed to validate Git repository: %w", err)
 	}
@@ -519,7 +552,7 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 
 	// 3. Parse remote source (default to "origin" if not specified)
 	if remoteSource == "" {
-		remoteSource = "origin"
+		remoteSource = defaultRemote
 	}
 
 	// 4. Handle remote management

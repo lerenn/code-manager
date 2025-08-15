@@ -2,6 +2,8 @@ package status
 
 import (
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
@@ -34,19 +36,42 @@ type Manager interface {
 	GetWorktree(repoURL, branch string) (*Repository, error)
 	// ListAllWorktrees lists all tracked worktrees.
 	ListAllWorktrees() ([]Repository, error)
+	// GetWorkspaceWorktrees returns all worktrees for a specific workspace and branch.
+	GetWorkspaceWorktrees(workspacePath, branchName string) ([]Repository, error)
+	// GetWorkspaceBranches returns all branch names for a specific workspace.
+	GetWorkspaceBranches(workspacePath string) ([]string, error)
 }
 
 type realManager struct {
-	fs     fs.FS
-	config *config.Config
+	fs         fs.FS
+	config     *config.Config
+	workspaces map[string]map[string][]Repository // workspace -> branch -> repositories
 }
 
 // NewManager creates a new Status Manager instance.
 func NewManager(fs fs.FS, config *config.Config) Manager {
-	return &realManager{
-		fs:     fs,
-		config: config,
+	manager := &realManager{
+		fs:         fs,
+		config:     config,
+		workspaces: make(map[string]map[string][]Repository),
 	}
+
+	// Initialize workspaces map
+	manager.initializeWorkspacesMap()
+
+	return manager
+}
+
+// initializeWorkspacesMap loads the status and computes the workspaces map.
+func (s *realManager) initializeWorkspacesMap() {
+	status, err := s.loadStatus()
+	if err != nil {
+		// If we can't load status, start with empty map
+		s.workspaces = make(map[string]map[string][]Repository)
+		return
+	}
+
+	s.computeWorkspacesMap(status.Repositories)
 }
 
 // AddWorktree adds a worktree entry to the status file.
@@ -146,6 +171,63 @@ func (s *realManager) ListAllWorktrees() ([]Repository, error) {
 	return status.Repositories, nil
 }
 
+// computeWorkspacesMap computes the workspaces map from the repositories list.
+func (s *realManager) computeWorkspacesMap(repositories []Repository) {
+	s.workspaces = make(map[string]map[string][]Repository)
+
+	for _, repo := range repositories {
+		if repo.Workspace == "" {
+			continue // Skip non-workspace repositories
+		}
+
+		// Get workspace name from the workspace path
+		workspaceName := s.getWorkspaceNameFromPath(repo.Workspace)
+
+		// Initialize workspace map if it doesn't exist
+		if s.workspaces[workspaceName] == nil {
+			s.workspaces[workspaceName] = make(map[string][]Repository)
+		}
+
+		// Add repository to the appropriate branch
+		s.workspaces[workspaceName][repo.Branch] = append(s.workspaces[workspaceName][repo.Branch], repo)
+	}
+}
+
+// getWorkspaceNameFromPath extracts the workspace name from the workspace file path.
+func (s *realManager) getWorkspaceNameFromPath(workspacePath string) string {
+	// Extract filename without extension
+	// This is a simple implementation - in practice, you might want to parse the workspace file
+	// to get the actual workspace name from the JSON content
+	// For now, we'll use the filename without .code-workspace extension
+	// This matches the logic in the workspace.go getName method
+	return strings.TrimSuffix(filepath.Base(workspacePath), ".code-workspace")
+}
+
+// GetWorkspaceWorktrees returns all worktrees for a specific workspace and branch.
+func (s *realManager) GetWorkspaceWorktrees(workspacePath, branchName string) ([]Repository, error) {
+	workspaceName := s.getWorkspaceNameFromPath(workspacePath)
+	if s.workspaces[workspaceName] == nil {
+		return []Repository{}, nil
+	}
+
+	return s.workspaces[workspaceName][branchName], nil
+}
+
+// GetWorkspaceBranches returns all branch names for a specific workspace.
+func (s *realManager) GetWorkspaceBranches(workspacePath string) ([]string, error) {
+	workspaceName := s.getWorkspaceNameFromPath(workspacePath)
+	if s.workspaces[workspaceName] == nil {
+		return []string{}, nil
+	}
+
+	var branches []string
+	for branch := range s.workspaces[workspaceName] {
+		branches = append(branches, branch)
+	}
+
+	return branches, nil
+}
+
 // getStatusFilePath returns the status file path from configuration.
 func (s *realManager) getStatusFilePath() (string, error) {
 	if s.config == nil {
@@ -222,6 +304,9 @@ func (s *realManager) saveStatus(status *Status) error {
 	if err := s.fs.WriteFileAtomic(statusPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write status file: %w", err)
 	}
+
+	// Update workspaces map after successful save
+	s.computeWorkspacesMap(status.Repositories)
 
 	return nil
 }

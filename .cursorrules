@@ -157,18 +157,27 @@
 
 ## Shipping Process
 
-When asked to "ship" the code or when shipping is mentioned, systematically execute these commands in order:
+**CRITICAL**: The shipping process should ONLY be executed when the user explicitly asks to "ship" the code or mentions shipping. Do NOT automatically execute the shipping process after implementing features.
+
+**MANDATORY REQUIREMENT**: ALL tests MUST pass before shipping. If ANY test fails, you MUST fix the failing tests before proceeding with the shipping process. Shipping with failing tests is NOT allowed under any circumstances.
+
+When explicitly asked to "ship" the code or when shipping is mentioned, systematically execute these commands in order:
 
 1. **Generate Code**: Execute `go generate ./...` to ensure all generated files are up to date
 2. **Lint and Fix**: Execute `dagger call lint --source-dir=.` and automatically fix any linting errors that are found
-3. **Unit tests**: Execute `dagger call unit-tests --source-dir .`  and automatically fix any errors that are found
-4. **Integration tests**: Execute `dagger call integration-tests --source-dir .`  and automatically fix any errors that are found
-5. **End-to-end tests**: Execute `dagger call end-to-end-tests --source-dir .`  and automatically fix any errors that are found
+3. **Unit tests**: Execute `dagger call unit-tests --source-dir .` and automatically fix any errors that are found
+   - **STOP HERE** if unit tests fail - do not proceed until all unit tests pass
+4. **Integration tests**: Execute `dagger call integration-tests --source-dir .` and automatically fix any errors that are found
+   - **STOP HERE** if integration tests fail - do not proceed until all integration tests pass
+5. **End-to-end tests**: Execute `dagger call end-to-end-tests --source-dir .` and automatically fix any errors that are found
+   - **STOP HERE** if end-to-end tests fail - do not proceed until all end-to-end tests pass
 6. **Create Branch**: Create a new branch with a descriptive name based on the first request of the chat. ONLY if you're on main branch so check before hand.
 7. **Commit Changes**: Commit all changes with a descriptive commit message where:
    - **Title**: Use the first request of the chat as the commit title following conventional commit format
    - **Description**: Use the complete summary of everything done in the chat as the commit description
 8. **Push Branch**: Push the new branch to the remote repository
+
+**FAILURE HANDLING**: If any step fails and cannot be fixed within a reasonable number of attempts (3 attempts), you MUST inform the user that shipping cannot proceed due to failing tests and ask for guidance on how to proceed.
 
 ### Branch Naming Convention
 - Use descriptive names like: `feat/add-new-feature`, `fix/resolve-linting-issues`, `docs/update-readme`

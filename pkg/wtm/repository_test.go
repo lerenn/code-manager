@@ -100,7 +100,7 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRepository_CheckGitDirExists_Success(t *testing.T) {
+func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -110,16 +110,15 @@ func TestRepository_CheckGitDirExists_Success(t *testing.T) {
 
 	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
 
-	// Mock .git directory check
-	mockFS.EXPECT().Exists(".git").Return(true, nil)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil)
+	// Mock workspace files found
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
 
-	exists, err := repo.CheckGitDirExists()
+	exists, err := repo.IsWorkspaceFile()
 	assert.NoError(t, err)
 	assert.True(t, exists)
 }
 
-func TestRepository_CheckGitDirExists_NotFound(t *testing.T) {
+func TestRepository_IsWorkspaceFile_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -129,15 +128,55 @@ func TestRepository_CheckGitDirExists_NotFound(t *testing.T) {
 
 	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
 
-	// Mock .git directory not found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
+	// Mock no workspace files found
+	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
-	exists, err := repo.CheckGitDirExists()
+	exists, err := repo.IsWorkspaceFile()
 	assert.NoError(t, err)
 	assert.False(t, exists)
 }
 
-func TestRepository_CheckGitDirExists_NotDirectory(t *testing.T) {
+func TestRepository_IsGitRepository_Directory(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock .git exists and is a directory (regular repository)
+	mockFS.EXPECT().Exists(".git").Return(true, nil)
+	mockFS.EXPECT().IsDir(".git").Return(true, nil)
+
+	exists, err := repo.IsGitRepository()
+	assert.NoError(t, err)
+	assert.True(t, exists) // Should return true for regular repositories
+}
+
+func TestRepository_IsGitRepository_File(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock .git exists but is not a directory (worktree case)
+	mockFS.EXPECT().Exists(".git").Return(true, nil)
+	mockFS.EXPECT().IsDir(".git").Return(false, nil)
+	// Mock .git file content with valid worktree format
+	mockFS.EXPECT().ReadFile(".git").Return([]byte("gitdir: /path/to/main/repo/.git/worktrees/worktree-name"), nil)
+
+	exists, err := repo.IsGitRepository()
+	assert.NoError(t, err)
+	assert.True(t, exists) // Should return true for valid worktrees
+}
+
+func TestRepository_IsGitRepository_InvalidFile(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -150,10 +189,30 @@ func TestRepository_CheckGitDirExists_NotDirectory(t *testing.T) {
 	// Mock .git exists but is not a directory
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
 	mockFS.EXPECT().IsDir(".git").Return(false, nil)
+	// Mock .git file content without valid worktree format
+	mockFS.EXPECT().ReadFile(".git").Return([]byte("not a git worktree file"), nil)
 
-	exists, err := repo.CheckGitDirExists()
+	exists, err := repo.IsGitRepository()
 	assert.NoError(t, err)
-	assert.False(t, exists)
+	assert.False(t, exists) // Should return false for invalid .git files
+}
+
+func TestRepository_IsGitRepository_NotExists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Mock .git does not exist
+	mockFS.EXPECT().Exists(".git").Return(false, nil)
+
+	exists, err := repo.IsGitRepository()
+	assert.NoError(t, err)
+	assert.False(t, exists) // Should return false when .git doesn't exist
 }
 
 func TestRepository_getBasePath(t *testing.T) {

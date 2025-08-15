@@ -31,7 +31,8 @@ func listWorktrees(t *testing.T, setup *TestSetup) ([]Repository, error) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.ListWorktrees()
+	worktrees, _, err := wtmInstance.ListWorktrees()
+	return worktrees, err
 }
 
 // runListCommand runs the wtm list command and captures output
@@ -130,8 +131,8 @@ func TestListWorktreesWithWorktrees(t *testing.T) {
 
 	// Should show repository name and worktrees
 	assert.Contains(t, output, "Worktrees for", "Should show repository header")
-	assert.Contains(t, output, "feature/test-branch:", "Should show feature branch")
-	assert.Contains(t, output, "bugfix/issue-123:", "Should show bugfix branch")
+	assert.Contains(t, output, "feature/test-branch", "Should show feature branch")
+	assert.Contains(t, output, "bugfix/issue-123", "Should show bugfix branch")
 }
 
 // TestListWorktreesVerboseMode tests listing worktrees with verbose output
@@ -152,7 +153,7 @@ func TestListWorktreesVerboseMode(t *testing.T) {
 
 	// Should show verbose output
 	assert.Contains(t, output, "Starting worktree listing", "Should show verbose start message")
-	assert.Contains(t, output, "Checking for .git directory", "Should show Git detection")
+	assert.Contains(t, output, "Checking if current directory is a Git repository", "Should show Git detection")
 	assert.Contains(t, output, "Git repository detected", "Should show repository detection")
 	assert.Contains(t, output, "Listing worktrees for single repository mode", "Should show mode detection")
 	assert.Contains(t, output, "Repository name:", "Should show repository name extraction")
@@ -178,9 +179,9 @@ func TestListWorktreesQuietMode(t *testing.T) {
 
 	// Should show only the worktree list, no verbose messages
 	assert.Contains(t, output, "Worktrees for", "Should show repository header")
-	assert.Contains(t, output, "feature/test-branch:", "Should show worktree")
+	assert.Contains(t, output, "feature/test-branch", "Should show worktree")
 	assert.NotContains(t, output, "Starting worktree listing", "Should not show verbose messages")
-	assert.NotContains(t, output, "Checking for .git directory", "Should not show verbose messages")
+	assert.NotContains(t, output, "Checking if current directory is a Git repository", "Should not show verbose messages")
 }
 
 // TestListWorktreesNoRepository tests listing worktrees when not in a Git repository
@@ -227,7 +228,7 @@ func TestListWorktreesWorkspaceMode(t *testing.T) {
 	// Test CLI command output
 	output, err := runListCommand(t, setup)
 	require.NoError(t, err, "CLI command should succeed")
-	assert.Contains(t, output, "No worktrees found for current repository", "Should show appropriate message for workspace mode")
+	assert.Contains(t, output, "No worktrees found for current workspace", "Should show appropriate message for workspace mode")
 }
 
 // TestListWorktreesStatusFileCorruption tests listing worktrees with corrupted status file
@@ -288,8 +289,8 @@ func TestListWorktreesMultipleRepositories(t *testing.T) {
 	// Test CLI command output
 	output, err := runListCommand(t, setup)
 	require.NoError(t, err, "CLI command should succeed")
-	assert.Contains(t, output, "feature/test-branch:", "Should show current repository worktree")
-	assert.NotContains(t, output, "feature/other-branch:", "Should not show other repository worktree")
+	assert.Contains(t, output, "feature/test-branch", "Should show current repository worktree")
+	assert.NotContains(t, output, "feature/other-branch", "Should not show other repository worktree")
 }
 
 // TestListWorktreesRepositoryNameExtraction tests repository name extraction from different Git configurations

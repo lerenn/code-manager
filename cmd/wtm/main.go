@@ -6,8 +6,10 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/status"
 	"github.com/lerenn/wtm/pkg/wtm"
 	"github.com/spf13/cobra"
 )
@@ -135,6 +137,66 @@ func createDeleteCmd() *cobra.Command {
 	return deleteCmd
 }
 
+// getWorkspaceName extracts the workspace name from the workspace file path.
+func getWorkspaceName(workspacePath string) string {
+	// Extract filename without extension
+	filename := filepath.Base(workspacePath)
+	return strings.TrimSuffix(filename, ".code-workspace")
+}
+
+// displayWorktrees displays worktrees based on project type.
+func displayWorktrees(worktrees []status.Repository, projectType wtm.ProjectType) {
+	switch projectType {
+	case wtm.ProjectTypeSingleRepo:
+		displaySingleRepoWorktrees(worktrees)
+	case wtm.ProjectTypeWorkspace:
+		displayWorkspaceWorktrees(worktrees)
+	case wtm.ProjectTypeNone:
+		displayFallbackWorktrees(worktrees)
+	default:
+		displayFallbackWorktrees(worktrees)
+	}
+}
+
+// displaySingleRepoWorktrees displays worktrees for single repository mode.
+func displaySingleRepoWorktrees(worktrees []status.Repository) {
+	repoName := worktrees[0].URL
+	fmt.Printf("Worktrees for %s repository:\n", repoName)
+	displayUniqueBranches(worktrees)
+}
+
+// displayWorkspaceWorktrees displays worktrees for workspace mode.
+func displayWorkspaceWorktrees(worktrees []status.Repository) {
+	workspaceName := getWorkspaceName(worktrees[0].Workspace)
+	fmt.Printf("Worktrees for %s workspace:\n", workspaceName)
+	displayUniqueBranches(worktrees)
+}
+
+// displayFallbackWorktrees displays worktrees in fallback format.
+func displayFallbackWorktrees(worktrees []status.Repository) {
+	repoName := worktrees[0].URL
+	fmt.Printf("Worktrees for %s:\n", repoName)
+	for _, worktree := range worktrees {
+		fmt.Printf("  %s: %s\n", worktree.Branch, worktree.Path)
+	}
+}
+
+// displayUniqueBranches displays unique branches from worktrees.
+func displayUniqueBranches(worktrees []status.Repository) {
+	branches := make(map[string]bool)
+	for _, worktree := range worktrees {
+		if !branches[worktree.Branch] {
+			// Display branch with remote information if available
+			if worktree.Remote != "" {
+				fmt.Printf("  [%s] %s\n", worktree.Remote, worktree.Branch)
+			} else {
+				fmt.Printf("  %s\n", worktree.Branch)
+			}
+			branches[worktree.Branch] = true
+		}
+	}
+}
+
 func createListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
@@ -148,25 +210,28 @@ func createListCmd() *cobra.Command {
 			wtmManager.SetVerbose(verbose)
 
 			// List worktrees
-			worktrees, err := wtmManager.ListWorktrees()
+			worktrees, projectType, err := wtmManager.ListWorktrees()
 			if err != nil {
 				return err
 			}
 
 			// Display worktrees in simple text format
 			if len(worktrees) == 0 {
-				fmt.Println("No worktrees found for current repository")
+				switch projectType {
+				case wtm.ProjectTypeSingleRepo:
+					fmt.Println("No worktrees found for current repository")
+				case wtm.ProjectTypeWorkspace:
+					fmt.Println("No worktrees found for current workspace")
+				case wtm.ProjectTypeNone:
+					fmt.Println("No worktrees found")
+				default:
+					fmt.Println("No worktrees found")
+				}
 				return nil
 			}
 
-			// Get repository name for display
-			repoName := worktrees[0].URL
-			fmt.Printf("Worktrees for %s:\n", repoName)
-
-			for _, worktree := range worktrees {
-				// Format: [remote] branch: path
-				fmt.Printf("  [%s] %s: %s\n", worktree.Remote, worktree.Branch, worktree.Path)
-			}
+			// Display worktrees based on project type
+			displayWorktrees(worktrees, projectType)
 
 			return nil
 		},

@@ -25,7 +25,7 @@ type WTM interface {
 	OpenWorktree(worktreeName, ideName string) error
 
 	// ListWorktrees lists worktrees for the current project with mode detection.
-	ListWorktrees() ([]status.Repository, error)
+	ListWorktrees() ([]status.Repository, ProjectType, error)
 
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
 	LoadWorktree(branchArg string, ideName *string) error
@@ -188,7 +188,7 @@ func (c *realWTM) handleWorkspaceDeletion(branch string, force bool) error {
 	c.verbosePrint("Handling workspace deletion mode")
 
 	// Create a single workspace instance for all workspace operations
-	workspace := newWorkspace(c.fs, c.git, c.logger, c.verbose)
+	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
 
 	// 1. Load workspace (detection, selection, and display)
 	if err := workspace.Load(); err != nil {
@@ -214,7 +214,7 @@ func (c *realWTM) handleWorkspaceDeletion(branch string, force bool) error {
 func (c *realWTM) detectProjectMode() (ProjectType, error) {
 	// First check for single repository mode
 	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	exists, err := repo.CheckGitDirExists()
+	exists, err := repo.IsGitRepository()
 	if err != nil {
 		return ProjectTypeNone, fmt.Errorf("failed to detect repository mode: %w", err)
 	}
@@ -224,12 +224,12 @@ func (c *realWTM) detectProjectMode() (ProjectType, error) {
 	}
 
 	// If no single repo found, check for workspace mode
-	workspaceFiles, err := c.fs.Glob("*.code-workspace")
+	hasWorkspace, err := repo.IsWorkspaceFile()
 	if err != nil {
 		return ProjectTypeNone, fmt.Errorf("failed to check for workspace files: %w", err)
 	}
 
-	if len(workspaceFiles) > 0 {
+	if hasWorkspace {
 		return ProjectTypeWorkspace, nil
 	}
 
@@ -259,25 +259,17 @@ func (c *realWTM) handleRepositoryMode(branch string) error {
 	return nil
 }
 
-// handleWorkspaceMode handles workspace mode: validation and placeholder for worktree creation.
-func (c *realWTM) handleWorkspaceMode(_ string) error {
+// handleWorkspaceMode handles workspace mode: validation and worktree creation.
+func (c *realWTM) handleWorkspaceMode(branch string) error {
 	c.verbosePrint("Handling workspace mode")
 
 	// Create a single workspace instance for all workspace operations
-	workspace := newWorkspace(c.fs, c.git, c.logger, c.verbose)
+	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
 
-	// 1. Load workspace (detection, selection, and display)
-	if err := workspace.Load(); err != nil {
+	// Create worktrees for all repositories in workspace
+	if err := workspace.CreateWorktree(branch); err != nil {
 		return err
 	}
-
-	// 2. Validate all repositories in workspace
-	if err := workspace.Validate(); err != nil {
-		return err
-	}
-
-	// 4. TODO: Create worktrees for workspace repositories (placeholder)
-	c.verbosePrint("Workspace worktree creation not yet implemented")
 
 	c.verbosePrint("WTM execution completed successfully")
 
@@ -286,6 +278,27 @@ func (c *realWTM) handleWorkspaceMode(_ string) error {
 
 // OpenWorktree opens an existing worktree in the specified IDE.
 func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
+	// 1. Detect project mode (repository or workspace)
+	projectType, err := c.detectProjectMode()
+	if err != nil {
+		return fmt.Errorf("failed to detect project mode: %w", err)
+	}
+
+	// 2. Handle based on project type
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		return c.openWorktreeForSingleRepo(worktreeName, ideName)
+	case ProjectTypeWorkspace:
+		return c.openWorktreeForWorkspace(worktreeName, ideName)
+	case ProjectTypeNone:
+		return fmt.Errorf("no Git repository or workspace found")
+	default:
+		return fmt.Errorf("unknown project type")
+	}
+}
+
+// openWorktreeForSingleRepo opens a worktree for single repository mode.
+func (c *realWTM) openWorktreeForSingleRepo(worktreeName, ideName string) error {
 	// Get repository URL from local .git directory
 	repoURL, err := c.git.GetRepositoryName(".")
 	if err != nil {
@@ -309,28 +322,80 @@ func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
 	return nil
 }
 
+// openWorktreeForWorkspace opens a worktree for workspace mode.
+func (c *realWTM) openWorktreeForWorkspace(worktreeName, ideName string) error {
+	// Create a workspace instance to get workspace information
+	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
+
+	// Load workspace configuration
+	if err := workspace.Load(); err != nil {
+		return fmt.Errorf("failed to load workspace: %w", err)
+	}
+
+	// Get workspace name for worktree-specific workspace file
+	workspaceConfig, err := workspace.parseFile(workspace.originalFile)
+	if err != nil {
+		return fmt.Errorf("failed to parse workspace file: %w", err)
+	}
+	workspaceName := workspace.getName(workspaceConfig, workspace.originalFile)
+
+	// Sanitize branch name for filename (replace slashes with hyphens)
+	sanitizedBranchForFilename := strings.ReplaceAll(worktreeName, "/", "-")
+
+	// Construct path to worktree-specific workspace file
+	worktreeWorkspacePath := filepath.Join(
+		c.config.BasePath,
+		"workspaces",
+		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename),
+	)
+
+	// Check if worktree-specific workspace file exists
+	exists, err := c.fs.Exists(worktreeWorkspacePath)
+	if err != nil {
+		return fmt.Errorf("failed to check worktree workspace file existence: %w", err)
+	}
+
+	if !exists {
+		return fmt.Errorf("%w: %s", ide.ErrWorktreeNotFound, worktreeName)
+	}
+
+	// Open IDE with the worktree-specific workspace file
+	if err := c.ideManager.OpenIDE(ideName, worktreeWorkspacePath, c.verbose); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ListWorktrees lists worktrees for the current project with mode detection.
-func (c *realWTM) ListWorktrees() ([]status.Repository, error) {
+func (c *realWTM) ListWorktrees() ([]status.Repository, ProjectType, error) {
 	c.verbosePrint("Starting worktree listing")
 
 	// 1. Detect project mode (repository or workspace)
 	projectType, err := c.detectProjectMode()
 	if err != nil {
 		c.verbosePrint(fmt.Sprintf("Error: %v", err))
-		return nil, fmt.Errorf("failed to detect project mode: %w", err)
+		return nil, ProjectTypeNone, fmt.Errorf("failed to detect project mode: %w", err)
 	}
 
 	// 2. Handle based on project type
+	var worktrees []status.Repository
 	switch projectType {
 	case ProjectTypeSingleRepo:
-		return c.listWorktreesForSingleRepo()
+		worktrees, err = c.listWorktreesForSingleRepo()
 	case ProjectTypeWorkspace:
-		return c.listWorktreesForWorkspace()
+		worktrees, err = c.listWorktreesForWorkspace()
 	case ProjectTypeNone:
-		return nil, fmt.Errorf("no Git repository or workspace found")
+		return nil, ProjectTypeNone, fmt.Errorf("no Git repository or workspace found")
 	default:
-		return nil, fmt.Errorf("unknown project type")
+		return nil, ProjectTypeNone, fmt.Errorf("unknown project type")
 	}
+
+	if err != nil {
+		return nil, ProjectTypeNone, err
+	}
+
+	return worktrees, projectType, nil
 }
 
 // listWorktreesForSingleRepo lists worktrees for the current repository.
@@ -341,7 +406,7 @@ func (c *realWTM) listWorktreesForSingleRepo() ([]status.Repository, error) {
 
 // listWorktreesForWorkspace lists worktrees for workspace mode (placeholder for future).
 func (c *realWTM) listWorktreesForWorkspace() ([]status.Repository, error) {
-	workspace := newWorkspace(c.fs, c.git, c.logger, c.verbose)
+	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
 	return workspace.ListWorktrees()
 }
 
