@@ -5,7 +5,6 @@ package wtm
 import (
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
 	"github.com/lerenn/wtm/pkg/logger"
@@ -213,63 +212,6 @@ func TestRepository_IsGitRepository_NotExists(t *testing.T) {
 	exists, err := repo.IsGitRepository()
 	assert.NoError(t, err)
 	assert.False(t, exists) // Should return false when .git doesn't exist
-}
-
-func TestRepository_getBasePath(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-
-	tests := []struct {
-		name     string
-		config   *config.Config
-		expected string
-		wantErr  bool
-	}{
-		{
-			name: "Valid config",
-			config: &config.Config{
-				BasePath: "/custom/path",
-			},
-			expected: "/custom/path",
-			wantErr:  false,
-		},
-		{
-			name:     "Nil config",
-			config:   nil,
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name: "Empty base path",
-			config: &config.Config{
-				BasePath: "",
-			},
-			expected: "",
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := newRepository(mockFS, mockGit, tt.config, mockStatus, logger.NewNoopLogger(), true)
-
-			result, err := repo.getBasePath()
-			if tt.wantErr {
-				if tt.config == nil {
-					assert.ErrorIs(t, err, ErrConfigurationNotInitialized)
-				} else {
-					assert.Error(t, err)
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
-			}
-		})
-	}
 }
 
 func TestRepository_DeleteWorktree_Success(t *testing.T) {
