@@ -46,5 +46,5 @@ var (
 	ErrEmptyBranchName         = errors.New("empty branch name")
 	ErrBranchNameContainsColon = errors.New("branch name contains invalid character ':'")
 	ErrOriginRemoteNotFound    = errors.New("origin remote not found or invalid")
-	ErrOriginRemoteInvalidURL  = errors.New("origin remote URL is not a valid GitHub URL")
+	ErrOriginRemoteInvalidURL  = errors.New("origin remote URL is not a valid Git hosting service URL")
 )

@@ -531,12 +531,39 @@ func (r *repository) validateOriginRemote() error {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}
 
-	// Validate that it's a GitHub URL
-	if !r.isGitHubURL(originURL) {
+	// Validate that it's a valid Git hosting service URL
+	if r.extractHostFromURL(originURL) == "" {
 		return ErrOriginRemoteInvalidURL
 	}
 
 	return nil
+}
+
+// extractHostFromURL extracts the host from a Git remote URL.
+func (r *repository) extractHostFromURL(url string) string {
+	// Remove .git suffix if present
+	url = strings.TrimSuffix(url, ".git")
+
+	// Handle SSH format: git@github.com:user/repo
+	if strings.Contains(url, "@") && strings.Contains(url, ":") {
+		parts := strings.Split(url, ":")
+		if len(parts) == 2 {
+			hostParts := strings.Split(parts[0], "@")
+			if len(hostParts) == 2 {
+				return hostParts[1] // github.com
+			}
+		}
+	}
+
+	// Handle HTTPS format: https://github.com/user/repo
+	if strings.HasPrefix(url, "http") {
+		parts := strings.Split(url, "/")
+		if len(parts) >= 3 {
+			return parts[2] // github.com
+		}
+	}
+
+	return ""
 }
 
 // handleRemoteManagement handles remote addition if the remote doesn't exist.
@@ -574,20 +601,25 @@ func (r *repository) handleRemoteManagement(remoteSource string) error {
 		return fmt.Errorf("failed to get repository name: %w", err)
 	}
 
-	// Determine protocol from origin remote
+	// Determine protocol and host from origin remote
 	originURL, err := r.git.GetRemoteURL(".", "origin")
 	if err != nil {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}
 
 	protocol := r.determineProtocol(originURL)
+	host := r.extractHostFromURL(originURL)
+
+	if host == "" {
+		return fmt.Errorf("failed to extract host from origin URL: %s", originURL)
+	}
 
 	// Construct remote URL
 	var remoteURL string
 	if protocol == "ssh" {
-		remoteURL = fmt.Sprintf("git@github.com:%s/%s.git", remoteSource, r.extractRepoNameFromFullPath(repoName))
+		remoteURL = fmt.Sprintf("git@%s:%s/%s.git", host, remoteSource, r.extractRepoNameFromFullPath(repoName))
 	} else {
-		remoteURL = fmt.Sprintf("https://github.com/%s/%s.git", remoteSource, r.extractRepoNameFromFullPath(repoName))
+		remoteURL = fmt.Sprintf("https://%s/%s/%s.git", host, remoteSource, r.extractRepoNameFromFullPath(repoName))
 	}
 
 	r.verbosePrint("Constructed remote URL: %s", remoteURL)
@@ -598,11 +630,6 @@ func (r *repository) handleRemoteManagement(remoteSource string) error {
 	}
 
 	return nil
-}
-
-// isGitHubURL checks if the URL is a GitHub URL.
-func (r *repository) isGitHubURL(url string) bool {
-	return strings.Contains(url, "github.com")
 }
 
 // determineProtocol determines the protocol (https or ssh) from the origin URL.
