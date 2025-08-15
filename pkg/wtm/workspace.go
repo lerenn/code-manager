@@ -458,12 +458,17 @@ func (w *workspace) ListWorktrees() ([]status.Repository, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path for workspace file: %w", err)
 	}
-	
+
+	w.verbosePrint(fmt.Sprintf("Looking for worktrees with workspace path: %s", workspacePath))
+	w.verbosePrint(fmt.Sprintf("Total worktrees available: %d", len(allWorktrees)))
+
 	// Filter worktrees for this workspace
 	var workspaceWorktrees []status.Repository
 	for _, worktree := range allWorktrees {
+		w.verbosePrint(fmt.Sprintf("Checking worktree: URL=%s, Workspace=%s", worktree.URL, worktree.Workspace))
 		if worktree.Workspace == workspacePath {
 			workspaceWorktrees = append(workspaceWorktrees, worktree)
+			w.verbosePrint(fmt.Sprintf("✓ Found matching worktree: %s", worktree.URL))
 		}
 	}
 
@@ -583,11 +588,14 @@ func (w *workspace) createWorktreesForWorkspace(branch string) error {
 		path    string
 	}
 
+	// Sanitize branch name for filename (replace slashes with hyphens)
+	sanitizedBranchForFilename := strings.ReplaceAll(branch, "/", "-")
+
 	// Create worktree-specific workspace file path
 	worktreeWorkspacePath := filepath.Join(
 		w.config.BasePath,
 		"workspaces",
-		fmt.Sprintf("%s-%s.code-workspace", workspaceName, branch),
+		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename),
 	)
 
 	// 1. Update status file with worktree entries
@@ -641,7 +649,7 @@ func (w *workspace) prepareWorktreeStatusEntries(
 		if err != nil {
 			return fmt.Errorf("failed to get absolute path for workspace file: %w", err)
 		}
-		
+
 		// Add to status file
 		if err := w.statusManager.AddWorktree(repoURL, branch, resolvedPath, workspacePath); err != nil {
 			return fmt.Errorf("failed to add worktree to status file: %w", err)
@@ -756,12 +764,15 @@ func (w *workspace) createWorktreeWorkspaceFile(
 		return fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
+	// Sanitize branch name for workspace name (replace slashes with hyphens)
+	sanitizedBranchForName := strings.ReplaceAll(branch, "/", "-")
+
 	// Create worktree workspace configuration
 	worktreeConfig := struct {
 		Name    string            `json:"name,omitempty"`
 		Folders []WorkspaceFolder `json:"folders"`
 	}{
-		Name:    fmt.Sprintf("%s-%s", workspaceName, branch),
+		Name:    fmt.Sprintf("%s-%s", workspaceName, sanitizedBranchForName),
 		Folders: make([]WorkspaceFolder, len(workspaceConfig.Folders)),
 	}
 
@@ -852,10 +863,14 @@ func (w *workspace) DeleteWorktree(branch string, force bool) error {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
 	}
 	workspaceName := w.getName(workspaceConfig, w.originalFile)
+
+	// Sanitize branch name for filename (replace slashes with hyphens)
+	sanitizedBranchForFilename := strings.ReplaceAll(branch, "/", "-")
+
 	worktreeWorkspacePath := filepath.Join(
 		w.config.BasePath,
 		"workspaces",
-		fmt.Sprintf("%s-%s.code-workspace", workspaceName, branch),
+		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename),
 	)
 
 	// Delete worktrees for all repositories
@@ -888,11 +903,23 @@ func (w *workspace) getWorkspaceWorktrees(branch string) ([]status.Repository, e
 		return nil, fmt.Errorf("failed to list worktrees: %w", err)
 	}
 
+	// Convert workspace path to absolute for comparison with status file
+	workspacePath, err := filepath.Abs(w.originalFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get absolute path for workspace file: %w", err)
+	}
+
+	w.verbosePrint(fmt.Sprintf("Looking for worktrees with workspace path: %s", workspacePath))
+	w.verbosePrint(fmt.Sprintf("Total worktrees available: %d", len(allWorktrees)))
+
 	// Filter worktrees for this workspace and branch
 	var workspaceWorktrees []status.Repository
 	for _, worktree := range allWorktrees {
-		if worktree.Workspace == w.originalFile && worktree.Branch == branch {
+		w.verbosePrint(fmt.Sprintf("Checking worktree: URL=%s, Workspace=%s, Branch=%s",
+			worktree.URL, worktree.Workspace, worktree.Branch))
+		if worktree.Workspace == workspacePath && worktree.Branch == branch {
 			workspaceWorktrees = append(workspaceWorktrees, worktree)
+			w.verbosePrint(fmt.Sprintf("✓ Found matching worktree: %s", worktree.URL))
 		}
 	}
 

@@ -278,6 +278,27 @@ func (c *realWTM) handleWorkspaceMode(branch string) error {
 
 // OpenWorktree opens an existing worktree in the specified IDE.
 func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
+	// 1. Detect project mode (repository or workspace)
+	projectType, err := c.detectProjectMode()
+	if err != nil {
+		return fmt.Errorf("failed to detect project mode: %w", err)
+	}
+
+	// 2. Handle based on project type
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		return c.openWorktreeForSingleRepo(worktreeName, ideName)
+	case ProjectTypeWorkspace:
+		return c.openWorktreeForWorkspace(worktreeName, ideName)
+	case ProjectTypeNone:
+		return fmt.Errorf("no Git repository or workspace found")
+	default:
+		return fmt.Errorf("unknown project type")
+	}
+}
+
+// openWorktreeForSingleRepo opens a worktree for single repository mode.
+func (c *realWTM) openWorktreeForSingleRepo(worktreeName, ideName string) error {
 	// Get repository URL from local .git directory
 	repoURL, err := c.git.GetRepositoryName(".")
 	if err != nil {
@@ -295,6 +316,51 @@ func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
 
 	// Open IDE with the derived worktree path
 	if err := c.ideManager.OpenIDE(ideName, worktreePath, c.verbose); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// openWorktreeForWorkspace opens a worktree for workspace mode.
+func (c *realWTM) openWorktreeForWorkspace(worktreeName, ideName string) error {
+	// Create a workspace instance to get workspace information
+	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
+
+	// Load workspace configuration
+	if err := workspace.Load(); err != nil {
+		return fmt.Errorf("failed to load workspace: %w", err)
+	}
+
+	// Get workspace name for worktree-specific workspace file
+	workspaceConfig, err := workspace.parseFile(workspace.originalFile)
+	if err != nil {
+		return fmt.Errorf("failed to parse workspace file: %w", err)
+	}
+	workspaceName := workspace.getName(workspaceConfig, workspace.originalFile)
+
+	// Sanitize branch name for filename (replace slashes with hyphens)
+	sanitizedBranchForFilename := strings.ReplaceAll(worktreeName, "/", "-")
+
+	// Construct path to worktree-specific workspace file
+	worktreeWorkspacePath := filepath.Join(
+		c.config.BasePath,
+		"workspaces",
+		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename),
+	)
+
+	// Check if worktree-specific workspace file exists
+	exists, err := c.fs.Exists(worktreeWorkspacePath)
+	if err != nil {
+		return fmt.Errorf("failed to check worktree workspace file existence: %w", err)
+	}
+
+	if !exists {
+		return fmt.Errorf("%w: %s", ide.ErrWorktreeNotFound, worktreeName)
+	}
+
+	// Open IDE with the worktree-specific workspace file
+	if err := c.ideManager.OpenIDE(ideName, worktreeWorkspacePath, c.verbose); err != nil {
 		return err
 	}
 

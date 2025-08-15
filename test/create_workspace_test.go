@@ -72,6 +72,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
 	wtmInstance := wtm.NewWTM(cfg)
+	wtmInstance.SetVerbose(true)
 
 	// Create worktrees
 	branchName := "feature/test-branch"

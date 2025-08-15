@@ -138,6 +138,10 @@ func TestWTM_OpenWorktree(t *testing.T) {
 	c.statusManager = mockStatus
 	c.ideManager = mockIDE
 
+	// Mock single repo detection - .git found
+	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(1)
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(1)
+
 	// Mock Git to return repository URL
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
 
@@ -173,6 +177,10 @@ func TestWTM_OpenWorktree_NotFound(t *testing.T) {
 	c.git = mockGit
 	c.statusManager = mockStatus
 	c.ideManager = mockIDE
+
+	// Mock single repo detection - .git found
+	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(1)
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(1)
 
 	// Mock Git to return repository URL
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
