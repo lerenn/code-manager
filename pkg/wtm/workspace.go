@@ -453,10 +453,16 @@ func (w *workspace) ListWorktrees() ([]status.Repository, error) {
 		return nil, fmt.Errorf("failed to list worktrees: %w", err)
 	}
 
+	// Convert workspace path to absolute for comparison with status file
+	workspacePath, err := filepath.Abs(w.originalFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get absolute path for workspace file: %w", err)
+	}
+	
 	// Filter worktrees for this workspace
 	var workspaceWorktrees []status.Repository
 	for _, worktree := range allWorktrees {
-		if worktree.Workspace == w.originalFile {
+		if worktree.Workspace == workspacePath {
 			workspaceWorktrees = append(workspaceWorktrees, worktree)
 		}
 	}
@@ -630,8 +636,14 @@ func (w *workspace) prepareWorktreeStatusEntries(
 			return fmt.Errorf("failed to get repository URL for %s: %w", folder.Path, err)
 		}
 
+		// Convert workspace path to absolute for status file storage
+		workspacePath, err := filepath.Abs(w.originalFile)
+		if err != nil {
+			return fmt.Errorf("failed to get absolute path for workspace file: %w", err)
+		}
+		
 		// Add to status file
-		if err := w.statusManager.AddWorktree(repoURL, branch, resolvedPath, w.originalFile); err != nil {
+		if err := w.statusManager.AddWorktree(repoURL, branch, resolvedPath, workspacePath); err != nil {
 			return fmt.Errorf("failed to add worktree to status file: %w", err)
 		}
 

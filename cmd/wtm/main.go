@@ -186,7 +186,7 @@ func displayUniqueBranches(worktrees []status.Repository) {
 	branches := make(map[string]bool)
 	for _, worktree := range worktrees {
 		if !branches[worktree.Branch] {
-			fmt.Printf("  %s\n", worktree.Branch)
+			fmt.Printf("  %s:\n", worktree.Branch)
 			branches[worktree.Branch] = true
 		}
 	}

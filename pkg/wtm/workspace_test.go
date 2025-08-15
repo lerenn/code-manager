@@ -3,6 +3,7 @@
 package wtm
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/lerenn/wtm/pkg/fs"
@@ -79,8 +80,10 @@ func TestWTM_Run_WorkspaceMode(t *testing.T) {
 	// Mock status manager operations
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/frontend", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/backend", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/frontend", "test-branch", "frontend", "project.code-workspace").Return(nil).AnyTimes()
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/backend", "test-branch", "backend", "project.code-workspace").Return(nil).AnyTimes()
+	// Get absolute path for workspace file
+	absPath, _ := filepath.Abs("project.code-workspace")
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/frontend", "test-branch", "frontend", absPath).Return(nil).AnyTimes()
+	mockStatus.EXPECT().AddWorktree("github.com/lerenn/backend", "test-branch", "backend", absPath).Return(nil).AnyTimes()
 
 	err := wtm.CreateWorkTree("test-branch", nil)
 	assert.NoError(t, err)

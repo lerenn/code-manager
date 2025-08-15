@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/status"
 	"github.com/lerenn/wtm/pkg/wtm"
 	"github.com/stretchr/testify/assert"
@@ -107,7 +108,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	assert.Equal(t, backendWorktreePath, worktreeWorkspaceConfig.Folders[1].Path)
 
 	// Verify status file entries
-	statusManager := status.NewManager(nil, cfg)
+	statusManager := status.NewManager(fs.NewFS(), cfg)
 	allWorktrees, err := statusManager.ListAllWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, allWorktrees, 2)

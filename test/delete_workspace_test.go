@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/status"
 	"github.com/lerenn/wtm/pkg/wtm"
 	"github.com/stretchr/testify/assert"
@@ -109,7 +110,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	assert.NoFileExists(t, workspaceWorktreePath)
 
 	// Verify status file entries were removed
-	statusManager := status.NewManager(nil, cfg)
+	statusManager := status.NewManager(fs.NewFS(), cfg)
 	allWorktrees, err := statusManager.ListAllWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, allWorktrees, 0)
@@ -194,7 +195,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	assert.NoDirExists(t, frontendWorktreePath)
 
 	// Verify status file entries were removed
-	statusManager := status.NewManager(nil, cfg)
+	statusManager := status.NewManager(fs.NewFS(), cfg)
 	allWorktrees, err := statusManager.ListAllWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, allWorktrees, 0)
