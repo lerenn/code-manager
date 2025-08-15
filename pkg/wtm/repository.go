@@ -476,7 +476,7 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 		return ErrGitRepositoryNotFound
 	}
 
-	// 2. Validate origin remote exists and is a valid GitHub URL
+	// 2. Validate origin remote exists and is a valid Git hosting service URL
 	if err := r.validateOriginRemote(); err != nil {
 		return err
 	}
@@ -512,7 +512,7 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 	return r.CreateWorktree(branchName)
 }
 
-// validateOriginRemote validates that the origin remote exists and is a valid GitHub URL.
+// validateOriginRemote validates that the origin remote exists and is a valid Git hosting service URL.
 func (r *repository) validateOriginRemote() error {
 	r.verbosePrint("Validating origin remote")
 
@@ -544,22 +544,22 @@ func (r *repository) extractHostFromURL(url string) string {
 	// Remove .git suffix if present
 	url = strings.TrimSuffix(url, ".git")
 
-	// Handle SSH format: git@github.com:user/repo
+	// Handle SSH format: git@host:user/repo
 	if strings.Contains(url, "@") && strings.Contains(url, ":") {
 		parts := strings.Split(url, ":")
 		if len(parts) == 2 {
 			hostParts := strings.Split(parts[0], "@")
 			if len(hostParts) == 2 {
-				return hostParts[1] // github.com
+				return hostParts[1] // host
 			}
 		}
 	}
 
-	// Handle HTTPS format: https://github.com/user/repo
+	// Handle HTTPS format: https://host/user/repo
 	if strings.HasPrefix(url, "http") {
 		parts := strings.Split(url, "/")
 		if len(parts) >= 3 {
-			return parts[2] // github.com
+			return parts[2] // host
 		}
 	}
 
