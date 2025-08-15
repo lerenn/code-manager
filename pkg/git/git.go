@@ -143,7 +143,7 @@ func (g *realGit) GetRepositoryName(repoPath string) (string, error) {
 
 	if originURL != "" {
 		// Extract repository name from URL
-		// Handle different URL formats: https://github.com/user/repo.git, git@github.com:user/repo.git
+		// Handle different URL formats: https://host/user/repo.git, git@host:user/repo.git
 		repoName := g.extractRepoNameFromURL(originURL)
 		if repoName != "" {
 			return repoName, nil
@@ -166,7 +166,7 @@ func (g *realGit) extractRepoNameFromURL(url string) string {
 	// Remove .git suffix if present
 	url = strings.TrimSuffix(url, ".git")
 
-	// Handle SSH format: git@github.com:user/repo
+	// Handle SSH format: git@host:user/repo
 	if strings.Contains(url, "@") && strings.Contains(url, ":") {
 		parts := strings.Split(url, ":")
 		if len(parts) == 2 {
@@ -177,7 +177,7 @@ func (g *realGit) extractRepoNameFromURL(url string) string {
 		}
 	}
 
-	// Handle HTTPS format: https://github.com/user/repo
+	// Handle HTTPS format: https://host/user/repo
 	if strings.HasPrefix(url, "http") {
 		return g.extractHTTPSRepoName(url)
 	}
@@ -192,8 +192,8 @@ func (g *realGit) extractHTTPSRepoName(url string) string {
 		return ""
 	}
 
-	// Extract host and path: github.com/user/repo
-	host := parts[2] // github.com
+	// Extract host and path: host/user/repo
+	host := parts[2] // host
 	if len(parts) < 4 {
 		return host
 	}
