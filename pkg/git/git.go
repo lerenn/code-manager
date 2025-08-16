@@ -10,7 +10,7 @@ import (
 
 const defaultRemote = "origin"
 
-//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=git.go -destination=mockgit.gen.go -package=git
+//go:generate mockgen -source=git.go -destination=mockgit.gen.go -package=git
 
 // Git interface provides Git command execution capabilities.
 type Git interface {
@@ -54,7 +54,7 @@ type Git interface {
 	FetchRemote(repoPath, remoteName string) error
 
 	// BranchExistsOnRemote checks if a branch exists on a specific remote.
-	BranchExistsOnRemote(repoPath, remoteName, branch string) (bool, error)
+	BranchExistsOnRemote(params BranchExistsOnRemoteParams) (bool, error)
 
 	// GetRemoteURL gets the URL of a remote.
 	GetRemoteURL(repoPath, remoteName string) (string, error)
@@ -64,6 +64,12 @@ type Git interface {
 
 	// GetBranchRemote gets the remote name for a branch (e.g., "origin", "justenstall").
 	GetBranchRemote(repoPath, branch string) (string, error)
+
+	// Add adds files to the Git staging area.
+	Add(repoPath string, files ...string) error
+
+	// Commit creates a new commit with the specified message.
+	Commit(repoPath, message string) error
 }
 
 type realGit struct {
@@ -343,14 +349,21 @@ func (g *realGit) FetchRemote(repoPath, remoteName string) error {
 	return nil
 }
 
+// BranchExistsOnRemoteParams contains parameters for BranchExistsOnRemote.
+type BranchExistsOnRemoteParams struct {
+	RepoPath   string
+	RemoteName string
+	Branch     string
+}
+
 // BranchExistsOnRemote checks if a branch exists on a specific remote.
-func (g *realGit) BranchExistsOnRemote(repoPath, remoteName, branch string) (bool, error) {
-	cmd := exec.Command("git", "ls-remote", "--heads", remoteName, branch)
-	cmd.Dir = repoPath
+func (g *realGit) BranchExistsOnRemote(params BranchExistsOnRemoteParams) (bool, error) {
+	cmd := exec.Command("git", "ls-remote", "--heads", params.RemoteName, params.Branch)
+	cmd.Dir = params.RepoPath
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return false, fmt.Errorf("git ls-remote failed: %w (command: git ls-remote --heads %s %s, output: %s)",
-			err, remoteName, branch, string(output))
+			err, params.RemoteName, params.Branch, string(output))
 	}
 	return strings.TrimSpace(string(output)) != "", nil
 }
@@ -447,4 +460,29 @@ func (g *realGit) findRemoteFromBranchList(repoPath, branch string) (string, err
 
 	// If we can't find the remote, return "origin" as default
 	return defaultRemote, nil
+}
+
+// Add adds files to the Git staging area.
+func (g *realGit) Add(repoPath string, files ...string) error {
+	args := append([]string{"add"}, files...)
+	cmd := exec.Command("git", args...)
+	cmd.Dir = repoPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git add failed: %w (command: git add %s, output: %s)",
+			err, strings.Join(files, " "), string(output))
+	}
+	return nil
+}
+
+// Commit creates a new commit with the specified message.
+func (g *realGit) Commit(repoPath, message string) error {
+	cmd := exec.Command("git", "commit", "-m", message)
+	cmd.Dir = repoPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git commit failed: %w (command: git commit -m %s, output: %s)",
+			err, message, string(output))
+	}
+	return nil
 }

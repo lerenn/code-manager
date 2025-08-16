@@ -29,7 +29,7 @@ func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.CreateWorkTree(branch, nil)
+	return wtmInstance.CreateWorkTree(branch)
 }
 
 // TestCreateWorktreeSingleRepo tests creating a worktree in single repository mode
@@ -164,7 +164,7 @@ func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = wtmInstance.CreateWorkTree("feature/test-branch", nil)
+	err = wtmInstance.CreateWorkTree("feature/test-branch")
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created successfully
@@ -213,7 +213,7 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	ideName := "dummy"
 
 	// Create worktree with IDE (dummy IDE will print the path to stdout)
-	err = wtmInstance.CreateWorkTree("feature/test-ide", &ideName)
+	err = wtmInstance.CreateWorkTree("feature/test-ide", wtm.CreateWorkTreeOpts{IDEName: ideName})
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created
@@ -256,7 +256,7 @@ func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
 	defer os.Chdir(originalDir)
 
 	ideName := "unsupported-ide"
-	err = wtmInstance.CreateWorkTree("feature/unsupported-ide", &ideName)
+	err = wtmInstance.CreateWorkTree("feature/unsupported-ide", wtm.CreateWorkTreeOpts{IDEName: ideName})
 	assert.Error(t, err, "Command should fail with unsupported IDE")
 	assert.Contains(t, err.Error(), "unsupported IDE", "Error should mention unsupported IDE")
 }

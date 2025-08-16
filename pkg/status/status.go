@@ -10,7 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=status.go -destination=mockstatus.gen.go -package=status
+//go:generate mockgen -source=status.go -destination=mockstatus.gen.go -package=status
 
 // Status represents the status.yaml file structure.
 type Status struct {
@@ -29,7 +29,7 @@ type Repository struct {
 // Manager interface provides status file management functionality.
 type Manager interface {
 	// AddWorktree adds a worktree entry to the status file.
-	AddWorktree(repoURL, branch, worktreePath, workspacePath string) error
+	AddWorktree(params AddWorktreeParams) error
 	// RemoveWorktree removes a worktree entry from the status file.
 	RemoveWorktree(repoURL, branch string) error
 	// GetWorktree retrieves the status of a specific worktree.
@@ -74,8 +74,16 @@ func (s *realManager) initializeWorkspacesMap() {
 	s.computeWorkspacesMap(status.Repositories)
 }
 
+// AddWorktreeParams contains parameters for AddWorktree.
+type AddWorktreeParams struct {
+	RepoURL       string
+	Branch        string
+	WorktreePath  string
+	WorkspacePath string
+}
+
 // AddWorktree adds a worktree entry to the status file.
-func (s *realManager) AddWorktree(repoURL, branch, worktreePath, workspacePath string) error {
+func (s *realManager) AddWorktree(params AddWorktreeParams) error {
 	// Load current status
 	status, err := s.loadStatus()
 	if err != nil {
@@ -84,17 +92,17 @@ func (s *realManager) AddWorktree(repoURL, branch, worktreePath, workspacePath s
 
 	// Check for duplicate entry
 	for _, repo := range status.Repositories {
-		if repo.URL == repoURL && repo.Branch == branch {
-			return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeAlreadyExists, repoURL, branch)
+		if repo.URL == params.RepoURL && repo.Branch == params.Branch {
+			return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeAlreadyExists, params.RepoURL, params.Branch)
 		}
 	}
 
 	// Create new repository entry
 	newRepo := Repository{
-		URL:       repoURL,
-		Branch:    branch,
-		Path:      worktreePath,
-		Workspace: workspacePath,
+		URL:       params.RepoURL,
+		Branch:    params.Branch,
+		Path:      params.WorktreePath,
+		Workspace: params.WorkspacePath,
 	}
 
 	// Add to repositories list

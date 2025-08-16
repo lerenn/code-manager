@@ -13,23 +13,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// deleteWorktreeParams contains parameters for deleteWorktree.
+type deleteWorktreeParams struct {
+	Setup  *TestSetup
+	Branch string
+	Force  bool
+}
+
 // deleteWorktree deletes a worktree using the WTM instance
-func deleteWorktree(t *testing.T, setup *TestSetup, branch string, force bool) error {
+func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 	t.Helper()
 
 	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
-		StatusFile: setup.StatusPath,
+		BasePath:   params.Setup.WtmPath,
+		StatusFile: params.Setup.StatusPath,
 	})
 
 	// Change to repo directory and delete worktree
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
-	err = os.Chdir(setup.RepoPath)
+	err = os.Chdir(params.Setup.RepoPath)
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.DeleteWorkTree(branch, force)
+	return wtmInstance.DeleteWorkTree(params.Branch, params.Force)
 }
 
 // TestDeleteWorktreeSingleRepo tests deleting a worktree in single repository mode
@@ -52,7 +59,11 @@ func TestDeleteWorktreeSingleRepo(t *testing.T) {
 	assertWorktreeExists(t, setup, "feature/test-delete-branch")
 
 	// Delete the worktree with force flag
-	err = deleteWorktree(t, setup, "feature/test-delete-branch", true)
+	err = deleteWorktree(t, deleteWorktreeParams{
+		Setup:  setup,
+		Branch: "feature/test-delete-branch",
+		Force:  true,
+	})
 	require.NoError(t, err, "Worktree deletion should succeed")
 
 	// Verify the worktree was deleted from status.yaml
@@ -85,7 +96,11 @@ func TestDeleteWorktreeNonExistentBranch(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Try to delete a non-existent worktree
-	err := deleteWorktree(t, setup, "non-existent-branch", true)
+	err := deleteWorktree(t, deleteWorktreeParams{
+		Setup:  setup,
+		Branch: "non-existent-branch",
+		Force:  true,
+	})
 	assert.Error(t, err, "Should fail when deleting non-existent worktree")
 	assert.Contains(t, err.Error(), "worktree not found in status file")
 }
@@ -141,7 +156,11 @@ func TestDeleteWorktreeCLI(t *testing.T) {
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
 	// Delete worktree using WTM instance with force flag
-	err = deleteWorktree(t, setup, "feature/cli-test", true)
+	err = deleteWorktree(t, deleteWorktreeParams{
+		Setup:  setup,
+		Branch: "feature/cli-test",
+		Force:  true,
+	})
 	require.NoError(t, err, "Worktree deletion should succeed")
 
 	// Verify the worktree was deleted
@@ -197,7 +216,11 @@ func TestDeleteWorktreeCLINonExistentBranch(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Try to delete non-existent worktree using WTM instance
-	err := deleteWorktree(t, setup, "non-existent-branch", true)
+	err := deleteWorktree(t, deleteWorktreeParams{
+		Setup:  setup,
+		Branch: "non-existent-branch",
+		Force:  true,
+	})
 	assert.Error(t, err, "Should fail when deleting non-existent worktree")
 	assert.Contains(t, err.Error(), "worktree not found in status file")
 }

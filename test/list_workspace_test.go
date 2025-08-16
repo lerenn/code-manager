@@ -80,10 +80,10 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	branchName1 := "feature/branch1"
 	branchName2 := "feature/branch2"
 
-	err = wtmInstance.CreateWorkTree(branchName1, nil)
+	err = wtmInstance.CreateWorkTree(branchName1)
 	require.NoError(t, err)
 
-	err = wtmInstance.CreateWorkTree(branchName2, nil)
+	err = wtmInstance.CreateWorkTree(branchName2)
 	require.NoError(t, err)
 
 	// Verify worktrees are listed
@@ -174,7 +174,7 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 
 	// Create a worktree
 	branchName := "feature/test-branch"
-	err = wtmInstance.CreateWorkTree(branchName, nil)
+	err = wtmInstance.CreateWorkTree(branchName)
 	require.NoError(t, err)
 
 	// Verify worktree is listed

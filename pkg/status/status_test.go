@@ -56,7 +56,12 @@ func TestAddWorktree(t *testing.T) {
 	mockFS.EXPECT().WriteFileAtomic("/home/user/.wtmstatus.yaml", expectedData, gomock.Any()).Return(nil)
 
 	// Execute
-	err := manager.AddWorktree(repoName, branch, worktreePath, workspacePath)
+	err := manager.AddWorktree(AddWorktreeParams{
+		RepoURL:       repoName,
+		Branch:        branch,
+		WorktreePath:  worktreePath,
+		WorkspacePath: workspacePath,
+	})
 
 	// Assert
 	assert.NoError(t, err)
@@ -103,7 +108,12 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	mockFS.EXPECT().ReadFile("/home/user/.wtmstatus.yaml").Return(existingData, nil)
 
 	// Execute
-	err := manager.AddWorktree(repoName, branch, worktreePath, workspacePath)
+	err := manager.AddWorktree(AddWorktreeParams{
+		RepoURL:       repoName,
+		Branch:        branch,
+		WorktreePath:  worktreePath,
+		WorkspacePath: workspacePath,
+	})
 
 	// Assert
 	assert.ErrorIs(t, err, ErrWorktreeAlreadyExists)

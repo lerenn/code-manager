@@ -19,6 +19,7 @@ var (
 	verbose    bool
 	configPath string
 	ideName    string
+	fromIssue  string
 )
 
 // loadConfig loads the configuration with fallback to default.
@@ -55,26 +56,48 @@ func loadConfig() *config.Config {
 }
 
 func createCreateCmd() *cobra.Command {
-	return &cobra.Command{
+	createCmd := &cobra.Command{
 		Use:   "create [branch]",
 		Short: "Create worktree(s) for the specified branch",
 		Long:  `Create worktree(s) for the specified branch. Currently supports single repository mode.`,
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			branch := args[0]
-			cfg := loadConfig()
-			cgwtManager := wtm.NewWTM(cfg)
-			cgwtManager.SetVerbose(verbose)
-
-			// Create worktree with IDE if specified
-			if ideName != "" {
-				return cgwtManager.CreateWorkTree(branch, &ideName)
+			var branchName string
+			if len(args) > 0 {
+				branchName = args[0]
 			}
 
-			// Just create worktree without IDE
-			return cgwtManager.CreateWorkTree(branch, nil)
+			cfg := loadConfig()
+			wtmManager := wtm.NewWTM(cfg)
+			wtmManager.SetVerbose(verbose)
+
+			// Create worktree with options
+			opts := wtm.CreateWorkTreeOpts{}
+
+			// Set IDE name if specified
+			if ideName != "" {
+				opts.IDEName = ideName
+			}
+
+			// Set issue reference if specified
+			if fromIssue != "" {
+				opts.IssueRef = fromIssue
+			}
+
+			// If no branch name provided and no issue reference, return error
+			if branchName == "" && fromIssue == "" {
+				return fmt.Errorf("branch name is required when not using --from-issue")
+			}
+
+			// Create worktree with options
+			return wtmManager.CreateWorkTree(branchName, opts)
 		},
 	}
+
+	// Add --from-issue flag
+	createCmd.Flags().StringVar(&fromIssue, "from-issue", "", "Create worktree from forge issue (GitHub issue URL, issue number, or owner/repo#issue format)")
+
+	return createCmd
 }
 
 func createOpenCmd() *cobra.Command {
@@ -253,18 +276,18 @@ origin or other users/organizations.`,
 
 			// Load worktree with IDE if specified
 			if ideName != "" {
-				return wtmManager.LoadWorktree(args[0], &ideName)
+				return wtmManager.LoadWorktree(args[0], wtm.LoadWorktreeOpts{IDEName: ideName})
 			}
 
 			// Just load worktree without IDE
-			return wtmManager.LoadWorktree(args[0], nil)
+			return wtmManager.LoadWorktree(args[0])
 		},
 	}
 }
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "cgwt",
+		Use:   "wtm",
 		Short: "Cursor Git WorkTree Manager",
 		Long:  `A powerful CLI tool for managing Git worktrees specifically designed for Cursor IDE.`,
 	}

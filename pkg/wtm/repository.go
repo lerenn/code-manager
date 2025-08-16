@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/forge"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
 	"github.com/lerenn/wtm/pkg/logger"
@@ -13,6 +14,11 @@ import (
 )
 
 const defaultRemote = "origin"
+
+// CreateWorktreeOpts contains optional parameters for CreateWorktree.
+type CreateWorktreeOpts struct {
+	IssueInfo *forge.IssueInfo
+}
 
 // repository represents a single Git repository and provides methods for repository operations.
 type repository struct {
@@ -65,7 +71,7 @@ func (r *repository) Validate() error {
 }
 
 // CreateWorktree creates a worktree for the repository with the specified branch.
-func (r *repository) CreateWorktree(branch string) error {
+func (r *repository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) error {
 	r.verbosePrint(fmt.Sprintf("Creating worktree for single repository with branch: %s", branch))
 
 	// Validate and prepare repository
@@ -77,6 +83,13 @@ func (r *repository) CreateWorktree(branch string) error {
 	// Create the worktree
 	if err := r.executeWorktreeCreation(repoURL, branch, worktreePath); err != nil {
 		return err
+	}
+
+	// Create initial commit with issue information if provided
+	if len(opts) > 0 && opts[0].IssueInfo != nil {
+		if err := r.createInitialCommitWithIssue(worktreePath, opts[0].IssueInfo); err != nil {
+			return fmt.Errorf("failed to create initial commit: %w", err)
+		}
 	}
 
 	r.verbosePrint(fmt.Sprintf("Successfully created worktree for branch %s at %s", branch, worktreePath))
@@ -338,7 +351,12 @@ func (r *repository) executeWorktreeCreation(repoURL, branch, worktreePath strin
 	}
 
 	// Create worktree with cleanup
-	if err := r.createWorktreeWithCleanup(repoURL, branch, worktreePath, currentDir); err != nil {
+	if err := r.createWorktreeWithCleanup(createWorktreeWithCleanupParams{
+		RepoURL:      repoURL,
+		Branch:       branch,
+		WorktreePath: worktreePath,
+		CurrentDir:   currentDir,
+	}); err != nil {
 		return err
 	}
 
@@ -362,25 +380,38 @@ func (r *repository) ensureBranchExists(currentDir, branch string) error {
 	return nil
 }
 
+// createWorktreeWithCleanupParams contains parameters for createWorktreeWithCleanup.
+type createWorktreeWithCleanupParams struct {
+	RepoURL      string
+	Branch       string
+	WorktreePath string
+	CurrentDir   string
+}
+
 // createWorktreeWithCleanup creates the worktree with proper cleanup on failure.
-func (r *repository) createWorktreeWithCleanup(repoURL, branch, worktreePath, currentDir string) error {
+func (r *repository) createWorktreeWithCleanup(params createWorktreeWithCleanupParams) error {
 	// Update status file with worktree entry (before creating the worktree for proper cleanup)
 	// Store the original repository path, not the worktree path
-	if err := r.statusManager.AddWorktree(repoURL, branch, currentDir, ""); err != nil {
+	if err := r.statusManager.AddWorktree(status.AddWorktreeParams{
+		RepoURL:       params.RepoURL,
+		Branch:        params.Branch,
+		WorktreePath:  params.CurrentDir,
+		WorkspacePath: "",
+	}); err != nil {
 		// Clean up created directory on status update failure
-		if cleanupErr := r.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+		if cleanupErr := r.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
 			r.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
 		}
 		return fmt.Errorf("failed to add worktree to status: %w", err)
 	}
 
 	// Create the Git worktree
-	if err := r.git.CreateWorktree(currentDir, worktreePath, branch); err != nil {
+	if err := r.git.CreateWorktree(params.CurrentDir, params.WorktreePath, params.Branch); err != nil {
 		// Clean up on worktree creation failure
-		if cleanupErr := r.statusManager.RemoveWorktree(repoURL, branch); cleanupErr != nil {
+		if cleanupErr := r.statusManager.RemoveWorktree(params.RepoURL, params.Branch); cleanupErr != nil {
 			r.logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
 		}
-		if cleanupErr := r.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+		if cleanupErr := r.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
 			r.logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
 		}
 		return fmt.Errorf("failed to create Git worktree: %w", err)
@@ -427,7 +458,12 @@ func (r *repository) DeleteWorktree(branch string, force bool) error {
 	}
 
 	// Execute the deletion
-	if err := r.executeWorktreeDeletion(repoURL, branch, worktreePath, force); err != nil {
+	if err := r.executeWorktreeDeletion(executeWorktreeDeletionParams{
+		RepoURL:      repoURL,
+		Branch:       branch,
+		WorktreePath: worktreePath,
+		Force:        force,
+	}); err != nil {
 		return err
 	}
 
@@ -478,32 +514,40 @@ func (r *repository) prepareWorktreeDeletion(branch string) (string, string, err
 	return repoURL, worktreePath, nil
 }
 
+// executeWorktreeDeletionParams contains parameters for executeWorktreeDeletion.
+type executeWorktreeDeletionParams struct {
+	RepoURL      string
+	Branch       string
+	WorktreePath string
+	Force        bool
+}
+
 // executeWorktreeDeletion deletes the worktree with proper cleanup.
-func (r *repository) executeWorktreeDeletion(repoURL, branch, worktreePath string, force bool) error {
+func (r *repository) executeWorktreeDeletion(params executeWorktreeDeletionParams) error {
 	currentDir, err := filepath.Abs(".")
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
 	// Prompt for confirmation unless force flag is used
-	if !force {
-		if err := r.promptForConfirmation(branch, worktreePath); err != nil {
+	if !params.Force {
+		if err := r.promptForConfirmation(params.Branch, params.WorktreePath); err != nil {
 			return err
 		}
 	}
 
 	// Remove worktree from Git tracking first
-	if err := r.git.RemoveWorktree(currentDir, worktreePath); err != nil {
+	if err := r.git.RemoveWorktree(currentDir, params.WorktreePath); err != nil {
 		return fmt.Errorf("failed to remove worktree from Git: %w", err)
 	}
 
 	// Remove worktree directory
-	if err := r.fs.RemoveAll(worktreePath); err != nil {
+	if err := r.fs.RemoveAll(params.WorktreePath); err != nil {
 		return fmt.Errorf("failed to remove worktree directory: %w", err)
 	}
 
 	// Remove entry from status file
-	if err := r.statusManager.RemoveWorktree(repoURL, branch); err != nil {
+	if err := r.statusManager.RemoveWorktree(params.RepoURL, params.Branch); err != nil {
 		return fmt.Errorf("failed to remove worktree from status: %w", err)
 	}
 
@@ -568,7 +612,11 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 
 	// 6. Validate branch exists on remote
 	r.verbosePrint(fmt.Sprintf("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource))
-	exists, err := r.git.BranchExistsOnRemote(".", remoteSource, branchName)
+	exists, err := r.git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
+		RepoPath:   ".",
+		RemoteName: remoteSource,
+		Branch:     branchName,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to check branch existence: %w", err)
 	}
@@ -689,4 +737,42 @@ func (r *repository) extractRepoNameFromFullPath(fullPath string) string {
 		return parts[len(parts)-1] // Return the last part (repo name)
 	}
 	return fullPath
+}
+
+// createInitialCommitWithIssue creates an initial commit with issue information.
+func (r *repository) createInitialCommitWithIssue(worktreePath string, issueInfo *forge.IssueInfo) error {
+	r.verbosePrint(fmt.Sprintf("Creating initial commit with issue information for worktree: %s", worktreePath))
+
+	// Create a README file with issue information
+	readmeContent := fmt.Sprintf(`# Issue #%d: %s
+
+%s
+
+## Issue Details
+- **URL**: %s
+- **State**: %s
+- **Repository**: %s/%s
+
+This worktree was created from issue #%d.
+`, issueInfo.Number, issueInfo.Title, issueInfo.Description, issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
+
+	// Write README file
+	readmePath := filepath.Join(worktreePath, "README.md")
+	if err := r.fs.WriteFileAtomic(readmePath, []byte(readmeContent), 0644); err != nil {
+		return fmt.Errorf("failed to write README file: %w", err)
+	}
+
+	// Add the file to git
+	if err := r.git.Add(worktreePath, "README.md"); err != nil {
+		return fmt.Errorf("failed to add README to git: %w", err)
+	}
+
+	// Create the commit
+	commitMessage := fmt.Sprintf("%s\n\nIssue: %s", issueInfo.Title, issueInfo.URL)
+	if err := r.git.Commit(worktreePath, commitMessage); err != nil {
+		return fmt.Errorf("failed to create commit: %w", err)
+	}
+
+	r.verbosePrint("Successfully created initial commit with issue information")
+	return nil
 }
