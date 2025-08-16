@@ -111,17 +111,45 @@ func captureOutput(t *testing.T, fn func()) string {
 	return buf.String()
 }
 
+// safeChdir safely changes to a directory and restores the original directory
+func safeChdir(t *testing.T, targetDir string) func() {
+	t.Helper()
+
+	// Ensure the target directory exists
+	require.NoError(t, os.MkdirAll(targetDir, 0755))
+
+	// Get current directory, but don't fail if it doesn't exist
+	originalDir, err := os.Getwd()
+	if err != nil {
+		// If we can't get the current directory, use a fallback
+		originalDir = "/tmp"
+		t.Logf("Warning: could not get current directory, using fallback: %s", originalDir)
+	}
+
+	// Verify the target directory exists before changing to it
+	if _, err := os.Stat(targetDir); os.IsNotExist(err) {
+		t.Fatalf("Target directory does not exist: %s", targetDir)
+	}
+
+	// Change to target directory
+	err = os.Chdir(targetDir)
+	require.NoError(t, err)
+
+	// Return a function to restore the original directory
+	return func() {
+		if restoreErr := os.Chdir(originalDir); restoreErr != nil {
+			t.Logf("Warning: failed to restore original directory: %v", restoreErr)
+		}
+	}
+}
+
 // createTestGitRepo creates a Git repository with some test content
 func createTestGitRepo(t *testing.T, repoPath string) {
 	t.Helper()
 
-	// Change to the repository directory for setup
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-
-	err = os.Chdir(repoPath)
-	require.NoError(t, err)
-	defer os.Chdir(originalDir) // Restore original directory
+	// Safely change to the repository directory for setup
+	restore := safeChdir(t, repoPath)
+	defer restore()
 
 	// Set up Git environment variables for all commands
 	gitEnv := append(os.Environ(),
