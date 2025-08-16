@@ -22,12 +22,7 @@ type CreateWorktreeOpts struct {
 
 // repository represents a single Git repository and provides methods for repository operations.
 type repository struct {
-	fs            fs.FS
-	git           git.Git
-	config        *config.Config
-	statusManager status.Manager
-	logger        logger.Logger
-	verbose       bool
+	*base
 }
 
 // newRepository creates a new Repository instance.
@@ -40,18 +35,13 @@ func newRepository(
 	verbose bool,
 ) *repository {
 	return &repository{
-		fs:            fs,
-		git:           git,
-		config:        config,
-		statusManager: statusManager,
-		logger:        logger,
-		verbose:       verbose,
+		base: newBase(fs, git, config, statusManager, logger, verbose),
 	}
 }
 
 // Validate validates that the current directory is a working Git repository.
 func (r *repository) Validate() error {
-	r.verbosePrint(fmt.Sprintf("Validating repository: %s", "."))
+	r.verbosePrint("Validating repository: %s", ".")
 
 	// Check if we're in a Git repository
 	exists, err := r.IsGitRepository()
@@ -110,7 +100,7 @@ func (r *repository) ListWorktrees() ([]status.Repository, error) {
 		return nil, fmt.Errorf("failed to get repository name: %w", err)
 	}
 
-	r.verbosePrint(fmt.Sprintf("Repository name: %s", repoName))
+	r.verbosePrint("Repository name: %s", repoName)
 
 	// 2. Load all worktrees from status file
 	allWorktrees, err := r.statusManager.ListAllWorktrees()
@@ -118,7 +108,7 @@ func (r *repository) ListWorktrees() ([]status.Repository, error) {
 		return nil, fmt.Errorf("failed to load worktrees from status file: %w", err)
 	}
 
-	r.verbosePrint(fmt.Sprintf("Found %d total worktrees in status file", len(allWorktrees)))
+	r.verbosePrint("Found %d total worktrees in status file", len(allWorktrees))
 
 	// 3. Filter worktrees to only include those for the current repository and add remote information
 	var filteredWorktrees []status.Repository
@@ -138,7 +128,7 @@ func (r *repository) ListWorktrees() ([]status.Repository, error) {
 		}
 	}
 
-	r.verbosePrint(fmt.Sprintf("Found %d worktrees for current repository", len(filteredWorktrees)))
+	r.verbosePrint("Found %d worktrees for current repository", len(filteredWorktrees))
 
 	return filteredWorktrees, nil
 }
@@ -175,7 +165,7 @@ func (r *repository) IsGitRepository() (bool, error) {
 
 	content, err := r.fs.ReadFile(".git")
 	if err != nil {
-		r.verbosePrint(fmt.Sprintf("Failed to read .git file: %v", err))
+		r.verbosePrint("Failed to read .git file: %v", err)
 		return false, nil
 	}
 
@@ -200,7 +190,7 @@ func (r *repository) IsWorkspaceFile() (bool, error) {
 	}
 
 	if len(workspaceFiles) > 0 {
-		r.verbosePrint(fmt.Sprintf("Workspace files found: %v", workspaceFiles))
+		r.verbosePrint("Workspace files found: %v", workspaceFiles)
 		return true, nil
 	}
 
@@ -211,41 +201,14 @@ func (r *repository) IsWorkspaceFile() (bool, error) {
 // validateGitStatus validates that git status works in the repository.
 func (r *repository) validateGitStatus() error {
 	// Execute git status to ensure repository is working
-	r.verbosePrint(fmt.Sprintf("Executing git status in: %s", "."))
+	r.verbosePrint("Executing git status in: %s", ".")
 	_, err := r.git.Status(".")
 	if err != nil {
-		r.verbosePrint(fmt.Sprintf("Error: %v", err))
+		r.verbosePrint("Error: %v", err)
 		return fmt.Errorf("%w: %w", ErrGitRepositoryInvalid, err)
 	}
 
 	return nil
-}
-
-// validateGitConfiguration validates that Git configuration is functional.
-func (r *repository) validateGitConfiguration(workDir string) error {
-	r.verbosePrint(fmt.Sprintf("Validating Git configuration in: %s", workDir))
-
-	// Execute git status to ensure Git is working
-	_, err := r.git.Status(workDir)
-	if err != nil {
-		r.verbosePrint(fmt.Sprintf("Error: %v", err))
-		return fmt.Errorf("%w: %w", ErrGitRepositoryInvalid, err)
-	}
-
-	return nil
-}
-
-// getBasePath returns the base path from configuration.
-func (r *repository) getBasePath() (string, error) {
-	if r.config == nil {
-		return "", ErrConfigurationNotInitialized
-	}
-
-	if r.config.BasePath == "" {
-		return "", fmt.Errorf("base path is not configured")
-	}
-
-	return r.config.BasePath, nil
 }
 
 // prepareWorktreeCreation validates the repository and prepares the worktree path.
@@ -288,7 +251,7 @@ func (r *repository) validateRepository(branch string) (string, error) {
 		return "", fmt.Errorf("failed to get repository URL: %w", err)
 	}
 
-	r.verbosePrint(fmt.Sprintf("Repository URL: %s", repoURL))
+	r.verbosePrint("Repository URL: %s", repoURL)
 
 	// Check if worktree already exists in status file
 	existingWorktree, err := r.statusManager.GetWorktree(repoURL, branch)
@@ -310,16 +273,10 @@ func (r *repository) validateRepository(branch string) (string, error) {
 
 // prepareWorktreePath prepares the worktree directory path.
 func (r *repository) prepareWorktreePath(repoURL, branch string) (string, error) {
-	// Get base path from configuration
-	basePath, err := r.getBasePath()
-	if err != nil {
-		return "", fmt.Errorf("failed to get base path: %w", err)
-	}
-
 	// Create worktree directory path
-	worktreePath := filepath.Join(basePath, repoURL, branch)
+	worktreePath := r.buildWorktreePath(repoURL, branch)
 
-	r.verbosePrint(fmt.Sprintf("Worktree path: %s", worktreePath))
+	r.verbosePrint("Worktree path: %s", worktreePath)
 
 	// Check if worktree directory already exists
 	exists, err := r.fs.Exists(worktreePath)
@@ -371,7 +328,7 @@ func (r *repository) ensureBranchExists(currentDir, branch string) error {
 	}
 
 	if !branchExists {
-		r.verbosePrint(fmt.Sprintf("Branch %s does not exist, creating from current branch", branch))
+		r.verbosePrint("Branch %s does not exist, creating from current branch", branch)
 		if err := r.git.CreateBranch(currentDir, branch); err != nil {
 			return fmt.Errorf("failed to create branch %s: %w", branch, err)
 		}
@@ -420,36 +377,9 @@ func (r *repository) createWorktreeWithCleanup(params createWorktreeWithCleanupP
 	return nil
 }
 
-// cleanupWorktreeDirectory removes the worktree directory and parent directories if empty.
-func (r *repository) cleanupWorktreeDirectory(worktreePath string) error {
-	r.verbosePrint(fmt.Sprintf("Cleaning up worktree directory: %s", worktreePath))
-
-	// Remove the worktree directory if it exists
-	exists, err := r.fs.Exists(worktreePath)
-	if err != nil {
-		return fmt.Errorf("failed to check if worktree directory exists: %w", err)
-	}
-
-	if exists {
-		// Remove the worktree directory
-		if err := r.fs.RemoveAll(worktreePath); err != nil {
-			return fmt.Errorf("failed to remove worktree directory: %w", err)
-		}
-	}
-
-	return nil
-}
-
-// verbosePrint prints a message only in verbose mode.
-func (r *repository) verbosePrint(message string) {
-	if r.verbose {
-		r.logger.Logf(message)
-	}
-}
-
 // DeleteWorktree deletes a worktree for the repository with the specified branch.
 func (r *repository) DeleteWorktree(branch string, force bool) error {
-	r.verbosePrint(fmt.Sprintf("Deleting worktree for single repository with branch: %s", branch))
+	r.verbosePrint("Deleting worktree for single repository with branch: %s", branch)
 
 	// Validate and prepare worktree deletion
 	repoURL, worktreePath, err := r.prepareWorktreeDeletion(branch)
@@ -467,7 +397,7 @@ func (r *repository) DeleteWorktree(branch string, force bool) error {
 		return err
 	}
 
-	r.verbosePrint(fmt.Sprintf("Successfully deleted worktree for branch %s", branch))
+	r.verbosePrint("Successfully deleted worktree for branch %s", branch)
 
 	return nil
 }
@@ -495,7 +425,7 @@ func (r *repository) prepareWorktreeDeletion(branch string) (string, string, err
 		return "", "", fmt.Errorf("failed to get repository URL: %w", err)
 	}
 
-	r.verbosePrint(fmt.Sprintf("Repository URL: %s", repoURL))
+	r.verbosePrint("Repository URL: %s", repoURL)
 
 	// Check if worktree exists in status file
 	existingWorktree, err := r.statusManager.GetWorktree(repoURL, branch)
@@ -509,7 +439,7 @@ func (r *repository) prepareWorktreeDeletion(branch string) (string, string, err
 		return "", "", fmt.Errorf("failed to get worktree path: %w", err)
 	}
 
-	r.verbosePrint(fmt.Sprintf("Worktree path: %s", worktreePath))
+	r.verbosePrint("Worktree path: %s", worktreePath)
 
 	return repoURL, worktreePath, nil
 }
@@ -565,20 +495,21 @@ func (r *repository) promptForConfirmation(branch, worktreePath string) error {
 		return fmt.Errorf("failed to read user input: %w", err)
 	}
 
-	switch input {
-	case "y", "Y", "yes", "YES":
-		return nil
-	case "n", "N", "no", "NO", "":
-		return ErrDeletionCancelled
-	default:
-		fmt.Print("Please enter 'y' for yes or 'n' for no: ")
-		return r.promptForConfirmation(branch, worktreePath)
+	result, err := r.parseConfirmationInput(input)
+	if err != nil {
+		return err
 	}
+
+	if !result {
+		return ErrDeletionCancelled
+	}
+
+	return nil
 }
 
 // LoadWorktree loads a branch from a remote source and creates a worktree.
 func (r *repository) LoadWorktree(remoteSource, branchName string) error {
-	r.verbosePrint(fmt.Sprintf("Loading branch: remote=%s, branch=%s", remoteSource, branchName))
+	r.verbosePrint("Loading branch: remote=%s, branch=%s", remoteSource, branchName)
 
 	// 1. Validate current directory is a Git repository
 	gitExists, err := r.IsGitRepository()
@@ -589,7 +520,7 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 		return ErrGitRepositoryNotFound
 	}
 
-	// 2. Validate origin remote exists and is a valid GitHub URL
+	// 2. Validate origin remote exists and is a valid Git hosting service URL
 	if err := r.validateOriginRemote(); err != nil {
 		return err
 	}
@@ -605,7 +536,7 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 	}
 
 	// 5. Fetch from the remote
-	r.verbosePrint(fmt.Sprintf("Fetching from remote '%s'", remoteSource))
+	r.verbosePrint("Fetching from remote '%s'", remoteSource)
 	if err := r.git.FetchRemote(".", remoteSource); err != nil {
 		return fmt.Errorf("%w: %w", git.ErrFetchFailed, err)
 	}
@@ -625,11 +556,11 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 	}
 
 	// 7. Create worktree for the branch (using existing worktree creation logic directly)
-	r.verbosePrint(fmt.Sprintf("Creating worktree for branch '%s'", branchName))
+	r.verbosePrint("Creating worktree for branch '%s'", branchName)
 	return r.CreateWorktree(branchName)
 }
 
-// validateOriginRemote validates that the origin remote exists and is a valid GitHub URL.
+// validateOriginRemote validates that the origin remote exists and is a valid Git hosting service URL.
 func (r *repository) validateOriginRemote() error {
 	r.verbosePrint("Validating origin remote")
 
@@ -648,12 +579,39 @@ func (r *repository) validateOriginRemote() error {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}
 
-	// Validate that it's a GitHub URL
-	if !r.isGitHubURL(originURL) {
+	// Validate that it's a valid Git hosting service URL
+	if r.extractHostFromURL(originURL) == "" {
 		return ErrOriginRemoteInvalidURL
 	}
 
 	return nil
+}
+
+// extractHostFromURL extracts the host from a Git remote URL.
+func (r *repository) extractHostFromURL(url string) string {
+	// Remove .git suffix if present
+	url = strings.TrimSuffix(url, ".git")
+
+	// Handle SSH format: git@host:user/repo
+	if strings.Contains(url, "@") && strings.Contains(url, ":") {
+		parts := strings.Split(url, ":")
+		if len(parts) == 2 {
+			hostParts := strings.Split(parts[0], "@")
+			if len(hostParts) == 2 {
+				return hostParts[1] // host
+			}
+		}
+	}
+
+	// Handle HTTPS format: https://host/user/repo
+	if strings.HasPrefix(url, "http") {
+		parts := strings.Split(url, "/")
+		if len(parts) >= 3 {
+			return parts[2] // host
+		}
+	}
+
+	return ""
 }
 
 // handleRemoteManagement handles remote addition if the remote doesn't exist.
@@ -664,50 +622,57 @@ func (r *repository) handleRemoteManagement(remoteSource string) error {
 		return nil
 	}
 
-	// Check if remote already exists
+	// Check if remote already exists and handle existing remote
+	if err := r.handleExistingRemote(remoteSource); err != nil {
+		return err
+	}
+
+	// Add new remote
+	return r.addNewRemote(remoteSource)
+}
+
+// handleExistingRemote checks if remote exists and handles it appropriately.
+func (r *repository) handleExistingRemote(remoteSource string) error {
 	exists, err := r.git.RemoteExists(".", remoteSource)
 	if err != nil {
 		return fmt.Errorf("failed to check if remote '%s' exists: %w", remoteSource, err)
 	}
 
 	if exists {
-		// Validate that the existing remote URL matches expected format
 		remoteURL, err := r.git.GetRemoteURL(".", remoteSource)
 		if err != nil {
 			return fmt.Errorf("failed to get remote URL: %w", err)
 		}
 
-		// For now, just log that we're using existing remote
-		r.verbosePrint(fmt.Sprintf("Using existing remote '%s' with URL: %s", remoteSource, remoteURL))
+		r.verbosePrint("Using existing remote '%s' with URL: %s", remoteSource, remoteURL)
 		return nil
 	}
 
-	// Add new remote
-	r.verbosePrint(fmt.Sprintf("Adding new remote '%s'", remoteSource))
+	return nil
+}
 
-	// Get repository name from origin remote
+// addNewRemote adds a new remote for the given remote source.
+func (r *repository) addNewRemote(remoteSource string) error {
+	r.verbosePrint("Adding new remote '%s'", remoteSource)
+
+	// Get repository information
 	repoName, err := r.git.GetRepositoryName(".")
 	if err != nil {
 		return fmt.Errorf("failed to get repository name: %w", err)
 	}
 
-	// Determine protocol from origin remote
 	originURL, err := r.git.GetRemoteURL(".", "origin")
 	if err != nil {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}
 
-	protocol := r.determineProtocol(originURL)
-
 	// Construct remote URL
-	var remoteURL string
-	if protocol == "ssh" {
-		remoteURL = fmt.Sprintf("git@github.com:%s/%s.git", remoteSource, r.extractRepoNameFromFullPath(repoName))
-	} else {
-		remoteURL = fmt.Sprintf("https://github.com/%s/%s.git", remoteSource, r.extractRepoNameFromFullPath(repoName))
+	remoteURL, err := r.constructRemoteURL(originURL, remoteSource, repoName)
+	if err != nil {
+		return err
 	}
 
-	r.verbosePrint(fmt.Sprintf("Constructed remote URL: %s", remoteURL))
+	r.verbosePrint("Constructed remote URL: %s", remoteURL)
 
 	// Add the remote
 	if err := r.git.AddRemote(".", remoteSource, remoteURL); err != nil {
@@ -717,9 +682,21 @@ func (r *repository) handleRemoteManagement(remoteSource string) error {
 	return nil
 }
 
-// isGitHubURL checks if the URL is a GitHub URL.
-func (r *repository) isGitHubURL(url string) bool {
-	return strings.Contains(url, "github.com")
+// constructRemoteURL constructs the remote URL based on origin URL and remote source.
+func (r *repository) constructRemoteURL(originURL, remoteSource, repoName string) (string, error) {
+	protocol := r.determineProtocol(originURL)
+	host := r.extractHostFromURL(originURL)
+
+	if host == "" {
+		return "", fmt.Errorf("failed to extract host from origin URL: %s", originURL)
+	}
+
+	repoNameShort := r.extractRepoNameFromFullPath(repoName)
+
+	if protocol == "ssh" {
+		return fmt.Sprintf("git@%s:%s/%s.git", host, remoteSource, repoNameShort), nil
+	}
+	return fmt.Sprintf("https://%s/%s/%s.git", host, remoteSource, repoNameShort), nil
 }
 
 // determineProtocol determines the protocol (https or ssh) from the origin URL.

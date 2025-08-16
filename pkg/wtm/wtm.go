@@ -47,13 +47,8 @@ type WTM interface {
 }
 
 type realWTM struct {
-	fs            fs.FS
-	git           git.Git
-	config        *config.Config
-	statusManager status.Manager
-	ideManager    ide.ManagerInterface
-	verbose       bool
-	logger        logger.Logger
+	*base
+	ideManager ide.ManagerInterface
 }
 
 // NewWTM creates a new WTM instance.
@@ -63,13 +58,8 @@ func NewWTM(cfg *config.Config) WTM {
 	loggerInstance := logger.NewNoopLogger()
 
 	return &realWTM{
-		fs:            fsInstance,
-		git:           gitInstance,
-		config:        cfg,
-		statusManager: status.NewManager(fsInstance, cfg),
-		ideManager:    ide.NewManager(fsInstance, loggerInstance),
-		verbose:       false,
-		logger:        loggerInstance,
+		base:       newBase(fsInstance, gitInstance, cfg, status.NewManager(fsInstance, cfg), loggerInstance, false),
+		ideManager: ide.NewManager(fsInstance, loggerInstance),
 	}
 }
 
@@ -342,7 +332,7 @@ func (c *realWTM) openWorktreeForSingleRepo(worktreeName, ideName string) error 
 	}
 
 	// Derive worktree path from original repository path and branch name
-	worktreePath := filepath.Join(c.config.BasePath, repoURL, worktreeName)
+	worktreePath := c.buildWorktreePath(repoURL, worktreeName)
 
 	// Open IDE with the derived worktree path
 	if err := c.ideManager.OpenIDE(ideName, worktreePath, c.verbose); err != nil {

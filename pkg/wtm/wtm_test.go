@@ -716,7 +716,7 @@ func TestWTM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 
 	// Mock origin remote exists but invalid URL
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
-	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://gitlab.com/lerenn/example.git", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("invalid-url", nil)
 
 	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.ErrorIs(t, err, ErrOriginRemoteInvalidURL)

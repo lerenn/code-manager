@@ -5,7 +5,6 @@ package wtm
 import (
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
 	"github.com/lerenn/wtm/pkg/logger"
@@ -213,63 +212,6 @@ func TestRepository_IsGitRepository_NotExists(t *testing.T) {
 	exists, err := repo.IsGitRepository()
 	assert.NoError(t, err)
 	assert.False(t, exists) // Should return false when .git doesn't exist
-}
-
-func TestRepository_getBasePath(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-
-	tests := []struct {
-		name     string
-		config   *config.Config
-		expected string
-		wantErr  bool
-	}{
-		{
-			name: "Valid config",
-			config: &config.Config{
-				BasePath: "/custom/path",
-			},
-			expected: "/custom/path",
-			wantErr:  false,
-		},
-		{
-			name:     "Nil config",
-			config:   nil,
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name: "Empty base path",
-			config: &config.Config{
-				BasePath: "",
-			},
-			expected: "",
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			repo := newRepository(mockFS, mockGit, tt.config, mockStatus, logger.NewNoopLogger(), true)
-
-			result, err := repo.getBasePath()
-			if tt.wantErr {
-				if tt.config == nil {
-					assert.ErrorIs(t, err, ErrConfigurationNotInitialized)
-				} else {
-					assert.Error(t, err)
-				}
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
-			}
-		})
-	}
 }
 
 func TestRepository_DeleteWorktree_Success(t *testing.T) {
@@ -935,7 +877,7 @@ func TestRepository_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 
 	// Mock origin remote exists but invalid URL
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
-	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://gitlab.com/lerenn/example.git", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("invalid-url-format", nil)
 
 	err := repo.LoadWorktree("origin", "feature-branch")
 	assert.ErrorIs(t, err, ErrOriginRemoteInvalidURL)
@@ -1059,6 +1001,10 @@ func TestRepository_LoadWorktree_ExistingRemote(t *testing.T) {
 	mockGit.EXPECT().RemoteExists(".", "otheruser").Return(true, nil)
 	mockGit.EXPECT().GetRemoteURL(".", "otheruser").Return("https://github.com/otheruser/example.git", nil)
 
+	// Mock origin remote URL for addNewRemote (in case it's called)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().AddRemote(".", "otheruser", "https://github.com/otheruser/example.git").Return(nil)
+
 	// Mock fetch from remote
 	mockGit.EXPECT().FetchRemote(".", "otheruser").Return(nil)
 
@@ -1066,7 +1012,7 @@ func TestRepository_LoadWorktree_ExistingRemote(t *testing.T) {
 	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic)
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil).AnyTimes()
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
@@ -1123,4 +1069,173 @@ func TestRepository_LoadWorktree_WorktreeCreationError(t *testing.T) {
 	err := repo.LoadWorktree("origin", "feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create Git worktree")
+}
+
+func TestRepository_ExtractHostFromURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Test cases for different URL formats
+	testCases := []struct {
+		name     string
+		url      string
+		expected string
+	}{
+		{
+			name:     "GitHub HTTPS URL",
+			url:      "https://github.com/lerenn/example.git",
+			expected: "github.com",
+		},
+		{
+			name:     "GitHub SSH URL",
+			url:      "git@github.com:lerenn/example.git",
+			expected: "github.com",
+		},
+		{
+			name:     "GitLab HTTPS URL",
+			url:      "https://gitlab.com/lerenn/example.git",
+			expected: "gitlab.com",
+		},
+		{
+			name:     "GitLab SSH URL",
+			url:      "git@gitlab.com:lerenn/example.git",
+			expected: "gitlab.com",
+		},
+		{
+			name:     "Bitbucket HTTPS URL",
+			url:      "https://bitbucket.org/lerenn/example.git",
+			expected: "bitbucket.org",
+		},
+		{
+			name:     "Bitbucket SSH URL",
+			url:      "git@bitbucket.org:lerenn/example.git",
+			expected: "bitbucket.org",
+		},
+		{
+			name:     "Custom Git server HTTPS URL",
+			url:      "https://git.company.com/lerenn/example.git",
+			expected: "git.company.com",
+		},
+		{
+			name:     "Custom Git server SSH URL",
+			url:      "git@git.company.com:lerenn/example.git",
+			expected: "git.company.com",
+		},
+		{
+			name:     "URL without .git suffix",
+			url:      "https://github.com/lerenn/example",
+			expected: "github.com",
+		},
+		{
+			name:     "Invalid URL format",
+			url:      "invalid-url-format",
+			expected: "",
+		},
+		{
+			name:     "Empty URL",
+			url:      "",
+			expected: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := repo.extractHostFromURL(tc.url)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func TestRepository_HandleRemoteManagement_DifferentHosts(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+
+	repo := newRepository(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewNoopLogger(), true)
+
+	// Test cases for different hosts and protocols
+	testCases := []struct {
+		name          string
+		originURL     string
+		remoteSource  string
+		repoName      string
+		expectedSSH   string
+		expectedHTTPS string
+	}{
+		{
+			name:          "GitHub repository",
+			originURL:     "https://github.com/lerenn/example.git",
+			remoteSource:  "upstream",
+			repoName:      "github.com/lerenn/example",
+			expectedSSH:   "git@github.com:upstream/example.git",
+			expectedHTTPS: "https://github.com/upstream/example.git",
+		},
+		{
+			name:          "GitLab repository",
+			originURL:     "git@gitlab.com:lerenn/example.git",
+			remoteSource:  "fork",
+			repoName:      "gitlab.com/lerenn/example",
+			expectedSSH:   "git@gitlab.com:fork/example.git",
+			expectedHTTPS: "https://gitlab.com/fork/example.git",
+		},
+		{
+			name:          "Bitbucket repository",
+			originURL:     "https://bitbucket.org/lerenn/example.git",
+			remoteSource:  "upstream",
+			repoName:      "bitbucket.org/lerenn/example",
+			expectedSSH:   "git@bitbucket.org:upstream/example.git",
+			expectedHTTPS: "https://bitbucket.org/upstream/example.git",
+		},
+		{
+			name:          "Custom Git server",
+			originURL:     "git@git.company.com:lerenn/example.git",
+			remoteSource:  "staging",
+			repoName:      "git.company.com/lerenn/example",
+			expectedSSH:   "git@git.company.com:staging/example.git",
+			expectedHTTPS: "https://git.company.com/staging/example.git",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Mock that remote doesn't exist
+			mockGit.EXPECT().RemoteExists(".", tc.remoteSource).Return(false, nil)
+
+			// Mock getting repository name
+			mockGit.EXPECT().GetRepositoryName(".").Return(tc.repoName, nil)
+
+			// Mock getting origin URL
+			mockGit.EXPECT().GetRemoteURL(".", "origin").Return(tc.originURL, nil)
+
+			// Mock adding remote - we'll capture the URL that gets passed
+			var capturedURL string
+			mockGit.EXPECT().AddRemote(".", tc.remoteSource, gomock.Any()).DoAndReturn(
+				func(repoPath, remoteName, remoteURL string) error {
+					capturedURL = remoteURL
+					return nil
+				},
+			)
+
+			// Execute the method
+			err := repo.handleRemoteManagement(tc.remoteSource)
+			assert.NoError(t, err)
+
+			// Verify the constructed URL matches expected format based on protocol
+			protocol := repo.determineProtocol(tc.originURL)
+			if protocol == "ssh" {
+				assert.Equal(t, tc.expectedSSH, capturedURL)
+			} else {
+				assert.Equal(t, tc.expectedHTTPS, capturedURL)
+			}
+		})
+	}
 }
