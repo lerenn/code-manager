@@ -62,7 +62,7 @@ func (r *repository) Validate() error {
 
 // CreateWorktree creates a worktree for the repository with the specified branch.
 func (r *repository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) error {
-	r.verbosePrint(fmt.Sprintf("Creating worktree for single repository with branch: %s", branch))
+	r.verbosePrint("Creating worktree for single repository with branch: %s", branch)
 
 	// Validate and prepare repository
 	repoURL, worktreePath, err := r.prepareWorktreeCreation(branch)
@@ -82,7 +82,7 @@ func (r *repository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) e
 		}
 	}
 
-	r.verbosePrint(fmt.Sprintf("Successfully created worktree for branch %s at %s", branch, worktreePath))
+	r.verbosePrint("Successfully created worktree for branch %s at %s", branch, worktreePath)
 
 	return nil
 }
@@ -542,7 +542,7 @@ func (r *repository) LoadWorktree(remoteSource, branchName string) error {
 	}
 
 	// 6. Validate branch exists on remote
-	r.verbosePrint(fmt.Sprintf("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource))
+	r.verbosePrint("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource)
 	exists, err := r.git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
 		RepoPath:   ".",
 		RemoteName: remoteSource,
@@ -718,7 +718,7 @@ func (r *repository) extractRepoNameFromFullPath(fullPath string) string {
 
 // createInitialCommitWithIssue creates an initial commit with issue information.
 func (r *repository) createInitialCommitWithIssue(worktreePath string, issueInfo *forge.IssueInfo) error {
-	r.verbosePrint(fmt.Sprintf("Creating initial commit with issue information for worktree: %s", worktreePath))
+	r.verbosePrint("Creating initial commit with issue information for worktree: %s", worktreePath)
 
 	// Create a README file with issue information
 	readmeContent := fmt.Sprintf(`# Issue #%d: %s

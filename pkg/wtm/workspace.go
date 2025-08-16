@@ -431,7 +431,7 @@ func (w *workspace) ListWorktrees() ([]status.Repository, error) {
 
 // CreateWorktree creates worktrees for all repositories in the workspace.
 func (w *workspace) CreateWorktree(branch string, opts ...WorkspaceCreateWorktreeOpts) error {
-	w.verbosePrint(fmt.Sprintf("Creating worktrees for branch: %s", branch))
+	w.verbosePrint("Creating worktrees for branch: %s", branch)
 
 	// 1. Load and validate workspace configuration (only if not already loaded)
 	if w.originalFile == "" {
@@ -686,7 +686,7 @@ func (w *workspace) createWorktreeDirectories(
 			}
 		}
 
-		w.verbosePrint(fmt.Sprintf("✓ Worktree created successfully for %s", folder.Path))
+		w.verbosePrint("✓ Worktree created successfully for %s", folder.Path)
 	}
 
 	return nil
@@ -860,7 +860,7 @@ func (w *workspace) DeleteWorktree(branch string, force bool) error {
 
 // createInitialCommitWithIssue creates an initial commit with issue information.
 func (w *workspace) createInitialCommitWithIssue(worktreePath string, issueInfo *forge.IssueInfo) error {
-	w.verbosePrint(fmt.Sprintf("Creating initial commit with issue information for worktree: %s", worktreePath))
+	w.verbosePrint("Creating initial commit with issue information for worktree: %s", worktreePath)
 
 	// Create a README file with issue information
 	readmeContent := fmt.Sprintf(`# Issue #%d: %s
