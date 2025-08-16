@@ -555,12 +555,12 @@ func (w *workspace) createWorktreesForWorkspace(branch string, opts *WorkspaceCr
 	}
 
 	// 2. Create worktree-specific workspace file
-			if err := w.createWorktreeWorkspaceFile(createWorktreeWorkspaceFileParams{
-			WorkspaceConfig:       workspaceConfig,
-			WorkspaceName:         workspaceName,
-			Branch:                branch,
-			WorktreeWorkspacePath: worktreeWorkspacePath,
-		}); err != nil {
+	if err := w.createWorktreeWorkspaceFile(createWorktreeWorkspaceFileParams{
+		WorkspaceConfig:       workspaceConfig,
+		WorkspaceName:         workspaceName,
+		Branch:                branch,
+		WorktreeWorkspacePath: worktreeWorkspacePath,
+	}); err != nil {
 		// Cleanup status entries on failure
 		w.cleanupFailedWorktrees(createdWorktrees)
 		return fmt.Errorf("failed to create worktree workspace file: %w", err)
@@ -662,10 +662,10 @@ func (w *workspace) createWorktreeDirectories(
 
 // createSingleWorktreeParams contains parameters for creating a single worktree.
 type createSingleWorktreeParams struct {
-	Folder                WorkspaceFolder
-	WorkspaceDir          string
-	Branch                string
-	CreatedWorktrees      []struct {
+	Folder           WorkspaceFolder
+	WorkspaceDir     string
+	Branch           string
+	CreatedWorktrees []struct {
 		repoURL string
 		branch  string
 		path    string
@@ -685,14 +685,14 @@ func (w *workspace) createSingleWorktree(params createSingleWorktreeParams) erro
 
 	worktreePath := w.buildWorktreePath(repoURL, params.Branch)
 
-			// Ensure branch exists
-		if err := w.ensureBranchExists(ensureBranchExistsParams{
-			ResolvedPath:          resolvedPath,
-			Branch:                params.Branch,
-			FolderPath:            params.Folder.Path,
-			CreatedWorktrees:      params.CreatedWorktrees,
-			WorktreeWorkspacePath: params.WorktreeWorkspacePath,
-		}); err != nil {
+	// Ensure branch exists
+	if err := w.ensureBranchExists(ensureBranchExistsParams{
+		ResolvedPath:          resolvedPath,
+		Branch:                params.Branch,
+		FolderPath:            params.Folder.Path,
+		CreatedWorktrees:      params.CreatedWorktrees,
+		WorktreeWorkspacePath: params.WorktreeWorkspacePath,
+	}); err != nil {
 		return err
 	}
 
@@ -740,10 +740,10 @@ func (w *workspace) cleanupOnFailure(
 
 // ensureBranchExistsParams contains parameters for ensuring a branch exists.
 type ensureBranchExistsParams struct {
-	ResolvedPath          string
-	Branch                string
-	FolderPath            string
-	CreatedWorktrees      []struct {
+	ResolvedPath     string
+	Branch           string
+	FolderPath       string
+	CreatedWorktrees []struct {
 		repoURL string
 		branch  string
 		path    string
@@ -931,7 +931,7 @@ func (w *workspace) createInitialCommitWithIssue(worktreePath string, issueInfo 
 - **Repository**: %s/%s
 
 This worktree was created from issue #%d.
-`, issueInfo.Number, issueInfo.Title, issueInfo.Description, 
+`, issueInfo.Number, issueInfo.Title, issueInfo.Description,
 		issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
 
 	// Write README file
