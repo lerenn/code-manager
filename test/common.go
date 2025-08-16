@@ -3,7 +3,6 @@
 package test
 
 import (
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -75,40 +74,6 @@ func cleanupTestEnvironment(t *testing.T, setup *TestSetup) {
 	if setup != nil && setup.TempDir != "" {
 		require.NoError(t, os.RemoveAll(setup.TempDir))
 	}
-}
-
-// captureOutput captures stdout during the execution of a function
-func captureOutput(t *testing.T, fn func()) string {
-	t.Helper()
-
-	// Save original stdout
-	oldStdout := os.Stdout
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = w
-
-	// Execute the function in a goroutine
-	done := make(chan bool)
-	go func() {
-		fn()
-		done <- true
-	}()
-
-	// Close the write end of the pipe
-	w.Close()
-
-	// Read captured output
-	var buf strings.Builder
-	_, err = io.Copy(&buf, r)
-	require.NoError(t, err)
-
-	// Wait for function to complete
-	<-done
-
-	// Restore stdout
-	os.Stdout = oldStdout
-
-	return buf.String()
 }
 
 // safeChdir safely changes to a directory and restores the original directory

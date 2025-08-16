@@ -76,7 +76,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 
 	// Format output similar to CLI output
 	var output strings.Builder
-	
+
 	if projectType == wtm.ProjectTypeSingleRepo {
 		if len(worktrees) == 0 {
 			output.WriteString("No worktrees found for current repository\n")
