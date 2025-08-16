@@ -176,7 +176,7 @@ func TestGitHub_sanitizeTitle(t *testing.T) {
 		{"Mixed Case Title", "mixed-case-title"},
 		{"Title with numbers 123", "title-with-numbers-123"},
 		{"", ""},
-		{"   spaces   ", "-spaces-"},
+		{"   spaces   ", "spaces"},
 		{"multiple---hyphens", "multiple-hyphens"},
 	}
 

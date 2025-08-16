@@ -232,9 +232,9 @@ func (g *GitHub) parseGitHubURL(urlStr string) (*IssueReference, error) {
 
 	// Convert issue number to int
 	var issueNumber int
-			if _, err := fmt.Sscanf(issueNum, "%d", &issueNumber); err != nil {
-			return nil, fmt.Errorf("invalid issue number: %s", issueNum)
-		}
+	if _, err := fmt.Sscanf(issueNum, "%d", &issueNumber); err != nil {
+		return nil, fmt.Errorf("invalid issue number: %s", issueNum)
+	}
 
 	return &IssueReference{
 		Owner:       owner,
@@ -314,6 +314,9 @@ func (g *GitHub) sanitizeTitle(title string) string {
 	// Replace multiple consecutive hyphens with single hyphen
 	re = regexp.MustCompile(`-+`)
 	title = re.ReplaceAllString(title, "-")
+
+	// Trim leading and trailing hyphens
+	title = strings.Trim(title, "-")
 
 	return title
 }

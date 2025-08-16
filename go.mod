@@ -1,6 +1,6 @@
 module github.com/lerenn/wtm
 
-go 1.25
+go 1.24.4
 
 require (
 	github.com/google/go-github/v62 v62.0.0
