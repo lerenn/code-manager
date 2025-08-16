@@ -731,7 +731,8 @@ func (r *repository) createInitialCommitWithIssue(worktreePath string, issueInfo
 - **Repository**: %s/%s
 
 This worktree was created from issue #%d.
-`, issueInfo.Number, issueInfo.Title, issueInfo.Description, issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
+`, issueInfo.Number, issueInfo.Title, issueInfo.Description, 
+		issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
 
 	// Write README file
 	readmePath := filepath.Join(worktreePath, "README.md")

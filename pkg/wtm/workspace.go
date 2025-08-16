@@ -555,7 +555,12 @@ func (w *workspace) createWorktreesForWorkspace(branch string, opts *WorkspaceCr
 	}
 
 	// 2. Create worktree-specific workspace file
-	if err := w.createWorktreeWorkspaceFile(workspaceConfig, workspaceName, branch, worktreeWorkspacePath); err != nil {
+			if err := w.createWorktreeWorkspaceFile(createWorktreeWorkspaceFileParams{
+			WorkspaceConfig:       workspaceConfig,
+			WorkspaceName:         workspaceName,
+			Branch:                branch,
+			WorktreeWorkspacePath: worktreeWorkspacePath,
+		}); err != nil {
 		// Cleanup status entries on failure
 		w.cleanupFailedWorktrees(createdWorktrees)
 		return fmt.Errorf("failed to create worktree workspace file: %w", err)
@@ -638,52 +643,15 @@ func (w *workspace) createWorktreeDirectories(
 	for i, folder := range workspaceConfig.Folders {
 		w.verbosePrint("Creating worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
 
-		resolvedPath := filepath.Join(workspaceDir, folder.Path)
-		repoURL, err := w.git.GetRepositoryName(resolvedPath)
-		if err != nil {
-			// Cleanup on failure
-			w.cleanupFailedWorktrees(createdWorktrees)
-			w.cleanupWorktreeWorkspaceFile(worktreeWorkspacePath)
-			return fmt.Errorf("failed to get repository URL for %s: %w", folder.Path, err)
-		}
-
-		worktreePath := w.buildWorktreePath(repoURL, branch)
-
-		// Ensure branch exists
-		if err := w.ensureBranchExists(
-			resolvedPath, branch, folder.Path, createdWorktrees, worktreeWorkspacePath,
-		); err != nil {
+		if err := w.createSingleWorktree(createSingleWorktreeParams{
+			Folder:                folder,
+			WorkspaceDir:          workspaceDir,
+			Branch:                branch,
+			CreatedWorktrees:      createdWorktrees,
+			WorktreeWorkspacePath: worktreeWorkspacePath,
+			Opts:                  opts,
+		}); err != nil {
 			return err
-		}
-
-		// Create worktree directory
-		if err := w.fs.MkdirAll(worktreePath, 0755); err != nil {
-			// Cleanup on failure
-			w.cleanupFailedWorktrees(createdWorktrees)
-			w.cleanupWorktreeWorkspaceFile(worktreeWorkspacePath)
-			return fmt.Errorf("failed to create worktree directory %s: %w", worktreePath, err)
-		}
-
-		// Execute Git worktree creation command
-		if err := w.git.CreateWorktree(resolvedPath, worktreePath, branch); err != nil {
-			// Cleanup on failure
-			w.cleanupFailedWorktrees(createdWorktrees)
-			w.cleanupWorktreeWorkspaceFile(worktreeWorkspacePath)
-			if cleanupErr := w.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
-				w.verbosePrint("Warning: failed to clean up worktree directory: %v", cleanupErr)
-			}
-			return fmt.Errorf("failed to create Git worktree for %s: %w", folder.Path, err)
-		}
-
-		// Create initial commit with issue information if provided
-		if opts != nil && opts.IssueInfo != nil {
-			if err := w.createInitialCommitWithIssue(worktreePath, opts.IssueInfo); err != nil {
-				// Cleanup on failure
-				w.cleanupFailedWorktrees(createdWorktrees)
-				w.cleanupWorktreeWorkspaceFile(worktreeWorkspacePath)
-				w.cleanupWorktreeDirectory(worktreePath)
-				return fmt.Errorf("failed to create initial commit for %s: %w", folder.Path, err)
-			}
 		}
 
 		w.verbosePrint("✓ Worktree created successfully for %s", folder.Path)
@@ -692,63 +660,153 @@ func (w *workspace) createWorktreeDirectories(
 	return nil
 }
 
-// ensureBranchExists ensures that the specified branch exists in the repository.
-func (w *workspace) ensureBranchExists(resolvedPath, branch, folderPath string, createdWorktrees []struct {
-	repoURL string
-	branch  string
-	path    string
-}, worktreeWorkspacePath string) error {
-	// Check if branch exists
-	exists, err := w.git.BranchExists(resolvedPath, branch)
+// createSingleWorktreeParams contains parameters for creating a single worktree.
+type createSingleWorktreeParams struct {
+	Folder                WorkspaceFolder
+	WorkspaceDir          string
+	Branch                string
+	CreatedWorktrees      []struct {
+		repoURL string
+		branch  string
+		path    string
+	}
+	WorktreeWorkspacePath string
+	Opts                  *WorkspaceCreateWorktreeOpts
+}
+
+// createSingleWorktree creates a single worktree for a folder.
+func (w *workspace) createSingleWorktree(params createSingleWorktreeParams) error {
+	resolvedPath := filepath.Join(params.WorkspaceDir, params.Folder.Path)
+	repoURL, err := w.git.GetRepositoryName(resolvedPath)
 	if err != nil {
-		// Cleanup on failure
-		w.cleanupFailedWorktrees(createdWorktrees)
-		w.cleanupWorktreeWorkspaceFile(worktreeWorkspacePath)
-		return fmt.Errorf("failed to check branch existence for %s: %w", folderPath, err)
+		w.cleanupOnFailure(params.CreatedWorktrees, params.WorktreeWorkspacePath)
+		return fmt.Errorf("failed to get repository URL for %s: %w", params.Folder.Path, err)
 	}
 
-	if !exists {
-		w.verbosePrint("Branch %s does not exist in %s, creating from current branch", branch, folderPath)
-		if err := w.git.CreateBranch(resolvedPath, branch); err != nil {
-			// Cleanup on failure
-			w.cleanupFailedWorktrees(createdWorktrees)
-			w.cleanupWorktreeWorkspaceFile(worktreeWorkspacePath)
-			return fmt.Errorf("failed to create branch %s for %s: %w", branch, folderPath, err)
+	worktreePath := w.buildWorktreePath(repoURL, params.Branch)
+
+			// Ensure branch exists
+		if err := w.ensureBranchExists(ensureBranchExistsParams{
+			ResolvedPath:          resolvedPath,
+			Branch:                params.Branch,
+			FolderPath:            params.Folder.Path,
+			CreatedWorktrees:      params.CreatedWorktrees,
+			WorktreeWorkspacePath: params.WorktreeWorkspacePath,
+		}); err != nil {
+		return err
+	}
+
+	// Create worktree directory
+	if err := w.fs.MkdirAll(worktreePath, 0755); err != nil {
+		w.cleanupOnFailure(params.CreatedWorktrees, params.WorktreeWorkspacePath)
+		return fmt.Errorf("failed to create worktree directory %s: %w", worktreePath, err)
+	}
+
+	// Execute Git worktree creation command
+	if err := w.git.CreateWorktree(resolvedPath, worktreePath, params.Branch); err != nil {
+		w.cleanupOnFailure(params.CreatedWorktrees, params.WorktreeWorkspacePath)
+		if cleanupErr := w.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+			w.verbosePrint("Warning: failed to clean up worktree directory: %v", cleanupErr)
+		}
+		return fmt.Errorf("failed to create Git worktree for %s: %w", params.Folder.Path, err)
+	}
+
+	// Create initial commit with issue information if provided
+	if params.Opts != nil && params.Opts.IssueInfo != nil {
+		if err := w.createInitialCommitWithIssue(worktreePath, params.Opts.IssueInfo); err != nil {
+			w.cleanupOnFailure(params.CreatedWorktrees, params.WorktreeWorkspacePath)
+			if err := w.cleanupWorktreeDirectory(worktreePath); err != nil {
+				w.verbosePrint("Warning: failed to cleanup worktree directory: %v", err)
+			}
+			return fmt.Errorf("failed to create initial commit for %s: %w", params.Folder.Path, err)
 		}
 	}
 
 	return nil
 }
 
-// createWorktreeWorkspaceFile creates the worktree-specific workspace file.
-func (w *workspace) createWorktreeWorkspaceFile(
-	workspaceConfig *WorkspaceConfig,
-	workspaceName,
-	branch,
+// cleanupOnFailure performs cleanup operations when worktree creation fails.
+func (w *workspace) cleanupOnFailure(
+	createdWorktrees []struct {
+		repoURL string
+		branch  string
+		path    string
+	},
 	worktreeWorkspacePath string,
-) error {
+) {
+	w.cleanupFailedWorktrees(createdWorktrees)
+	w.cleanupWorktreeWorkspaceFile(worktreeWorkspacePath)
+}
+
+// ensureBranchExistsParams contains parameters for ensuring a branch exists.
+type ensureBranchExistsParams struct {
+	ResolvedPath          string
+	Branch                string
+	FolderPath            string
+	CreatedWorktrees      []struct {
+		repoURL string
+		branch  string
+		path    string
+	}
+	WorktreeWorkspacePath string
+}
+
+// ensureBranchExists ensures that the specified branch exists in the repository.
+func (w *workspace) ensureBranchExists(params ensureBranchExistsParams) error {
+	// Check if branch exists
+	exists, err := w.git.BranchExists(params.ResolvedPath, params.Branch)
+	if err != nil {
+		// Cleanup on failure
+		w.cleanupFailedWorktrees(params.CreatedWorktrees)
+		w.cleanupWorktreeWorkspaceFile(params.WorktreeWorkspacePath)
+		return fmt.Errorf("failed to check branch existence for %s: %w", params.FolderPath, err)
+	}
+
+	if !exists {
+		w.verbosePrint("Branch %s does not exist in %s, creating from current branch", params.Branch, params.FolderPath)
+		if err := w.git.CreateBranch(params.ResolvedPath, params.Branch); err != nil {
+			// Cleanup on failure
+			w.cleanupFailedWorktrees(params.CreatedWorktrees)
+			w.cleanupWorktreeWorkspaceFile(params.WorktreeWorkspacePath)
+			return fmt.Errorf("failed to create branch %s for %s: %w", params.Branch, params.FolderPath, err)
+		}
+	}
+
+	return nil
+}
+
+// createWorktreeWorkspaceFileParams contains parameters for creating a worktree workspace file.
+type createWorktreeWorkspaceFileParams struct {
+	WorkspaceConfig       *WorkspaceConfig
+	WorkspaceName         string
+	Branch                string
+	WorktreeWorkspacePath string
+}
+
+// createWorktreeWorkspaceFile creates the worktree-specific workspace file.
+func (w *workspace) createWorktreeWorkspaceFile(params createWorktreeWorkspaceFileParams) error {
 	w.verbosePrint("Creating worktree-specific workspace file")
 
 	// Ensure workspaces directory exists
-	workspacesDir := filepath.Dir(worktreeWorkspacePath)
+	workspacesDir := filepath.Dir(params.WorktreeWorkspacePath)
 	if err := w.fs.MkdirAll(workspacesDir, 0755); err != nil {
 		return fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
 	// Sanitize branch name for workspace name (replace slashes with hyphens)
-	sanitizedBranchForName := strings.ReplaceAll(branch, "/", "-")
+	sanitizedBranchForName := strings.ReplaceAll(params.Branch, "/", "-")
 
 	// Create worktree workspace configuration
 	worktreeConfig := struct {
 		Name    string            `json:"name,omitempty"`
 		Folders []WorkspaceFolder `json:"folders"`
 	}{
-		Name:    fmt.Sprintf("%s-%s", workspaceName, sanitizedBranchForName),
-		Folders: make([]WorkspaceFolder, len(workspaceConfig.Folders)),
+		Name:    fmt.Sprintf("%s-%s", params.WorkspaceName, sanitizedBranchForName),
+		Folders: make([]WorkspaceFolder, len(params.WorkspaceConfig.Folders)),
 	}
 
 	// Update folder paths to point to worktree directories
-	for i, folder := range workspaceConfig.Folders {
+	for i, folder := range params.WorkspaceConfig.Folders {
 		// Get repository URL for this folder
 		resolvedPath := filepath.Join(filepath.Dir(w.originalFile), folder.Path)
 		repoURL, err := w.git.GetRepositoryName(resolvedPath)
@@ -758,7 +816,7 @@ func (w *workspace) createWorktreeWorkspaceFile(
 
 		worktreeConfig.Folders[i] = WorkspaceFolder{
 			Name: folder.Name,
-			Path: w.buildWorktreePath(repoURL, branch),
+			Path: w.buildWorktreePath(repoURL, params.Branch),
 		}
 	}
 
@@ -769,11 +827,11 @@ func (w *workspace) createWorktreeWorkspaceFile(
 	}
 
 	// Write worktree workspace file
-	if err := w.fs.WriteFileAtomic(worktreeWorkspacePath, data, 0644); err != nil {
+	if err := w.fs.WriteFileAtomic(params.WorktreeWorkspacePath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write worktree workspace file: %w", err)
 	}
 
-	w.verbosePrint("Worktree workspace file created: %s", worktreeWorkspacePath)
+	w.verbosePrint("Worktree workspace file created: %s", params.WorktreeWorkspacePath)
 	return nil
 }
 
@@ -873,7 +931,8 @@ func (w *workspace) createInitialCommitWithIssue(worktreePath string, issueInfo 
 - **Repository**: %s/%s
 
 This worktree was created from issue #%d.
-`, issueInfo.Number, issueInfo.Title, issueInfo.Description, issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
+`, issueInfo.Number, issueInfo.Title, issueInfo.Description, 
+		issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
 
 	// Write README file
 	readmePath := filepath.Join(worktreePath, "README.md")

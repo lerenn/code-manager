@@ -1,8 +1,9 @@
+// Package forge provides interfaces and implementations for interacting with various forge platforms.
 package forge
 
 import "errors"
 
-// Forge-specific errors
+// Forge-specific errors.
 var (
 	ErrUnsupportedForge = errors.New("unsupported forge")
 	ErrIssueNotFound    = errors.New("issue not found")

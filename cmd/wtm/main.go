@@ -95,7 +95,8 @@ func createCreateCmd() *cobra.Command {
 	}
 
 	// Add --from-issue flag
-	createCmd.Flags().StringVar(&fromIssue, "from-issue", "", "Create worktree from forge issue (GitHub issue URL, issue number, or owner/repo#issue format)")
+	createCmd.Flags().StringVar(&fromIssue, "from-issue", "", 
+		"Create worktree from forge issue (GitHub issue URL, issue number, or owner/repo#issue format)")
 
 	return createCmd
 }

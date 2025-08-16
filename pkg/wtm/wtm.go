@@ -77,10 +77,23 @@ func (c *realWTM) SetVerbose(verbose bool) {
 
 // CreateWorkTree executes the main application logic.
 func (c *realWTM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error {
+	// Extract and validate options
+	issueRef, ideName := c.extractCreateWorkTreeOptions(opts)
+
+	// Handle issue-based worktree creation
+	if issueRef != "" {
+		return c.createWorkTreeFromIssue(branch, issueRef, ideName)
+	}
+
+	// Handle regular worktree creation
+	return c.createRegularWorkTree(branch, ideName)
+}
+
+// extractCreateWorkTreeOptions extracts options from the variadic parameter.
+func (c *realWTM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string, *string) {
 	var issueRef string
 	var ideName *string
 
-	// Extract options
 	if len(opts) > 0 {
 		if opts[0].IssueRef != "" {
 			issueRef = opts[0].IssueRef
@@ -90,50 +103,53 @@ func (c *realWTM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) erro
 		}
 	}
 
-	// Handle issue-based worktree creation
-	if issueRef != "" {
-		return c.createWorkTreeFromIssue(branch, issueRef, ideName)
-	}
+	return issueRef, ideName
+}
 
+// createRegularWorkTree handles regular worktree creation (non-issue based).
+func (c *realWTM) createRegularWorkTree(branch string, ideName *string) error {
 	// Sanitize branch name first
 	sanitizedBranch, err := c.sanitizeBranchName(branch)
 	if err != nil {
 		return err
 	}
 
-	// Log if branch name was sanitized (appears in normal and verbose modes, but not quiet)
+	// Log if branch name was sanitized
 	if sanitizedBranch != branch {
 		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
 	}
 
 	c.verbosePrint(fmt.Sprintf("Starting WTM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch))
 
-	// 1. Detect project mode (repository or workspace)
+	// Detect project mode and handle accordingly
+	worktreeErr := c.handleProjectMode(sanitizedBranch)
+
+	// Open IDE if specified and worktree creation was successful
+	if err := c.handleIDEOpening(worktreeErr, sanitizedBranch, ideName); err != nil {
+		return err
+	}
+
+	return worktreeErr
+}
+
+// handleProjectMode detects project mode and handles worktree creation accordingly.
+func (c *realWTM) handleProjectMode(sanitizedBranch string) error {
 	projectType, err := c.detectProjectMode()
 	if err != nil {
 		c.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return err
 	}
 
-	// 2. Handle based on project type
-	var worktreeErr error
 	switch projectType {
 	case ProjectTypeSingleRepo:
-		worktreeErr = c.handleRepositoryMode(sanitizedBranch)
+		return c.handleRepositoryMode(sanitizedBranch)
 	case ProjectTypeWorkspace:
-		worktreeErr = c.handleWorkspaceMode(sanitizedBranch)
+		return c.handleWorkspaceMode(sanitizedBranch)
 	case ProjectTypeNone:
 		return fmt.Errorf("no Git repository or workspace found")
 	default:
 		return fmt.Errorf("unknown project type")
 	}
-
-	// 3. Open IDE if specified and worktree creation was successful
-	if err := c.handleIDEOpening(worktreeErr, sanitizedBranch, ideName); err != nil {
-		return err
-	}
-
-	return worktreeErr
 }
 
 // DeleteWorkTree deletes a worktree for the specified branch.

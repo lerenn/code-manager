@@ -8,7 +8,7 @@ import (
 
 //go:generate mockgen -source=forge.go -destination=mockforge.gen.go -package=forge
 
-// IssueInfo represents information about a forge issue
+// IssueInfo represents information about a forge issue.
 type IssueInfo struct {
 	Number      int
 	Title       string
@@ -19,7 +19,7 @@ type IssueInfo struct {
 	Owner       string
 }
 
-// IssueReference represents a parsed issue reference
+// IssueReference represents a parsed issue reference.
 type IssueReference struct {
 	Owner       string
 	Repository  string

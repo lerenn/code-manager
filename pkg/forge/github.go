@@ -3,6 +3,7 @@ package forge
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"strings"
@@ -52,17 +53,9 @@ func (g *GitHub) Name() string {
 // GetIssueInfo fetches issue information from GitHub API.
 func (g *GitHub) GetIssueInfo(issueRef string) (*IssueInfo, error) {
 	// Parse the issue reference to get repository and issue number
-	ref, err := g.ParseIssueReference(issueRef)
+	ref, err := g.parseIssueReference(issueRef)
 	if err != nil {
-		// If it's an issue number format error, try to extract repository info from current repo
-		if strings.Contains(err.Error(), "issue number format requires repository context") {
-			ref, err = g.parseIssueNumberWithContext(issueRef)
-			if err != nil {
-				return nil, fmt.Errorf("%w: %v", ErrInvalidIssueRef, err)
-			}
-		} else {
-			return nil, fmt.Errorf("%w: %v", ErrInvalidIssueRef, err)
-		}
+		return nil, err
 	}
 
 	// Create context with timeout
@@ -72,22 +65,7 @@ func (g *GitHub) GetIssueInfo(issueRef string) (*IssueInfo, error) {
 	// Fetch the issue using the GitHub client
 	issue, resp, err := g.client.Issues.Get(ctx, ref.Owner, ref.Repository, ref.IssueNumber)
 	if err != nil {
-		// Handle specific error cases
-		if resp != nil {
-			switch resp.StatusCode {
-			case 404:
-				return nil, fmt.Errorf("%w: issue #%d", ErrIssueNotFound, ref.IssueNumber)
-			case 401:
-				return nil, fmt.Errorf("%w: check GITHUB_TOKEN environment variable", ErrUnauthorized)
-			case 403:
-				// Check if it's rate limiting
-				if resp.Header.Get("X-RateLimit-Remaining") == "0" {
-					return nil, fmt.Errorf("%w: GitHub API rate limit exceeded", ErrRateLimited)
-				}
-				return nil, fmt.Errorf("%w: access forbidden", ErrUnauthorized)
-			}
-		}
-		return nil, fmt.Errorf("failed to fetch issue: %w", err)
+		return nil, g.handleGitHubError(err, resp, ref.IssueNumber)
 	}
 
 	// Validate issue state
@@ -104,6 +82,42 @@ func (g *GitHub) GetIssueInfo(issueRef string) (*IssueInfo, error) {
 		Repository:  ref.Repository,
 		Owner:       ref.Owner,
 	}, nil
+}
+
+// parseIssueReference parses the issue reference and handles context extraction.
+func (g *GitHub) parseIssueReference(issueRef string) (*IssueReference, error) {
+	ref, err := g.ParseIssueReference(issueRef)
+	if err != nil {
+		// If it's an issue number format error, try to extract repository info from current repo
+		if strings.Contains(err.Error(), "issue number format requires repository context") {
+			ref, err = g.parseIssueNumberWithContext(issueRef)
+			if err != nil {
+				return nil, fmt.Errorf("%w: %w", ErrInvalidIssueRef, err)
+			}
+		} else {
+			return nil, fmt.Errorf("%w: %w", ErrInvalidIssueRef, err)
+		}
+	}
+	return ref, nil
+}
+
+// handleGitHubError handles GitHub API errors and returns appropriate error messages.
+func (g *GitHub) handleGitHubError(err error, resp *github.Response, issueNumber int) error {
+	if resp != nil {
+		switch resp.StatusCode {
+		case http.StatusNotFound:
+			return fmt.Errorf("%w: issue #%d", ErrIssueNotFound, issueNumber)
+		case http.StatusUnauthorized:
+			return fmt.Errorf("%w: check GITHUB_TOKEN environment variable", ErrUnauthorized)
+		case http.StatusForbidden:
+			// Check if it's rate limiting
+			if resp.Header.Get("X-RateLimit-Remaining") == "0" {
+				return fmt.Errorf("%w: GitHub API rate limit exceeded", ErrRateLimited)
+			}
+			return fmt.Errorf("%w: access forbidden", ErrUnauthorized)
+		}
+	}
+	return fmt.Errorf("failed to fetch issue: %w", err)
 }
 
 // ValidateForgeRepository validates that repository has GitHub remote origin.
@@ -218,7 +232,9 @@ func (g *GitHub) parseGitHubURL(urlStr string) (*IssueReference, error) {
 
 	// Convert issue number to int
 	var issueNumber int
-	fmt.Sscanf(issueNum, "%d", &issueNumber)
+			if _, err := fmt.Sscanf(issueNum, "%d", &issueNumber); err != nil {
+			return nil, fmt.Errorf("invalid issue number: %s", issueNum)
+		}
 
 	return &IssueReference{
 		Owner:       owner,
