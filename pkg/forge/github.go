@@ -11,6 +11,7 @@ import (
 
 	"github.com/google/go-github/v62/github"
 	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/issue"
 )
 
 const (
@@ -51,7 +52,7 @@ func (g *GitHub) Name() string {
 }
 
 // GetIssueInfo fetches issue information from GitHub API.
-func (g *GitHub) GetIssueInfo(issueRef string) (*IssueInfo, error) {
+func (g *GitHub) GetIssueInfo(issueRef string) (*issue.Info, error) {
 	// Parse the issue reference to get repository and issue number
 	ref, err := g.parseIssueReference(issueRef)
 	if err != nil {
@@ -63,29 +64,29 @@ func (g *GitHub) GetIssueInfo(issueRef string) (*IssueInfo, error) {
 	defer cancel()
 
 	// Fetch the issue using the GitHub client
-	issue, resp, err := g.client.Issues.Get(ctx, ref.Owner, ref.Repository, ref.IssueNumber)
+	githubIssue, resp, err := g.client.Issues.Get(ctx, ref.Owner, ref.Repository, ref.IssueNumber)
 	if err != nil {
 		return nil, g.handleGitHubError(err, resp, ref.IssueNumber)
 	}
 
 	// Validate issue state
-	if issue.GetState() != "open" {
-		return nil, fmt.Errorf("%w: issue #%d", ErrIssueClosed, issue.GetNumber())
+	if githubIssue.GetState() != "open" {
+		return nil, fmt.Errorf("%w: issue #%d", ErrIssueClosed, githubIssue.GetNumber())
 	}
 
-	return &IssueInfo{
-		Number:      issue.GetNumber(),
-		Title:       issue.GetTitle(),
-		Description: issue.GetBody(),
-		State:       issue.GetState(),
-		URL:         issue.GetHTMLURL(),
+	return &issue.Info{
+		Number:      githubIssue.GetNumber(),
+		Title:       githubIssue.GetTitle(),
+		Description: githubIssue.GetBody(),
+		State:       githubIssue.GetState(),
+		URL:         githubIssue.GetHTMLURL(),
 		Repository:  ref.Repository,
 		Owner:       ref.Owner,
 	}, nil
 }
 
 // parseIssueReference parses the issue reference and handles context extraction.
-func (g *GitHub) parseIssueReference(issueRef string) (*IssueReference, error) {
+func (g *GitHub) parseIssueReference(issueRef string) (*issue.Reference, error) {
 	ref, err := g.ParseIssueReference(issueRef)
 	if err != nil {
 		// If it's an issue number format error, try to extract repository info from current repo
@@ -138,7 +139,7 @@ func (g *GitHub) ValidateForgeRepository(repoPath string) error {
 }
 
 // ParseIssueReference parses various issue reference formats.
-func (g *GitHub) ParseIssueReference(issueRef string) (*IssueReference, error) {
+func (g *GitHub) ParseIssueReference(issueRef string) (*issue.Reference, error) {
 	// Try different formats
 
 	// 1. GitHub issue URL: https://github.com/owner/repo/issues/123
@@ -161,7 +162,7 @@ func (g *GitHub) ParseIssueReference(issueRef string) (*IssueReference, error) {
 }
 
 // parseIssueNumberWithContext parses an issue number and extracts repository info from current repo.
-func (g *GitHub) parseIssueNumberWithContext(issueRef string) (*IssueReference, error) {
+func (g *GitHub) parseIssueNumberWithContext(issueRef string) (*issue.Reference, error) {
 	// Validate that it's a number
 	if matched, _ := regexp.MatchString(`^\d+$`, issueRef); !matched {
 		return nil, fmt.Errorf("invalid issue number format: %s", issueRef)
@@ -208,7 +209,7 @@ func (g *GitHub) parseIssueNumberWithContext(issueRef string) (*IssueReference, 
 	// Build the URL
 	url := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, issueNumber)
 
-	return &IssueReference{
+	return &issue.Reference{
 		Owner:       owner,
 		Repository:  repo,
 		IssueNumber: issueNumber,
@@ -217,7 +218,7 @@ func (g *GitHub) parseIssueNumberWithContext(issueRef string) (*IssueReference, 
 }
 
 // parseGitHubURL parses GitHub issue URLs.
-func (g *GitHub) parseGitHubURL(urlStr string) (*IssueReference, error) {
+func (g *GitHub) parseGitHubURL(urlStr string) (*issue.Reference, error) {
 	// Extract owner, repo, and issue number from URL
 	// https://github.com/owner/repo/issues/123
 	re := regexp.MustCompile(`github\.com/([^/]+)/([^/]+)/issues/(\d+)`)
@@ -236,7 +237,7 @@ func (g *GitHub) parseGitHubURL(urlStr string) (*IssueReference, error) {
 		return nil, fmt.Errorf("invalid issue number: %s", issueNum)
 	}
 
-	return &IssueReference{
+	return &issue.Reference{
 		Owner:       owner,
 		Repository:  repo,
 		IssueNumber: issueNumber,
@@ -245,7 +246,7 @@ func (g *GitHub) parseGitHubURL(urlStr string) (*IssueReference, error) {
 }
 
 // parseOwnerRepoFormat parses owner/repo#issue format.
-func (g *GitHub) parseOwnerRepoFormat(ref string) (*IssueReference, error) {
+func (g *GitHub) parseOwnerRepoFormat(ref string) (*issue.Reference, error) {
 	// owner/repo#123
 	parts := strings.Split(ref, "#")
 	if len(parts) != 2 {
@@ -273,7 +274,7 @@ func (g *GitHub) parseOwnerRepoFormat(ref string) (*IssueReference, error) {
 	// Build the URL
 	url := fmt.Sprintf("https://github.com/%s/%s/issues/%d", owner, repo, issueNumber)
 
-	return &IssueReference{
+	return &issue.Reference{
 		Owner:       owner,
 		Repository:  repo,
 		IssueNumber: issueNumber,
@@ -282,7 +283,7 @@ func (g *GitHub) parseOwnerRepoFormat(ref string) (*IssueReference, error) {
 }
 
 // GenerateBranchName generates branch name from issue information.
-func (g *GitHub) GenerateBranchName(issueInfo *IssueInfo) string {
+func (g *GitHub) GenerateBranchName(issueInfo *issue.Info) string {
 	// Format: <issue-nb>-<sanitized-issue-title>
 
 	// Sanitize the title

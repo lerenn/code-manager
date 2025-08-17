@@ -3,29 +3,11 @@ package forge
 import (
 	"fmt"
 
+	"github.com/lerenn/wtm/pkg/issue"
 	"github.com/lerenn/wtm/pkg/logger"
 )
 
 //go:generate mockgen -source=forge.go -destination=mockforge.gen.go -package=forge
-
-// IssueInfo represents information about a forge issue.
-type IssueInfo struct {
-	Number      int
-	Title       string
-	Description string
-	State       string
-	URL         string
-	Repository  string
-	Owner       string
-}
-
-// IssueReference represents a parsed issue reference.
-type IssueReference struct {
-	Owner       string
-	Repository  string
-	IssueNumber int
-	URL         string
-}
 
 // Forge interface defines the methods that all forge implementations must provide.
 type Forge interface {
@@ -33,16 +15,16 @@ type Forge interface {
 	Name() string
 
 	// GetIssueInfo fetches issue information from the forge
-	GetIssueInfo(issueRef string) (*IssueInfo, error)
+	GetIssueInfo(issueRef string) (*issue.Info, error)
 
 	// ValidateForgeRepository validates that repository has supported forge remote origin
 	ValidateForgeRepository(repoPath string) error
 
 	// ParseIssueReference parses various issue reference formats
-	ParseIssueReference(issueRef string) (*IssueReference, error)
+	ParseIssueReference(issueRef string) (*issue.Reference, error)
 
 	// GenerateBranchName generates branch name from issue information
-	GenerateBranchName(issueInfo *IssueInfo) string
+	GenerateBranchName(issueInfo *issue.Info) string
 }
 
 // ManagerInterface defines the interface for forge management.

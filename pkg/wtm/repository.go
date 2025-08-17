@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/forge"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/issue"
 	"github.com/lerenn/wtm/pkg/logger"
 	"github.com/lerenn/wtm/pkg/status"
 )
@@ -17,7 +17,7 @@ const defaultRemote = "origin"
 
 // CreateWorktreeOpts contains optional parameters for CreateWorktree.
 type CreateWorktreeOpts struct {
-	IssueInfo *forge.IssueInfo
+	IssueInfo *issue.Info
 }
 
 // repository represents a single Git repository and provides methods for repository operations.
@@ -71,16 +71,15 @@ func (r *repository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) e
 	}
 
 	// Create the worktree
-	if err := r.executeWorktreeCreation(repoURL, branch, worktreePath); err != nil {
+	var issueInfo *issue.Info
+	if len(opts) > 0 && opts[0].IssueInfo != nil {
+		issueInfo = opts[0].IssueInfo
+	}
+	if err := r.executeWorktreeCreation(repoURL, branch, worktreePath, issueInfo); err != nil {
 		return err
 	}
 
-	// Create initial commit with issue information if provided
-	if len(opts) > 0 && opts[0].IssueInfo != nil {
-		if err := r.createInitialCommitWithIssue(worktreePath, opts[0].IssueInfo); err != nil {
-			return fmt.Errorf("failed to create initial commit: %w", err)
-		}
-	}
+	// Issue information is now stored in status file instead of creating initial commits
 
 	r.verbosePrint("Successfully created worktree for branch %s at %s", branch, worktreePath)
 
@@ -296,7 +295,7 @@ func (r *repository) prepareWorktreePath(repoURL, branch string) (string, error)
 }
 
 // executeWorktreeCreation creates the branch and worktree.
-func (r *repository) executeWorktreeCreation(repoURL, branch, worktreePath string) error {
+func (r *repository) executeWorktreeCreation(repoURL, branch, worktreePath string, issueInfo *issue.Info) error {
 	currentDir, err := filepath.Abs(".")
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -313,6 +312,7 @@ func (r *repository) executeWorktreeCreation(repoURL, branch, worktreePath strin
 		Branch:       branch,
 		WorktreePath: worktreePath,
 		CurrentDir:   currentDir,
+		IssueInfo:    issueInfo,
 	}); err != nil {
 		return err
 	}
@@ -343,6 +343,7 @@ type createWorktreeWithCleanupParams struct {
 	Branch       string
 	WorktreePath string
 	CurrentDir   string
+	IssueInfo    *issue.Info
 }
 
 // createWorktreeWithCleanup creates the worktree with proper cleanup on failure.
@@ -354,6 +355,7 @@ func (r *repository) createWorktreeWithCleanup(params createWorktreeWithCleanupP
 		Branch:        params.Branch,
 		WorktreePath:  params.CurrentDir,
 		WorkspacePath: "",
+		IssueInfo:     params.IssueInfo,
 	}); err != nil {
 		// Clean up created directory on status update failure
 		if cleanupErr := r.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
@@ -714,43 +716,4 @@ func (r *repository) extractRepoNameFromFullPath(fullPath string) string {
 		return parts[len(parts)-1] // Return the last part (repo name)
 	}
 	return fullPath
-}
-
-// createInitialCommitWithIssue creates an initial commit with issue information.
-func (r *repository) createInitialCommitWithIssue(worktreePath string, issueInfo *forge.IssueInfo) error {
-	r.verbosePrint("Creating initial commit with issue information for worktree: %s", worktreePath)
-
-	// Create a README file with issue information
-	readmeContent := fmt.Sprintf(`# Issue #%d: %s
-
-%s
-
-## Issue Details
-- **URL**: %s
-- **State**: %s
-- **Repository**: %s/%s
-
-This worktree was created from issue #%d.
-`, issueInfo.Number, issueInfo.Title, issueInfo.Description, 
-		issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
-
-	// Write README file
-	readmePath := filepath.Join(worktreePath, "README.md")
-	if err := r.fs.WriteFileAtomic(readmePath, []byte(readmeContent), 0644); err != nil {
-		return fmt.Errorf("failed to write README file: %w", err)
-	}
-
-	// Add the file to git
-	if err := r.git.Add(worktreePath, "README.md"); err != nil {
-		return fmt.Errorf("failed to add README to git: %w", err)
-	}
-
-	// Create the commit
-	commitMessage := fmt.Sprintf("%s\n\nIssue: %s", issueInfo.Title, issueInfo.URL)
-	if err := r.git.Commit(worktreePath, commitMessage); err != nil {
-		return fmt.Errorf("failed to create commit: %w", err)
-	}
-
-	r.verbosePrint("Successfully created initial commit with issue information")
-	return nil
 }

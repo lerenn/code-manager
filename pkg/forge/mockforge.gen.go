@@ -12,6 +12,7 @@ package forge
 import (
 	reflect "reflect"
 
+	issue "github.com/lerenn/wtm/pkg/issue"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -40,7 +41,7 @@ func (m *MockForge) EXPECT() *MockForgeMockRecorder {
 }
 
 // GenerateBranchName mocks base method.
-func (m *MockForge) GenerateBranchName(issueInfo *IssueInfo) string {
+func (m *MockForge) GenerateBranchName(issueInfo *issue.Info) string {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GenerateBranchName", issueInfo)
 	ret0, _ := ret[0].(string)
@@ -54,10 +55,10 @@ func (mr *MockForgeMockRecorder) GenerateBranchName(issueInfo any) *gomock.Call 
 }
 
 // GetIssueInfo mocks base method.
-func (m *MockForge) GetIssueInfo(issueRef string) (*IssueInfo, error) {
+func (m *MockForge) GetIssueInfo(issueRef string) (*issue.Info, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetIssueInfo", issueRef)
-	ret0, _ := ret[0].(*IssueInfo)
+	ret0, _ := ret[0].(*issue.Info)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -83,10 +84,10 @@ func (mr *MockForgeMockRecorder) Name() *gomock.Call {
 }
 
 // ParseIssueReference mocks base method.
-func (m *MockForge) ParseIssueReference(issueRef string) (*IssueReference, error) {
+func (m *MockForge) ParseIssueReference(issueRef string) (*issue.Reference, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ParseIssueReference", issueRef)
-	ret0, _ := ret[0].(*IssueReference)
+	ret0, _ := ret[0].(*issue.Reference)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

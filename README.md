@@ -27,7 +27,7 @@ A powerful Go CLI tool for managing Git worktrees specifically designed for IDE.
 - Create worktrees directly from GitHub issues
 - Automatic branch name generation from issue titles
 - Support for multiple issue reference formats
-- Initial commit with issue information
+- Issue information stored in status file for tracking
 
 ### 📊 Flexible Output
 - Human-readable output for terminal usage

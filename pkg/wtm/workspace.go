@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/forge"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/wtm/pkg/issue"
 	"github.com/lerenn/wtm/pkg/logger"
 	"github.com/lerenn/wtm/pkg/status"
 )
@@ -30,7 +30,7 @@ type WorkspaceFolder struct {
 
 // WorkspaceCreateWorktreeOpts contains optional parameters for CreateWorktree.
 type WorkspaceCreateWorktreeOpts struct {
-	IssueInfo *forge.IssueInfo
+	IssueInfo *issue.Info
 }
 
 // workspace represents a workspace and provides methods for workspace operations.
@@ -550,7 +550,7 @@ func (w *workspace) createWorktreesForWorkspace(branch string, opts *WorkspaceCr
 	)
 
 	// 1. Update status file with worktree entries
-	if err := w.prepareWorktreeStatusEntries(workspaceConfig, workspaceDir, branch, &createdWorktrees); err != nil {
+	if err := w.prepareWorktreeStatusEntries(workspaceConfig, workspaceDir, branch, &createdWorktrees, opts); err != nil {
 		return err
 	}
 
@@ -591,6 +591,7 @@ func (w *workspace) prepareWorktreeStatusEntries(
 		branch  string
 		path    string
 	},
+	opts *WorkspaceCreateWorktreeOpts,
 ) error {
 	for i, folder := range workspaceConfig.Folders {
 		w.verbosePrint("Preparing worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
@@ -608,11 +609,16 @@ func (w *workspace) prepareWorktreeStatusEntries(
 		}
 
 		// Add to status file
+		var issueInfo *issue.Info
+		if opts != nil && opts.IssueInfo != nil {
+			issueInfo = opts.IssueInfo
+		}
 		if err := w.statusManager.AddWorktree(status.AddWorktreeParams{
 			RepoURL:       repoURL,
 			Branch:        branch,
 			WorktreePath:  resolvedPath,
 			WorkspacePath: workspacePath,
+			IssueInfo:     issueInfo,
 		}); err != nil {
 			return fmt.Errorf("failed to add worktree to status file: %w", err)
 		}
@@ -709,17 +715,6 @@ func (w *workspace) createSingleWorktree(params createSingleWorktreeParams) erro
 			w.verbosePrint("Warning: failed to clean up worktree directory: %v", cleanupErr)
 		}
 		return fmt.Errorf("failed to create Git worktree for %s: %w", params.Folder.Path, err)
-	}
-
-	// Create initial commit with issue information if provided
-	if params.Opts != nil && params.Opts.IssueInfo != nil {
-		if err := w.createInitialCommitWithIssue(worktreePath, params.Opts.IssueInfo); err != nil {
-			w.cleanupOnFailure(params.CreatedWorktrees, params.WorktreeWorkspacePath)
-			if err := w.cleanupWorktreeDirectory(worktreePath); err != nil {
-				w.verbosePrint("Warning: failed to cleanup worktree directory: %v", err)
-			}
-			return fmt.Errorf("failed to create initial commit for %s: %w", params.Folder.Path, err)
-		}
 	}
 
 	return nil
@@ -913,45 +908,6 @@ func (w *workspace) DeleteWorktree(branch string, force bool) error {
 	}
 
 	w.verbosePrint("Workspace worktree deletion completed successfully")
-	return nil
-}
-
-// createInitialCommitWithIssue creates an initial commit with issue information.
-func (w *workspace) createInitialCommitWithIssue(worktreePath string, issueInfo *forge.IssueInfo) error {
-	w.verbosePrint("Creating initial commit with issue information for worktree: %s", worktreePath)
-
-	// Create a README file with issue information
-	readmeContent := fmt.Sprintf(`# Issue #%d: %s
-
-%s
-
-## Issue Details
-- **URL**: %s
-- **State**: %s
-- **Repository**: %s/%s
-
-This worktree was created from issue #%d.
-`, issueInfo.Number, issueInfo.Title, issueInfo.Description,
-		issueInfo.URL, issueInfo.State, issueInfo.Owner, issueInfo.Repository, issueInfo.Number)
-
-	// Write README file
-	readmePath := filepath.Join(worktreePath, "README.md")
-	if err := w.fs.WriteFileAtomic(readmePath, []byte(readmeContent), 0644); err != nil {
-		return fmt.Errorf("failed to write README file: %w", err)
-	}
-
-	// Add the file to git
-	if err := w.git.Add(worktreePath, "README.md"); err != nil {
-		return fmt.Errorf("failed to add README to git: %w", err)
-	}
-
-	// Create the commit
-	commitMessage := fmt.Sprintf("%s\n\nIssue: %s", issueInfo.Title, issueInfo.URL)
-	if err := w.git.Commit(worktreePath, commitMessage); err != nil {
-		return fmt.Errorf("failed to create commit: %w", err)
-	}
-
-	w.verbosePrint("Successfully created initial commit with issue information")
 	return nil
 }
 

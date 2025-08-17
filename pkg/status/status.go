@@ -7,6 +7,7 @@ import (
 
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
+	"github.com/lerenn/wtm/pkg/issue"
 	"gopkg.in/yaml.v3"
 )
 
@@ -19,11 +20,12 @@ type Status struct {
 
 // Repository represents a repository entry in the status file.
 type Repository struct {
-	URL       string `yaml:"url"`                 // Repository URL (e.g., "github.com/lerenn/wtm")
-	Branch    string `yaml:"branch"`              // Branch name
-	Path      string `yaml:"path"`                // Original repository path (not worktree path)
-	Workspace string `yaml:"workspace,omitempty"` // Workspace path (if applicable)
-	Remote    string `yaml:"remote,omitempty"`    // Remote name (e.g., "origin", "justenstall")
+	URL       string      `yaml:"url"`                 // Repository URL (e.g., "github.com/lerenn/wtm")
+	Branch    string      `yaml:"branch"`              // Branch name
+	Path      string      `yaml:"path"`                // Original repository path (not worktree path)
+	Workspace string      `yaml:"workspace,omitempty"` // Workspace path (if applicable)
+	Remote    string      `yaml:"remote,omitempty"`    // Remote name (e.g., "origin", "justenstall")
+	Issue     *issue.Info `yaml:"issue,omitempty"`     // Issue information (if created from issue)
 }
 
 // Manager interface provides status file management functionality.
@@ -80,6 +82,7 @@ type AddWorktreeParams struct {
 	Branch        string
 	WorktreePath  string
 	WorkspacePath string
+	IssueInfo     *issue.Info
 }
 
 // AddWorktree adds a worktree entry to the status file.
@@ -103,6 +106,7 @@ func (s *realManager) AddWorktree(params AddWorktreeParams) error {
 		Branch:    params.Branch,
 		Path:      params.WorktreePath,
 		Workspace: params.WorkspacePath,
+		Issue:     params.IssueInfo,
 	}
 
 	// Add to repositories list

@@ -5,6 +5,7 @@ package forge
 import (
 	"testing"
 
+	"github.com/lerenn/wtm/pkg/issue"
 	"github.com/lerenn/wtm/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,12 +45,12 @@ func TestGitHub_GenerateBranchName(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		issue    *IssueInfo
+		issue    *issue.Info
 		expected string
 	}{
 		{
 			name: "simple title",
-			issue: &IssueInfo{
+			issue: &issue.Info{
 				Number: 123,
 				Title:  "Fix Login Bug",
 			},
@@ -57,7 +58,7 @@ func TestGitHub_GenerateBranchName(t *testing.T) {
 		},
 		{
 			name: "title with special characters",
-			issue: &IssueInfo{
+			issue: &issue.Info{
 				Number: 456,
 				Title:  "Add new feature! @#$%^&*()",
 			},
@@ -65,7 +66,7 @@ func TestGitHub_GenerateBranchName(t *testing.T) {
 		},
 		{
 			name: "title with multiple spaces",
-			issue: &IssueInfo{
+			issue: &issue.Info{
 				Number: 789,
 				Title:  "Update   documentation   files",
 			},
@@ -73,7 +74,7 @@ func TestGitHub_GenerateBranchName(t *testing.T) {
 		},
 		{
 			name: "title with hyphens",
-			issue: &IssueInfo{
+			issue: &issue.Info{
 				Number: 101,
 				Title:  "Fix-bug-in-login-system",
 			},
@@ -81,7 +82,7 @@ func TestGitHub_GenerateBranchName(t *testing.T) {
 		},
 		{
 			name: "very long title",
-			issue: &IssueInfo{
+			issue: &issue.Info{
 				Number: 202,
 				Title:  "This is a very long title that should be truncated to fit within the maximum length limit of 80 characters for branch names",
 			},
@@ -104,12 +105,12 @@ func TestGitHub_ParseIssueReference(t *testing.T) {
 		name        string
 		issueRef    string
 		expectError bool
-		expected    *IssueReference
+		expected    *issue.Reference
 	}{
 		{
 			name:     "GitHub URL format",
 			issueRef: "https://github.com/owner/repo/issues/123",
-			expected: &IssueReference{
+			expected: &issue.Reference{
 				Owner:       "owner",
 				Repository:  "repo",
 				IssueNumber: 123,
@@ -119,7 +120,7 @@ func TestGitHub_ParseIssueReference(t *testing.T) {
 		{
 			name:     "owner/repo#issue format",
 			issueRef: "owner/repo#456",
-			expected: &IssueReference{
+			expected: &issue.Reference{
 				Owner:       "owner",
 				Repository:  "repo",
 				IssueNumber: 456,
