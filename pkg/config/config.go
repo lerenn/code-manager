@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=config.go -destination=mockconfig.gen.go -package=config
+//go:generate mockgen -source=config.go -destination=mockconfig.gen.go -package=config
 
 // Config represents the application configuration.
 type Config struct {

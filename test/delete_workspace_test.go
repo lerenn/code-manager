@@ -75,7 +75,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 
 	// Create worktrees first
 	branchName := "feature/test-branch"
-	err = wtmInstance.CreateWorkTree(branchName, nil)
+	err = wtmInstance.CreateWorkTree(branchName)
 	require.NoError(t, err)
 
 	// Verify worktrees were created
@@ -170,7 +170,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 
 	// Create worktrees first
 	branchName := "feature/test-branch"
-	err = wtmInstance.CreateWorkTree(branchName, nil)
+	err = wtmInstance.CreateWorkTree(branchName)
 	require.NoError(t, err)
 
 	// Verify worktree was created

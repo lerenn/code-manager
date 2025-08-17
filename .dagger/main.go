@@ -47,7 +47,7 @@ func (ci *Wtm) PublishTag(
 // Lint runs golangci-lint on the main repo (./...) only.
 func (ci *Wtm) Lint(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().
-		From("golangci/golangci-lint:v1.62.0").
+		From("golangci/golangci-lint:v2.4.0").
 		WithMountedCache("/root/.cache/golangci-lint", dag.CacheVolume("golangci-lint"))
 
 	c = ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir)

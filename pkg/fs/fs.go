@@ -7,7 +7,7 @@ import (
 	"syscall"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=fs.go -destination=mockfs.gen.go -package=fs
+//go:generate mockgen -source=fs.go -destination=mockfs.gen.go -package=fs
 
 // FS interface provides file system operations for Git repository detection.
 type FS interface {

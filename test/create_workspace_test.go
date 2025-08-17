@@ -76,7 +76,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 
 	// Create worktrees
 	branchName := "feature/test-branch"
-	err = wtmInstance.CreateWorkTree(branchName, nil)
+	err = wtmInstance.CreateWorkTree(branchName)
 	require.NoError(t, err)
 
 	// Verify worktrees were created

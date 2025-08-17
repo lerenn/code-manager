@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lerenn/wtm/pkg/config"
+	"github.com/lerenn/wtm/pkg/forge"
 	"github.com/lerenn/wtm/pkg/fs"
 	"github.com/lerenn/wtm/pkg/git"
 	"github.com/lerenn/wtm/pkg/ide"
@@ -13,10 +14,21 @@ import (
 	"github.com/lerenn/wtm/pkg/status"
 )
 
+// CreateWorkTreeOpts contains optional parameters for CreateWorkTree.
+type CreateWorkTreeOpts struct {
+	IDEName  string
+	IssueRef string
+}
+
+// LoadWorktreeOpts contains optional parameters for LoadWorktree.
+type LoadWorktreeOpts struct {
+	IDEName string
+}
+
 // WTM interface provides Git repository detection functionality.
 type WTM interface {
 	// CreateWorkTree executes the main application logic.
-	CreateWorkTree(branch string, ideName *string) error
+	CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 
 	// DeleteWorkTree deletes a worktree for the specified branch.
 	DeleteWorkTree(branch string, force bool) error
@@ -28,7 +40,7 @@ type WTM interface {
 	ListWorktrees() ([]status.Repository, ProjectType, error)
 
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
-	LoadWorktree(branchArg string, ideName *string) error
+	LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error
 
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
@@ -64,46 +76,80 @@ func (c *realWTM) SetVerbose(verbose bool) {
 }
 
 // CreateWorkTree executes the main application logic.
-func (c *realWTM) CreateWorkTree(branch string, ideName *string) error {
+func (c *realWTM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error {
+	// Extract and validate options
+	issueRef, ideName := c.extractCreateWorkTreeOptions(opts)
+
+	// Handle issue-based worktree creation
+	if issueRef != "" {
+		return c.createWorkTreeFromIssue(branch, issueRef, ideName)
+	}
+
+	// Handle regular worktree creation
+	return c.createRegularWorkTree(branch, ideName)
+}
+
+// extractCreateWorkTreeOptions extracts options from the variadic parameter.
+func (c *realWTM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string, *string) {
+	var issueRef string
+	var ideName *string
+
+	if len(opts) > 0 {
+		if opts[0].IssueRef != "" {
+			issueRef = opts[0].IssueRef
+		}
+		if opts[0].IDEName != "" {
+			ideName = &opts[0].IDEName
+		}
+	}
+
+	return issueRef, ideName
+}
+
+// createRegularWorkTree handles regular worktree creation (non-issue based).
+func (c *realWTM) createRegularWorkTree(branch string, ideName *string) error {
 	// Sanitize branch name first
 	sanitizedBranch, err := c.sanitizeBranchName(branch)
 	if err != nil {
 		return err
 	}
 
-	// Log if branch name was sanitized (appears in normal and verbose modes, but not quiet)
+	// Log if branch name was sanitized
 	if sanitizedBranch != branch {
 		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
 	}
 
 	c.verbosePrint(fmt.Sprintf("Starting WTM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch))
 
-	// 1. Detect project mode (repository or workspace)
+	// Detect project mode and handle accordingly
+	worktreeErr := c.handleProjectMode(sanitizedBranch)
+
+	// Open IDE if specified and worktree creation was successful
+	if err := c.handleIDEOpening(worktreeErr, sanitizedBranch, ideName); err != nil {
+		return err
+	}
+
+	return worktreeErr
+}
+
+// handleProjectMode detects project mode and handles worktree creation accordingly.
+func (c *realWTM) handleProjectMode(sanitizedBranch string) error {
 	projectType, err := c.detectProjectMode()
 	if err != nil {
 		c.verbosePrint(fmt.Sprintf("Error: %v", err))
 		return err
 	}
 
-	// 2. Handle based on project type
-	var worktreeErr error
 	switch projectType {
 	case ProjectTypeSingleRepo:
-		worktreeErr = c.handleRepositoryMode(sanitizedBranch)
+		return c.handleRepositoryMode(sanitizedBranch)
 	case ProjectTypeWorkspace:
-		worktreeErr = c.handleWorkspaceMode(sanitizedBranch)
+		return c.handleWorkspaceMode(sanitizedBranch)
 	case ProjectTypeNone:
 		return fmt.Errorf("no Git repository or workspace found")
 	default:
 		return fmt.Errorf("unknown project type")
 	}
-
-	// 3. Open IDE if specified and worktree creation was successful
-	if err := c.handleIDEOpening(worktreeErr, sanitizedBranch, ideName); err != nil {
-		return err
-	}
-
-	return worktreeErr
 }
 
 // DeleteWorkTree deletes a worktree for the specified branch.
@@ -401,7 +447,7 @@ func (c *realWTM) listWorktreesForWorkspace() ([]status.Repository, error) {
 }
 
 // LoadWorktree loads a branch from a remote source and creates a worktree.
-func (c *realWTM) LoadWorktree(branchArg string, ideName *string) error {
+func (c *realWTM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error {
 	c.verbosePrint(fmt.Sprintf("Starting branch loading: %s", branchArg))
 
 	// 1. Parse the branch argument to extract remote and branch name
@@ -433,11 +479,114 @@ func (c *realWTM) LoadWorktree(branchArg string, ideName *string) error {
 	}
 
 	// 4. Open IDE if specified and branch loading was successful
+	var ideName *string
+	if len(opts) > 0 && opts[0].IDEName != "" {
+		ideName = &opts[0].IDEName
+	}
 	if err := c.handleIDEOpening(loadErr, branchName, ideName); err != nil {
 		return err
 	}
 
 	return loadErr
+}
+
+// createWorkTreeFromIssue creates a worktree from a forge issue.
+func (c *realWTM) createWorkTreeFromIssue(branch string, issueRef string, ideName *string) error {
+	c.verbosePrint(fmt.Sprintf("Starting worktree creation from issue: %s", issueRef))
+
+	// 1. Detect project mode (repository or workspace)
+	projectType, err := c.detectProjectMode()
+	if err != nil {
+		c.verbosePrint(fmt.Sprintf("Error: %v", err))
+		return fmt.Errorf("failed to detect project mode: %w", err)
+	}
+
+	// 2. Handle based on project type
+	var createErr error
+	var branchName *string
+	if branch != "" {
+		branchName = &branch
+	}
+
+	switch projectType {
+	case ProjectTypeSingleRepo:
+		createErr = c.createWorkTreeFromIssueForSingleRepo(branchName, issueRef)
+	case ProjectTypeWorkspace:
+		createErr = c.createWorkTreeFromIssueForWorkspace(branchName, issueRef)
+	case ProjectTypeNone:
+		return fmt.Errorf("no Git repository or workspace found")
+	default:
+		return fmt.Errorf("unknown project type")
+	}
+
+	// 3. Open IDE if specified and worktree creation was successful
+	if branchName != nil {
+		if err := c.handleIDEOpening(createErr, *branchName, ideName); err != nil {
+			return err
+		}
+	}
+
+	return createErr
+}
+
+// createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.
+func (c *realWTM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueRef string) error {
+	c.verbosePrint("Creating worktree from issue for single repository mode")
+
+	// Create forge manager
+	forgeManager := forge.NewManager(c.logger)
+
+	// Get the appropriate forge for the repository
+	selectedForge, err := forgeManager.GetForgeForRepository(".")
+	if err != nil {
+		return fmt.Errorf("failed to get forge for repository: %w", err)
+	}
+
+	// Get issue information
+	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
+	if err != nil {
+		return fmt.Errorf("failed to get issue information: %w", err)
+	}
+
+	// Generate branch name if not provided
+	if branchName == nil || *branchName == "" {
+		generatedBranchName := selectedForge.GenerateBranchName(issueInfo)
+		branchName = &generatedBranchName
+	}
+
+	// Create worktree using existing logic
+	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
+	return repo.CreateWorktree(*branchName, CreateWorktreeOpts{IssueInfo: issueInfo})
+}
+
+// createWorkTreeFromIssueForWorkspace creates worktrees from issue for workspace.
+func (c *realWTM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string) error {
+	c.verbosePrint("Creating worktrees from issue for workspace mode")
+
+	// Create forge manager
+	forgeManager := forge.NewManager(c.logger)
+
+	// Get the appropriate forge for the first repository (we'll use the same issue for all)
+	selectedForge, err := forgeManager.GetForgeForRepository(".")
+	if err != nil {
+		return fmt.Errorf("failed to get forge for repository: %w", err)
+	}
+
+	// Get issue information
+	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
+	if err != nil {
+		return fmt.Errorf("failed to get issue information: %w", err)
+	}
+
+	// Generate branch name if not provided
+	if branchName == nil || *branchName == "" {
+		generatedBranchName := selectedForge.GenerateBranchName(issueInfo)
+		branchName = &generatedBranchName
+	}
+
+	// Create worktrees for all repositories in workspace
+	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
+	return workspace.CreateWorktree(*branchName, WorkspaceCreateWorktreeOpts{IssueInfo: issueInfo})
 }
 
 // loadWorktreeForSingleRepo loads a worktree for single repository mode.

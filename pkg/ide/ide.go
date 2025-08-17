@@ -7,7 +7,7 @@ import (
 	"github.com/lerenn/wtm/pkg/logger"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=ide.go -destination=mockide.gen.go -package=ide
+//go:generate mockgen -source=ide.go -destination=mockide.gen.go -package=ide
 
 // IDE interface defines the methods that all IDE implementations must provide.
 type IDE interface {

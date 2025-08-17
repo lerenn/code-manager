@@ -7,10 +7,11 @@ import (
 
 	"github.com/lerenn/wtm/pkg/config"
 	"github.com/lerenn/wtm/pkg/fs"
+	"github.com/lerenn/wtm/pkg/issue"
 	"gopkg.in/yaml.v3"
 )
 
-//go:generate go run go.uber.org/mock/mockgen@v0.5.2 -source=status.go -destination=mockstatus.gen.go -package=status
+//go:generate mockgen -source=status.go -destination=mockstatus.gen.go -package=status
 
 // Status represents the status.yaml file structure.
 type Status struct {
@@ -19,17 +20,18 @@ type Status struct {
 
 // Repository represents a repository entry in the status file.
 type Repository struct {
-	URL       string `yaml:"url"`                 // Repository URL (e.g., "github.com/lerenn/wtm")
-	Branch    string `yaml:"branch"`              // Branch name
-	Path      string `yaml:"path"`                // Original repository path (not worktree path)
-	Workspace string `yaml:"workspace,omitempty"` // Workspace path (if applicable)
-	Remote    string `yaml:"remote,omitempty"`    // Remote name (e.g., "origin", "justenstall")
+	URL       string      `yaml:"url"`                 // Repository URL (e.g., "github.com/lerenn/wtm")
+	Branch    string      `yaml:"branch"`              // Branch name
+	Path      string      `yaml:"path"`                // Original repository path (not worktree path)
+	Workspace string      `yaml:"workspace,omitempty"` // Workspace path (if applicable)
+	Remote    string      `yaml:"remote,omitempty"`    // Remote name (e.g., "origin", "justenstall")
+	Issue     *issue.Info `yaml:"issue,omitempty"`     // Issue information (if created from issue)
 }
 
 // Manager interface provides status file management functionality.
 type Manager interface {
 	// AddWorktree adds a worktree entry to the status file.
-	AddWorktree(repoURL, branch, worktreePath, workspacePath string) error
+	AddWorktree(params AddWorktreeParams) error
 	// RemoveWorktree removes a worktree entry from the status file.
 	RemoveWorktree(repoURL, branch string) error
 	// GetWorktree retrieves the status of a specific worktree.
@@ -74,8 +76,17 @@ func (s *realManager) initializeWorkspacesMap() {
 	s.computeWorkspacesMap(status.Repositories)
 }
 
+// AddWorktreeParams contains parameters for AddWorktree.
+type AddWorktreeParams struct {
+	RepoURL       string
+	Branch        string
+	WorktreePath  string
+	WorkspacePath string
+	IssueInfo     *issue.Info
+}
+
 // AddWorktree adds a worktree entry to the status file.
-func (s *realManager) AddWorktree(repoURL, branch, worktreePath, workspacePath string) error {
+func (s *realManager) AddWorktree(params AddWorktreeParams) error {
 	// Load current status
 	status, err := s.loadStatus()
 	if err != nil {
@@ -84,17 +95,18 @@ func (s *realManager) AddWorktree(repoURL, branch, worktreePath, workspacePath s
 
 	// Check for duplicate entry
 	for _, repo := range status.Repositories {
-		if repo.URL == repoURL && repo.Branch == branch {
-			return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeAlreadyExists, repoURL, branch)
+		if repo.URL == params.RepoURL && repo.Branch == params.Branch {
+			return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeAlreadyExists, params.RepoURL, params.Branch)
 		}
 	}
 
 	// Create new repository entry
 	newRepo := Repository{
-		URL:       repoURL,
-		Branch:    branch,
-		Path:      worktreePath,
-		Workspace: workspacePath,
+		URL:       params.RepoURL,
+		Branch:    params.Branch,
+		Path:      params.WorktreePath,
+		Workspace: params.WorkspacePath,
+		Issue:     params.IssueInfo,
 	}
 
 	// Add to repositories list

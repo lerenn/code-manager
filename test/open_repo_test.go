@@ -34,7 +34,7 @@ func TestOpenExistingWorktree(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = wtmInstance.CreateWorkTree("feature/existing-ide", nil)
+	err = wtmInstance.CreateWorkTree("feature/existing-ide")
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Open the worktree with IDE (dummy IDE will print the path to stdout)
@@ -101,7 +101,7 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = wtmInstance.CreateWorkTree("feature/unsupported-ide", nil)
+	err = wtmInstance.CreateWorkTree("feature/unsupported-ide")
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Try to open with unsupported IDE

@@ -49,7 +49,7 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 
 	// Mock status manager calls
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 
 	// Mock worktree creation calls
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
@@ -60,7 +60,7 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch", nil)
+	err := wtm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
 }
 
@@ -94,7 +94,7 @@ func TestWTM_CreateWorkTreeWithIDE(t *testing.T) {
 
 	// Mock status manager calls
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).Times(1)
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 
 	// Mock GetWorktree for IDE opening (called after worktree creation)
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
@@ -116,7 +116,7 @@ func TestWTM_CreateWorkTreeWithIDE(t *testing.T) {
 	ideName := "cursor"
 	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch", &ideName)
+	err := wtm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: ideName})
 	assert.NoError(t, err)
 }
 
@@ -221,7 +221,7 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 
 	// Mock status manager calls
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "test-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 
 	// Mock worktree creation calls
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
@@ -232,7 +232,7 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch", nil)
+	err := wtm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
 }
 
@@ -415,7 +415,7 @@ func TestWTM_LoadWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
 
 	// Mock branch existence check
-	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(true, nil)
+	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic)
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
@@ -423,12 +423,12 @@ func TestWTM_LoadWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", nil)
+	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.NoError(t, err)
 }
 
@@ -465,7 +465,7 @@ func TestWTM_LoadWorktree_WithIDE(t *testing.T) {
 	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
 
 	// Mock branch existence check
-	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(true, nil)
+	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic)
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil).AnyTimes()
@@ -473,7 +473,7 @@ func TestWTM_LoadWorktree_WithIDE(t *testing.T) {
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
@@ -487,7 +487,7 @@ func TestWTM_LoadWorktree_WithIDE(t *testing.T) {
 	}, nil)
 	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", &ideName)
+	err := wtm.LoadWorktree("origin:feature-branch", LoadWorktreeOpts{IDEName: ideName})
 	assert.NoError(t, err)
 }
 
@@ -530,7 +530,7 @@ func TestWTM_LoadWorktree_NewRemote(t *testing.T) {
 	mockGit.EXPECT().FetchRemote(".", "otheruser").Return(nil)
 
 	// Mock branch existence check
-	mockGit.EXPECT().BranchExistsOnRemote(".", "otheruser", "feature-branch").Return(true, nil)
+	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic)
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
@@ -538,12 +538,12 @@ func TestWTM_LoadWorktree_NewRemote(t *testing.T) {
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
-	err := wtm.LoadWorktree("otheruser:feature-branch", nil)
+	err := wtm.LoadWorktree("otheruser:feature-branch")
 	assert.NoError(t, err)
 }
 
@@ -586,7 +586,7 @@ func TestWTM_LoadWorktree_SSHProtocol(t *testing.T) {
 	mockGit.EXPECT().FetchRemote(".", "otheruser").Return(nil)
 
 	// Mock branch existence check
-	mockGit.EXPECT().BranchExistsOnRemote(".", "otheruser", "feature-branch").Return(true, nil)
+	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic)
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
@@ -594,12 +594,12 @@ func TestWTM_LoadWorktree_SSHProtocol(t *testing.T) {
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
-	err := wtm.LoadWorktree("otheruser:feature-branch", nil)
+	err := wtm.LoadWorktree("otheruser:feature-branch")
 	assert.NoError(t, err)
 }
 
@@ -625,7 +625,7 @@ func TestWTM_LoadWorktree_NoRepository(t *testing.T) {
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", nil)
+	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no Git repository or workspace found")
 }
@@ -652,7 +652,7 @@ func TestWTM_LoadWorktree_WorkspaceMode(t *testing.T) {
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"workspace.code-workspace"}, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", nil)
+	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "workspace mode not yet supported for load command")
 }
@@ -685,7 +685,7 @@ func TestWTM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 	// Mock origin remote not found
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(false, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", nil)
+	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.ErrorIs(t, err, ErrOriginRemoteNotFound)
 }
 
@@ -718,7 +718,7 @@ func TestWTM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
 	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("invalid-url", nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", nil)
+	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.ErrorIs(t, err, ErrOriginRemoteInvalidURL)
 }
 
@@ -754,7 +754,7 @@ func TestWTM_LoadWorktree_FetchFailed(t *testing.T) {
 	// Mock fetch from remote fails
 	mockGit.EXPECT().FetchRemote(".", "origin").Return(assert.AnError)
 
-	err := wtm.LoadWorktree("origin:feature-branch", nil)
+	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to fetch from remote")
 }
@@ -792,9 +792,9 @@ func TestWTM_LoadWorktree_BranchNotFound(t *testing.T) {
 	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
 
 	// Mock branch existence check fails
-	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(false, nil)
+	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(false, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", nil)
+	err := wtm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "branch not found on remote")
 }
@@ -832,7 +832,7 @@ func TestWTM_LoadWorktree_DefaultRemote(t *testing.T) {
 	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
 
 	// Mock branch existence check
-	mockGit.EXPECT().BranchExistsOnRemote(".", "origin", "feature-branch").Return(true, nil)
+	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic)
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
@@ -840,12 +840,12 @@ func TestWTM_LoadWorktree_DefaultRemote(t *testing.T) {
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockStatus.EXPECT().AddWorktree("github.com/lerenn/example", "feature-branch", gomock.Any(), "").Return(nil)
+	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
 	// Test with empty remote source (should default to "origin")
-	err := wtm.LoadWorktree("feature-branch", nil)
+	err := wtm.LoadWorktree("feature-branch")
 	assert.NoError(t, err)
 }

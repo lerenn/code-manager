@@ -120,6 +120,136 @@
 - Add comments for complex logic
 - Handle errors properly with wrapped errors using `fmt.Errorf` with `%w`
 
+### Function Parameter Design with Option Structs and Parameter Structs
+- **ALWAYS use option structs for functions with optional parameters** instead of multiple pointer parameters
+- **Option struct naming**: Use `XXXOpts` where `XXX` is the function name (e.g., `CreateWorkTreeOpts`, `LoadWorktreeOpts`)
+- **Option struct location**: Define option structs in the same file as the function, before the function definition
+- **Option struct fields**: Use non-pointer types for simple fields (string, int, bool) and pointer types for complex structs
+- **Function signature**: Always accept variadic `...XXXOpts` as the last parameter, allowing no arguments for no options
+- **Variadic handling**: Check `len(opts) > 0` before accessing `opts[0]` fields
+- **Default values**: Handle default values within the function when no options are provided or fields are empty
+- **CLI integration**: Create option structs in CLI code and pass them as values (not pointers) to WTM methods
+- **Test updates**: Update all tests to use the new variadic option struct signatures
+
+### Function Parameter Design with Parameter Structs for Multiple Arguments
+- **ALWAYS use parameter structs for functions with more than 3 arguments** (excluding `context.Context` and `*Opts` structs)
+- **Parameter struct naming**: Use `XXXParams` where `XXX` is the function name (e.g., `BranchExistsOnRemoteParams`, `AddWorktreeParams`)
+- **Parameter struct location**: Define parameter structs in the same file as the function, before the function definition
+- **Parameter struct fields**: Use descriptive field names that clearly indicate their purpose
+- **Function signature**: Accept a single `XXXParams` struct as the parameter, keeping `context.Context` and `*Opts` as separate arguments
+- **Context and Options**: Keep `context.Context` and `*Opts` structs as separate arguments alongside the `XXXParams` struct
+- **Call site updates**: Update all call sites to use the new parameter struct pattern
+- **Interface updates**: Update interfaces to match the new function signatures
+- **Mock updates**: Regenerate mocks after interface changes
+- **Test updates**: Update all tests to use the new parameter struct signatures
+- **CRITICAL: NO PROXY FUNCTIONS**: NEVER create wrapper functions that just call parameter struct versions. The function should directly accept the parameter struct, not create a proxy that calls another function with the struct.
+
+**Example Pattern for Parameter Structs:**
+```go
+// Parameter struct definition
+type BranchExistsOnRemoteParams struct {
+    RepoPath   string
+    RemoteName string
+    Branch     string
+}
+
+// Function signature with parameter struct
+func (g *Git) BranchExistsOnRemote(params BranchExistsOnRemoteParams) (bool, error) {
+    // Use params.RepoPath, params.RemoteName, params.Branch
+    return nil
+}
+
+// Call site usage
+exists, err := git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
+    RepoPath:   ".",
+    RemoteName: "origin",
+    Branch:     "feature-branch",
+})
+
+// Test usage
+func TestBranchExistsOnRemote(t *testing.T) {
+    exists, err := git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
+        RepoPath:   ".",
+        RemoteName: "origin",
+        Branch:     "feature-branch",
+    })
+    assert.NoError(t, err)
+}
+
+// ❌ BAD: NEVER create proxy functions like this
+func (g *Git) BranchExistsOnRemote(repoPath, remoteName, branch string) (bool, error) {
+    params := BranchExistsOnRemoteParams{
+        RepoPath:   repoPath,
+        RemoteName: remoteName,
+        Branch:     branch,
+    }
+    return g.BranchExistsOnRemoteWithParams(params) // This is wrong!
+}
+
+func (g *Git) BranchExistsOnRemoteWithParams(params BranchExistsOnRemoteParams) (bool, error) {
+    // Implementation here
+}
+```
+
+**Benefits of Parameter Structs:**
+- **Clarity**: Clear parameter names and purpose
+- **Extensibility**: Easy to add new parameters without breaking existing code
+- **Type safety**: Compile-time checking of parameter usage
+- **Documentation**: Parameter structs serve as self-documenting parameter lists
+- **Consistency**: Uniform pattern across all functions with multiple parameters
+
+**Example Pattern:**
+```go
+// Option struct definition
+type CreateWorkTreeOpts struct {
+    IDEName string
+}
+
+// Function signature with variadic option struct
+func (w *WTM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error {
+    // Variadic safety check
+    var ideName *string
+    if len(opts) > 0 && opts[0].IDEName != "" {
+        ideName = &opts[0].IDEName
+    }
+    
+    // Use ideName (can be nil)
+    if ideName != nil {
+        // Handle IDE opening
+    }
+    
+    return nil
+}
+
+// CLI usage
+func createCmd() *cobra.Command {
+    return &cobra.Command{
+        RunE: func(_ *cobra.Command, args []string) error {
+            if ideName != "" {
+                opts := wtm.CreateWorkTreeOpts{
+                    IDEName: ideName,
+                }
+                return wtmManager.CreateWorkTree(args[0], opts)
+            }
+            return wtmManager.CreateWorkTree(args[0])
+        },
+    }
+}
+
+// Test usage
+func TestCreateWorkTree(t *testing.T) {
+    err := wtm.CreateWorkTree("branch", CreateWorkTreeOpts{IDEName: ideName})
+    assert.NoError(t, err)
+}
+```
+
+**Benefits:**
+- **Extensibility**: Easy to add new optional parameters without breaking existing code
+- **Clarity**: Clear distinction between required and optional parameters
+- **Type safety**: Compile-time checking of option usage
+- **Documentation**: Option structs serve as self-documenting parameter lists
+- **Consistency**: Uniform pattern across all functions with optional parameters
+
 ### CLI Architecture
 - **CLI (`cmd/wtm/main.go`) should ONLY contain boilerplate code**:
   - Command definitions and flag parsing

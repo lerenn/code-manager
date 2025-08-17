@@ -23,6 +23,12 @@ A powerful Go CLI tool for managing Git worktrees specifically designed for IDE.
 - Seamless workspace duplication
 - Optimized for VSCode Based IDE's workflow
 
+### 🔗 Forge Integration
+- Create worktrees directly from GitHub issues
+- Automatic branch name generation from issue titles
+- Support for multiple issue reference formats
+- Issue information stored in status file for tracking
+
 ### 📊 Flexible Output
 - Human-readable output for terminal usage
 - JSON output for extension integration (`--json` flag)
@@ -40,6 +46,9 @@ wtm --help
 **Prerequisites:**
 - Go 1.19 or later
 - `$GOPATH/bin` in your `$PATH` (usually already configured)
+
+**For GitHub Integration:**
+- `GITHUB_TOKEN` environment variable (optional, for private repositories or rate limit increases)
 
 ## Usage
 
@@ -86,6 +95,7 @@ Creates a new worktree for the specified branch.
 
 **Options:**
 - `-i, --ide`: Open the worktree in IDE after creation
+- `--from-issue`: Create worktree from a forge issue (GitHub issue URL, issue number, or owner/repo#issue format)
 - `--json`: Output creation details in JSON format
 
 **Examples:**
@@ -95,7 +105,37 @@ wtm create feature/new-feature
 
 # Create worktree and open in Cursor IDE
 wtm create hotfix/bug-fix -i cursor
+
+# Create worktree from GitHub issue (auto-generates branch name)
+wtm create --from-issue https://github.com/owner/repo/issues/123
+
+# Create worktree from GitHub issue with custom branch name
+wtm create custom-branch-name --from-issue owner/repo#456
+
+# Create worktree from issue and open in IDE
+wtm create --from-issue 789 -i cursor
 ```
+
+### Issue Reference Formats
+
+The `--from-issue` flag supports multiple formats for referencing GitHub issues:
+
+- **GitHub URL**: `https://github.com/owner/repo/issues/123`
+- **Owner/Repo format**: `owner/repo#456`
+- **Issue number only**: `789` (requires current repository to be GitHub)
+
+**Branch Name Generation:**
+When using `--from-issue` without specifying a branch name, WTM automatically generates a branch name in the format:
+```
+<issue-number>-<sanitized-issue-title>
+```
+
+The title is sanitized by:
+- Converting to lowercase
+- Replacing spaces with hyphens
+- Removing non-alphanumeric characters (except hyphens)
+- Limiting to 80 characters
+- Ensuring no consecutive hyphens
 
 ### `list [options]`
 Lists all active worktrees for the current project.
