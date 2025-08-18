@@ -82,7 +82,12 @@ func (b *base) cleanupWorktreeDirectory(worktreePath string) error {
 
 // buildWorktreePath constructs a worktree path from base path, repository URL, and branch.
 func (b *base) buildWorktreePath(repoURL, branch string) string {
-	return filepath.Join(b.config.BasePath, repoURL, branch)
+	// Use configurable worktrees directory if specified, otherwise fall back to base path
+	worktreesBase := b.config.WorktreesDir
+	if worktreesBase == "" {
+		worktreesBase = b.config.BasePath
+	}
+	return filepath.Join(worktreesBase, repoURL, branch)
 }
 
 // parseConfirmationInput parses confirmation input from user.

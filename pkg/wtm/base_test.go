@@ -213,38 +213,61 @@ func TestBase_buildWorktreePath(t *testing.T) {
 	mockLogger := logger.NewNoopLogger()
 
 	tests := []struct {
-		name     string
-		basePath string
-		repoURL  string
-		branch   string
-		expected string
+		name         string
+		basePath     string
+		worktreesDir string
+		repoURL      string
+		branch       string
+		expected     string
 	}{
 		{
-			name:     "Simple path construction",
-			basePath: "/base/path",
-			repoURL:  "github.com/lerenn/example",
-			branch:   "main",
-			expected: "/base/path/github.com/lerenn/example/main",
+			name:         "Simple path construction with base path",
+			basePath:     "/base/path",
+			worktreesDir: "",
+			repoURL:      "github.com/lerenn/example",
+			branch:       "main",
+			expected:     "/base/path/github.com/lerenn/example/main",
 		},
 		{
-			name:     "Path with branch containing slash",
-			basePath: "/base/path",
-			repoURL:  "github.com/lerenn/example",
-			branch:   "feature/new-feature",
-			expected: "/base/path/github.com/lerenn/example/feature/new-feature",
+			name:         "Path construction with worktrees directory",
+			basePath:     "/base/path",
+			worktreesDir: "/custom/worktrees",
+			repoURL:      "github.com/lerenn/example",
+			branch:       "main",
+			expected:     "/custom/worktrees/github.com/lerenn/example/main",
 		},
 		{
-			name:     "Empty base path",
-			basePath: "",
-			repoURL:  "github.com/lerenn/example",
-			branch:   "main",
-			expected: "github.com/lerenn/example/main",
+			name:         "Path with branch containing slash using worktrees directory",
+			basePath:     "/base/path",
+			worktreesDir: "/custom/worktrees",
+			repoURL:      "github.com/lerenn/example",
+			branch:       "feature/new-feature",
+			expected:     "/custom/worktrees/github.com/lerenn/example/feature/new-feature",
+		},
+		{
+			name:         "Empty base path with worktrees directory",
+			basePath:     "",
+			worktreesDir: "/custom/worktrees",
+			repoURL:      "github.com/lerenn/example",
+			branch:       "main",
+			expected:     "/custom/worktrees/github.com/lerenn/example/main",
+		},
+		{
+			name:         "Empty base path and worktrees directory",
+			basePath:     "",
+			worktreesDir: "",
+			repoURL:      "github.com/lerenn/example",
+			branch:       "main",
+			expected:     "github.com/lerenn/example/main",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			base := newBase(mockFS, mockGit, &config.Config{BasePath: tt.basePath}, mockStatus, mockLogger, false)
+			base := newBase(mockFS, mockGit, &config.Config{
+				BasePath:     tt.basePath,
+				WorktreesDir: tt.worktreesDir,
+			}, mockStatus, mockLogger, false)
 
 			result := base.buildWorktreePath(tt.repoURL, tt.branch)
 			assert.Equal(t, tt.expected, result)

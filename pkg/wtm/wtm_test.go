@@ -17,8 +17,9 @@ import (
 // createTestConfig creates a test configuration for unit tests.
 func createTestConfig() *config.Config {
 	return &config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/base/path/status.yaml",
+		BasePath:     "/test/base/path",
+		StatusFile:   "/test/base/path/status.yaml",
+		WorktreesDir: "/test/base/path/worktrees",
 	}
 }
 
@@ -100,7 +101,7 @@ func TestWTM_CreateWorkTreeWithIDE(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
 		URL:    "github.com/lerenn/example",
 		Branch: "test-branch",
-		Path:   "/test/base/path/github.com/lerenn/example/test-branch",
+		Path:   "/test/base/path/worktrees/github.com/lerenn/example/test-branch",
 	}, nil)
 
 	// Mock worktree creation calls
@@ -154,7 +155,7 @@ func TestWTM_OpenWorktree(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(worktree, nil)
 
 	// Mock IDE opening - now uses derived worktree path
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/test-branch", false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
 
 	err := wtm.OpenWorktree("test-branch", "cursor")
 	assert.NoError(t, err)
@@ -483,7 +484,7 @@ func TestWTM_LoadWorktree_WithIDE(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(&status.Repository{
 		URL:    "github.com/lerenn/example",
 		Branch: "feature-branch",
-		Path:   "/test/base/path/github.com/lerenn/example/feature-branch",
+		Path:   "/test/base/path/worktrees/github.com/lerenn/example/feature-branch",
 	}, nil)
 	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
 

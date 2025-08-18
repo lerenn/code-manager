@@ -118,6 +118,12 @@ func (f *realFS) IsNotExist(err error) bool {
 func (f *realFS) WriteFileAtomic(filename string, data []byte, perm os.FileMode) error {
 	// Create temporary file in the same directory
 	dir := filepath.Dir(filename)
+
+	// Ensure parent directory exists before creating temporary file
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
 	tmpFile, err := os.CreateTemp(dir, filepath.Base(filename)+".tmp")
 	if err != nil {
 		return err
@@ -165,6 +171,12 @@ func (f *realFS) WriteFileAtomic(filename string, data []byte, perm os.FileMode)
 func (f *realFS) FileLock(filename string) (func(), error) {
 	// Create lock file path
 	lockPath := filename + ".lock"
+
+	// Ensure parent directory exists before creating lock file
+	lockDir := filepath.Dir(lockPath)
+	if err := os.MkdirAll(lockDir, 0755); err != nil {
+		return nil, err
+	}
 
 	// Create lock file
 	lockFile, err := os.Create(lockPath)

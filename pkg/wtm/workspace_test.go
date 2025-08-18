@@ -68,14 +68,14 @@ func TestWTM_Run_WorkspaceMode(t *testing.T) {
 	mockGit.EXPECT().BranchExists("backend", "test-branch").Return(false, nil).AnyTimes()
 	mockGit.EXPECT().CreateBranch("frontend", "test-branch").Return(nil).AnyTimes()
 	mockGit.EXPECT().CreateBranch("backend", "test-branch").Return(nil).AnyTimes()
-	mockGit.EXPECT().CreateWorktree("frontend", "/test/base/path/github.com/lerenn/frontend/test-branch", "test-branch").Return(nil).AnyTimes()
-	mockGit.EXPECT().CreateWorktree("backend", "/test/base/path/github.com/lerenn/backend/test-branch", "test-branch").Return(nil).AnyTimes()
+	mockGit.EXPECT().CreateWorktree("frontend", "/test/base/path/worktrees/github.com/lerenn/frontend/test-branch", "test-branch").Return(nil).AnyTimes()
+	mockGit.EXPECT().CreateWorktree("backend", "/test/base/path/worktrees/github.com/lerenn/backend/test-branch", "test-branch").Return(nil).AnyTimes()
 
 	// Mock file system operations for worktree creation
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/frontend/test-branch").Return(false, nil).AnyTimes()
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/backend/test-branch").Return(false, nil).AnyTimes()
-	mockFS.EXPECT().MkdirAll("/test/base/path/github.com/lerenn/frontend/test-branch", gomock.Any()).Return(nil).AnyTimes()
-	mockFS.EXPECT().MkdirAll("/test/base/path/github.com/lerenn/backend/test-branch", gomock.Any()).Return(nil).AnyTimes()
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(false, nil).AnyTimes()
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/backend/test-branch").Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch", gomock.Any()).Return(nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll("/test/base/path/worktrees/github.com/lerenn/backend/test-branch", gomock.Any()).Return(nil).AnyTimes()
 	mockFS.EXPECT().MkdirAll("/test/base/path/workspaces", gomock.Any()).Return(nil).AnyTimes()
 	mockFS.EXPECT().WriteFileAtomic("/test/base/path/workspaces/project-test-branch.code-workspace", gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
@@ -323,11 +323,11 @@ func TestWTM_Run_WorkspaceVerboseMode(t *testing.T) {
 	mockGit.EXPECT().GetRepositoryName("frontend").Return("github.com/lerenn/frontend", nil).AnyTimes()
 	mockGit.EXPECT().BranchExists("frontend", "test-branch").Return(false, nil).AnyTimes()
 	mockGit.EXPECT().CreateBranch("frontend", "test-branch").Return(nil).AnyTimes()
-	mockGit.EXPECT().CreateWorktree("frontend", "/test/base/path/github.com/lerenn/frontend/test-branch", "test-branch").Return(nil).AnyTimes()
+	mockGit.EXPECT().CreateWorktree("frontend", "/test/base/path/worktrees/github.com/lerenn/frontend/test-branch", "test-branch").Return(nil).AnyTimes()
 
 	// Mock file system operations for worktree creation
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/frontend/test-branch").Return(false, nil).AnyTimes()
-	mockFS.EXPECT().MkdirAll("/test/base/path/github.com/lerenn/frontend/test-branch", gomock.Any()).Return(nil).AnyTimes()
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(false, nil).AnyTimes()
+	mockFS.EXPECT().MkdirAll("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch", gomock.Any()).Return(nil).AnyTimes()
 	mockFS.EXPECT().MkdirAll("/test/base/path/workspaces", gomock.Any()).Return(nil).AnyTimes()
 	mockFS.EXPECT().WriteFileAtomic("/test/base/path/workspaces/project-test-branch.code-workspace", gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
@@ -386,22 +386,26 @@ func TestWorkspace_DeleteWorktree(t *testing.T) {
 	}`
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil).Times(1)
 
+	// Get the expected workspace path (absolute path of project.code-workspace)
+	expectedWorkspacePath, absErr := filepath.Abs("project.code-workspace")
+	require.NoError(t, absErr)
+
 	// Mock worktree retrieval
 	worktrees := []status.Repository{
 		{
 			URL:       "github.com/lerenn/frontend",
 			Branch:    "test-branch",
 			Path:      "frontend",
-			Workspace: "/go/src/github.com/lerenn/wtm/pkg/wtm/project.code-workspace",
+			Workspace: expectedWorkspacePath,
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(worktrees, nil).Times(1)
 
 	// Mock Git worktree deletion
-	mockGit.EXPECT().RemoveWorktree("frontend", "/test/base/path/github.com/lerenn/frontend/test-branch").Return(nil).Times(1)
+	mockGit.EXPECT().RemoveWorktree("frontend", "/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(nil).Times(1)
 
 	// Mock file system operations
-	mockFS.EXPECT().RemoveAll("/test/base/path/github.com/lerenn/frontend/test-branch").Return(nil).Times(1)
+	mockFS.EXPECT().RemoveAll("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(nil).Times(1)
 	mockFS.EXPECT().RemoveAll("/test/base/path/workspaces/project-test-branch.code-workspace").Return(nil).Times(1)
 
 	// Mock status removal
@@ -452,22 +456,26 @@ func TestWorkspace_DeleteWorktree_ForceMode(t *testing.T) {
 	}`
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil).Times(1)
 
+	// Get the expected workspace path (absolute path of project.code-workspace)
+	expectedWorkspacePath, absErr := filepath.Abs("project.code-workspace")
+	require.NoError(t, absErr)
+
 	// Mock worktree retrieval
 	worktrees := []status.Repository{
 		{
 			URL:       "github.com/lerenn/frontend",
 			Branch:    "test-branch",
 			Path:      "frontend",
-			Workspace: "/go/src/github.com/lerenn/wtm/pkg/wtm/project.code-workspace",
+			Workspace: expectedWorkspacePath,
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(worktrees, nil).Times(1)
 
 	// Mock Git worktree deletion with error (should be ignored in force mode)
-	mockGit.EXPECT().RemoveWorktree("frontend", "/test/base/path/github.com/lerenn/frontend/test-branch").Return(assert.AnError).Times(1)
+	mockGit.EXPECT().RemoveWorktree("frontend", "/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(assert.AnError).Times(1)
 
 	// Mock file system operations with error (should be ignored in force mode)
-	mockFS.EXPECT().RemoveAll("/test/base/path/github.com/lerenn/frontend/test-branch").Return(assert.AnError).Times(1)
+	mockFS.EXPECT().RemoveAll("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(assert.AnError).Times(1)
 	mockFS.EXPECT().RemoveAll("/test/base/path/workspaces/project-test-branch.code-workspace").Return(assert.AnError).Times(1)
 
 	// Mock status removal with error (should be ignored in force mode)
@@ -488,19 +496,23 @@ func TestWorkspace_ListWorktrees(t *testing.T) {
 	workspace := newWorkspace(mockFS, mockGit, createTestConfig(), mockStatus, logger.NewDefaultLogger(), true)
 	workspace.originalFile = "project.code-workspace"
 
+	// Get the expected workspace path (absolute path of project.code-workspace)
+	expectedWorkspacePath, absErr := filepath.Abs("project.code-workspace")
+	require.NoError(t, absErr)
+
 	// Mock all worktrees retrieval
 	allWorktrees := []status.Repository{
 		{
 			URL:       "github.com/lerenn/frontend",
 			Branch:    "test-branch",
 			Path:      "frontend",
-			Workspace: "/go/src/github.com/lerenn/wtm/pkg/wtm/project.code-workspace",
+			Workspace: expectedWorkspacePath,
 		},
 		{
 			URL:       "github.com/lerenn/backend",
 			Branch:    "test-branch",
 			Path:      "backend",
-			Workspace: "/go/src/github.com/lerenn/wtm/pkg/wtm/project.code-workspace",
+			Workspace: expectedWorkspacePath,
 		},
 		{
 			URL:       "github.com/lerenn/other",
@@ -554,13 +566,17 @@ func TestWorkspace_ListWorktrees_LoadWorkspace(t *testing.T) {
 	}`
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil).Times(1)
 
+	// Get the expected workspace path (absolute path of project.code-workspace)
+	expectedWorkspacePath, absErr := filepath.Abs("project.code-workspace")
+	require.NoError(t, absErr)
+
 	// Mock all worktrees retrieval
 	allWorktrees := []status.Repository{
 		{
 			URL:       "github.com/lerenn/frontend",
 			Branch:    "test-branch",
 			Path:      "frontend",
-			Workspace: "/go/src/github.com/lerenn/wtm/pkg/wtm/project.code-workspace",
+			Workspace: expectedWorkspacePath,
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil).Times(1)
@@ -610,7 +626,7 @@ func TestWorkspace_ValidateWorkspaceForWorktreeCreation(t *testing.T) {
 	mockGit.EXPECT().BranchExists("frontend", "test-branch").Return(false, nil).Times(1)
 
 	// Mock worktree directory check
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/frontend/test-branch").Return(false, nil).Times(1)
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(false, nil).Times(1)
 
 	err := workspace.validateWorkspaceForWorktreeCreation("test-branch")
 	assert.NoError(t, err)
@@ -681,7 +697,7 @@ func TestWorkspace_ValidateWorkspaceForWorktreeCreation_DirectoryExists(t *testi
 	mockGit.EXPECT().BranchExists("frontend", "test-branch").Return(false, nil).Times(1)
 
 	// Mock worktree directory check - directory already exists
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/frontend/test-branch").Return(true, nil).Times(1)
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(true, nil).Times(1)
 
 	err := workspace.validateWorkspaceForWorktreeCreation("test-branch")
 	assert.Error(t, err)
@@ -867,13 +883,17 @@ func TestWTM_ListWorktrees_WorkspaceMode(t *testing.T) {
 	}`
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceJSON), nil).AnyTimes()
 
+	// Get the expected workspace path (absolute path of project.code-workspace)
+	expectedWorkspacePath, absErr := filepath.Abs("project.code-workspace")
+	require.NoError(t, absErr)
+
 	// Mock worktree listing
 	worktrees := []status.Repository{
 		{
 			URL:       "github.com/lerenn/frontend",
 			Branch:    "test-branch",
 			Path:      "frontend",
-			Workspace: "/go/src/github.com/lerenn/wtm/pkg/wtm/project.code-workspace",
+			Workspace: expectedWorkspacePath,
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(worktrees, nil).AnyTimes()
@@ -938,10 +958,10 @@ func TestWTM_DeleteWorkTree_WorkspaceMode(t *testing.T) {
 	mockStatus.EXPECT().ListAllWorktrees().Return(worktrees, nil).AnyTimes()
 
 	// Mock Git worktree deletion
-	mockGit.EXPECT().RemoveWorktree("frontend", "/test/base/path/github.com/lerenn/frontend/test-branch").Return(nil).AnyTimes()
+	mockGit.EXPECT().RemoveWorktree("frontend", "/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(nil).AnyTimes()
 
 	// Mock file system operations
-	mockFS.EXPECT().RemoveAll("/test/base/path/github.com/lerenn/frontend/test-branch").Return(nil).AnyTimes()
+	mockFS.EXPECT().RemoveAll("/test/base/path/worktrees/github.com/lerenn/frontend/test-branch").Return(nil).AnyTimes()
 	mockFS.EXPECT().RemoveAll("/test/base/path/workspaces/project-test-branch.code-workspace").Return(nil).AnyTimes()
 
 	// Mock status removal
