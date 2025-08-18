@@ -85,18 +85,13 @@ func (c *realManager) DefaultConfig() *Config {
 	}
 }
 
-// Validate validates the configuration values.
-func (c *Config) Validate() error {
-	if c.BasePath == "" {
-		return ErrBasePathEmpty
-	}
-
-	// Check if base path is accessible (can be created if it doesn't exist)
-	dir := filepath.Dir(c.BasePath)
+// validateDirectoryAccessibility checks if a directory path is accessible and can be created.
+func (c *Config) validateDirectoryAccessibility(path, pathName string) error {
+	dir := filepath.Dir(path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		// Try to create the parent directory to validate permissions
 		if err := os.MkdirAll(dir, 0755); err != nil {
-			return fmt.Errorf("base_path parent directory is not accessible: %w", err)
+			return fmt.Errorf("%s parent directory is not accessible: %w", pathName, err)
 		}
 		// Clean up the test directory
 		if err := os.RemoveAll(dir); err != nil {
@@ -104,28 +99,38 @@ func (c *Config) Validate() error {
 			_ = err
 		}
 	} else if err != nil {
-		return fmt.Errorf("base_path parent directory is not accessible: %w", err)
+		return fmt.Errorf("%s parent directory is not accessible: %w", pathName, err)
+	}
+	return nil
+}
+
+// Validate validates the configuration values.
+func (c *Config) Validate() error {
+	if c.BasePath == "" {
+		return ErrBasePathEmpty
+	}
+
+	// Check if base path is accessible
+	if err := c.validateDirectoryAccessibility(c.BasePath, "base_path"); err != nil {
+		return err
 	}
 
 	// Validate worktrees directory if specified
 	if c.WorktreesDir != "" {
-		worktreesDir := filepath.Dir(c.WorktreesDir)
-		if _, err := os.Stat(worktreesDir); os.IsNotExist(err) {
-			// Try to create the parent directory to validate permissions
-			if err := os.MkdirAll(worktreesDir, 0755); err != nil {
-				return fmt.Errorf("worktrees_dir parent directory is not accessible: %w", err)
-			}
-			// Clean up the test directory
-			if err := os.RemoveAll(worktreesDir); err != nil {
-				// Log the error but don't fail validation for cleanup errors
-				_ = err
-			}
-		} else if err != nil {
-			return fmt.Errorf("worktrees_dir parent directory is not accessible: %w", err)
+		if err := c.validateDirectoryAccessibility(c.WorktreesDir, "worktrees_dir"); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+// expandTilde expands a single path if it starts with tilde.
+func (c *Config) expandTilde(path string, homeDir string) string {
+	if strings.HasPrefix(path, "~") {
+		return filepath.Join(homeDir, strings.TrimPrefix(path, "~"))
+	}
+	return path
 }
 
 // expandTildes expands tilde (~) to the user's home directory in configuration paths.
@@ -135,20 +140,10 @@ func (c *Config) expandTildes() error {
 		return fmt.Errorf("failed to determine home directory: %w", err)
 	}
 
-	// Expand tilde in BasePath
-	if strings.HasPrefix(c.BasePath, "~") {
-		c.BasePath = filepath.Join(homeDir, strings.TrimPrefix(c.BasePath, "~"))
-	}
-
-	// Expand tilde in StatusFile
-	if strings.HasPrefix(c.StatusFile, "~") {
-		c.StatusFile = filepath.Join(homeDir, strings.TrimPrefix(c.StatusFile, "~"))
-	}
-
-	// Expand tilde in WorktreesDir
-	if strings.HasPrefix(c.WorktreesDir, "~") {
-		c.WorktreesDir = filepath.Join(homeDir, strings.TrimPrefix(c.WorktreesDir, "~"))
-	}
+	// Expand tildes in all paths
+	c.BasePath = c.expandTilde(c.BasePath, homeDir)
+	c.StatusFile = c.expandTilde(c.StatusFile, homeDir)
+	c.WorktreesDir = c.expandTilde(c.WorktreesDir, homeDir)
 
 	return nil
 }

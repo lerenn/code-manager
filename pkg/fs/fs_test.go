@@ -207,9 +207,9 @@ func TestFS_WriteFileAtomic(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, newContent, readContent)
 
-	// Test writing to non-existent directory (should fail)
-	nonExistentFile := filepath.Join("/non/existent/path", "test.txt")
-	err = fs.WriteFileAtomic(nonExistentFile, testContent, 0644)
+	// Test writing to a device file which should fail
+	deviceFile := "/dev/null/test.txt"
+	err = fs.WriteFileAtomic(deviceFile, testContent, 0644)
 	assert.Error(t, err)
 }
 
@@ -251,9 +251,9 @@ func TestFS_FileLock(t *testing.T) {
 	assert.NotNil(t, unlock2)
 	unlock2()
 
-	// Test acquiring lock on non-existent directory (should fail)
-	nonExistentFile := filepath.Join("/non/existent/path", "test.txt")
-	_, err = fs.FileLock(nonExistentFile)
+	// Test acquiring lock on a device file which should fail
+	deviceFile := "/dev/null/test.txt"
+	_, err = fs.FileLock(deviceFile)
 	assert.Error(t, err)
 }
 
