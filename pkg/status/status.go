@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/issue"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/issue"
 	"gopkg.in/yaml.v3"
 )
 
@@ -20,7 +20,7 @@ type Status struct {
 
 // Repository represents a repository entry in the status file.
 type Repository struct {
-	URL       string      `yaml:"url"`                 // Repository URL (e.g., "github.com/lerenn/wtm")
+	URL       string      `yaml:"url"`                 // Repository URL (e.g., "github.com/lerenn/cm")
 	Branch    string      `yaml:"branch"`              // Branch name
 	Path      string      `yaml:"path"`                // Original repository path (not worktree path)
 	Workspace string      `yaml:"workspace,omitempty"` // Workspace path (if applicable)

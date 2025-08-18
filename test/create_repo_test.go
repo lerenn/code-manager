@@ -7,18 +7,18 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/wtm"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/cm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// createWorktree creates a worktree using the WTM instance
+// createWorktree creates a worktree using the CM instance
 func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	t.Helper()
 
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
@@ -26,7 +26,7 @@ func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
-	return wtmInstance.CreateWorkTree(branch)
+	return cmInstance.CreateWorkTree(branch)
 }
 
 // TestCreateWorktreeSingleRepo tests creating a worktree in single repository mode
@@ -54,7 +54,7 @@ func TestCreateWorktreeSingleRepo(t *testing.T) {
 	assert.NotEmpty(t, entry.URL, "Repository URL should be set")
 	assert.NotEmpty(t, entry.Path, "Repository path should be set")
 
-	// Verify the worktree exists in the .wtm directory
+	// Verify the worktree exists in the .cm directory
 	assertWorktreeExists(t, setup, "feature/test-branch")
 
 	// Verify the worktree is properly linked in the original repository
@@ -88,7 +88,7 @@ func TestCreateWorktreeNonExistentBranch(t *testing.T) {
 	assert.NotEmpty(t, entry.URL, "Repository URL should be set")
 	assert.NotEmpty(t, entry.Path, "Repository path should be set")
 
-	// Verify the worktree exists in the .wtm directory
+	// Verify the worktree exists in the .cm directory
 	// Use the actual branch name from the status file
 	assertWorktreeExists(t, setup, entry.Branch)
 
@@ -130,9 +130,9 @@ func TestCreateWorktreeOutsideGitRepo(t *testing.T) {
 	assert.Error(t, err, "Command should fail outside Git repository")
 	assert.Contains(t, err.Error(), "no Git repository or workspace found", "Error should mention no Git repository found")
 
-	// Verify status file exists but is empty (created during WTM initialization)
+	// Verify status file exists but is empty (created during CM initialization)
 	_, err = os.Stat(setup.StatusPath)
-	assert.NoError(t, err, "Status file should exist (created during WTM initialization)")
+	assert.NoError(t, err, "Status file should exist (created during CM initialization)")
 
 	// Verify status file is empty (no worktrees added)
 	status := readStatusFile(t, setup.StatusPath)
@@ -148,17 +148,17 @@ func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with verbose flag
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
-	wtmInstance.SetVerbose(true)
+	cmInstance.SetVerbose(true)
 
 	// Safely change to repo directory and create worktree
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
-	err := wtmInstance.CreateWorkTree("feature/test-branch")
+	err := cmInstance.CreateWorkTree("feature/test-branch")
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created successfully
@@ -174,7 +174,7 @@ func TestCreateWorktreeWithQuietFlag(t *testing.T) {
 	// Create a test Git repository
 	createTestGitRepo(t, setup.RepoPath)
 
-	// Test creating a worktree with quiet flag (quiet mode is handled by the logger, not the WTM interface)
+	// Test creating a worktree with quiet flag (quiet mode is handled by the logger, not the CM interface)
 	err := createWorktree(t, setup, "feature/test-branch")
 	require.NoError(t, err, "Command should succeed")
 
@@ -192,8 +192,8 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with IDE opening
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
@@ -204,7 +204,7 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	ideName := "dummy"
 
 	// Create worktree with IDE (dummy IDE will print the path to stdout)
-	err := wtmInstance.CreateWorkTree("feature/test-ide", wtm.CreateWorkTreeOpts{IDEName: ideName})
+	err := cmInstance.CreateWorkTree("feature/test-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created
@@ -234,8 +234,8 @@ func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with unsupported IDE
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
@@ -244,7 +244,7 @@ func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
 	defer restore()
 
 	ideName := "unsupported-ide"
-	err := wtmInstance.CreateWorkTree("feature/unsupported-ide", wtm.CreateWorkTreeOpts{IDEName: ideName})
+	err := cmInstance.CreateWorkTree("feature/unsupported-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
 	assert.Error(t, err, "Command should fail with unsupported IDE")
 	assert.Contains(t, err.Error(), "unsupported IDE", "Error should mention unsupported IDE")
 }

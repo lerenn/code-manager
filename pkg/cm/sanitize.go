@@ -1,4 +1,4 @@
-package wtm
+package cm
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ import (
 //   - They cannot be the single character @.
 //   - They cannot contain a \.
 //   - Additional rule for branch names: They cannot start with a dash -.
-func (c *realWTM) sanitizeBranchName(branchName string) (string, error) {
+func (c *realCM) sanitizeBranchName(branchName string) (string, error) {
 	if branchName == "" {
 		return "", ErrBranchNameEmpty
 	}

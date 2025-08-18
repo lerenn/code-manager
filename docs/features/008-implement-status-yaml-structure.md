@@ -1,15 +1,15 @@
 # Feature 008: Implement Status YAML Structure
 
 ## Overview
-Implement functionality to create and manage a `status.yaml` file that tracks worktrees present in `$HOME/.wtm` and links them to their original repositories. This provides a centralized registry of all worktrees and their metadata for future worktree management features.
+Implement functionality to create and manage a `status.yaml` file that tracks worktrees present in `$HOME/.cm` and links them to their original repositories. This provides a centralized registry of all worktrees and their metadata for future worktree management features.
 
 ## Background
-The Git WorkTree Manager (wtm) needs a persistent state tracking mechanism to maintain information about created worktrees and their relationships to original repositories. This status file will serve as the authoritative source for worktree locations, branch information, and workspace associations, enabling efficient worktree management operations.
+The Code Manager (cm) needs a persistent state tracking mechanism to maintain information about created worktrees and their relationships to original repositories. This status file will serve as the authoritative source for worktree locations, branch information, and workspace associations, enabling efficient worktree management operations.
 
 ## Requirements
 
 ### Functional Requirements
-1. **Status File Management**: Create and maintain `status.yaml` at configurable location (default: `$HOME/.wtm/status.yaml`)
+1. **Status File Management**: Create and maintain `status.yaml` at configurable location (default: `$HOME/.cm/status.yaml`)
 2. **Worktree Tracking**: Track worktrees with repository name, branch, local path, and optional workspace association
 3. **Atomic Operations**: Implement file locking mechanism to prevent concurrent access issues
 4. **Automatic Creation**: Create status file automatically if it doesn't exist
@@ -107,9 +107,9 @@ type Config struct {
 ```
 
 **Updated Methods**:
-- `DefaultConfig()`: Include default status file path (`$HOME/.wtm/status.yaml`)
+- `DefaultConfig()`: Include default status file path (`$HOME/.cm/status.yaml`)
 
-#### WTM Package Extension (Business Logic)
+#### CM Package Extension (Business Logic)
 **New Interface Methods**:
 - `AddWorktreeToStatus(repoName, branch, worktreePath, workspacePath string) error`: Add worktree to status
 - `RemoveWorktreeFromStatus(repoName, branch string) error`: Remove worktree from status
@@ -117,10 +117,10 @@ type Config struct {
 - `ListAllWorktrees() ([]status.Repository, error)`: List all tracked worktrees
 
 **Updated Constructor**:
-- `NewWTM(cfg *config.Config) WTM`: Creates Status Manager internally
+- `NewCM(cfg *config.Config) CM`: Creates Status Manager internally
 
 **Implementation Structure**:
-- Extends existing WTM package with status management
+- Extends existing CM package with status management
 - Integration with existing `Run()` method for status updates
 - Business logic for worktree status tracking
 - Clean separation of concerns
@@ -170,12 +170,12 @@ Extends configuration to support status file path:
 
 **New Fields**:
 - `StatusFile` field for configurable status file location
-- Default value: `$HOME/.wtm/status.yaml`
+- Default value: `$HOME/.cm/status.yaml`
 
 **Updated Methods**:
 - `DefaultConfig`: Include default status file path
 
-#### 4. WTM Package Extension
+#### 4. CM Package Extension
 Extends business logic with status management:
 
 **New Methods**:
@@ -206,18 +206,18 @@ pkg/
 │   ├── config.go                # Extended with StatusFile field
 │   ├── config_test.go           # Unit tests for config
 │   └── mockconfig.gen.go        # Generated mock for testing
-└── wtm/
-    ├── wtm.go                  # Extended with status management
-    ├── wtm_test.go             # Unit tests with mocked dependencies
+└── cm/
+    ├── cm.go                  # Extended with status management
+    ├── cm_test.go             # Unit tests with mocked dependencies
     ├── status_test.go           # Unit tests for status functionality
-    └── mockwtm.gen.go          # Generated mock for testing
+    └── mockcm.gen.go          # Generated mock for testing
 ```
 
 ### Testing Strategy
 
 #### Unit Tests (Business Logic)
 - **Status Package**: Mock FS adapter for file operations
-- **WTM Package**: Mock Status Manager for status operations
+- **CM Package**: Mock Status Manager for status operations
 - **Config Package**: Mock file system for config operations
 
 #### Integration Tests (Adapters)
@@ -318,7 +318,7 @@ pkg/
 5. **Performance**: Status operations complete within 100ms
 6. **Error Handling**: All error conditions are handled gracefully
 7. **Testing**: Comprehensive test coverage for all components
-8. **Integration**: Seamless integration with existing WTM functionality
+8. **Integration**: Seamless integration with existing CM functionality
 9. **Future Ready**: Status file structure supports future worktree management features
 10. **Cross-Platform**: Works consistently across Windows, macOS, and Linux
 

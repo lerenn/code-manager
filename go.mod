@@ -1,4 +1,4 @@
-module github.com/lerenn/wtm
+module github.com/lerenn/cm
 
 go 1.24.4
 

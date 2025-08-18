@@ -1,65 +1,61 @@
-# WTM Configuration
+# CM Configuration
 
-This directory contains example configuration files for the Git WorkTree Manager (WTM).
+This directory contains example configuration files for the Code Manager (CM).
 
-## Configuration Files
+## Configuration Structure
 
-### default.yaml
-Default configuration example showing the standard configuration structure.
+The CM configuration file uses YAML format and contains the following settings:
 
-### Configuration Options
+### Base Path
+- **Key**: `base_path`
+- **Default**: `$HOME/.cm`
+- **Description**: The base directory where CM will store its data, including repository worktrees.
 
-#### base_path
-- **Type**: string
-- **Default**: `$HOME/.wtm`
-- **Description**: The base directory where WTM will store its data, including repository worktrees.
+### Status File
+- **Key**: `status_file`
+- **Default**: `$HOME/.cm/status.yaml`
+- **Description**: The path to the status file that tracks CM worktrees and their metadata.
 
-#### status_file
-- **Type**: string
-- **Default**: `$HOME/.wtm/status.yaml`
-- **Description**: The path to the status file that tracks WTM worktrees and their metadata.
+### Worktrees Directory
+- **Key**: `worktrees_dir`
+- **Default**: `$HOME/.cm/worktrees`
+- **Description**: The directory where CM will store all repository worktrees. If not specified, worktrees will be stored directly under the base_path.
 
-#### worktrees_dir
-- **Type**: string
-- **Default**: `$HOME/.wtm/worktrees`
-- **Description**: The directory where WTM will store all repository worktrees. If not specified, worktrees will be stored directly under the base_path.
+## Installation
 
-## Usage
+1. Copy the default configuration to your home directory:
+```bash
+cp configs/default.yaml ~/.cm/config.yaml
+```
 
-1. Copy the example configuration file to your home directory:
-   ```bash
-   cp configs/default.yaml ~/.wtm/config.yaml
-   ```
+2. Edit the configuration file to customize settings:
+```bash
+nano ~/.cm/config.yaml
+```
 
-2. Edit the configuration file to customize your settings:
-   ```bash
-   nano ~/.wtm/config.yaml
-   ```
+3. CM will automatically load the configuration from `~/.cm/config.yaml` when it starts.
 
-3. WTM will automatically load the configuration from `~/.wtm/config.yaml` when it starts.
+## Configuration Format
 
-## File Format
-
-WTM uses YAML format for configuration files. The configuration file should be located at:
-`$HOME/.wtm/config.yaml`
+CM uses YAML format for configuration files. The configuration file should be located at:
+`$HOME/.cm/config.yaml`
 
 ## Example Configuration
 
 ```yaml
-# Base path for WTM data storage
-base_path: /custom/path/to/wtm
+# Base path for CM data storage
+base_path: /custom/path/to/cm
 
 # Status file path
-status_file: /custom/path/to/wtm/status.yaml
+status_file: /custom/path/to/cm/status.yaml
 
 # Worktrees directory path
-worktrees_dir: /custom/path/to/wtm/worktrees
+worktrees_dir: /custom/path/to/cm/worktrees
 ```
 
 ## Validation
 
-WTM validates the configuration on startup:
-- The `base_path` must not be empty
-- The parent directory of `base_path` must be accessible and writable
-- The parent directory of `worktrees_dir` (if specified) must be accessible and writable
-- If validation fails, WTM will fall back to the default configuration
+CM validates the configuration on startup:
+- Checks if all required fields are present
+- Validates file paths and permissions
+- If validation fails, CM will fall back to the default configuration

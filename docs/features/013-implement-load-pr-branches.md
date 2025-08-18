@@ -1,32 +1,32 @@
 # Feature 013: Implement Load PR Branches
 
 ## Overview
-Implement functionality to load branches from remote sources using the `wtm load` command. This feature will allow users to load branches from other users/organizations by specifying a remote source and branch name, automatically adding the remote if it doesn't exist.
+Implement functionality to load branches from remote sources using the `cm load` command. This feature will allow users to load branches from other users/organizations by specifying a remote source and branch name, automatically adding the remote if it doesn't exist.
 
 ## Background
-The Git WorkTree Manager (wtm) needs to provide functionality to load branches from external sources (like pull requests from other users). This feature will enable developers to easily work on branches from other contributors by automatically managing remote sources and creating worktrees for the loaded branches.
+The Code Manager (cm) needs to provide functionality to load branches from external sources (like pull requests from other users). This feature will enable developers to easily work on branches from other contributors by automatically managing remote sources and creating worktrees for the loaded branches.
 
 ## Command Syntax
 
 ### Load Command
 ```bash
-wtm load [remote-source:]<branch-name>
+cm load [remote-source:]<branch-name>
 ```
 
 ### Examples
 
 ```bash
 # Load branch from origin (default remote)
-wtm load feature/new-feature
+cm load feature/new-feature
 
 # Load branch from specific user/organization
-wtm load user:branch-name
+cm load user:branch-name
 
 # Load branch and open in IDE
-wtm load user:fix-bug-123 -i cursor
+cm load user:fix-bug-123 -i cursor
 
 # Load with verbose output
-wtm load feature/improvement -v
+cm load feature/improvement -v
 ```
 
 ## Requirements
@@ -71,13 +71,13 @@ wtm load feature/improvement -v
 - Cross-platform compatibility
 - Error handling with wrapped errors
 
-#### WTM Package Extension
+#### CM Package Extension
 **New Interface Methods**:
 - `LoadBranch(remoteSource, branchName string, ideName *string) error`: Main entry point for loading branches
 - `loadBranchForSingleRepo(remoteSource, branchName string, ideName *string) error`: Load branch for single repository
 
 **Implementation Structure**:
-- Extends existing WTM package with branch loading functionality
+- Extends existing CM package with branch loading functionality
 - Mode detection in main `LoadBranch()` method
 - Private helper methods for remote management
 - Integration with existing worktree creation
@@ -110,8 +110,8 @@ The Git package will be extended with remote management operations:
 - Provide detailed error messages for debugging
 - Validate remote URLs before adding them
 
-#### 2. WTM Package Implementation
-The WTM package will implement the branch loading logic:
+#### 2. CM Package Implementation
+The CM package will implement the branch loading logic:
 
 **Key Components**:
 - Add `LoadBranch()` method as the main entry point with mode detection
@@ -169,7 +169,7 @@ func createLoadCmd() *cobra.Command {
         Args:  cobra.ExactArgs(1),
         RunE: func(_ *cobra.Command, args []string) error {
             // Parse remote:branch format
-            // Call WTM.LoadBranch()
+            // Call CM.LoadBranch()
         },
     }
 }
@@ -202,35 +202,35 @@ func createLoadCmd() *cobra.Command {
 
 #### Success Scenarios
 ```
-$ wtm load user:branch-name
+$ cm load user:branch-name
 ✓ Added remote 'user'
 ✓ Fetched from remote 'user'
 ✓ Branch 'branch-name' found on remote
 ✓ Created worktree for 'branch-name'
-✓ Worktree ready at: /Users/user/.wtm/github.com/lerenn/wtm/branch-name
+✓ Worktree ready at: /Users/user/.cm/github.com/lerenn/cm/branch-name
 ```
 
 #### Error Scenarios
 ```
-$ wtm load invalid-user:branch
+$ cm load invalid-user:branch
 ✗ Failed to add remote 'invalid-user': repository not found
   Suggestion: Check the username and repository name
 
-$ wtm load user:non-existent-branch
+$ cm load user:non-existent-branch
 ✗ Branch 'non-existent-branch' not found on remote 'user'
   Suggestion: Check the branch name or contact the repository owner
 
-$ wtm load invalid:format
+$ cm load invalid:format
 ✗ Invalid argument format. Expected: [remote-source:]<branch-name> or <branch-name>
-  Usage: wtm load [remote-source:]<branch-name>
+  Usage: cm load [remote-source:]<branch-name>
   Examples:
-    wtm load feature/new-feature          # Load from origin
-    wtm load user:branch-name             # Load from specific remote
+    cm load feature/new-feature          # Load from origin
+    cm load user:branch-name             # Load from specific remote
 
-$ wtm load :branch-name
+$ cm load :branch-name
 ✗ Invalid argument format: empty remote source
 
-$ wtm load user:
+$ cm load user:
 ✗ Invalid argument format: empty branch name
 ```
 
@@ -313,7 +313,7 @@ $ wtm load user:
 ## Implementation Summary
 
 ### Key Features
-- **Dual format support**: `wtm load branch-name` (origin) and `wtm load user:branch-name` (specific remote)
+- **Dual format support**: `cm load branch-name` (origin) and `cm load user:branch-name` (specific remote)
 - **Automatic remote management**: Add remotes automatically when they don't exist
 - **Protocol matching**: Use same protocol (HTTPS/SSH) as origin remote, default to HTTPS
 - **GitHub-only**: Initial implementation supports GitHub only
@@ -324,7 +324,7 @@ $ wtm load user:
 
 ### Technical Approach
 - Extends existing Git package with remote management methods
-- Extends WTM package with `LoadBranch()` method
+- Extends CM package with `LoadBranch()` method
 - Reuses existing repository name extraction and worktree creation logic
 - Follows existing architectural patterns and testing conventions
 - Integrates seamlessly with current command structure

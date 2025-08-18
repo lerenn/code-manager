@@ -1,4 +1,4 @@
-package wtm
+package cm
 
 // ProjectType represents the type of project detected.
 type ProjectType int

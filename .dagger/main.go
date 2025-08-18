@@ -1,4 +1,4 @@
-// A generated module for Wtm functions
+// A generated module for CM functions
 //
 // This module has been generated via dagger init and serves as a reference to
 // basic module structure as you get started with Dagger.
@@ -18,13 +18,13 @@ import (
 	"context"
 	"runtime"
 
-	"dagger/wtm/internal/dagger"
+	"dagger/cm/internal/dagger"
 )
 
-type Wtm struct{}
+type CM struct{}
 
 // Publish a new release.
-func (ci *Wtm) PublishTag(
+func (ci *CM) PublishTag(
 	ctx context.Context,
 	sourceDir *dagger.Directory,
 	user *string,
@@ -45,7 +45,7 @@ func (ci *Wtm) PublishTag(
 }
 
 // Lint runs golangci-lint on the main repo (./...) only.
-func (ci *Wtm) Lint(sourceDir *dagger.Directory) *dagger.Container {
+func (ci *CM) Lint(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().
 		From("golangci/golangci-lint:v2.4.0").
 		WithMountedCache("/root/.cache/golangci-lint", dag.CacheVolume("golangci-lint"))
@@ -59,7 +59,7 @@ func (ci *Wtm) Lint(sourceDir *dagger.Directory) *dagger.Container {
 }
 
 // LintDagger runs golangci-lint on the .dagger directory only.
-func (ci *Wtm) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
+func (ci *CM) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().
 		From("golangci/golangci-lint:v1.62.0").
 		WithMountedCache("/root/.cache/golangci-lint", dag.CacheVolume("golangci-lint"))
@@ -73,7 +73,7 @@ func (ci *Wtm) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 }
 
 // UnitTests returns a container that runs the unit tests.
-func (ci *Wtm) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
+func (ci *CM) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:" + goVersion() + "-alpine")
 	return ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir).
 		WithExec([]string{"sh", "-c",
@@ -82,7 +82,7 @@ func (ci *Wtm) UnitTests(sourceDir *dagger.Directory) *dagger.Container {
 }
 
 // IntegrationTests returns a container that runs the integration tests.
-func (ci *Wtm) IntegrationTests(sourceDir *dagger.Directory) *dagger.Container {
+func (ci *CM) IntegrationTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:" + goVersion() + "-alpine").
 		// Install git for integration tests
 		WithExec([]string{"apk", "add", "--no-cache", "git"})
@@ -94,7 +94,7 @@ func (ci *Wtm) IntegrationTests(sourceDir *dagger.Directory) *dagger.Container {
 }
 
 // EndToEndTests returns a container that runs the end-to-end tests.
-func (ci *Wtm) EndToEndTests(sourceDir *dagger.Directory) *dagger.Container {
+func (ci *CM) EndToEndTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:" + goVersion() + "-alpine").
 		// Install git for end-to-end tests
 		WithExec([]string{"apk", "add", "--no-cache", "git"}).
@@ -108,11 +108,11 @@ func (ci *Wtm) EndToEndTests(sourceDir *dagger.Directory) *dagger.Container {
 		})
 }
 
-func (ci *Wtm) withGoCodeAndCacheAsWorkDirectory(
+func (ci *CM) withGoCodeAndCacheAsWorkDirectory(
 	c *dagger.Container,
 	sourceDir *dagger.Directory,
 ) *dagger.Container {
-	containerPath := "/go/src/github.com/lerenn/wtm"
+	containerPath := "/go/src/github.com/lerenn/cm"
 	return c.
 		// Add Go caches
 		WithMountedCache("/root/.cache/go-build", dag.CacheVolume("gobuild")).

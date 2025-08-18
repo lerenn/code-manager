@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/issue"
-	"github.com/lerenn/wtm/pkg/wtm"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/issue"
+	"github.com/lerenn/cm/pkg/cm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -54,8 +54,8 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 	}
 
 	// Create a worktree manually with issue information to simulate the behavior
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
@@ -67,7 +67,7 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 	defer os.Chdir(originalDir)
 
 	// Create a worktree with issue information
-	err = wtmInstance.CreateWorkTree("test-branch", wtm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree("test-branch", cm.CreateWorkTreeOpts{
 		IssueRef: "https://github.com/test-owner/test-repo/issues/123",
 	})
 
@@ -205,8 +205,8 @@ func TestCreateFromIssue_NoIssueInfo(t *testing.T) {
 	addGitHubRemote(t, setup.RepoPath)
 
 	// Create a worktree without issue information
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
@@ -218,7 +218,7 @@ func TestCreateFromIssue_NoIssueInfo(t *testing.T) {
 	defer os.Chdir(originalDir)
 
 	// Create a regular worktree (without issue information)
-	err = wtmInstance.CreateWorkTree("regular-branch", wtm.CreateWorkTreeOpts{})
+	err = cmInstance.CreateWorkTree("regular-branch", cm.CreateWorkTreeOpts{})
 	require.NoError(t, err)
 
 	// Verify that the status file doesn't have issue information for this worktree
@@ -394,8 +394,8 @@ func TestCreateFromIssue_WithIDE(t *testing.T) {
 // Helper functions
 
 func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) error {
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
@@ -406,12 +406,12 @@ func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) er
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.CreateWorkTree("", wtm.CreateWorkTreeOpts{IssueRef: issueRef})
+	return cmInstance.CreateWorkTree("", cm.CreateWorkTreeOpts{IssueRef: issueRef})
 }
 
 func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIssueWithBranchParams) error {
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   params.Setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   params.Setup.CmPath,
 		StatusFile: params.Setup.StatusPath,
 	})
 
@@ -422,12 +422,12 @@ func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIs
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.CreateWorkTree(params.BranchName, wtm.CreateWorkTreeOpts{IssueRef: params.IssueRef})
+	return cmInstance.CreateWorkTree(params.BranchName, cm.CreateWorkTreeOpts{IssueRef: params.IssueRef})
 }
 
 func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssueWithIDEParams) error {
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   params.Setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   params.Setup.CmPath,
 		StatusFile: params.Setup.StatusPath,
 	})
 
@@ -438,7 +438,7 @@ func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssue
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.CreateWorkTree("", wtm.CreateWorkTreeOpts{IssueRef: params.IssueRef, IDEName: params.IDEName})
+	return cmInstance.CreateWorkTree("", cm.CreateWorkTreeOpts{IssueRef: params.IssueRef, IDEName: params.IDEName})
 }
 
 // addGitHubRemote adds a GitHub remote origin to the repository

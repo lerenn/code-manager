@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/wtm"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/cm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -17,7 +17,7 @@ import (
 
 func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "wtm-workspace-list-test-*")
+	tempDir, err := os.MkdirTemp("", "cm-workspace-list-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -36,8 +36,8 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.MkdirAll(workspaceDir, 0755))
 
 	// Create workspace file
-	workspaceConfig := &wtm.WorkspaceConfig{
-		Folders: []wtm.WorkspaceFolder{
+	workspaceConfig := &cm.WorkspaceConfig{
+		Folders: []cm.WorkspaceFolder{
 			{Name: "Frontend", Path: "./frontend"},
 			{Name: "Backend", Path: "./backend"},
 		},
@@ -64,15 +64,15 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	defer os.Chdir(originalDir)
 	require.NoError(t, os.Chdir(workspaceDir))
 
-	// Create WTM instance
+	// Create CM instance
 	cfg := &config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	wtmInstance := wtm.NewWTM(cfg)
+	cmInstance := cm.NewCM(cfg)
 
 	// Initially, no worktrees should exist
-	worktrees, _, err := wtmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
 
@@ -80,14 +80,14 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	branchName1 := "feature/branch1"
 	branchName2 := "feature/branch2"
 
-	err = wtmInstance.CreateWorkTree(branchName1)
+	err = cmInstance.CreateWorkTree(branchName1)
 	require.NoError(t, err)
 
-	err = wtmInstance.CreateWorkTree(branchName2)
+	err = cmInstance.CreateWorkTree(branchName2)
 	require.NoError(t, err)
 
 	// Verify worktrees are listed
-	worktrees, _, err = wtmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 4) // 2 repositories × 2 branches
 
@@ -99,11 +99,11 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	}
 
 	// Delete one branch
-	err = wtmInstance.DeleteWorkTree(branchName1, false)
+	err = cmInstance.DeleteWorkTree(branchName1, false)
 	require.NoError(t, err)
 
 	// Verify only the remaining worktrees are listed
-	worktrees, _, err = wtmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2) // 2 repositories × 1 branch
 
@@ -117,7 +117,7 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 
 func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "wtm-workspace-list-empty-test-*")
+	tempDir, err := os.MkdirTemp("", "cm-workspace-list-empty-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -136,8 +136,8 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	require.NoError(t, os.MkdirAll(workspaceDir, 0755))
 
 	// Create workspace file
-	workspaceConfig := &wtm.WorkspaceConfig{
-		Folders: []wtm.WorkspaceFolder{
+	workspaceConfig := &cm.WorkspaceConfig{
+		Folders: []cm.WorkspaceFolder{
 			{Name: "Frontend", Path: "./frontend"},
 		},
 	}
@@ -160,25 +160,25 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	defer os.Chdir(originalDir)
 	require.NoError(t, os.Chdir(workspaceDir))
 
-	// Create WTM instance
+	// Create CM instance
 	cfg := &config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	wtmInstance := wtm.NewWTM(cfg)
+	cmInstance := cm.NewCM(cfg)
 
 	// Initially, no worktrees should exist
-	worktrees, _, err := wtmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
 
 	// Create a worktree
 	branchName := "feature/test-branch"
-	err = wtmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName)
 	require.NoError(t, err)
 
 	// Verify worktree is listed
-	worktrees, _, err = wtmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1)
 	assert.Equal(t, "frontend", worktrees[0].URL)
@@ -186,11 +186,11 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	assert.Equal(t, workspacePath, worktrees[0].Workspace)
 
 	// Delete the worktree
-	err = wtmInstance.DeleteWorkTree(branchName, false)
+	err = cmInstance.DeleteWorkTree(branchName, false)
 	require.NoError(t, err)
 
 	// Verify no worktrees are listed
-	worktrees, _, err = wtmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
 }

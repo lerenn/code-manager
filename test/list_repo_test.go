@@ -10,19 +10,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/wtm"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/cm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
-// listWorktrees lists worktrees using the WTM instance
+// listWorktrees lists worktrees using the CM instance
 func listWorktrees(t *testing.T, setup *TestSetup) ([]Repository, error) {
 	t.Helper()
 
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
@@ -33,11 +33,11 @@ func listWorktrees(t *testing.T, setup *TestSetup) ([]Repository, error) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	worktrees, _, err := wtmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees()
 	return worktrees, err
 }
 
-// runListCommand runs the wtm list command and captures output
+// runListCommand runs the cm list command and captures output
 func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, error) {
 	t.Helper()
 
@@ -50,15 +50,15 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 		}
 	}
 
-	// Create WTM instance with the test configuration
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	// Create CM instance with the test configuration
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
 	// Set verbose mode if requested
 	if isVerbose {
-		wtmInstance.SetVerbose(true)
+		cmInstance.SetVerbose(true)
 	}
 
 	// Change to repo directory and list worktrees
@@ -69,7 +69,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	defer os.Chdir(originalDir)
 
 	// Call ListWorktrees directly
-	worktrees, projectType, err := wtmInstance.ListWorktrees()
+	worktrees, projectType, err := cmInstance.ListWorktrees()
 	if err != nil {
 		return err.Error(), err
 	}
@@ -77,7 +77,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	// Format output similar to CLI output
 	var output strings.Builder
 
-	if projectType == wtm.ProjectTypeSingleRepo {
+	if projectType == cm.ProjectTypeSingleRepo {
 		if len(worktrees) == 0 {
 			output.WriteString("No worktrees found for current repository\n")
 		} else {
@@ -86,7 +86,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 				output.WriteString(fmt.Sprintf("  %s\n", wt.Branch))
 			}
 		}
-	} else if projectType == wtm.ProjectTypeWorkspace {
+	} else if projectType == cm.ProjectTypeWorkspace {
 		if len(worktrees) == 0 {
 			output.WriteString("No worktrees found for current workspace\n")
 		} else {
@@ -182,7 +182,7 @@ func TestListWorktreesVerboseMode(t *testing.T) {
 	output, err := runListCommand(t, setup, "--verbose")
 	require.NoError(t, err, "CLI command should succeed")
 
-	// Should show worktree output (verbose mode is handled internally by WTM)
+	// Should show worktree output (verbose mode is handled internally by CM)
 	assert.Contains(t, output, "Worktrees for", "Should show repository header")
 	assert.Contains(t, output, "feature/test-branch", "Should show worktree")
 }
@@ -298,7 +298,7 @@ func TestListWorktreesMultipleRepositories(t *testing.T) {
 	status.Repositories = append(status.Repositories, Repository{
 		URL:    "github.com/other/repo",
 		Branch: "feature/other-branch",
-		Path:   filepath.Join(setup.WtmPath, "github.com/other/repo/feature/other-branch"),
+		Path:   filepath.Join(setup.CmPath, "github.com/other/repo/feature/other-branch"),
 	})
 
 	// Write the updated status file

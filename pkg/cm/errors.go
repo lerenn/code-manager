@@ -1,9 +1,9 @@
-// Package wtm provides worktree management functionality and error definitions.
-package wtm
+// Package cm provides worktree management functionality and error definitions.
+package cm
 
 import "errors"
 
-// Error definitions for WTM package.
+// Error definitions for CM package.
 var (
 	// Git repository errors.
 	ErrGitRepositoryNotFound     = errors.New("not a valid Git repository: .git directory not found")

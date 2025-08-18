@@ -1,16 +1,16 @@
-package wtm
+package cm
 
 import (
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/git"
-	"github.com/lerenn/wtm/pkg/issue"
-	"github.com/lerenn/wtm/pkg/logger"
-	"github.com/lerenn/wtm/pkg/status"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/git"
+	"github.com/lerenn/cm/pkg/issue"
+	"github.com/lerenn/cm/pkg/logger"
+	"github.com/lerenn/cm/pkg/status"
 )
 
 const defaultRemote = "origin"
