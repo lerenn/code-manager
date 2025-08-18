@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/status"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -27,7 +27,7 @@ type TestSetup struct {
 	TempDir    string
 	ConfigPath string
 	RepoPath   string
-	WtmPath    string
+	CmPath    string
 	StatusPath string
 }
 
@@ -36,21 +36,21 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 	t.Helper()
 
 	// Create temporary directory
-	tempDir, err := os.MkdirTemp("", "wtm-e2e-test-*")
+	tempDir, err := os.MkdirTemp("", "cm-e2e-test-*")
 	require.NoError(t, err)
 
 	// Create subdirectories
 	repoPath := filepath.Join(tempDir, "repo")
-	wtmPath := filepath.Join(tempDir, ".wtm")
-	statusPath := filepath.Join(wtmPath, "status.yaml")
+	cmPath := filepath.Join(tempDir, ".cm")
+	statusPath := filepath.Join(cmPath, "status.yaml")
 
 	// Create directories
 	require.NoError(t, os.MkdirAll(repoPath, 0755))
-	require.NoError(t, os.MkdirAll(wtmPath, 0755))
+	require.NoError(t, os.MkdirAll(cmPath, 0755))
 
 	// Create test config using the config package
 	testConfig := &config.Config{
-		BasePath:   wtmPath,
+		BasePath:   cmPath,
 		StatusFile: statusPath,
 	}
 
@@ -63,7 +63,7 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 		TempDir:    tempDir,
 		ConfigPath: configPath,
 		RepoPath:   repoPath,
-		WtmPath:    wtmPath,
+		CmPath:    cmPath,
 		StatusPath: statusPath,
 	}
 }
@@ -131,7 +131,7 @@ func createTestGitRepo(t *testing.T, repoPath string) {
 
 	// Create initial commit
 	readmePath := filepath.Join(repoPath, "README.md")
-	require.NoError(t, os.WriteFile(readmePath, []byte("# Test Repository\n\nThis is a test repository for WTM e2e tests.\n"), 0644))
+	require.NoError(t, os.WriteFile(readmePath, []byte("# Test Repository\n\nThis is a test repository for CM e2e tests.\n"), 0644))
 
 	cmd = exec.Command("git", "add", "README.md")
 	cmd.Env = gitEnv
@@ -211,16 +211,16 @@ func readStatusFile(t *testing.T, statusPath string) *StatusFile {
 func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 	t.Helper()
 
-	// The worktree should be created in the .wtm directory with repo name and branch structure
+	// The worktree should be created in the .cm directory with repo name and branch structure
 	// Since we don't know the exact repo name, we'll check for any directory with the branch name
-	entries, err := os.ReadDir(setup.WtmPath)
+	entries, err := os.ReadDir(setup.CmPath)
 	require.NoError(t, err)
 
 	var worktreePath string
 	for _, entry := range entries {
 		if entry.IsDir() && entry.Name() != "status.yaml" {
 			// This is likely the repository directory
-			repoDir := filepath.Join(setup.WtmPath, entry.Name())
+			repoDir := filepath.Join(setup.CmPath, entry.Name())
 			branchDir := filepath.Join(repoDir, branch)
 			if _, err := os.Stat(branchDir); err == nil {
 				worktreePath = branchDir
@@ -254,10 +254,10 @@ func assertWorktreeInRepo(t *testing.T, setup *TestSetup, branch string) {
 	output, err := cmd.Output()
 	require.NoError(t, err)
 
-	// The worktree path should be in the .wtm directory with repo name and branch structure
+	// The worktree path should be in the .cm directory with repo name and branch structure
 	// Since we don't know the exact repo name, we'll check for any path containing the branch name
 	assert.Contains(t, string(output), branch, "Worktree should be listed in the original repository")
-	assert.Contains(t, string(output), setup.WtmPath, "Worktree should be in the .wtm directory")
+	assert.Contains(t, string(output), setup.CmPath, "Worktree should be in the .cm directory")
 }
 
 // getGitWorktreeList gets the list of worktrees from Git

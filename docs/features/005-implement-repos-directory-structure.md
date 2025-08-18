@@ -1,18 +1,18 @@
 # Feature 005: Implement Repos Directory Structure
 
 ## Overview
-Implement functionality to create and manage the directory structure `$HOME/.wtm/repos/<repo>/<branch>/` for organizing Git worktrees for individual repositories.
+Implement functionality to create and manage the directory structure `$HOME/.cm/repos/<repo>/<branch>/` for organizing Git worktrees for individual repositories.
 
 ## Background
-The Git WorkTree Manager (wtm) needs a standardized directory structure to organize and manage Git worktrees. This feature establishes the foundation for storing worktrees for single repositories, providing a clean separation between different repos and branches.
+The Code Manager (cm) needs a standardized directory structure to organize and manage Git worktrees. This feature establishes the foundation for storing worktrees for single repositories, providing a clean separation between different repos and branches.
 
 ## Requirements
 
 ### Functional Requirements
-1. **Directory Structure Creation**: Create the full directory path `$HOME/.wtm/repos/<repo>/<branch>/`
-2. **Repository Name Handling**: Extract and sanitize repository names from Git remote URLs (full path format: e.g., "github.com/lerenn/wtm")
+1. **Directory Structure Creation**: Create the full directory path `$HOME/.cm/repos/<repo>/<branch>/`
+2. **Repository Name Handling**: Extract and sanitize repository names from Git remote URLs (full path format: e.g., "github.com/lerenn/cm")
 3. **Branch Name Handling**: Validate and sanitize branch names for safe directory creation (replace invalid characters with underscores/hyphens)
-4. **Path Validation**: Ensure the base directory (`$HOME/.wtm/`) can be accessed and created
+4. **Path Validation**: Ensure the base directory (`$HOME/.cm/`) can be accessed and created
 5. **Error Handling**: Provide clear error messages for directory creation failures
 6. **Integration Ready**: Return the created path in a format suitable for other features
 7. **Configuration Support**: Support configurable base path via config file
@@ -65,18 +65,18 @@ type Config struct {
 - No state management required
 - Cross-platform compatibility
 
-#### WTM Package Extension (Business Logic)
+#### CM Package Extension (Business Logic)
 **New Interface Methods:**
 - `CreateReposDirectoryStructure(repoName, branchName string) (string, error)`: Create and return the full directory path
 - `sanitizeRepositoryName(remoteURL string) (string, error)`: Extract and sanitize repo name from Git remote
 - `sanitizeBranchName(branchName string) (string, error)`: Validate and sanitize branch name
-- `getBasePath() (string, error)`: Get the configurable base path for WTM
+- `getBasePath() (string, error)`: Get the configurable base path for CM
 
 **Updated Constructor:**
-- `NewWTM(config *config.Config) WTM`: Accept configuration as parameter
+- `NewCM(config *config.Config) CM`: Accept configuration as parameter
 
 **Implementation Structure:**
-- Extends existing WTM package with directory structure management
+- Extends existing CM package with directory structure management
 - Private helper methods for sanitization and validation
 - Error handling with wrapped errors
 - Clean separation of concerns
@@ -105,8 +105,8 @@ The Config package manages application configuration:
 
 **Implementation Notes:**
 - Use `gopkg.in/yaml.v3` for YAML parsing
-- Default base path: `$HOME/.wtm/`
-- Config file location: `$HOME/.wtm/config.yaml`
+- Default base path: `$HOME/.cm/`
+- Config file location: `$HOME/.cm/config.yaml`
 - Graceful fallback to defaults if config file is missing
 - Validation of base path accessibility
 
@@ -121,7 +121,7 @@ The Config package manages application configuration:
 
 **Example Config Structure**:
 ```yaml
-base_path: /custom/path/to/wtm
+base_path: /custom/path/to/cm
 ```
 
 #### 3. FS Package Extension
@@ -141,11 +141,11 @@ The FS package extends with directory creation operations:
 - Update mock generation to include new methods
 - Generate mock files as `mockfs.gen.go` in same directory
 
-#### 4. WTM Package Extension
-The WTM package implements directory structure management:
+#### 4. CM Package Extension
+The CM package implements directory structure management:
 
 **Key Components:**
-- Updated constructor: `NewWTM(config *config.Config)`
+- Updated constructor: `NewCM(config *config.Config)`
 - Public method: `CreateReposDirectoryStructure()`
 - Private helper methods: `sanitizeRepositoryName()`, `sanitizeBranchName()`, `getBasePath()`
 - Dependency injection of FS interface and Config
@@ -172,11 +172,11 @@ The WTM package implements directory structure management:
 
 #### Config File Support
 - Support configurable base path via config file
-- Default to `$HOME/.wtm/` if no config file or base path specified
-- Config file location: `$HOME/.wtm/config.yaml`
+- Default to `$HOME/.cm/` if no config file or base path specified
+- Config file location: `$HOME/.cm/config.yaml`
 - Config structure:
 ```yaml
-base_path: /custom/path/to/wtm
+base_path: /custom/path/to/cm
 ```
 
 #### Example Configs
@@ -203,7 +203,7 @@ base_path: /custom/path/to/wtm
 
 ### Testing Strategy
 
-#### Unit Tests (WTM Package)
+#### Unit Tests (CM Package)
 - Mock FS adapter for all file system operations
 - Mock Config for configuration testing
 - Test repository name sanitization with various remote URL formats
@@ -233,11 +233,11 @@ base_path: /custom/path/to/wtm
 ### Integration with Run() Method
 The `CreateReposDirectoryStructure()` method will be called from the existing `Run()` method to keep the function small and maintain separation of concerns. The integration will occur after project validation (Feature 004) and before any worktree operations.
 
-### Integration with NewWTM()
-The `NewWTM()` function will be updated to accept a `*config.Config` parameter, allowing configuration to be injected at construction time. This maintains dependency injection principles and makes the code more testable.
+### Integration with NewCM()
+The `NewCM()` function will be updated to accept a `*config.Config` parameter, allowing configuration to be injected at construction time. This maintains dependency injection principles and makes the code more testable.
 
 ### Repository Name Format Decision
-- **Format**: Full repository path (e.g., "github.com/lerenn/wtm")
+- **Format**: Full repository path (e.g., "github.com/lerenn/cm")
 - **Rationale**: Provides better organization and avoids naming conflicts
 - **Sanitization**: Replace invalid characters with underscores/hyphens
 

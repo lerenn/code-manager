@@ -8,31 +8,31 @@ Add the ability to open repositories directly in supported IDEs using the `-o` c
 
 ### Create Command with IDE Opening
 ```bash
-wtm create [branch-name] -i <ide-name>
+cm create [branch-name] -i <ide-name>
 ```
 
 ### Open Existing Worktree
 ```bash
-wtm open <worktree-name> -i <ide-name>
+cm open <worktree-name> -i <ide-name>
 ```
 
 ### Examples
 
 ```bash
 # Create a new branch and open in VS Code
-wtm create feature/new-feature -i vscode
+cm create feature/new-feature -i vscode
 
 # Create a new branch and open in GoLand
-wtm create bugfix/issue-123 -i goland
+cm create bugfix/issue-123 -i goland
 
 # Create a new branch and open in IntelliJ IDEA
-wtm create hotfix/critical-fix -i intellij
+cm create hotfix/critical-fix -i intellij
 
 # Open existing worktree in Cursor
-wtm open feature/new-feature -i cursor
+cm open feature/new-feature -i cursor
 
 # Open existing worktree in VS Code
-wtm open bugfix/issue-123 -i vscode
+cm open bugfix/issue-123 -i vscode
 ```
 
 
@@ -125,7 +125,7 @@ ExecuteCommand(command string, args ...string) error
 ### CLI Integration
 
 ```go
-// cmd/wtm/main.go
+// cmd/cm/main.go
 // Add -o flag to existing create command
 var createCmd = &cobra.Command{
     Use:   "create [branch-name]",
@@ -197,8 +197,8 @@ var (
 - None (uses standard library for process execution)
 
 ### Modified Dependencies
-- `pkg/wtm`: Add IDE opening functionality
-- `cmd/wtm`: Add new CLI command
+- `pkg/cm`: Add IDE opening functionality
+- `cmd/cm`: Add new CLI command
 
 ## Migration and Backward Compatibility
 
@@ -224,5 +224,5 @@ var (
 7. **First Implementation**: Cursor IDE with command `cursor <repo-path>`
 8. **Testing**: Unit tests only using mocked FS adapter
 9. **CLI Structure**: 
-   - Create command: `wtm create [branch-name] -i <ide-name>`
-   - Open command: `wtm open <worktree-name> -i <ide-name>`
+   - Create command: `cm create [branch-name] -i <ide-name>`
+   - Open command: `cm open <worktree-name> -i <ide-name>`

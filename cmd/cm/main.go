@@ -1,4 +1,4 @@
-// Package main provides the command-line interface for the WTM application.
+// Package main provides the command-line interface for the CM application.
 package main
 
 import (
@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/status"
-	"github.com/lerenn/wtm/pkg/wtm"
+	cm "github.com/lerenn/cm/pkg/cm"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +44,7 @@ func loadConfig() *config.Config {
 			homeDir = "."
 		}
 
-		defaultConfigPath := filepath.Join(homeDir, ".wtm", "config.yaml")
+		defaultConfigPath := filepath.Join(homeDir, ".cm", "config.yaml")
 		cfg, err = config.LoadConfigWithFallback(defaultConfigPath)
 		if err != nil {
 			// If there's an error, use default config
@@ -68,11 +68,11 @@ func createCreateCmd() *cobra.Command {
 			}
 
 			cfg := loadConfig()
-			wtmManager := wtm.NewWTM(cfg)
-			wtmManager.SetVerbose(verbose)
+			cmManager := cm.NewCM(cfg)
+			cmManager.SetVerbose(verbose)
 
 			// Create worktree with options
-			opts := wtm.CreateWorkTreeOpts{}
+			opts := cm.CreateWorkTreeOpts{}
 
 			// Set IDE name if specified
 			if ideName != "" {
@@ -90,7 +90,7 @@ func createCreateCmd() *cobra.Command {
 			}
 
 			// Create worktree with options
-			return wtmManager.CreateWorkTree(branchName, opts)
+			return cmManager.CreateWorkTree(branchName, opts)
 		},
 	}
 
@@ -114,13 +114,13 @@ func createOpenCmd() *cobra.Command {
 				return fmt.Errorf("IDE name is required. Use -i or --ide flag")
 			}
 
-			// Load configuration and create WTM instance
+			// Load configuration and create CM instance
 			cfg := loadConfig()
-			wtmManager := wtm.NewWTM(cfg)
-			wtmManager.SetVerbose(verbose)
+			cmManager := cm.NewCM(cfg)
+			cmManager.SetVerbose(verbose)
 
 			// Open worktree in IDE
-			return wtmManager.OpenWorktree(worktreeName, ideName)
+			return cmManager.OpenWorktree(worktreeName, ideName)
 		},
 	}
 
@@ -145,13 +145,13 @@ func createDeleteCmd() *cobra.Command {
 		RunE: func(_ *cobra.Command, args []string) error {
 			branch := args[0]
 
-			// Load configuration and create WTM instance
+			// Load configuration and create CM instance
 			cfg := loadConfig()
-			wtmManager := wtm.NewWTM(cfg)
-			wtmManager.SetVerbose(verbose)
+			cmManager := cm.NewCM(cfg)
+			cmManager.SetVerbose(verbose)
 
 			// Delete worktree
-			return wtmManager.DeleteWorkTree(branch, force)
+			return cmManager.DeleteWorkTree(branch, force)
 		},
 	}
 
@@ -169,13 +169,13 @@ func getWorkspaceName(workspacePath string) string {
 }
 
 // displayWorktrees displays worktrees based on project type.
-func displayWorktrees(worktrees []status.Repository, projectType wtm.ProjectType) {
+func displayWorktrees(worktrees []status.Repository, projectType cm.ProjectType) {
 	switch projectType {
-	case wtm.ProjectTypeSingleRepo:
+	case cm.ProjectTypeSingleRepo:
 		displaySingleRepoWorktrees(worktrees)
-	case wtm.ProjectTypeWorkspace:
+	case cm.ProjectTypeWorkspace:
 		displayWorkspaceWorktrees(worktrees)
-	case wtm.ProjectTypeNone:
+	case cm.ProjectTypeNone:
 		displayFallbackWorktrees(worktrees)
 	default:
 		displayFallbackWorktrees(worktrees)
@@ -228,13 +228,13 @@ func createListCmd() *cobra.Command {
 		Long:  `List all worktrees for the current Git repository. Currently supports single repository mode.`,
 		Args:  cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			// Load configuration and create WTM instance
+			// Load configuration and create CM instance
 			cfg := loadConfig()
-			wtmManager := wtm.NewWTM(cfg)
-			wtmManager.SetVerbose(verbose)
+			cmManager := cm.NewCM(cfg)
+			cmManager.SetVerbose(verbose)
 
 			// List worktrees
-			worktrees, projectType, err := wtmManager.ListWorktrees()
+			worktrees, projectType, err := cmManager.ListWorktrees()
 			if err != nil {
 				return err
 			}
@@ -242,11 +242,11 @@ func createListCmd() *cobra.Command {
 			// Display worktrees in simple text format
 			if len(worktrees) == 0 {
 				switch projectType {
-				case wtm.ProjectTypeSingleRepo:
+				case cm.ProjectTypeSingleRepo:
 					fmt.Println("No worktrees found for current repository")
-				case wtm.ProjectTypeWorkspace:
+				case cm.ProjectTypeWorkspace:
 					fmt.Println("No worktrees found for current workspace")
-				case wtm.ProjectTypeNone:
+				case cm.ProjectTypeNone:
 					fmt.Println("No worktrees found")
 				default:
 					fmt.Println("No worktrees found")
@@ -270,27 +270,28 @@ func createLoadCmd() *cobra.Command {
 origin or other users/organizations.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			// Load configuration and create WTM instance
+			// Load configuration and create CM instance
 			cfg := loadConfig()
-			wtmManager := wtm.NewWTM(cfg)
-			wtmManager.SetVerbose(verbose)
+			cmManager := cm.NewCM(cfg)
+			cmManager.SetVerbose(verbose)
 
 			// Load worktree with IDE if specified
 			if ideName != "" {
-				return wtmManager.LoadWorktree(args[0], wtm.LoadWorktreeOpts{IDEName: ideName})
+				return cmManager.LoadWorktree(args[0], cm.LoadWorktreeOpts{IDEName: ideName})
 			}
 
 			// Just load worktree without IDE
-			return wtmManager.LoadWorktree(args[0])
+			return cmManager.LoadWorktree(args[0])
 		},
 	}
 }
 
 func main() {
 	var rootCmd = &cobra.Command{
-		Use:   "wtm",
-		Short: "Cursor Git WorkTree Manager",
-		Long:  `A powerful CLI tool for managing Git worktrees specifically designed for Cursor IDE.`,
+		Use:   "cm",
+		Short: "Code Manager - Git WorkTree Manager",
+		Long: `A powerful CLI tool for managing Git worktrees and code development workflows ` +
+			`specifically designed for modern IDEs.`,
 	}
 
 	// Add global flags

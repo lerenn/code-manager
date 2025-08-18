@@ -1,4 +1,4 @@
-// Package config provides configuration management functionality for the WTM application.
+// Package config provides configuration management functionality for the CM application.
 package config
 
 import (
@@ -74,7 +74,7 @@ func (c *realManager) DefaultConfig() *Config {
 		homeDir = "."
 	}
 
-	basePath := filepath.Join(homeDir, ".wtm")
+	basePath := filepath.Join(homeDir, ".cm")
 	statusFile := filepath.Join(basePath, "status.yaml")
 	worktreesDir := filepath.Join(basePath, "worktrees")
 

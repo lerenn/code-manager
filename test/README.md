@@ -1,6 +1,6 @@
 # End-to-End Tests
 
-This directory contains end-to-end tests for the WTM CLI application. These tests verify that the CLI behaves correctly by:
+This directory contains end-to-end tests for the CM CLI application. These tests verify that the CLI behaves correctly by:
 
 1. **Compiling the binary** in isolation
 2. **Running CLI commands** in temporary directories
@@ -17,11 +17,11 @@ This directory contains end-to-end tests for the WTM CLI application. These test
 ### Test Environment
 Each test creates a temporary directory structure:
 ```
-/tmp/wtm-e2e-test-*/
+/tmp/cm-e2e-test-*/
 ├── config.yaml          # Custom test configuration
-├── wtm                  # Compiled binary
+├── cm                  # Compiled binary
 ├── repo/                # Test Git repository
-└── .wtm/                # WTM data directory
+└── .cm/                # CM data directory
     └── status.yaml      # Status file (created by tests)
 ```
 
@@ -63,7 +63,7 @@ go test ./test/ -v
 
 ### Isolation
 - Tests run in temporary directories
-- Never touch system config (`~/.wtm`)
+- Never touch system config (`~/.cm`)
 - Clean up after each test
 - Custom config files for each test
 
@@ -74,7 +74,7 @@ go test ./test/ -v
 
 ### Verification
 - Checks status.yaml file structure
-- Verifies worktree creation in `.wtm` directory
+- Verifies worktree creation in `.cm` directory
 - Confirms worktree linking in original repository
 - Validates CLI output and error messages
 

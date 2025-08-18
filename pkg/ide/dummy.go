@@ -3,7 +3,7 @@ package ide
 import (
 	"fmt"
 
-	"github.com/lerenn/wtm/pkg/fs"
+	"github.com/lerenn/cm/pkg/fs"
 )
 
 const (

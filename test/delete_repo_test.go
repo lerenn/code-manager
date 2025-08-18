@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/wtm"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/cm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -20,12 +20,12 @@ type deleteWorktreeParams struct {
 	Force  bool
 }
 
-// deleteWorktree deletes a worktree using the WTM instance
+// deleteWorktree deletes a worktree using the CM instance
 func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 	t.Helper()
 
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   params.Setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   params.Setup.CmPath,
 		StatusFile: params.Setup.StatusPath,
 	})
 
@@ -36,7 +36,7 @@ func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return wtmInstance.DeleteWorkTree(params.Branch, params.Force)
+	return cmInstance.DeleteWorkTree(params.Branch, params.Force)
 }
 
 // TestDeleteWorktreeSingleRepo tests deleting a worktree in single repository mode
@@ -55,7 +55,7 @@ func TestDeleteWorktreeSingleRepo(t *testing.T) {
 	status := readStatusFile(t, setup.StatusPath)
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
-	// Verify the worktree exists in the .wtm directory
+	// Verify the worktree exists in the .cm directory
 	assertWorktreeExists(t, setup, "feature/test-delete-branch")
 
 	// Delete the worktree with force flag
@@ -71,7 +71,7 @@ func TestDeleteWorktreeSingleRepo(t *testing.T) {
 	assert.Len(t, status.Repositories, 0, "Should have no repository entries after deletion")
 
 	// Verify the worktree directory was removed
-	worktreePath := filepath.Join(setup.WtmPath, "test-repo", "feature/test-delete-branch")
+	worktreePath := filepath.Join(setup.CmPath, "test-repo", "feature/test-delete-branch")
 	_, err = os.Stat(worktreePath)
 	assert.True(t, os.IsNotExist(err), "Worktree directory should be removed")
 
@@ -118,11 +118,11 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Delete the worktree with verbose mode
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
-	wtmInstance.SetVerbose(true)
+	cmInstance.SetVerbose(true)
 
 	// Change to repo directory and delete worktree
 	originalDir, err := os.Getwd()
@@ -131,7 +131,7 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = wtmInstance.DeleteWorkTree("feature/verbose-test", true)
+	err = cmInstance.DeleteWorkTree("feature/verbose-test", true)
 	require.NoError(t, err, "Worktree deletion should succeed")
 
 	// Verify the worktree was deleted
@@ -139,7 +139,7 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 	assert.Len(t, status.Repositories, 0, "Should have no repository entries after deletion")
 }
 
-// TestDeleteWorktreeCLI tests deleting a worktree using the WTM instance directly
+// TestDeleteWorktreeCLI tests deleting a worktree using the CM instance directly
 func TestDeleteWorktreeCLI(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
@@ -147,7 +147,7 @@ func TestDeleteWorktreeCLI(t *testing.T) {
 	// Create a test Git repository
 	createTestGitRepo(t, setup.RepoPath)
 
-	// Create a worktree first using WTM instance
+	// Create a worktree first using CM instance
 	err := createWorktree(t, setup, "feature/cli-test")
 	require.NoError(t, err, "Worktree creation should succeed")
 
@@ -155,7 +155,7 @@ func TestDeleteWorktreeCLI(t *testing.T) {
 	status := readStatusFile(t, setup.StatusPath)
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
-	// Delete worktree using WTM instance with force flag
+	// Delete worktree using CM instance with force flag
 	err = deleteWorktree(t, deleteWorktreeParams{
 		Setup:  setup,
 		Branch: "feature/cli-test",
@@ -168,12 +168,12 @@ func TestDeleteWorktreeCLI(t *testing.T) {
 	assert.Len(t, status.Repositories, 0, "Should have no repository entries after deletion")
 
 	// Verify the worktree directory was removed
-	worktreePath := filepath.Join(setup.WtmPath, "test-repo", "feature/cli-test")
+	worktreePath := filepath.Join(setup.CmPath, "test-repo", "feature/cli-test")
 	_, err = os.Stat(worktreePath)
 	assert.True(t, os.IsNotExist(err), "Worktree directory should be removed")
 }
 
-// TestDeleteWorktreeCLIWithVerbose tests deleting a worktree using the WTM instance with verbose output
+// TestDeleteWorktreeCLIWithVerbose tests deleting a worktree using the CM instance with verbose output
 func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
@@ -181,16 +181,16 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 	// Create a test Git repository
 	createTestGitRepo(t, setup.RepoPath)
 
-	// Create a worktree first using WTM instance
+	// Create a worktree first using CM instance
 	err := createWorktree(t, setup, "feature/verbose-cli-test")
 	require.NoError(t, err, "Worktree creation should succeed")
 
-	// Delete worktree using WTM instance with force flag and verbose mode
-	wtmInstance := wtm.NewWTM(&config.Config{
-		BasePath:   setup.WtmPath,
+	// Delete worktree using CM instance with force flag and verbose mode
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
-	wtmInstance.SetVerbose(true)
+	cmInstance.SetVerbose(true)
 
 	// Change to repo directory and delete worktree
 	originalDir, err := os.Getwd()
@@ -199,7 +199,7 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = wtmInstance.DeleteWorkTree("feature/verbose-cli-test", true)
+	err = cmInstance.DeleteWorkTree("feature/verbose-cli-test", true)
 	require.NoError(t, err, "Worktree deletion should succeed")
 
 	// Verify the worktree was deleted
@@ -215,7 +215,7 @@ func TestDeleteWorktreeCLINonExistentBranch(t *testing.T) {
 	// Create a test Git repository
 	createTestGitRepo(t, setup.RepoPath)
 
-	// Try to delete non-existent worktree using WTM instance
+	// Try to delete non-existent worktree using CM instance
 	err := deleteWorktree(t, deleteWorktreeParams{
 		Setup:  setup,
 		Branch: "non-existent-branch",

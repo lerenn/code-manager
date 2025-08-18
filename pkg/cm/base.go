@@ -1,18 +1,18 @@
-package wtm
+package cm
 
 import (
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/git"
-	"github.com/lerenn/wtm/pkg/logger"
-	"github.com/lerenn/wtm/pkg/status"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/git"
+	"github.com/lerenn/cm/pkg/logger"
+	"github.com/lerenn/cm/pkg/status"
 )
 
-// base provides common functionality for WTM components.
+// base provides common functionality for CM components.
 type base struct {
 	fs            fs.FS
 	git           git.Git

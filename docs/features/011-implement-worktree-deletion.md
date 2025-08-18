@@ -6,29 +6,29 @@ Add the ability to safely delete Git worktrees using the `delete` command. This 
 
 ## Background
 
-The Git WorkTree Manager (wtm) currently supports creating worktrees but lacks the ability to delete them. Users need a safe way to remove worktrees when they're no longer needed, ensuring proper cleanup of both the worktree directory and Git's internal worktree tracking.
+The Code Manager (cm) currently supports creating worktrees but lacks the ability to delete them. Users need a safe way to remove worktrees when they're no longer needed, ensuring proper cleanup of both the worktree directory and Git's internal worktree tracking.
 
 ## Command Syntax
 
 ### Delete Command
 ```bash
-wtm delete <branch-name> [options]
+cm delete <branch-name> [options]
 ```
 
 ### Examples
 
 ```bash
 # Delete a worktree with confirmation
-wtm delete feature/new-feature
+cm delete feature/new-feature
 
 # Force delete without confirmation
-wtm delete bugfix/issue-123 --force
+cm delete bugfix/issue-123 --force
 
 # Force delete without confirmation (short flag)
-wtm delete hotfix/critical-fix -f
+cm delete hotfix/critical-fix -f
 
 # Delete with verbose output
-wtm delete feature/old-feature -v
+cm delete feature/old-feature -v
 ```
 
 ## Requirements
@@ -72,7 +72,7 @@ wtm delete feature/old-feature -v
 - Cross-platform compatibility
 - Error handling with wrapped errors
 
-#### WTM Package Extension
+#### CM Package Extension
 **New Interface Methods**:
 - `DeleteWorkTree(branch string, force bool) error`: Main entry point for worktree deletion
 
@@ -85,7 +85,7 @@ wtm delete feature/old-feature -v
 - `DeleteWorktree(branch string, force bool) error`: Placeholder for future workspace deletion support
 
 **Implementation Structure**:
-- WTM package: Main entry point that detects mode and delegates to appropriate handler
+- CM package: Main entry point that detects mode and delegates to appropriate handler
 - Repository package: Implements deletion logic for single repository mode
 - Workspace package: Placeholder for future workspace deletion support
 - Integration with status management
@@ -114,8 +114,8 @@ The Git package will be extended with worktree deletion operations:
 - Parse `git worktree list` output to find worktree paths
 - Provide detailed error messages for debugging
 
-#### 2. WTM Package Implementation
-The WTM package will implement the main entry point for worktree deletion:
+#### 2. CM Package Implementation
+The CM package will implement the main entry point for worktree deletion:
 
 **Key Components**:
 - `DeleteWorkTree()`: Main entry point that detects mode and delegates to appropriate handler
@@ -125,8 +125,8 @@ The WTM package will implement the main entry point for worktree deletion:
 - Safety validation and confirmation
 
 **Deletion Process**:
-1. **WTM Package**: Detect project mode (single repo vs workspace)
-2. **WTM Package**: Delegate to appropriate handler (repository or workspace)
+1. **CM Package**: Detect project mode (single repo vs workspace)
+2. **CM Package**: Delegate to appropriate handler (repository or workspace)
 3. **Repository/Workspace Package**: Validate worktree exists in status.yaml
 4. **Repository/Workspace Package**: Get worktree path from Git
 5. **Repository/Workspace Package**: Prompt for confirmation with detailed information (unless --force/-f)
@@ -183,7 +183,7 @@ var (
 )
 ```
 
-// pkg/wtm/errors.go
+// pkg/cm/errors.go
 var (
     ErrWorktreeNotInStatus = errors.New("worktree not found in status file")
     ErrDeletionCancelled = errors.New("deletion cancelled by user")
@@ -239,10 +239,10 @@ No new configuration required. Uses existing configuration for:
 
 ### Modified Dependencies
 - `pkg/git`: Add worktree deletion methods
-- `pkg/wtm`: Add main deletion entry point
-- `pkg/wtm/repository.go`: Add repository deletion method
-- `pkg/wtm/workspace.go`: Add workspace deletion placeholder
-- `cmd/wtm`: Add new CLI command
+- `pkg/cm`: Add main deletion entry point
+- `pkg/cm/repository.go`: Add repository deletion method
+- `pkg/cm/workspace.go`: Add workspace deletion placeholder
+- `cmd/cm`: Add new CLI command
 
 ## Migration and Backward Compatibility
 
@@ -253,7 +253,7 @@ No new configuration required. Uses existing configuration for:
 ## Implementation Decisions
 
 1. **Git Interface**: Add `RemoveWorktree()`, `GetWorktreePath()` methods
-2. **Architecture**: Follow existing patterns with WTM as main entry point, delegating to repository/workspace packages
+2. **Architecture**: Follow existing patterns with CM as main entry point, delegating to repository/workspace packages
 3. **Deletion Process**: 
    - Validate existence in status.yaml
    - Get worktree path from Git
@@ -264,7 +264,7 @@ No new configuration required. Uses existing configuration for:
 5. **Error Handling**: 
    - `ErrWorktreeNotFound` when worktree doesn't exist
    - `ErrDeletionCancelled` when user cancels
-6. **CLI Structure**: `wtm delete <branch-name> [--force/-f]` (following create/open pattern)
+6. **CLI Structure**: `cm delete <branch-name> [--force/-f]` (following create/open pattern)
 7. **Testing**: Unit tests with mocked dependencies, integration tests with real Git
 8. **Cross-Platform**: Use standard library for file operations and process execution
 9. **Logging**: Log all operations with appropriate verbosity levels

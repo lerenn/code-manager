@@ -4,7 +4,7 @@
 Implement functionality to detect when the current working directory contains a `.code-workspace` file, indicating a multi-repository workspace configuration for VS Code like IDEs.
 
 ## Background
-The Git WorkTree Manager (wtm) needs to distinguish between single repository mode and workspace mode. Workspace mode is indicated by the presence of a `.code-workspace` file, which contains configuration for managing multiple repositories within a single workspace. This feature builds upon the single repository detection from Feature 001.
+The Code Manager (cm) needs to distinguish between single repository mode and workspace mode. Workspace mode is indicated by the presence of a `.code-workspace` file, which contains configuration for managing multiple repositories within a single workspace. This feature builds upon the single repository detection from Feature 001.
 
 ## Requirements
 
@@ -41,7 +41,7 @@ The Git WorkTree Manager (wtm) needs to distinguish between single repository mo
 - Cross-platform compatibility
 - **Single source of truth** for all file system operations
 
-#### WTM Package Extension (Business Logic)
+#### CM Package Extension (Business Logic)
 **New Interface Methods:**
 - `detectWorkspaceMode() ([]string, error)`: Detect workspace files (returns list of files, no error for multiple files)
 - `getWorkspaceInfo(workspaceFile string) (*WorkspaceConfig, error)`: Parse and validate workspace configuration
@@ -62,7 +62,7 @@ type WorkspaceFolder struct {
 ```
 
 **Implementation Structure:**
-- Extends existing WTM package with workspace detection
+- Extends existing CM package with workspace detection
 - Private helper method: `detectWorkspaceMode()`
 - Private helper method: `parseWorkspaceFile()`
 - Private helper method: `validateWorkspaceRepositories()`
@@ -97,8 +97,8 @@ The FS package extends with file reading operations:
 - **ALL file system operations** must be implemented here
 - **Integration tests only** - no unit tests for this adapter
 
-#### 2. WTM Package Extension
-The WTM package extends with workspace detection capabilities:
+#### 2. CM Package Extension
+The CM package extends with workspace detection capabilities:
 
 **Key Components:**
 - Extended `Run()` method to detect both single repo and workspace modes
@@ -182,13 +182,13 @@ The WTM package extends with workspace detection capabilities:
 #### 1. Main Application Flow
 **Key Components:**
 - Enhanced Cobra root command setup
-- Dependency injection: FS adapter → WTM manager
+- Dependency injection: FS adapter → CM manager
 - Error handling with `log.Fatal()`
 - Clean separation of concerns
 
 **Implementation Notes:**
 - Extend existing Cobra command structure
-- Create FS adapter and WTM manager in the command's `RunE` function
+- Create FS adapter and CM manager in the command's `RunE` function
 - Handle errors at the top level with `log.Fatal()` and exit code 1
 - Keep main function simple and focused on orchestration
 - Maintain existing global quiet mode and verbose mode flags
@@ -196,7 +196,7 @@ The WTM package extends with workspace detection capabilities:
 - Extend `create` subcommand to handle workspace mode (branch name argument not used yet)
 - Help text: "Create worktree(s) for the specified branch"
 
-#### 2. WTM Package Integration
+#### 2. CM Package Integration
 **Key Components:**
 - Extended interface with workspace detection capabilities
 - Project type classification (SingleRepo, Workspace, Unknown)
@@ -237,7 +237,7 @@ The WTM package extends with workspace detection capabilities:
 - **Use `//go:build integration` tag** for all tests
 - **NO unit tests** - adapters should only have integration tests
 
-#### 2. WTM Package Extension Tests (with Mocked FS)
+#### 2. CM Package Extension Tests (with Mocked FS)
 **Test Strategy:**
 - Use Uber gomock for mocking FS interface
 - Test the extended `Run()` method with various scenarios
@@ -246,24 +246,24 @@ The WTM package extends with workspace detection capabilities:
 - **Unit tests only** - this is business logic, no real file system access
 
 **Test Cases:**
-- `TestWTM_Run_ValidWorkspace`: Test successful workspace detection with valid configuration
-- `TestWTM_Run_ValidWorkspaceWithName`: Test workspace detection when workspace has a name field
-- `TestWTM_Run_ValidWorkspaceWithoutName`: Test workspace detection when workspace has no name field (uses filename)
-- `TestWTM_Run_InvalidWorkspaceJSON`: Test when workspace file contains invalid JSON
-- `TestWTM_Run_MissingRepository`: Test when workspace references non-existent repository
-- `TestWTM_Run_InvalidRepository`: Test when workspace references non-Git repository
-- `TestWTM_Run_NoWorkspaceFile`: Test when no workspace file exists (falls back to single repo detection)
-- `TestWTM_Run_MultipleWorkspaceFiles`: Test when multiple workspace files are found (fatal error with count)
-- `TestWTM_Run_EmptyFolders`: Test when workspace has empty folders array
-- `TestWTM_Run_InvalidFolderStructure`: Test when folders array contains objects without path field
-- `TestWTM_Run_InvalidPathField`: Test when path field is empty or not a string
-- `TestWTM_Run_InvalidNameField`: Test when name field is present but not a string
-- `TestWTM_Run_DuplicatePaths`: Test when multiple paths resolve to same location
-- `TestWTM_Run_BrokenSymlink`: Test when symlink points to non-existent location
-- `TestWTM_Run_NullValuesInFolders`: Test when folders array contains null values (should skip)
-- `TestWTM_Run_QuietMode`: Test quiet mode operation (only errors to stderr)
-- `TestWTM_Run_VerboseMode`: Test verbose mode operation (detailed steps)
-- `TestWTM_Run_NormalMode`: Test normal mode operation (user interaction only)
+- `TestCM_Run_ValidWorkspace`: Test successful workspace detection with valid configuration
+- `TestCM_Run_ValidWorkspaceWithName`: Test workspace detection when workspace has a name field
+- `TestCM_Run_ValidWorkspaceWithoutName`: Test workspace detection when workspace has no name field (uses filename)
+- `TestCM_Run_InvalidWorkspaceJSON`: Test when workspace file contains invalid JSON
+- `TestCM_Run_MissingRepository`: Test when workspace references non-existent repository
+- `TestCM_Run_InvalidRepository`: Test when workspace references non-Git repository
+- `TestCM_Run_NoWorkspaceFile`: Test when no workspace file exists (falls back to single repo detection)
+- `TestCM_Run_MultipleWorkspaceFiles`: Test when multiple workspace files are found (fatal error with count)
+- `TestCM_Run_EmptyFolders`: Test when workspace has empty folders array
+- `TestCM_Run_InvalidFolderStructure`: Test when folders array contains objects without path field
+- `TestCM_Run_InvalidPathField`: Test when path field is empty or not a string
+- `TestCM_Run_InvalidNameField`: Test when name field is present but not a string
+- `TestCM_Run_DuplicatePaths`: Test when multiple paths resolve to same location
+- `TestCM_Run_BrokenSymlink`: Test when symlink points to non-existent location
+- `TestCM_Run_NullValuesInFolders`: Test when folders array contains null values (should skip)
+- `TestCM_Run_QuietMode`: Test quiet mode operation (only errors to stderr)
+- `TestCM_Run_VerboseMode`: Test verbose mode operation (detailed steps)
+- `TestCM_Run_NormalMode`: Test normal mode operation (user interaction only)
 
 **Implementation Notes:**
 - Use `gomock.NewController(t)` for mock setup
@@ -285,21 +285,21 @@ The WTM package extends with workspace detection capabilities:
 - **Unit tests only** - this is business logic, no real file system access
 
 **Test Cases:**
-- `TestWTM_detectWorkspaceMode_ValidWorkspace`: Test successful workspace detection
-- `TestWTM_detectWorkspaceMode_NoWorkspaceFile`: Test when no workspace file found
-- `TestWTM_detectWorkspaceMode_MultipleFiles`: Test when multiple workspace files found
-- `TestWTM_parseWorkspaceFile_ValidJSON`: Test successful JSON parsing
-- `TestWTM_parseWorkspaceFile_InvalidJSON`: Test JSON parsing errors
-- `TestWTM_parseWorkspaceFile_EmptyFolders`: Test when folders array is empty
-- `TestWTM_parseWorkspaceFile_InvalidFolderStructure`: Test when folder objects lack required fields
-- `TestWTM_parseWorkspaceFile_InvalidFoldersType`: Test when folders is not an array
-- `TestWTM_parseWorkspaceFile_InvalidFolderType`: Test when folder is not an object
-- `TestWTM_parseWorkspaceFile_NullValues`: Test when folders array contains null values (should skip)
-- `TestWTM_validateWorkspaceRepositories_ValidRepos`: Test successful repository validation
-- `TestWTM_validateWorkspaceRepositories_InvalidRepos`: Test repository validation errors
-- `TestWTM_validateWorkspaceRepositories_DuplicatePaths`: Test when multiple paths resolve to same location
-- `TestWTM_validateWorkspaceRepositories_SymlinkResolution`: Test symlink resolution in paths
-- `TestWTM_validateWorkspaceRepositories_BrokenSymlinks`: Test broken symlink detection
+- `TestCM_detectWorkspaceMode_ValidWorkspace`: Test successful workspace detection
+- `TestCM_detectWorkspaceMode_NoWorkspaceFile`: Test when no workspace file found
+- `TestCM_detectWorkspaceMode_MultipleFiles`: Test when multiple workspace files found
+- `TestCM_parseWorkspaceFile_ValidJSON`: Test successful JSON parsing
+- `TestCM_parseWorkspaceFile_InvalidJSON`: Test JSON parsing errors
+- `TestCM_parseWorkspaceFile_EmptyFolders`: Test when folders array is empty
+- `TestCM_parseWorkspaceFile_InvalidFolderStructure`: Test when folder objects lack required fields
+- `TestCM_parseWorkspaceFile_InvalidFoldersType`: Test when folders is not an array
+- `TestCM_parseWorkspaceFile_InvalidFolderType`: Test when folder is not an object
+- `TestCM_parseWorkspaceFile_NullValues`: Test when folders array contains null values (should skip)
+- `TestCM_validateWorkspaceRepositories_ValidRepos`: Test successful repository validation
+- `TestCM_validateWorkspaceRepositories_InvalidRepos`: Test repository validation errors
+- `TestCM_validateWorkspaceRepositories_DuplicatePaths`: Test when multiple paths resolve to same location
+- `TestCM_validateWorkspaceRepositories_SymlinkResolution`: Test symlink resolution in paths
+- `TestCM_validateWorkspaceRepositories_BrokenSymlinks`: Test broken symlink detection
 
 **Implementation Notes:**
 - Test private methods by accessing them directly in test package
@@ -316,7 +316,7 @@ The WTM package extends with workspace detection capabilities:
 - Use real FS adapter with actual workspace files
 - Test with various workspace configurations
 - Verify consistent detection across different workspace structures
-- **Integration tests for FS adapter only** - not for WTM business logic
+- **Integration tests for FS adapter only** - not for CM business logic
 
 **Test Cases:**
 - `TestFS_ReadFile_RealWorkspace`: Test reading actual `.code-workspace` files
@@ -329,14 +329,14 @@ The WTM package extends with workspace detection capabilities:
 - Verify file system operations work with various Git configurations
 - Test with workspaces that have different folder structures
 - **Use `//go:build integration` tag** for real file system tests
-- **Only test FS adapter** - WTM business logic uses unit tests with mocked FS
+- **Only test FS adapter** - CM business logic uses unit tests with mocked FS
 
 #### 2. Edge Cases
 **Test Strategy:**
 - Test with problematic file system scenarios
 - Verify error handling for edge cases
 - Ensure graceful degradation
-- **Integration tests for FS adapter only** - not for WTM business logic
+- **Integration tests for FS adapter only** - not for CM business logic
 
 **Test Cases:**
 - `TestFS_ReadFile_MalformedWorkspace`: Test reading corrupted workspace files
@@ -350,7 +350,7 @@ The WTM package extends with workspace detection capabilities:
 - Test cross-platform compatibility
 - Ensure no panics or crashes
 - **Use `//go:build integration` tag** for real file system tests
-- **Only test FS adapter** - WTM business logic uses unit tests with mocked FS
+- **Only test FS adapter** - CM business logic uses unit tests with mocked FS
 
 ## Implementation Plan
 
@@ -363,7 +363,7 @@ The WTM package extends with workspace detection capabilities:
 6. Generate mock files as `mockfs.gen.go` using `go generate` and commit them
 7. **Ensure ALL file system operations** are implemented in this adapter
 
-### Phase 2: WTM Package Extension (Priority: High)
+### Phase 2: CM Package Extension (Priority: High)
 1. Extend `Run()` function with workspace detection logic
 2. Add private helper functions (`detectWorkspaceMode()`, `parseWorkspaceFile()`, `validateWorkspaceRepositories()`)
 3. Define workspace configuration data structures
@@ -373,8 +373,8 @@ The WTM package extends with workspace detection capabilities:
 7. **Ensure NO direct file system calls** - all operations through FS adapter interface
 
 ### Phase 3: Integration (Priority: Medium)
-1. Integrate extended FS and WTM packages in main application
-2. **Verify separation of concerns**: FS adapter (integration tests) vs WTM (unit tests)
+1. Integrate extended FS and CM packages in main application
+2. **Verify separation of concerns**: FS adapter (integration tests) vs CM (unit tests)
 3. Performance optimization
 4. Documentation updates
 5. **Ensure proper test organization** with build tags
@@ -436,7 +436,7 @@ The WTM package extends with workspace detection capabilities:
 - Mock files should be committed to the repository as `mockfs.gen.go`
 - Exit immediately with exit code 1 on errors
 - **FS package uses integration tests only (adapter)** - ALL file system operations here
-- **WTM package uses unit tests only (business logic)** - NO direct file system access
+- **CM package uses unit tests only (business logic)** - NO direct file system access
 - Support three output modes: quiet (errors to stderr only), verbose (detailed steps), normal (user interaction only)
 - **Only adapters should have integration tests**
 - **Separate test files**: integration tests for adapters, unit tests for business logic
@@ -444,4 +444,4 @@ The WTM package extends with workspace detection capabilities:
 - **Detection priority**: Single repo first (`.git`), then workspace (`*.code-workspace`) if no single repo
 - Handle both relative and absolute paths in workspace configuration
 - Validate that workspace repositories are accessible and contain valid Git repositories
-- **Clear separation**: FS adapter handles ALL file system operations, WTM handles business logic only
+- **Clear separation**: FS adapter handles ALL file system operations, CM handles business logic only

@@ -3,8 +3,8 @@ package ide
 import (
 	"fmt"
 
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/logger"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/logger"
 )
 
 //go:generate mockgen -source=ide.go -destination=mockide.gen.go -package=ide

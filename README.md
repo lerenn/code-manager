@@ -1,10 +1,10 @@
-# Git WorkTree Manager (wtm)
+# Code Manager (CM)
 
-A powerful Go CLI tool for managing Git worktrees specifically designed for IDE. Enables parallel development across different branches and repositories with seamless IDE integration.
+A powerful Go CLI tool for managing code development workflows, Git worktrees, and IDE integration. Enables parallel development across different branches and repositories with seamless IDE integration and forge connectivity.
 
 ## Overview
 
-`wtm` is a command-line interface that simplifies Git worktree management for both single repositories and multi-repo workspaces. It automatically detects your project type and provides intelligent worktree creation, management, and IDE integration.
+`cm` is a command-line interface that simplifies code development workflows for both single repositories and multi-repo workspaces. It automatically detects your project type and provides intelligent worktree creation, management, IDE integration, and forge connectivity for enhanced development productivity.
 
 ## Features
 
@@ -21,26 +21,32 @@ A powerful Go CLI tool for managing Git worktrees specifically designed for IDE.
 ### 🚀 IDE Integration
 - Direct IDE launch with `-i` flag
 - Seamless workspace duplication
-- Optimized for VSCode Based IDE's workflow
+- Optimized for modern IDE workflows (VSCode, Cursor, etc.)
 
 ### 🔗 Forge Integration
 - Create worktrees directly from GitHub issues
 - Automatic branch name generation from issue titles
 - Support for multiple issue reference formats
 - Issue information stored in status file for tracking
+- Enhanced development workflow with forge connectivity
 
 ### 📊 Flexible Output
 - Human-readable output for terminal usage
 - JSON output for extension integration (`--json` flag)
 
+### 🔄 Remote Branch Management
+- Load branches from remote sources
+- Support for multiple remote configurations
+- Automatic remote management and validation
+
 ## Installation
 
 ```bash
 # Install directly from GitHub
-go install github.com/lerenn/wtm@latest
+go install github.com/lerenn/cm@latest
 
 # Verify installation
-wtm --help
+cm --help
 ```
 
 **Prerequisites:**
@@ -56,22 +62,25 @@ wtm --help
 
 ```bash
 # Create a worktree for a branch
-wtm create <branch-name>
+cm create <branch-name>
 
 # Create an ephemeral worktree
-wtm create <branch-name> -e
+cm create <branch-name> -e
 
 # Open worktree in IDE
-wtm create <branch-name> -i cursor
+cm create <branch-name> -i cursor
 
 # List all worktrees
-wtm list
+cm list
 
 # List worktrees in JSON format
-wtm list --json
+cm list --json
 
 # Delete a worktree
-wtm delete <branch-name>
+cm delete <branch-name>
+
+# Load a branch from remote
+cm load <remote>:<branch-name>
 ```
 
 ### Project Structure
@@ -79,13 +88,13 @@ wtm delete <branch-name>
 #### Single Repository Mode
 Worktrees are created at:
 ```
-$HOME/.wtm/repos/<repo-name>/<branch-name>/
+$HOME/.cm/repos/<repo-name>/<branch-name>/
 ```
 
 #### Workspace Mode
 Worktrees are created at:
 ```
-$HOME/.wtm/workspaces/<workspace-name>/<branch-name>/<repo-name>/
+$HOME/.cm/workspaces/<workspace-name>/<branch-name>/<repo-name>/
 ```
 
 ## Command Reference
@@ -101,19 +110,19 @@ Creates a new worktree for the specified branch.
 **Examples:**
 ```bash
 # Create persistent worktree
-wtm create feature/new-feature
+cm create feature/new-feature
 
 # Create worktree and open in Cursor IDE
-wtm create hotfix/bug-fix -i cursor
+cm create hotfix/bug-fix -i cursor
 
 # Create worktree from GitHub issue (auto-generates branch name)
-wtm create --from-issue https://github.com/owner/repo/issues/123
+cm create --from-issue https://github.com/owner/repo/issues/123
 
 # Create worktree from GitHub issue with custom branch name
-wtm create custom-branch-name --from-issue owner/repo#456
+cm create custom-branch-name --from-issue owner/repo#456
 
 # Create worktree from issue and open in IDE
-wtm create --from-issue 789 -i cursor
+cm create --from-issue 789 -i cursor
 ```
 
 ### Issue Reference Formats
@@ -125,7 +134,7 @@ The `--from-issue` flag supports multiple formats for referencing GitHub issues:
 - **Issue number only**: `789` (requires current repository to be GitHub)
 
 **Branch Name Generation:**
-When using `--from-issue` without specifying a branch name, WTM automatically generates a branch name in the format:
+When using `--from-issue` without specifying a branch name, CM automatically generates a branch name in the format:
 ```
 <issue-number>-<sanitized-issue-title>
 ```
@@ -136,6 +145,21 @@ The title is sanitized by:
 - Removing non-alphanumeric characters (except hyphens)
 - Limiting to 80 characters
 - Ensuring no consecutive hyphens
+
+### `load [remote-source:]<branch-name>`
+Loads a branch from a remote source and creates a worktree.
+
+**Examples:**
+```bash
+# Load branch from origin
+cm load origin:feature-branch
+
+# Load branch from another user's fork
+cm load otheruser:feature-branch
+
+# Load branch using default remote (origin)
+cm load feature-branch
+```
 
 ### `list [options]`
 Lists all active worktrees for the current project.
@@ -151,7 +175,7 @@ Lists all active worktrees for the current project.
     {
       "repo": "my-project",
       "branch": "feature/new-feature",
-      "path": "/home/user/.wtm/repos/my-project/feature/new-feature",
+      "path": "/home/user/.cm/repos/my-project/feature/new-feature",
       "type": "persistent",
       "workspace": "my-workspace"
     }
@@ -186,15 +210,15 @@ The `--json` flag enables structured output for extension development:
 
 ```bash
 # Get worktree list in JSON format
-wtm list --json
+cm list --json
 
 # Create worktree with JSON response
-wtm create feature-branch --json
+cm create feature-branch --json
 ```
 
 ## Configuration
 
-Configuration files are stored in `$HOME/.wtm/config/`:
+Configuration files are stored in `$HOME/.cm/config/`:
 
 - `settings.json`: Global settings
 - `workspaces.json`: Workspace-specific configurations
@@ -219,3 +243,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Advanced filtering options
 - [ ] Performance optimizations
 - [ ] Plugin system for custom workflows
+- [ ] Enhanced forge integrations (GitLab, Bitbucket)
+- [ ] Code review workflow integration
+- [ ] Automated testing workflow support
+- [ ] Multi-language project support

@@ -4,7 +4,7 @@
 Implement functionality to list worktrees for the current Git repository. This feature will allow users to see all worktrees associated with their current repository, providing visibility into their worktree management setup.
 
 ## Background
-The Git WorkTree Manager (wtm) needs to provide visibility into existing worktrees for the current repository. This feature will help users understand what worktrees they have created and their current status. This builds upon the existing detection, validation, and status management capabilities to provide a complete worktree management solution.
+The Code Manager (cm) needs to provide visibility into existing worktrees for the current repository. This feature will help users understand what worktrees they have created and their current status. This builds upon the existing detection, validation, and status management capabilities to provide a complete worktree management solution.
 
 ## Requirements
 
@@ -30,14 +30,14 @@ The Git WorkTree Manager (wtm) needs to provide visibility into existing worktre
 
 ### Interface Design
 
-#### WTM Package Extension
+#### CM Package Extension
 **New Interface Methods**:
 - `ListWorktrees() ([]status.Repository, error)`: Main entry point for listing worktrees with mode detection
 - `listWorktreesForSingleRepo() ([]status.Repository, error)`: List worktrees for current repository
 - `listWorktreesForWorkspace() ([]status.Repository, error)`: List worktrees for workspace (placeholder for future)
 
 **Implementation Structure**:
-- Extends existing WTM package with listing functionality
+- Extends existing CM package with listing functionality
 - Mode detection in main `ListWorktrees()` method
 - Private helper methods for different modes
 - Integration with status management
@@ -54,8 +54,8 @@ The Git WorkTree Manager (wtm) needs to provide visibility into existing worktre
 
 ### Implementation Details
 
-#### 1. WTM Package Implementation
-The WTM package will implement the worktree listing logic:
+#### 1. CM Package Implementation
+The CM package will implement the worktree listing logic:
 
 **Key Components**:
 - Add `ListWorktrees()` method as the main entry point with mode detection
@@ -94,9 +94,9 @@ Worktrees will be displayed in a simple text list format:
 **Normal Mode Output**:
 ```
 Worktrees for github.com/lerenn/example:
-  feature-a: /Users/lfradin/.wtm/github.com/lerenn/example/feature-a
-  feature-b: /Users/lfradin/.wtm/github.com/lerenn/example/feature-b
-  bugfix-123: /Users/lfradin/.wtm/github.com/lerenn/example/bugfix-123
+  feature-a: /Users/lfradin/.cm/github.com/lerenn/example/feature-a
+  feature-b: /Users/lfradin/.cm/github.com/lerenn/example/feature-b
+  bugfix-123: /Users/lfradin/.cm/github.com/lerenn/example/bugfix-123
 ```
 
 **Empty List Output**:
@@ -112,13 +112,13 @@ Repository name: github.com/lerenn/example
 Loading worktrees from status file...
 Found 3 worktrees for current repository
 Worktrees for github.com/lerenn/example:
-  feature-a: /Users/lfradin/.wtm/github.com/lerenn/example/feature-a
-  feature-b: /Users/lfradin/.wtm/github.com/lerenn/example/feature-b
-  bugfix-123: /Users/lfradin/.wtm/github.com/lerenn/example/bugfix-123
+  feature-a: /Users/lfradin/.cm/github.com/lerenn/example/feature-a
+  feature-b: /Users/lfradin/.cm/github.com/lerenn/example/feature-b
+  bugfix-123: /Users/lfradin/.cm/github.com/lerenn/example/bugfix-123
 ```
 
 #### 3. Mode Detection and Repository Name Handling
-- Use existing mode detection logic from WTM package
+- Use existing mode detection logic from CM package
 - Use existing `GetRepositoryName()` method from Git adapter
 - Support both remote origin URL extraction and local path fallback
 - Ensure consistent repository name format for filtering
@@ -147,13 +147,13 @@ Worktrees for github.com/lerenn/example:
 The feature will be accessible through a new `list` subcommand:
 ```bash
 # List worktrees for current repository
-wtm list
+cm list
 
 # List worktrees with verbose output
-wtm list --verbose
+cm list --verbose
 
 # List worktrees with quiet output (errors only)
-wtm list --quiet
+cm list --quiet
 ```
 
 **Command Structure**:
@@ -178,17 +178,17 @@ wtm list --quiet
 - Unit tests only (not an adapter)
 
 **Test Cases**:
-- `TestWTM_ListWorktrees_SingleRepoModeWithWorktrees`: Test successful listing in single repository mode with existing worktrees
-- `TestWTM_ListWorktrees_SingleRepoModeNoWorktrees`: Test listing in single repository mode when no worktrees exist
-- `TestWTM_ListWorktrees_WorkspaceMode`: Test listing in workspace mode (placeholder, returns empty list)
-- `TestWTM_ListWorktrees_NoRepo`: Test when current directory is not a Git repository
-- `TestWTM_ListWorktrees_StatusFileCorrupted`: Test handling of corrupted status file
-- `TestWTM_ListWorktrees_StatusFileNotFound`: Test handling of missing status file
-- `TestWTM_ListWorktrees_RepositoryNameError`: Test handling of repository name extraction errors
-- `TestWTM_ListWorktrees_ModeDetectionError`: Test handling of mode detection errors
-- `TestWTM_ListWorktrees_QuietMode`: Test quiet mode operation (only errors to stderr)
-- `TestWTM_ListWorktrees_VerboseMode`: Test verbose mode operation (detailed steps)
-- `TestWTM_ListWorktrees_NormalMode`: Test normal mode operation (user interaction only)
+- `TestCM_ListWorktrees_SingleRepoModeWithWorktrees`: Test successful listing in single repository mode with existing worktrees
+- `TestCM_ListWorktrees_SingleRepoModeNoWorktrees`: Test listing in single repository mode when no worktrees exist
+- `TestCM_ListWorktrees_WorkspaceMode`: Test listing in workspace mode (placeholder, returns empty list)
+- `TestCM_ListWorktrees_NoRepo`: Test when current directory is not a Git repository
+- `TestCM_ListWorktrees_StatusFileCorrupted`: Test handling of corrupted status file
+- `TestCM_ListWorktrees_StatusFileNotFound`: Test handling of missing status file
+- `TestCM_ListWorktrees_RepositoryNameError`: Test handling of repository name extraction errors
+- `TestCM_ListWorktrees_ModeDetectionError`: Test handling of mode detection errors
+- `TestCM_ListWorktrees_QuietMode`: Test quiet mode operation (only errors to stderr)
+- `TestCM_ListWorktrees_VerboseMode`: Test verbose mode operation (detailed steps)
+- `TestCM_ListWorktrees_NormalMode`: Test normal mode operation (user interaction only)
 
 **Implementation Notes**:
 - Use `gomock.NewController(t)` for mock setup
@@ -207,10 +207,10 @@ wtm list --quiet
 - Unit tests only (not an adapter)
 
 **Test Cases**:
-- `TestWTM_listWorktreesForSingleRepo_ValidRepoWithWorktrees`: Test successful listing logic for single repository
-- `TestWTM_listWorktreesForSingleRepo_ValidRepoNoWorktrees`: Test empty list logic for single repository
-- `TestWTM_listWorktreesForSingleRepo_RepositoryNameError`: Test repository name extraction errors
-- `TestWTM_listWorktreesForWorkspace_Placeholder`: Test workspace mode placeholder implementation
+- `TestCM_listWorktreesForSingleRepo_ValidRepoWithWorktrees`: Test successful listing logic for single repository
+- `TestCM_listWorktreesForSingleRepo_ValidRepoNoWorktrees`: Test empty list logic for single repository
+- `TestCM_listWorktreesForSingleRepo_RepositoryNameError`: Test repository name extraction errors
+- `TestCM_listWorktreesForWorkspace_Placeholder`: Test workspace mode placeholder implementation
 
 **Implementation Notes**:
 - Test private methods by accessing them directly in test package
@@ -227,8 +227,8 @@ wtm list --quiet
 - Integration tests for adapters only
 
 **Test Cases**:
-- `TestWTM_ListWorktrees_RealRepository`: Test with real Git repositories and status files
-- `TestWTM_ListWorktrees_DifferentRepoTypes`: Test various Git repository configurations
+- `TestCM_ListWorktrees_RealRepository`: Test with real Git repositories and status files
+- `TestCM_ListWorktrees_DifferentRepoTypes`: Test various Git repository configurations
 
 **Implementation Notes**:
 - Use real Git repositories for testing (e.g., small test repos)
@@ -239,8 +239,8 @@ wtm list --quiet
 
 ### Implementation Plan
 
-#### Phase 1: WTM Package Extension (Priority: High)
-1. Add `ListWorktrees()` method to WTM package with mode detection
+#### Phase 1: CM Package Extension (Priority: High)
+1. Add `ListWorktrees()` method to CM package with mode detection
 2. Add `listWorktreesForSingleRepo()` helper method for single repository mode
 3. Add `listWorktreesForWorkspace()` placeholder method for workspace mode
 4. Implement repository name extraction and filtering logic
@@ -261,13 +261,13 @@ wtm list --quiet
 ### File Structure
 
 ```
-cmd/wtm/
+cmd/cm/
 ├── main.go                    # Extended with list subcommand
-pkg/wtm/
-├── wtm.go                    # Extended with ListWorktrees method
-├── wtm_test.go               # Unit tests with mocked dependencies
+pkg/cm/
+├── cm.go                    # Extended with ListWorktrees method
+├── cm_test.go               # Unit tests with mocked dependencies
 ├── list_test.go              # Unit tests for listing functionality
-└── mockwtm.gen.go            # Generated mock for testing
+└── mockcm.gen.go            # Generated mock for testing
 ```
 
 ### Dependencies

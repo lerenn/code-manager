@@ -1,28 +1,28 @@
 //go:build unit
 
-package wtm
+package cm
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/git"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/git"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
-func TestRealWTM_sanitizeBranchName(t *testing.T) {
+func TestRealCM_sanitizeBranchName(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 
@@ -120,7 +120,7 @@ func TestRealWTM_sanitizeBranchName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := wtm.(*realWTM).sanitizeBranchName(tt.input)
+			result, err := cm.(*realCM).sanitizeBranchName(tt.input)
 			if tt.wantErr {
 				if tt.input == "" {
 					assert.ErrorIs(t, err, ErrBranchNameEmpty)

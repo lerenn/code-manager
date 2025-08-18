@@ -1,14 +1,14 @@
-# Default configuration for WTM
-# This file shows the default configuration structure
+# Default configuration for CM
+# This file contains the default configuration settings for the Code Manager (CM)
 
-# Base path for WTM data storage
-# Default: $HOME/.cursor/wtm
-base_path: ~/.wtm
+# Base path for CM data storage
+# Default: $HOME/.cm
+base_path: ~/.cm
 
-# Status file path (auto-generated from base_path)
-# Default: $HOME/.cursor/wtm/status.yaml
-status_file: ~/.wtm/status.yaml
+# Status file path
+# Default: $HOME/.cm/status.yaml
+status_file: ~/.cm/status.yaml
 
-# Worktrees directory path (auto-generated from base_path)
-# Default: $HOME/.cursor/wtm/worktrees
-worktrees_dir: ~/.wtm/worktrees
+# Worktrees directory path
+# Default: $HOME/.cm/worktrees
+worktrees_dir: ~/.cm/worktrees

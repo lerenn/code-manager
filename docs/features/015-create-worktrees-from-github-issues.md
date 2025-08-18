@@ -4,47 +4,47 @@
 Implement functionality to create Git worktrees based on GitHub issues. This feature will allow users to create worktrees by specifying a GitHub issue URL or issue number, automatically creating a branch with a descriptive name based on the issue title and creating a worktree for development.
 
 ## Background
-The Git WorkTree Manager (wtm) currently supports creating worktrees from branch names and loading branches from remote sources. However, developers often want to work on specific GitHub issues and need a convenient way to create worktrees directly from issue references. This feature will streamline the workflow by automatically creating descriptive branch names and worktrees based on GitHub issue information.
+The Code Manager (cm) currently supports creating worktrees from branch names and loading branches from remote sources. However, developers often want to work on specific GitHub issues and need a convenient way to create worktrees directly from issue references. This feature will streamline the workflow by automatically creating descriptive branch names and worktrees based on GitHub issue information.
 
 ## Command Syntax
 
 ### Create from Issue Command
 ```bash
-wtm create [branch-name] --from-issue <issue-reference> [options]
+cm create [branch-name] --from-issue <issue-reference> [options]
 ```
 
 ### Issue Reference Formats
 ```bash
 # GitHub issue URL
-wtm create --from-issue https://github.com/owner/repo/issues/123
+cm create --from-issue https://github.com/owner/repo/issues/123
 
 # Issue number (requires remote origin to be GitHub)
-wtm create --from-issue 123
+cm create --from-issue 123
 
 # Owner/repo#issue format
-wtm create --from-issue owner/repo#123
+cm create --from-issue owner/repo#123
 
 # With custom branch name
-wtm create custom-branch-name --from-issue 456
+cm create custom-branch-name --from-issue 456
 ```
 
 ### Examples
 
 ```bash
 # Create worktree from GitHub issue URL (infer branch name)
-wtm create --from-issue https://github.com/lerenn/wtm/issues/42
+cm create --from-issue https://github.com/lerenn/cm/issues/42
 
 # Create worktree from issue number (current repo, infer branch name)
-wtm create --from-issue 42
+cm create --from-issue 42
 
 # Create worktree with custom branch name
-wtm create feature-login-fix --from-issue 123
+cm create feature-login-fix --from-issue 123
 
 # Create worktree and open in IDE
-wtm create --from-issue 123 -i cursor
+cm create --from-issue 123 -i cursor
 
 # Create worktree with verbose output
-wtm create --from-issue https://github.com/owner/repo/issues/789 -v
+cm create --from-issue https://github.com/owner/repo/issues/789 -v
 ```
 
 ## Requirements
@@ -124,14 +124,14 @@ type Forge interface {
 - Support for forge API authentication via environment variables
 - Extensible design for multiple forge implementations
 
-#### WTM Package Extension
+#### CM Package Extension
 **New Interface Methods**:
 - `CreateWorkTreeFromIssue(branchName *string, issueRef string, ideName *string) error`: Main entry point for creating worktrees from issues
 - `createWorkTreeFromIssueForSingleRepo(branchName *string, issueRef string, ideName *string) error`: Create worktree from issue for single repository
 - `createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string, ideName *string) error`: Create worktree from issue for workspace
 
 **Implementation Structure**:
-- Extends existing WTM package with GitHub issue functionality
+- Extends existing CM package with GitHub issue functionality
 - Mode detection in main `CreateWorkTreeFromIssue()` method
 - Private helper methods for issue parsing and branch name generation
 - Integration with existing worktree creation
@@ -166,8 +166,8 @@ The Forge package will handle all forge API interactions with a forge-agnostic d
 - Support both public and private repositories
 - Forge-agnostic design allowing multiple forge implementations
 
-#### 2. WTM Package Implementation
-The WTM package will implement the issue-based worktree creation logic:
+#### 2. CM Package Implementation
+The CM package will implement the issue-based worktree creation logic:
 
 **Key Components**:
 - `CreateWorkTreeFromIssue()`: Main entry point with mode detection
@@ -203,7 +203,7 @@ The CLI will extend the existing create command with a new flag:
 - When provided, the positional branch name argument becomes optional
 
 **Implementation Notes**:
-- Extend existing `wtm create` command with `--from-issue` flag
+- Extend existing `cm create` command with `--from-issue` flag
 - Follow existing CLI patterns and architecture
 - Use existing flag parsing and validation
 - Integrate with existing configuration loading

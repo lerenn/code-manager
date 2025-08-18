@@ -1,17 +1,17 @@
-package wtm
+package cm
 
 import (
 	"fmt"
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/forge"
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/git"
-	"github.com/lerenn/wtm/pkg/ide"
-	"github.com/lerenn/wtm/pkg/logger"
-	"github.com/lerenn/wtm/pkg/status"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/forge"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/git"
+	"github.com/lerenn/cm/pkg/ide"
+	"github.com/lerenn/cm/pkg/logger"
+	"github.com/lerenn/cm/pkg/status"
 )
 
 // CreateWorkTreeOpts contains optional parameters for CreateWorkTree.
@@ -25,8 +25,8 @@ type LoadWorktreeOpts struct {
 	IDEName string
 }
 
-// WTM interface provides Git repository detection functionality.
-type WTM interface {
+// CM interface provides Git repository detection functionality.
+type CM interface {
 	// CreateWorkTree executes the main application logic.
 	CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 
@@ -46,24 +46,24 @@ type WTM interface {
 	SetVerbose(verbose bool)
 }
 
-type realWTM struct {
+type realCM struct {
 	*base
 	ideManager ide.ManagerInterface
 }
 
-// NewWTM creates a new WTM instance.
-func NewWTM(cfg *config.Config) WTM {
+// NewCM creates a new CM instance.
+func NewCM(cfg *config.Config) CM {
 	fsInstance := fs.NewFS()
 	gitInstance := git.NewGit()
 	loggerInstance := logger.NewNoopLogger()
 
-	return &realWTM{
+	return &realCM{
 		base:       newBase(fsInstance, gitInstance, cfg, status.NewManager(fsInstance, cfg), loggerInstance, false),
 		ideManager: ide.NewManager(fsInstance, loggerInstance),
 	}
 }
 
-func (c *realWTM) SetVerbose(verbose bool) {
+func (c *realCM) SetVerbose(verbose bool) {
 	c.verbose = verbose
 	if verbose {
 		c.logger = logger.NewDefaultLogger()
@@ -76,7 +76,7 @@ func (c *realWTM) SetVerbose(verbose bool) {
 }
 
 // CreateWorkTree executes the main application logic.
-func (c *realWTM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error {
+func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error {
 	// Extract and validate options
 	issueRef, ideName := c.extractCreateWorkTreeOptions(opts)
 
@@ -90,7 +90,7 @@ func (c *realWTM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) erro
 }
 
 // extractCreateWorkTreeOptions extracts options from the variadic parameter.
-func (c *realWTM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string, *string) {
+func (c *realCM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string, *string) {
 	var issueRef string
 	var ideName *string
 
@@ -107,7 +107,7 @@ func (c *realWTM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (strin
 }
 
 // createRegularWorkTree handles regular worktree creation (non-issue based).
-func (c *realWTM) createRegularWorkTree(branch string, ideName *string) error {
+func (c *realCM) createRegularWorkTree(branch string, ideName *string) error {
 	// Sanitize branch name first
 	sanitizedBranch, err := c.sanitizeBranchName(branch)
 	if err != nil {
@@ -119,7 +119,7 @@ func (c *realWTM) createRegularWorkTree(branch string, ideName *string) error {
 		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
 	}
 
-	c.verbosePrint(fmt.Sprintf("Starting WTM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch))
+	c.verbosePrint(fmt.Sprintf("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch))
 
 	// Detect project mode and handle accordingly
 	worktreeErr := c.handleProjectMode(sanitizedBranch)
@@ -133,7 +133,7 @@ func (c *realWTM) createRegularWorkTree(branch string, ideName *string) error {
 }
 
 // handleProjectMode detects project mode and handles worktree creation accordingly.
-func (c *realWTM) handleProjectMode(sanitizedBranch string) error {
+func (c *realCM) handleProjectMode(sanitizedBranch string) error {
 	projectType, err := c.detectProjectMode()
 	if err != nil {
 		c.verbosePrint(fmt.Sprintf("Error: %v", err))
@@ -153,7 +153,7 @@ func (c *realWTM) handleProjectMode(sanitizedBranch string) error {
 }
 
 // DeleteWorkTree deletes a worktree for the specified branch.
-func (c *realWTM) DeleteWorkTree(branch string, force bool) error {
+func (c *realCM) DeleteWorkTree(branch string, force bool) error {
 	// Sanitize branch name first
 	sanitizedBranch, err := c.sanitizeBranchName(branch)
 	if err != nil {
@@ -165,7 +165,7 @@ func (c *realWTM) DeleteWorkTree(branch string, force bool) error {
 		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
 	}
 
-	c.verbosePrint(fmt.Sprintf("Starting WTM deletion for branch: %s (sanitized: %s)", branch, sanitizedBranch))
+	c.verbosePrint(fmt.Sprintf("Starting CM deletion for branch: %s (sanitized: %s)", branch, sanitizedBranch))
 
 	// 1. Detect project mode (repository or workspace)
 	projectType, err := c.detectProjectMode()
@@ -188,7 +188,7 @@ func (c *realWTM) DeleteWorkTree(branch string, force bool) error {
 }
 
 // handleIDEOpening handles IDE opening if specified and worktree creation was successful.
-func (c *realWTM) handleIDEOpening(worktreeErr error, branch string, ideName *string) error {
+func (c *realCM) handleIDEOpening(worktreeErr error, branch string, ideName *string) error {
 	if worktreeErr == nil && ideName != nil && *ideName != "" {
 		if err := c.OpenWorktree(branch, *ideName); err != nil {
 			return err
@@ -198,7 +198,7 @@ func (c *realWTM) handleIDEOpening(worktreeErr error, branch string, ideName *st
 }
 
 // handleRepositoryDeletion handles repository mode: validation and worktree deletion.
-func (c *realWTM) handleRepositoryDeletion(branch string, force bool) error {
+func (c *realCM) handleRepositoryDeletion(branch string, force bool) error {
 	c.verbosePrint("Handling repository deletion mode")
 
 	// Create a single repository instance for all repository operations
@@ -214,13 +214,13 @@ func (c *realWTM) handleRepositoryDeletion(branch string, force bool) error {
 		return err
 	}
 
-	c.verbosePrint("WTM deletion completed successfully")
+	c.verbosePrint("CM deletion completed successfully")
 
 	return nil
 }
 
 // handleWorkspaceDeletion handles workspace mode: validation and placeholder for worktree deletion.
-func (c *realWTM) handleWorkspaceDeletion(branch string, force bool) error {
+func (c *realCM) handleWorkspaceDeletion(branch string, force bool) error {
 	c.verbosePrint("Handling workspace deletion mode")
 
 	// Create a single workspace instance for all workspace operations
@@ -241,13 +241,13 @@ func (c *realWTM) handleWorkspaceDeletion(branch string, force bool) error {
 		return err
 	}
 
-	c.verbosePrint("WTM deletion completed successfully")
+	c.verbosePrint("CM deletion completed successfully")
 
 	return nil
 }
 
 // detectProjectMode detects if this is a repository or workspace mode.
-func (c *realWTM) detectProjectMode() (ProjectType, error) {
+func (c *realCM) detectProjectMode() (ProjectType, error) {
 	// First check for single repository mode
 	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
 	exists, err := repo.IsGitRepository()
@@ -274,7 +274,7 @@ func (c *realWTM) detectProjectMode() (ProjectType, error) {
 }
 
 // handleRepositoryMode handles repository mode: validation and worktree creation.
-func (c *realWTM) handleRepositoryMode(branch string) error {
+func (c *realCM) handleRepositoryMode(branch string) error {
 	c.verbosePrint("Handling repository mode")
 
 	// Create a single repository instance for all repository operations
@@ -290,13 +290,13 @@ func (c *realWTM) handleRepositoryMode(branch string) error {
 		return err
 	}
 
-	c.verbosePrint("WTM execution completed successfully")
+	c.verbosePrint("CM execution completed successfully")
 
 	return nil
 }
 
 // handleWorkspaceMode handles workspace mode: validation and worktree creation.
-func (c *realWTM) handleWorkspaceMode(branch string) error {
+func (c *realCM) handleWorkspaceMode(branch string) error {
 	c.verbosePrint("Handling workspace mode")
 
 	// Create a single workspace instance for all workspace operations
@@ -307,13 +307,13 @@ func (c *realWTM) handleWorkspaceMode(branch string) error {
 		return err
 	}
 
-	c.verbosePrint("WTM execution completed successfully")
+	c.verbosePrint("CM execution completed successfully")
 
 	return nil
 }
 
 // OpenWorktree opens an existing worktree in the specified IDE.
-func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
+func (c *realCM) OpenWorktree(worktreeName, ideName string) error {
 	// 1. Detect project mode (repository or workspace)
 	projectType, err := c.detectProjectMode()
 	if err != nil {
@@ -334,7 +334,7 @@ func (c *realWTM) OpenWorktree(worktreeName, ideName string) error {
 }
 
 // openWorktreeForSingleRepo opens a worktree for single repository mode.
-func (c *realWTM) openWorktreeForSingleRepo(worktreeName, ideName string) error {
+func (c *realCM) openWorktreeForSingleRepo(worktreeName, ideName string) error {
 	// Get repository URL from local .git directory
 	repoURL, err := c.git.GetRepositoryName(".")
 	if err != nil {
@@ -359,7 +359,7 @@ func (c *realWTM) openWorktreeForSingleRepo(worktreeName, ideName string) error 
 }
 
 // openWorktreeForWorkspace opens a worktree for workspace mode.
-func (c *realWTM) openWorktreeForWorkspace(worktreeName, ideName string) error {
+func (c *realCM) openWorktreeForWorkspace(worktreeName, ideName string) error {
 	// Create a workspace instance to get workspace information
 	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
 
@@ -404,7 +404,7 @@ func (c *realWTM) openWorktreeForWorkspace(worktreeName, ideName string) error {
 }
 
 // ListWorktrees lists worktrees for the current project with mode detection.
-func (c *realWTM) ListWorktrees() ([]status.Repository, ProjectType, error) {
+func (c *realCM) ListWorktrees() ([]status.Repository, ProjectType, error) {
 	c.verbosePrint("Starting worktree listing")
 
 	// 1. Detect project mode (repository or workspace)
@@ -435,19 +435,19 @@ func (c *realWTM) ListWorktrees() ([]status.Repository, ProjectType, error) {
 }
 
 // listWorktreesForSingleRepo lists worktrees for the current repository.
-func (c *realWTM) listWorktreesForSingleRepo() ([]status.Repository, error) {
+func (c *realCM) listWorktreesForSingleRepo() ([]status.Repository, error) {
 	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
 	return repo.ListWorktrees()
 }
 
 // listWorktreesForWorkspace lists worktrees for workspace mode (placeholder for future).
-func (c *realWTM) listWorktreesForWorkspace() ([]status.Repository, error) {
+func (c *realCM) listWorktreesForWorkspace() ([]status.Repository, error) {
 	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
 	return workspace.ListWorktrees()
 }
 
 // LoadWorktree loads a branch from a remote source and creates a worktree.
-func (c *realWTM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error {
+func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error {
 	c.verbosePrint(fmt.Sprintf("Starting branch loading: %s", branchArg))
 
 	// 1. Parse the branch argument to extract remote and branch name
@@ -491,7 +491,7 @@ func (c *realWTM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error
 }
 
 // createWorkTreeFromIssue creates a worktree from a forge issue.
-func (c *realWTM) createWorkTreeFromIssue(branch string, issueRef string, ideName *string) error {
+func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string, ideName *string) error {
 	c.verbosePrint(fmt.Sprintf("Starting worktree creation from issue: %s", issueRef))
 
 	// 1. Detect project mode (repository or workspace)
@@ -530,7 +530,7 @@ func (c *realWTM) createWorkTreeFromIssue(branch string, issueRef string, ideNam
 }
 
 // createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.
-func (c *realWTM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueRef string) error {
+func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueRef string) error {
 	c.verbosePrint("Creating worktree from issue for single repository mode")
 
 	// Create forge manager
@@ -560,7 +560,7 @@ func (c *realWTM) createWorkTreeFromIssueForSingleRepo(branchName *string, issue
 }
 
 // createWorkTreeFromIssueForWorkspace creates worktrees from issue for workspace.
-func (c *realWTM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string) error {
+func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string) error {
 	c.verbosePrint("Creating worktrees from issue for workspace mode")
 
 	// Create forge manager
@@ -590,7 +590,7 @@ func (c *realWTM) createWorkTreeFromIssueForWorkspace(branchName *string, issueR
 }
 
 // loadWorktreeForSingleRepo loads a worktree for single repository mode.
-func (c *realWTM) loadWorktreeForSingleRepo(remoteSource, branchName string) error {
+func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) error {
 	c.verbosePrint("Loading worktree for single repository mode")
 
 	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
@@ -598,7 +598,7 @@ func (c *realWTM) loadWorktreeForSingleRepo(remoteSource, branchName string) err
 }
 
 // parseBranchArg parses the remote:branch argument format.
-func (c *realWTM) parseBranchArg(arg string) (remoteSource, branchName string, err error) {
+func (c *realCM) parseBranchArg(arg string) (remoteSource, branchName string, err error) {
 	// Check for edge cases
 	if arg == "" {
 		return "", "", fmt.Errorf("argument cannot be empty")
@@ -641,7 +641,7 @@ func (c *realWTM) parseBranchArg(arg string) (remoteSource, branchName string, e
 }
 
 // verbosePrint prints a message only in verbose mode.
-func (c *realWTM) verbosePrint(message string) {
+func (c *realCM) verbosePrint(message string) {
 	if c.verbose {
 		c.logger.Logf(message)
 	}

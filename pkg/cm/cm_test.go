@@ -1,15 +1,15 @@
 //go:build unit
 
-package wtm
+package cm
 
 import (
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/git"
-	"github.com/lerenn/wtm/pkg/ide"
-	"github.com/lerenn/wtm/pkg/status"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/git"
+	"github.com/lerenn/cm/pkg/ide"
+	"github.com/lerenn/cm/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -23,7 +23,7 @@ func createTestConfig() *config.Config {
 	}
 }
 
-func TestWTM_Run_SingleRepository(t *testing.T) {
+func TestCM_Run_SingleRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -32,10 +32,10 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -61,11 +61,11 @@ func TestWTM_Run_SingleRepository(t *testing.T) {
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := cm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
 }
 
-func TestWTM_CreateWorkTreeWithIDE(t *testing.T) {
+func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -74,10 +74,10 @@ func TestWTM_CreateWorkTreeWithIDE(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -117,11 +117,11 @@ func TestWTM_CreateWorkTreeWithIDE(t *testing.T) {
 	ideName := "cursor"
 	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: ideName})
+	err := cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: ideName})
 	assert.NoError(t, err)
 }
 
-func TestWTM_OpenWorktree(t *testing.T) {
+func TestCM_OpenWorktree(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -130,10 +130,10 @@ func TestWTM_OpenWorktree(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -157,11 +157,11 @@ func TestWTM_OpenWorktree(t *testing.T) {
 	// Mock IDE opening - now uses derived worktree path
 	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
 
-	err := wtm.OpenWorktree("test-branch", "cursor")
+	err := cm.OpenWorktree("test-branch", "cursor")
 	assert.NoError(t, err)
 }
 
-func TestWTM_OpenWorktree_NotFound(t *testing.T) {
+func TestCM_OpenWorktree_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -170,10 +170,10 @@ func TestWTM_OpenWorktree_NotFound(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -189,12 +189,12 @@ func TestWTM_OpenWorktree_NotFound(t *testing.T) {
 	// Mock status manager to return error
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
 
-	err := wtm.OpenWorktree("test-branch", "cursor")
+	err := cm.OpenWorktree("test-branch", "cursor")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "worktree not found")
 }
 
-func TestWTM_Run_VerboseMode(t *testing.T) {
+func TestCM_Run_VerboseMode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -203,11 +203,11 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
-	wtm.SetVerbose(true)
+	cm := NewCM(createTestConfig())
+	cm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -233,11 +233,11 @@ func TestWTM_Run_VerboseMode(t *testing.T) {
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)   // Create directory structure
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
-	err := wtm.CreateWorkTree("test-branch")
+	err := cm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
 }
 
-func TestWTM_DeleteWorkTree_SingleRepository(t *testing.T) {
+func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -246,10 +246,10 @@ func TestWTM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -274,17 +274,17 @@ func TestWTM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	mockFS.EXPECT().RemoveAll("/test/path/worktree").Return(nil)
 	mockStatus.EXPECT().RemoveWorktree("github.com/lerenn/example", "test-branch").Return(nil)
 
-	err := wtm.DeleteWorkTree("test-branch", true) // Force deletion
+	err := cm.DeleteWorkTree("test-branch", true) // Force deletion
 	assert.NoError(t, err)
 }
 
-// TestWTM_DeleteWorkTree_Workspace is skipped due to test environment issues
+// TestCM_DeleteWorkTree_Workspace is skipped due to test environment issues
 // with workspace files in the test directory
-func TestWTM_DeleteWorkTree_Workspace(t *testing.T) {
+func TestCM_DeleteWorkTree_Workspace(t *testing.T) {
 	t.Skip("Skipping workspace test due to test environment issues")
 }
 
-func TestWTM_DeleteWorkTree_NoRepository(t *testing.T) {
+func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -293,10 +293,10 @@ func TestWTM_DeleteWorkTree_NoRepository(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -306,12 +306,12 @@ func TestWTM_DeleteWorkTree_NoRepository(t *testing.T) {
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
-	err := wtm.DeleteWorkTree("test-branch", true)
+	err := cm.DeleteWorkTree("test-branch", true)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no Git repository or workspace found")
 }
 
-func TestWTM_DeleteWorkTree_VerboseMode(t *testing.T) {
+func TestCM_DeleteWorkTree_VerboseMode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -320,11 +320,11 @@ func TestWTM_DeleteWorkTree_VerboseMode(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
-	wtm.SetVerbose(true)
+	cm := NewCM(createTestConfig())
+	cm.SetVerbose(true)
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -349,11 +349,11 @@ func TestWTM_DeleteWorkTree_VerboseMode(t *testing.T) {
 	mockFS.EXPECT().RemoveAll("/test/path/worktree").Return(nil)
 	mockStatus.EXPECT().RemoveWorktree("github.com/lerenn/example", "test-branch").Return(nil)
 
-	err := wtm.DeleteWorkTree("test-branch", true) // Force deletion
+	err := cm.DeleteWorkTree("test-branch", true) // Force deletion
 	assert.NoError(t, err)
 }
 
-func TestWTM_ListWorktrees_NoRepository(t *testing.T) {
+func TestCM_ListWorktrees_NoRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -362,10 +362,10 @@ func TestWTM_ListWorktrees_NoRepository(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -377,13 +377,13 @@ func TestWTM_ListWorktrees_NoRepository(t *testing.T) {
 	// Mock workspace detection - no workspace files found
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
-	result, _, err := wtm.ListWorktrees()
+	result, _, err := cm.ListWorktrees()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no Git repository or workspace found")
 	assert.Nil(t, result)
 }
 
-func TestWTM_LoadWorktree_Success(t *testing.T) {
+func TestCM_LoadWorktree_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -392,10 +392,10 @@ func TestWTM_LoadWorktree_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -429,11 +429,11 @@ func TestWTM_LoadWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch")
+	err := cm.LoadWorktree("origin:feature-branch")
 	assert.NoError(t, err)
 }
 
-func TestWTM_LoadWorktree_WithIDE(t *testing.T) {
+func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -442,10 +442,10 @@ func TestWTM_LoadWorktree_WithIDE(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -488,11 +488,11 @@ func TestWTM_LoadWorktree_WithIDE(t *testing.T) {
 	}, nil)
 	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch", LoadWorktreeOpts{IDEName: ideName})
+	err := cm.LoadWorktree("origin:feature-branch", LoadWorktreeOpts{IDEName: ideName})
 	assert.NoError(t, err)
 }
 
-func TestWTM_LoadWorktree_NewRemote(t *testing.T) {
+func TestCM_LoadWorktree_NewRemote(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -501,10 +501,10 @@ func TestWTM_LoadWorktree_NewRemote(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -544,11 +544,11 @@ func TestWTM_LoadWorktree_NewRemote(t *testing.T) {
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
-	err := wtm.LoadWorktree("otheruser:feature-branch")
+	err := cm.LoadWorktree("otheruser:feature-branch")
 	assert.NoError(t, err)
 }
 
-func TestWTM_LoadWorktree_SSHProtocol(t *testing.T) {
+func TestCM_LoadWorktree_SSHProtocol(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -557,10 +557,10 @@ func TestWTM_LoadWorktree_SSHProtocol(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -600,11 +600,11 @@ func TestWTM_LoadWorktree_SSHProtocol(t *testing.T) {
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
-	err := wtm.LoadWorktree("otheruser:feature-branch")
+	err := cm.LoadWorktree("otheruser:feature-branch")
 	assert.NoError(t, err)
 }
 
-func TestWTM_LoadWorktree_NoRepository(t *testing.T) {
+func TestCM_LoadWorktree_NoRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -613,10 +613,10 @@ func TestWTM_LoadWorktree_NoRepository(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -626,12 +626,12 @@ func TestWTM_LoadWorktree_NoRepository(t *testing.T) {
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch")
+	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no Git repository or workspace found")
 }
 
-func TestWTM_LoadWorktree_WorkspaceMode(t *testing.T) {
+func TestCM_LoadWorktree_WorkspaceMode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -640,10 +640,10 @@ func TestWTM_LoadWorktree_WorkspaceMode(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -653,12 +653,12 @@ func TestWTM_LoadWorktree_WorkspaceMode(t *testing.T) {
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"workspace.code-workspace"}, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch")
+	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "workspace mode not yet supported for load command")
 }
 
-func TestWTM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
+func TestCM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -667,10 +667,10 @@ func TestWTM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -686,11 +686,11 @@ func TestWTM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 	// Mock origin remote not found
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(false, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch")
+	err := cm.LoadWorktree("origin:feature-branch")
 	assert.ErrorIs(t, err, ErrOriginRemoteNotFound)
 }
 
-func TestWTM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
+func TestCM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -699,10 +699,10 @@ func TestWTM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -719,11 +719,11 @@ func TestWTM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
 	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("invalid-url", nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch")
+	err := cm.LoadWorktree("origin:feature-branch")
 	assert.ErrorIs(t, err, ErrOriginRemoteInvalidURL)
 }
 
-func TestWTM_LoadWorktree_FetchFailed(t *testing.T) {
+func TestCM_LoadWorktree_FetchFailed(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -732,10 +732,10 @@ func TestWTM_LoadWorktree_FetchFailed(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -755,12 +755,12 @@ func TestWTM_LoadWorktree_FetchFailed(t *testing.T) {
 	// Mock fetch from remote fails
 	mockGit.EXPECT().FetchRemote(".", "origin").Return(assert.AnError)
 
-	err := wtm.LoadWorktree("origin:feature-branch")
+	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to fetch from remote")
 }
 
-func TestWTM_LoadWorktree_BranchNotFound(t *testing.T) {
+func TestCM_LoadWorktree_BranchNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -769,10 +769,10 @@ func TestWTM_LoadWorktree_BranchNotFound(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -795,12 +795,12 @@ func TestWTM_LoadWorktree_BranchNotFound(t *testing.T) {
 	// Mock branch existence check fails
 	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(false, nil)
 
-	err := wtm.LoadWorktree("origin:feature-branch")
+	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "branch not found on remote")
 }
 
-func TestWTM_LoadWorktree_DefaultRemote(t *testing.T) {
+func TestCM_LoadWorktree_DefaultRemote(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -809,10 +809,10 @@ func TestWTM_LoadWorktree_DefaultRemote(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	wtm := NewWTM(createTestConfig())
+	cm := NewCM(createTestConfig())
 
 	// Override adapters with mocks
-	c := wtm.(*realWTM)
+	c := cm.(*realCM)
 	c.fs = mockFS
 	c.git = mockGit
 	c.statusManager = mockStatus
@@ -847,6 +847,6 @@ func TestWTM_LoadWorktree_DefaultRemote(t *testing.T) {
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
 	// Test with empty remote source (should default to "origin")
-	err := wtm.LoadWorktree("feature-branch")
+	err := cm.LoadWorktree("feature-branch")
 	assert.NoError(t, err)
 }

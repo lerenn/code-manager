@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/google/go-github/v62/github"
-	"github.com/lerenn/wtm/pkg/git"
-	"github.com/lerenn/wtm/pkg/issue"
+	"github.com/lerenn/cm/pkg/git"
+	"github.com/lerenn/cm/pkg/issue"
 )
 
 const (

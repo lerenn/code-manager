@@ -63,9 +63,9 @@ func TestRealManager_DefaultConfig(t *testing.T) {
 
 	assert.NotNil(t, config)
 	assert.NotEmpty(t, config.BasePath)
-	assert.Contains(t, config.BasePath, ".wtm")
+	assert.Contains(t, config.BasePath, ".cm")
 	assert.NotEmpty(t, config.WorktreesDir)
-	assert.Contains(t, config.WorktreesDir, ".wtm")
+	assert.Contains(t, config.WorktreesDir, ".cm")
 	assert.Contains(t, config.WorktreesDir, "worktrees")
 }
 
@@ -75,7 +75,7 @@ func TestRealManager_LoadConfig(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write valid YAML config with a path that can be created
-	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "wtm") + `
+	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "cm") + `
 worktrees_dir: ` + filepath.Join(tempDir, "custom", "worktrees") + `
 `
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
@@ -86,7 +86,7 @@ worktrees_dir: ` + filepath.Join(tempDir, "custom", "worktrees") + `
 
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "wtm"), config.BasePath)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.BasePath)
 	assert.Equal(t, filepath.Join(tempDir, "custom", "worktrees"), config.WorktreesDir)
 }
 
@@ -104,7 +104,7 @@ func TestRealManager_LoadConfig_InvalidYAML(t *testing.T) {
 	configPath := filepath.Join(tempDir, "invalid-config.yaml")
 
 	// Write invalid YAML
-	invalidYAML := `base_path: /custom/path/to/wtm
+	invalidYAML := `base_path: /custom/path/to/cm
 invalid: yaml: structure: here`
 	err := os.WriteFile(configPath, []byte(invalidYAML), 0644)
 	assert.NoError(t, err)
@@ -122,7 +122,7 @@ func TestLoadConfigWithFallback_WithValidFile(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write valid YAML config with a path that can be created
-	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "wtm") + `
+	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "cm") + `
 worktrees_dir: ` + filepath.Join(tempDir, "custom", "worktrees") + `
 `
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
@@ -132,7 +132,7 @@ worktrees_dir: ` + filepath.Join(tempDir, "custom", "worktrees") + `
 
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "wtm"), config.BasePath)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.BasePath)
 	assert.Equal(t, filepath.Join(tempDir, "custom", "worktrees"), config.WorktreesDir)
 }
 
@@ -141,16 +141,16 @@ func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
 
 	assert.NoError(t, err) // Should not error, should fallback to default
 	assert.NotNil(t, config)
-	assert.Contains(t, config.BasePath, "wtm")
-	assert.Contains(t, config.WorktreesDir, "wtm")
+	assert.Contains(t, config.BasePath, "cm")
+	assert.Contains(t, config.WorktreesDir, "cm")
 	assert.Contains(t, config.WorktreesDir, "worktrees")
 }
 
 func TestConfig_ExpandTildes(t *testing.T) {
 	config := &Config{
-		BasePath:     "~/.wtm-test",
-		StatusFile:   "~/.wtm-test/status.yaml",
-		WorktreesDir: "~/.wtm-test/worktrees",
+		BasePath:     "~/.cm-test",
+		StatusFile:   "~/.cm-test/status.yaml",
+		WorktreesDir: "~/.cm-test/worktrees",
 	}
 
 	err := config.expandTildes()
@@ -159,9 +159,9 @@ func TestConfig_ExpandTildes(t *testing.T) {
 	homeDir, err := os.UserHomeDir()
 	require.NoError(t, err)
 
-	assert.Equal(t, filepath.Join(homeDir, ".wtm-test"), config.BasePath)
-	assert.Equal(t, filepath.Join(homeDir, ".wtm-test", "status.yaml"), config.StatusFile)
-	assert.Equal(t, filepath.Join(homeDir, ".wtm-test", "worktrees"), config.WorktreesDir)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.BasePath)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "status.yaml"), config.StatusFile)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "worktrees"), config.WorktreesDir)
 }
 
 func TestConfig_ExpandTildes_NoTildes(t *testing.T) {
@@ -190,9 +190,9 @@ func TestRealManager_LoadConfig_WithTildes(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write YAML config with tildes
-	validYAML := `base_path: ~/.wtm-test
-status_file: ~/.wtm-test/status.yaml
-worktrees_dir: ~/.wtm-test/worktrees
+	validYAML := `base_path: ~/.cm-test
+status_file: ~/.cm-test/status.yaml
+worktrees_dir: ~/.cm-test/worktrees
 `
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
 	assert.NoError(t, err)
@@ -206,7 +206,7 @@ worktrees_dir: ~/.wtm-test/worktrees
 	homeDir, err := os.UserHomeDir()
 	require.NoError(t, err)
 
-	assert.Equal(t, filepath.Join(homeDir, ".wtm-test"), config.BasePath)
-	assert.Equal(t, filepath.Join(homeDir, ".wtm-test", "status.yaml"), config.StatusFile)
-	assert.Equal(t, filepath.Join(homeDir, ".wtm-test", "worktrees"), config.WorktreesDir)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.BasePath)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "status.yaml"), config.StatusFile)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "worktrees"), config.WorktreesDir)
 }

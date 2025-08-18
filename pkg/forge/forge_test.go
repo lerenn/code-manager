@@ -5,8 +5,8 @@ package forge
 import (
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/issue"
-	"github.com/lerenn/wtm/pkg/logger"
+	"github.com/lerenn/cm/pkg/issue"
+	"github.com/lerenn/cm/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

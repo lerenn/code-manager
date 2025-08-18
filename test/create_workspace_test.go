@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/wtm/pkg/config"
-	"github.com/lerenn/wtm/pkg/fs"
-	"github.com/lerenn/wtm/pkg/status"
-	"github.com/lerenn/wtm/pkg/wtm"
+	"github.com/lerenn/cm/pkg/cm"
+	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -19,7 +19,7 @@ import (
 
 func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	// Create temporary test directory
-	tempDir, err := os.MkdirTemp("", "wtm-workspace-test-*")
+	tempDir, err := os.MkdirTemp("", "cm-workspace-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 
@@ -38,8 +38,8 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.MkdirAll(workspaceDir, 0755))
 
 	// Create workspace file
-	workspaceConfig := &wtm.WorkspaceConfig{
-		Folders: []wtm.WorkspaceFolder{
+	workspaceConfig := &cm.WorkspaceConfig{
+		Folders: []cm.WorkspaceFolder{
 			{Name: "Frontend", Path: "./frontend"},
 			{Name: "Backend", Path: "./backend"},
 		},
@@ -66,21 +66,21 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	defer os.Chdir(originalDir)
 	require.NoError(t, os.Chdir(workspaceDir))
 
-	// Create WTM instance
+	// Create CM instance
 	cfg := &config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	wtmInstance := wtm.NewWTM(cfg)
-	wtmInstance.SetVerbose(true)
+	cmInstance := cm.NewCM(cfg)
+	cmInstance.SetVerbose(true)
 
 	// Create worktrees
 	branchName := "feature/test-branch"
-	err = wtmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName)
 	require.NoError(t, err)
 
 	// Verify worktrees were created
-	worktrees, _, err := wtmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2)
 
@@ -98,7 +98,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	workspaceWorktreeData, err := os.ReadFile(workspaceWorktreePath)
 	require.NoError(t, err)
 
-	var worktreeWorkspaceConfig wtm.WorkspaceConfig
+	var worktreeWorkspaceConfig cm.WorkspaceConfig
 	require.NoError(t, json.Unmarshal(workspaceWorktreeData, &worktreeWorkspaceConfig))
 
 	assert.Equal(t, "project-feature-test-branch", worktreeWorkspaceConfig.Name)

@@ -4,7 +4,7 @@
 Implement functionality to create Git worktrees for single repositories. This feature will allow users to create worktrees from their current Git repository, managing branch creation, worktree directory creation, and status tracking.
 
 ## Background
-The Git WorkTree Manager (wtm) needs to provide the core worktree creation functionality for single repositories. This is a foundational feature that enables developers to work on multiple branches simultaneously by creating separate worktree directories. This feature builds upon the existing detection and validation capabilities to provide a complete worktree management solution.
+The Code Manager (cm) needs to provide the core worktree creation functionality for single repositories. This is a foundational feature that enables developers to work on multiple branches simultaneously by creating separate worktree directories. This feature builds upon the existing detection and validation capabilities to provide a complete worktree management solution.
 
 ## Requirements
 
@@ -50,7 +50,7 @@ The Git WorkTree Manager (wtm) needs to provide the core worktree creation funct
 - Cross-platform compatibility
 - Error handling with wrapped errors
 
-#### WTM Package Extension
+#### CM Package Extension
 **New Interface Methods**:
 - `CreateWorkTree(branch string) error`: Main entry point (updated to accept branch parameter)
 - `createWorktreeForSingleRepo(branch string) error`: Create worktree for single repository
@@ -90,8 +90,8 @@ The Git package will be extended with worktree-specific operations:
 - Create branches from current branch when they don't exist
 - Fallback to local repository path when no remote origin is configured
 
-#### 2. WTM Package Implementation
-The WTM package will implement the worktree creation logic:
+#### 2. CM Package Implementation
+The CM package will implement the worktree creation logic:
 
 **Key Components**:
 - Extend existing `CreateWorkTree()` method to accept branch parameter
@@ -105,7 +105,7 @@ The WTM package will implement the worktree creation logic:
 2. Extract repository name from remote origin URL (fallback to local path if no remote)
 3. Check if worktree already exists (status file only, fail on discrepancy)
 4. Validate repository state (placeholder for future validation)
-5. Create worktree directory structure in `.wtm/{repo-name}/{branch-name}/`
+5. Create worktree directory structure in `.cm/{repo-name}/{branch-name}/`
 6. Update status file with worktree entry (using file locking)
 7. Execute Git worktree creation command
 8. Handle cleanup on failure (remove directory and status entry)
@@ -123,7 +123,7 @@ The WTM package will implement the worktree creation logic:
 #### 3. Worktree Directory Structure
 Worktrees will be created in the configured base path with the following structure:
 ```
-$HOME/.wtm/
+$HOME/.cm/
 ├── status.yaml
 └── {repository-name}/
     └── {branch-name}/
@@ -133,8 +133,8 @@ $HOME/.wtm/
 **Directory Naming**:
 - Repository name: Extracted from remote origin URL (e.g., `github.com/lerenn/example`) with fallback to local path
 - Branch name: User-provided branch name from command line argument
-- Full path example: `$HOME/.wtm/github.com/lerenn/example/feature-branch/`
-- Fallback example: `$HOME/.wtm/local-repo-name/feature-branch/` (when no remote origin)
+- Full path example: `$HOME/.cm/github.com/lerenn/example/feature-branch/`
+- Fallback example: `$HOME/.cm/local-repo-name/feature-branch/` (when no remote origin)
 
 #### 4. Status File Integration
 Worktree creation will update the status file to track:
@@ -163,13 +163,13 @@ Worktree creation will update the status file to track:
 ### User Interface
 
 #### Command Line Interface
-The feature will be accessible through the existing `wtm` command:
+The feature will be accessible through the existing `cm` command:
 ```bash
 # Create worktree with specified branch
-wtm create feature-name
+cm create feature-name
 
 # Create worktree with existing branch
-wtm create existing-branch
+cm create existing-branch
 ```
 
 **Command Structure**:
@@ -203,7 +203,7 @@ wtm create existing-branch
 
 ### Success Criteria
 1. Successfully create worktrees for single repositories using user-provided branch names
-2. Use full repository path structure for worktree directories (e.g., `.wtm/github.com/lerenn/example/branch-name/`)
+2. Use full repository path structure for worktree directories (e.g., `.cm/github.com/lerenn/example/branch-name/`)
 3. Prevent collisions by checking both Git worktrees and status file entries
 4. Update status file correctly with repository name from remote origin URL
 5. Provide comprehensive user feedback in verbose and normal modes

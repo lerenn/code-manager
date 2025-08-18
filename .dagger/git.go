@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"dagger/wtm/internal/dagger"
+	"dagger/cm/internal/dagger"
 )
 
 // Git provides access to a git repository.
@@ -41,7 +41,7 @@ func NewGit(ctx context.Context, opts NewGitOptions) (Git, error) {
 		// Change the url to use the token
 		container, err = container.WithExec([]string{
 			"git", "remote", "set-url", "origin",
-			"https://" + *opts.User + ":" + tokenString + "@github.com/lerenn/wtm.git",
+			"https://" + *opts.User + ":" + tokenString + "@github.com/lerenn/cm.git",
 		}).Sync(ctx)
 		if err != nil {
 			return Git{}, err
@@ -164,13 +164,13 @@ func setGitAuthor(
 ) (*dagger.Container, error) {
 	// Add infos on author
 	container, err := container.
-		WithExec([]string{"git", "config", "--global", "user.email", "louis.fradin+wtm-ci@gmail.com"}).
+		WithExec([]string{"git", "config", "--global", "user.email", "louis.fradin+cm-ci@gmail.com"}).
 		Sync(ctx)
 	if err != nil {
 		return nil, err
 	}
 	container, err = container.
-		WithExec([]string{"git", "config", "--global", "user.name", "WTM CI"}).
+		WithExec([]string{"git", "config", "--global", "user.name", "CM CI"}).
 		Sync(ctx)
 	if err != nil {
 		return nil, err

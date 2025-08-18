@@ -4,7 +4,7 @@
 Implement functionality to create Git worktrees for all repositories within a workspace. This feature will extend the existing workspace detection and validation capabilities to provide complete worktree management for multi-repository workspaces, allowing users to create worktrees across all repositories in a workspace simultaneously.
 
 ## Background
-The Git WorkTree Manager (wtm) currently supports worktree creation for single repositories and has comprehensive workspace detection and validation. However, the workspace mode currently only validates repositories without creating worktrees. This feature will complete the workspace functionality by implementing worktree creation across all repositories in a workspace, enabling developers to work on multiple branches simultaneously across all repositories in their workspace.
+The Code Manager (cm) currently supports worktree creation for single repositories and has comprehensive workspace detection and validation. However, the workspace mode currently only validates repositories without creating worktrees. This feature will complete the workspace functionality by implementing worktree creation across all repositories in a workspace, enabling developers to work on multiple branches simultaneously across all repositories in their workspace.
 
 ## Requirements
 
@@ -43,13 +43,13 @@ The Git WorkTree Manager (wtm) currently supports worktree creation for single r
 - Cross-platform compatibility
 - Error handling with wrapped errors
 
-#### WTM Package Extension
+#### CM Package Extension
 **New Interface Methods**:
 - `createWorktreesForWorkspace(branch string) error`: Create worktrees for all repositories in workspace
 - `validateWorkspaceForWorktreeCreation(branch string) error`: Validate workspace state before worktree creation
 
 **Implementation Structure**:
-- Extends existing `handleWorkspaceMode()` method in `wtm.go`
+- Extends existing `handleWorkspaceMode()` method in `cm.go`
 - Private helper methods for workspace worktree creation logic
 - Integration with status management for multiple repositories
 - Error handling with wrapped errors
@@ -140,7 +140,7 @@ A worktree-specific workspace file will be created to enable IDE opening with al
 2. Before worktree creation (to ensure it's available for IDE opening)
 
 **Deletion Timing**: The worktree-specific workspace file will be deleted:
-1. After worktree deletion (when using `wtm delete` command)
+1. After worktree deletion (when using `cm delete` command)
 2. Before status file update (to maintain consistency)
 
 **IDE Opening**: When IDE opening is triggered, it will open the worktree-specific workspace file directly.
@@ -153,11 +153,11 @@ A worktree-specific workspace file will be created to enable IDE opening with al
   "folders": [
     {
       "name": "repo1",
-      "path": "/Users/lfradin/.wtm/github.com/lerenn/example/feat1"
+      "path": "/Users/lfradin/.cm/github.com/lerenn/example/feat1"
     },
     {
       "name": "repo2", 
-      "path": "/Users/lfradin/.wtm/github.com/lerenn/toto/feat1"
+      "path": "/Users/lfradin/.cm/github.com/lerenn/toto/feat1"
     }
   ]
 }
@@ -252,13 +252,13 @@ Worktree paths will be derived from repository URL and branch name:
 ### User Interface
 
 #### Command Line Interface
-The feature will be accessible through the existing `wtm` command:
+The feature will be accessible through the existing `cm` command:
 ```bash
 # Create worktrees for all repositories in workspace with specified branch
-wtm create feature-name
+cm create feature-name
 
 # Create worktrees for all repositories in workspace with existing branch
-wtm create existing-branch
+cm create existing-branch
 ```
 
 **Command Structure**:
@@ -381,8 +381,8 @@ Workspace worktree creation failed: all worktrees rolled back
 5. Add error handling and cleanup mechanisms
 6. Write unit tests using mocked dependencies
 
-#### Phase 2: WTM Integration (Priority: High)
-1. Update `handleWorkspaceMode()` method in `wtm.go`
+#### Phase 2: CM Integration (Priority: High)
+1. Update `handleWorkspaceMode()` method in `cm.go`
 2. Integrate workspace worktree creation with existing workflow
 3. Add user feedback and progress reporting
 4. Handle complete rollback scenarios
@@ -421,7 +421,7 @@ Workspace worktree creation failed: all worktrees rolled back
 - Mock files should be committed to the repository as `*_gen.go`
 - Exit immediately with exit code 1 on critical errors
 - Support three output modes: quiet (errors to stderr only), verbose (detailed steps), normal (user interaction only)
-- Maintain separation of concerns: FS adapter handles file system operations, Git adapter handles Git operations, WTM handles business logic
+- Maintain separation of concerns: FS adapter handles file system operations, Git adapter handles Git operations, CM handles business logic
 - Ensure workspace operations are atomic where possible
 - No partial success scenarios - either all worktrees succeed or all fail with complete rollback
 - Worktree-specific workspace files are created in `$BASE_PATH/workspaces/` with naming convention `{original-name}-{branch-name}.code-workspace`
