@@ -408,7 +408,7 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 		{
 			URL:    "github.com/lerenn/example",
 			Branch: "feature/test-branch",
-			Path:   "/test/base/path/github.com/lerenn/example/feature/test-branch",
+			Path:   "/test/base/path/worktrees/github.com/lerenn/example/feature/test-branch",
 		},
 		{
 			URL:    "github.com/other/repo",
@@ -418,7 +418,7 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 		{
 			URL:    "github.com/lerenn/example",
 			Branch: "bugfix/issue-123",
-			Path:   "/test/base/path/github.com/lerenn/example/bugfix/issue-123",
+			Path:   "/test/base/path/worktrees/github.com/lerenn/example/bugfix/issue-123",
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)
@@ -526,7 +526,7 @@ func TestRepository_ListWorktrees_Filtering(t *testing.T) {
 		{
 			URL:    "github.com/lerenn/example",
 			Branch: "feature/test-branch",
-			Path:   "/test/base/path/github.com/lerenn/example/feature/test-branch",
+			Path:   "/test/base/path/worktrees/github.com/lerenn/example/feature/test-branch",
 		},
 		{
 			URL:    "github.com/other/repo",
@@ -541,7 +541,7 @@ func TestRepository_ListWorktrees_Filtering(t *testing.T) {
 		{
 			URL:    "github.com/lerenn/example",
 			Branch: "bugfix/issue-123",
-			Path:   "/test/base/path/github.com/lerenn/example/bugfix/issue-123",
+			Path:   "/test/base/path/worktrees/github.com/lerenn/example/bugfix/issue-123",
 		},
 	}
 	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)

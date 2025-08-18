@@ -8,3 +8,7 @@ base_path: ~/.wtm
 # Status file path (auto-generated from base_path)
 # Default: $HOME/.cursor/wtm/status.yaml
 status_file: ~/.wtm/status.yaml
+
+# Worktrees directory path (auto-generated from base_path)
+# Default: $HOME/.cursor/wtm/worktrees
+worktrees_dir: ~/.wtm/worktrees

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -13,8 +14,9 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	BasePath   string `yaml:"base_path"`
-	StatusFile string `yaml:"status_file"`
+	BasePath     string `yaml:"base_path"`
+	StatusFile   string `yaml:"status_file"`
+	WorktreesDir string `yaml:"worktrees_dir"`
 }
 
 // Manager interface provides configuration management functionality.
@@ -51,6 +53,11 @@ func (c *realManager) LoadConfig(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("%w: %w", ErrConfigFileParse, err)
 	}
 
+	// Expand tildes in configuration paths
+	if err := config.expandTildes(); err != nil {
+		return nil, fmt.Errorf("failed to expand tildes in configuration: %w", err)
+	}
+
 	// Validate configuration
 	if err := config.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid configuration: %w", err)
@@ -69,10 +76,12 @@ func (c *realManager) DefaultConfig() *Config {
 
 	basePath := filepath.Join(homeDir, ".wtm")
 	statusFile := filepath.Join(basePath, "status.yaml")
+	worktreesDir := filepath.Join(basePath, "worktrees")
 
 	return &Config{
-		BasePath:   basePath,
-		StatusFile: statusFile,
+		BasePath:     basePath,
+		StatusFile:   statusFile,
+		WorktreesDir: worktreesDir,
 	}
 }
 
@@ -96,6 +105,49 @@ func (c *Config) Validate() error {
 		}
 	} else if err != nil {
 		return fmt.Errorf("base_path parent directory is not accessible: %w", err)
+	}
+
+	// Validate worktrees directory if specified
+	if c.WorktreesDir != "" {
+		worktreesDir := filepath.Dir(c.WorktreesDir)
+		if _, err := os.Stat(worktreesDir); os.IsNotExist(err) {
+			// Try to create the parent directory to validate permissions
+			if err := os.MkdirAll(worktreesDir, 0755); err != nil {
+				return fmt.Errorf("worktrees_dir parent directory is not accessible: %w", err)
+			}
+			// Clean up the test directory
+			if err := os.RemoveAll(worktreesDir); err != nil {
+				// Log the error but don't fail validation for cleanup errors
+				_ = err
+			}
+		} else if err != nil {
+			return fmt.Errorf("worktrees_dir parent directory is not accessible: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// expandTildes expands tilde (~) to the user's home directory in configuration paths.
+func (c *Config) expandTildes() error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Errorf("failed to determine home directory: %w", err)
+	}
+
+	// Expand tilde in BasePath
+	if strings.HasPrefix(c.BasePath, "~") {
+		c.BasePath = filepath.Join(homeDir, strings.TrimPrefix(c.BasePath, "~"))
+	}
+
+	// Expand tilde in StatusFile
+	if strings.HasPrefix(c.StatusFile, "~") {
+		c.StatusFile = filepath.Join(homeDir, strings.TrimPrefix(c.StatusFile, "~"))
+	}
+
+	// Expand tilde in WorktreesDir
+	if strings.HasPrefix(c.WorktreesDir, "~") {
+		c.WorktreesDir = filepath.Join(homeDir, strings.TrimPrefix(c.WorktreesDir, "~"))
 	}
 
 	return nil
