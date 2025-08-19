@@ -44,7 +44,7 @@ Examples:
 			}
 
 			// Open the worktree
-			if err := cmManager.OpenWorktree(targetWorktree.URL, targetWorktree.Branch); err != nil {
+			if err := cmManager.OpenWorktree(targetWorktree.Branch, "cursor"); err != nil {
 				return fmt.Errorf("failed to open worktree: %w", err)
 			}
 

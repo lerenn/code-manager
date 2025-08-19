@@ -98,7 +98,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	assert.DirExists(t, backendWorktreePath)
 
 	// Verify worktree-specific workspace file was created
-	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "project-feature-test-branch.code-workspace")
+	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "test-workspace-feature-test-branch.code-workspace")
 	assert.FileExists(t, workspaceWorktreePath)
 
 	// Verify worktree-specific workspace file content
@@ -108,7 +108,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	var worktreeWorkspaceConfig workspace.Config
 	require.NoError(t, json.Unmarshal(workspaceWorktreeData, &worktreeWorkspaceConfig))
 
-	assert.Equal(t, "project-feature-test-branch", worktreeWorkspaceConfig.Name)
+	assert.Equal(t, "test-workspace-feature-test-branch", worktreeWorkspaceConfig.Name)
 	assert.Len(t, worktreeWorkspaceConfig.Folders, 2)
 	assert.Equal(t, "Frontend", worktreeWorkspaceConfig.Folders[0].Name)
 	assert.Equal(t, frontendWorktreePath, worktreeWorkspaceConfig.Folders[0].Path)

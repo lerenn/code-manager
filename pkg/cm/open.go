@@ -24,7 +24,18 @@ func (c *realCM) OpenWorktree(worktreeName, ideName string) error {
 		if err != nil {
 			return fmt.Errorf("failed to get repository URL: %w", err)
 		}
-		return c.ideManager.OpenIDE(ideName, c.BuildWorktreePath(repoURL, worktreeName), c.IsVerbose())
+
+		// Check if the worktree exists
+		worktreePath := c.BuildWorktreePath(repoURL, worktreeName)
+		exists, err := c.FS.Exists(worktreePath)
+		if err != nil {
+			return fmt.Errorf("failed to check if worktree exists: %w", err)
+		}
+		if !exists {
+			return fmt.Errorf("worktree not found for branch: %s", worktreeName)
+		}
+
+		return c.ideManager.OpenIDE(ideName, worktreePath, c.IsVerbose())
 	case ProjectTypeWorkspace:
 		// For workspace, we need to find the worktree path from the workspace
 		workspace := ws.NewWorkspace(ws.NewWorkspaceParams{

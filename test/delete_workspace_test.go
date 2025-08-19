@@ -97,7 +97,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	assert.DirExists(t, backendWorktreePath)
 
 	// Verify worktree-specific workspace file was created
-	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "project-feature-test-branch.code-workspace")
+	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "test-workspace-feature-test-branch.code-workspace")
 	assert.FileExists(t, workspaceWorktreePath)
 
 	// Now delete the worktrees

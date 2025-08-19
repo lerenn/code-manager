@@ -5,6 +5,7 @@ package cm
 import (
 	"testing"
 
+	"github.com/lerenn/cm/pkg/config"
 	"github.com/lerenn/cm/pkg/fs"
 	"github.com/lerenn/cm/pkg/git"
 	"github.com/lerenn/cm/pkg/ide"
@@ -12,6 +13,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+// createTestConfig creates a test configuration for use in tests.
+func createTestConfig() *config.Config {
+	return &config.Config{
+		BasePath:   "/test/base/path",
+		StatusFile: "/test/status.yaml",
+	}
+}
 
 func TestCM_Run_SingleRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
