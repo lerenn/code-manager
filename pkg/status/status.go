@@ -15,7 +15,8 @@ import (
 
 // Status represents the status.yaml file structure.
 type Status struct {
-	Repositories []Repository `yaml:"repositories"`
+	Initialized   bool          `yaml:"initialized"`   // Indicates if CM is initialized
+	Repositories  []Repository  `yaml:"repositories"`
 }
 
 // Repository represents a repository entry in the status file.
@@ -42,6 +43,12 @@ type Manager interface {
 	GetWorkspaceWorktrees(workspacePath, branchName string) ([]Repository, error)
 	// GetWorkspaceBranches returns all branch names for a specific workspace.
 	GetWorkspaceBranches(workspacePath string) ([]string, error)
+	// IsInitialized checks if CM is initialized.
+	IsInitialized() (bool, error)
+	// SetInitialized sets the initialization status.
+	SetInitialized(initialized bool) error
+	// CreateInitialStatus creates the initial status file structure.
+	CreateInitialStatus() error
 }
 
 type realManager struct {
@@ -62,6 +69,41 @@ func NewManager(fs fs.FS, config *config.Config) Manager {
 	manager.initializeWorkspacesMap()
 
 	return manager
+}
+
+// IsInitialized checks if CM is initialized.
+func (s *realManager) IsInitialized() (bool, error) {
+	status, err := s.loadStatus()
+	if err != nil {
+		return false, fmt.Errorf("failed to load status: %w", err)
+	}
+	return status.Initialized, nil
+}
+
+// SetInitialized sets the initialization status.
+func (s *realManager) SetInitialized(initialized bool) error {
+	status, err := s.loadStatus()
+	if err != nil {
+		return fmt.Errorf("failed to load status: %w", err)
+	}
+
+	status.Initialized = initialized
+
+	if err := s.saveStatus(status); err != nil {
+		return fmt.Errorf("failed to save status: %w", err)
+	}
+
+	return nil
+}
+
+// CreateInitialStatus creates the initial status file structure.
+func (s *realManager) CreateInitialStatus() error {
+	initialStatus := &Status{
+		Initialized:  false,
+		Repositories: []Repository{},
+	}
+
+	return s.saveStatus(initialStatus)
 }
 
 // initializeWorkspacesMap loads the status and computes the workspaces map.
@@ -269,6 +311,7 @@ func (s *realManager) loadStatus() (*Status, error) {
 	if !exists {
 		// Create initial status file
 		initialStatus := &Status{
+			Initialized: false, // Set initialized to false by default
 			Repositories: []Repository{},
 		}
 		if err := s.saveStatus(initialStatus); err != nil {

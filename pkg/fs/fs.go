@@ -1,9 +1,11 @@
 package fs
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -52,6 +54,18 @@ type FS interface {
 
 	// ExecuteCommand executes a command with arguments in the background.
 	ExecuteCommand(command string, args ...string) error
+
+	// CreateDirectory creates a directory with permissions.
+	CreateDirectory(path string, perm os.FileMode) error
+
+	// CreateFileWithContent creates a file with content.
+	CreateFileWithContent(path string, content []byte, perm os.FileMode) error
+
+	// IsDirectoryWritable checks if a directory is writable.
+	IsDirectoryWritable(path string) (bool, error)
+
+	// ExpandPath expands ~ to user's home directory.
+	ExpandPath(path string) (string, error)
 }
 
 type realFS struct {
@@ -165,6 +179,59 @@ func (f *realFS) WriteFileAtomic(filename string, data []byte, perm os.FileMode)
 	}
 
 	return nil
+}
+
+// CreateDirectory creates a directory with permissions.
+func (f *realFS) CreateDirectory(path string, perm os.FileMode) error {
+	return os.MkdirAll(path, perm)
+}
+
+// CreateFileWithContent creates a file with content.
+func (f *realFS) CreateFileWithContent(path string, content []byte, perm os.FileMode) error {
+	// Create parent directories if they don't exist
+	dir := filepath.Dir(path)
+	if err := f.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	// Write file atomically
+	return f.WriteFileAtomic(path, content, perm)
+}
+
+// IsDirectoryWritable checks if a directory is writable.
+func (f *realFS) IsDirectoryWritable(path string) (bool, error) {
+	// Try to create a temporary file to test write permissions
+	testFile := filepath.Join(path, ".cm_test_write")
+	file, err := os.Create(testFile)
+	if err != nil {
+		return false, err
+	}
+	// Clean up test file
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// Log the error but don't fail the test
+			fmt.Printf("Warning: failed to close test file: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(testFile); removeErr != nil {
+			// Log the error but don't fail the test
+			fmt.Printf("Warning: failed to remove test file: %v\n", removeErr)
+		}
+	}()
+	return true, nil
+}
+
+// ExpandPath expands ~ to user's home directory.
+func (f *realFS) ExpandPath(path string) (string, error) {
+	if !strings.HasPrefix(path, "~") {
+		return path, nil
+	}
+
+	homeDir, err := f.GetHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to determine home directory: %w", err)
+	}
+
+	return filepath.Join(homeDir, strings.TrimPrefix(path, "~")), nil
 }
 
 // FileLock acquires a file lock and returns an unlock function.

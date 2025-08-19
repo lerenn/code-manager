@@ -39,6 +39,20 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
+// CreateConfigDirectory mocks base method.
+func (m *MockManager) CreateConfigDirectory(configPath string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateConfigDirectory", configPath)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateConfigDirectory indicates an expected call of CreateConfigDirectory.
+func (mr *MockManagerMockRecorder) CreateConfigDirectory(configPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateConfigDirectory", reflect.TypeOf((*MockManager)(nil).CreateConfigDirectory), configPath)
+}
+
 // DefaultConfig mocks base method.
 func (m *MockManager) DefaultConfig() *Config {
 	m.ctrl.T.Helper()
@@ -66,4 +80,32 @@ func (m *MockManager) LoadConfig(configPath string) (*Config, error) {
 func (mr *MockManagerMockRecorder) LoadConfig(configPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfig", reflect.TypeOf((*MockManager)(nil).LoadConfig), configPath)
+}
+
+// SaveConfig mocks base method.
+func (m *MockManager) SaveConfig(config *Config, configPath string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveConfig", config, configPath)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveConfig indicates an expected call of SaveConfig.
+func (mr *MockManagerMockRecorder) SaveConfig(config, configPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockManager)(nil).SaveConfig), config, configPath)
+}
+
+// ValidateBasePath mocks base method.
+func (m *MockManager) ValidateBasePath(basePath string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateBasePath", basePath)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateBasePath indicates an expected call of ValidateBasePath.
+func (mr *MockManagerMockRecorder) ValidateBasePath(basePath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBasePath", reflect.TypeOf((*MockManager)(nil).ValidateBasePath), basePath)
 }

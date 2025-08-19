@@ -23,8 +23,8 @@ func TestRealCM_sanitizeBranchName(t *testing.T) {
 
 	// Override adapters with mocks
 	c := cm.(*realCM)
-	c.fs = mockFS
-	c.git = mockGit
+	c.FS = mockFS
+	c.Git = mockGit
 
 	tests := []struct {
 		name     string

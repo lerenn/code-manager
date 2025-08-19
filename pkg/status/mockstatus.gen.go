@@ -53,6 +53,20 @@ func (mr *MockManagerMockRecorder) AddWorktree(params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddWorktree", reflect.TypeOf((*MockManager)(nil).AddWorktree), params)
 }
 
+// CreateInitialStatus mocks base method.
+func (m *MockManager) CreateInitialStatus() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateInitialStatus")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateInitialStatus indicates an expected call of CreateInitialStatus.
+func (mr *MockManagerMockRecorder) CreateInitialStatus() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInitialStatus", reflect.TypeOf((*MockManager)(nil).CreateInitialStatus))
+}
+
 // GetWorkspaceBranches mocks base method.
 func (m *MockManager) GetWorkspaceBranches(workspacePath string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -98,6 +112,21 @@ func (mr *MockManagerMockRecorder) GetWorktree(repoURL, branch any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorktree", reflect.TypeOf((*MockManager)(nil).GetWorktree), repoURL, branch)
 }
 
+// IsInitialized mocks base method.
+func (m *MockManager) IsInitialized() (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsInitialized")
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsInitialized indicates an expected call of IsInitialized.
+func (mr *MockManagerMockRecorder) IsInitialized() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInitialized", reflect.TypeOf((*MockManager)(nil).IsInitialized))
+}
+
 // ListAllWorktrees mocks base method.
 func (m *MockManager) ListAllWorktrees() ([]Repository, error) {
 	m.ctrl.T.Helper()
@@ -125,4 +154,18 @@ func (m *MockManager) RemoveWorktree(repoURL, branch string) error {
 func (mr *MockManagerMockRecorder) RemoveWorktree(repoURL, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockManager)(nil).RemoveWorktree), repoURL, branch)
+}
+
+// SetInitialized mocks base method.
+func (m *MockManager) SetInitialized(initialized bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetInitialized", initialized)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetInitialized indicates an expected call of SetInitialized.
+func (mr *MockManagerMockRecorder) SetInitialized(initialized any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetInitialized", reflect.TypeOf((*MockManager)(nil).SetInitialized), initialized)
 }

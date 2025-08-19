@@ -14,15 +14,22 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	BasePath     string `yaml:"base_path"`
-	StatusFile   string `yaml:"status_file"`
-	WorktreesDir string `yaml:"worktrees_dir"`
+	BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code)
+	StatusFile string `yaml:"status_file"` // Status file path (default: ~/.cm/status.yaml)
+}
+
+// GetWorktreesDir returns the computed worktrees directory path.
+func (c *Config) GetWorktreesDir() string {
+	return filepath.Join(c.BasePath, "worktrees")
 }
 
 // Manager interface provides configuration management functionality.
 type Manager interface {
 	LoadConfig(configPath string) (*Config, error)
 	DefaultConfig() *Config
+	SaveConfig(config *Config, configPath string) error
+	CreateConfigDirectory(configPath string) error
+	ValidateBasePath(basePath string) error
 }
 
 type realManager struct {
@@ -74,15 +81,89 @@ func (c *realManager) DefaultConfig() *Config {
 		homeDir = "."
 	}
 
-	basePath := filepath.Join(homeDir, ".cm")
-	statusFile := filepath.Join(basePath, "status.yaml")
-	worktreesDir := filepath.Join(basePath, "worktrees")
+	basePath := filepath.Join(homeDir, "Code")
+	statusFile := filepath.Join(homeDir, ".cm", "status.yaml")
 
 	return &Config{
-		BasePath:     basePath,
-		StatusFile:   statusFile,
-		WorktreesDir: worktreesDir,
+		BasePath:   basePath,
+		StatusFile: statusFile,
 	}
+}
+
+// SaveConfig saves configuration to the specified file path.
+func (c *realManager) SaveConfig(config *Config, configPath string) error {
+	// Create config directory if it doesn't exist
+	if err := c.CreateConfigDirectory(configPath); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Marshal configuration to YAML
+	data, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal configuration: %w", err)
+	}
+
+	// Write configuration file atomically
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
+		return fmt.Errorf("failed to write configuration file: %w", err)
+	}
+
+	return nil
+}
+
+// CreateConfigDirectory creates the configuration directory structure.
+func (c *realManager) CreateConfigDirectory(configPath string) error {
+	configDir := filepath.Dir(configPath)
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+	return nil
+}
+
+// ValidateBasePath validates the base path for accessibility and permissions.
+func (c *realManager) ValidateBasePath(basePath string) error {
+	if basePath == "" {
+		return ErrBasePathEmpty
+	}
+
+	// Check if directory exists
+	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		// Try to create the directory to validate permissions
+		if err := os.MkdirAll(basePath, 0755); err != nil {
+			return fmt.Errorf("base path is not accessible: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("base path is not accessible: %w", err)
+	}
+
+	// Check if directory is writable
+	if err := c.validateDirectoryWritable(basePath); err != nil {
+		return fmt.Errorf("base path is not writable: %w", err)
+	}
+
+	return nil
+}
+
+// validateDirectoryWritable checks if a directory is writable.
+func (c *realManager) validateDirectoryWritable(path string) error {
+	// Try to create a temporary file to test write permissions
+	testFile := filepath.Join(path, ".cm_test_write")
+	file, err := os.Create(testFile)
+	if err != nil {
+		return err
+	}
+	// Clean up test file
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			// Log the error but don't fail the test
+			fmt.Printf("Warning: failed to close test file: %v\n", closeErr)
+		}
+		if removeErr := os.Remove(testFile); removeErr != nil {
+			// Log the error but don't fail the test
+			fmt.Printf("Warning: failed to remove test file: %v\n", removeErr)
+		}
+	}()
+	return nil
 }
 
 // validateDirectoryAccessibility checks if a directory path is accessible and can be created.
@@ -115,13 +196,6 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	// Validate worktrees directory if specified
-	if c.WorktreesDir != "" {
-		if err := c.validateDirectoryAccessibility(c.WorktreesDir, "worktrees_dir"); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -143,7 +217,6 @@ func (c *Config) expandTildes() error {
 	// Expand tildes in all paths
 	c.BasePath = c.expandTilde(c.BasePath, homeDir)
 	c.StatusFile = c.expandTilde(c.StatusFile, homeDir)
-	c.WorktreesDir = c.expandTilde(c.WorktreesDir, homeDir)
 
 	return nil
 }
