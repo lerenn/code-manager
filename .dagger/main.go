@@ -61,7 +61,7 @@ func (ci *CM) Lint(sourceDir *dagger.Directory) *dagger.Container {
 // LintDagger runs golangci-lint on the .dagger directory only.
 func (ci *CM) LintDagger(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().
-		From("golangci/golangci-lint:v1.62.0").
+		From("golangci/golangci-lint:v2.4.0").
 		WithMountedCache("/root/.cache/golangci-lint", dag.CacheVolume("golangci-lint"))
 
 	c = ci.withGoCodeAndCacheAsWorkDirectory(c, sourceDir)
