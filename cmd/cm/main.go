@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/cm/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -50,6 +52,38 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
+// checkInitialization checks if CM is initialized and returns an error if not.
+func checkInitialization() error {
+	cfg := loadConfig()
+	fsInstance := fs.NewFS()
+	statusManager := status.NewManager(fsInstance, cfg)
+
+	initialized, err := statusManager.IsInitialized()
+	if err != nil {
+		return err
+	}
+
+	if !initialized {
+		return status.ErrNotInitialized
+	}
+
+	return nil
+}
+
+// addInitializationCheck adds a pre-run check to ensure CM is initialized.
+func addInitializationCheck(cmd *cobra.Command) {
+	originalRunE := cmd.RunE
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if err := checkInitialization(); err != nil {
+			return err
+		}
+		if originalRunE != nil {
+			return originalRunE(cmd, args)
+		}
+		return nil
+	}
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "cm",
@@ -76,6 +110,13 @@ func main() {
 
 	// Add IDE flag to load command
 	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
+
+	// Add initialization check to all commands except init
+	addInitializationCheck(createCmd)
+	addInitializationCheck(openCmd)
+	addInitializationCheck(deleteCmd)
+	addInitializationCheck(listCmd)
+	addInitializationCheck(loadCmd)
 
 	// Add subcommands
 	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd)
