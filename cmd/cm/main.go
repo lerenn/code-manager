@@ -77,6 +77,9 @@ func main() {
 	// Add IDE flag to load command
 	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
 
+	// Add IDE flag to open command
+	openCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE")
+
 	// Add subcommands
 	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd)
 
