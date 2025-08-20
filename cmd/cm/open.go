@@ -10,6 +10,8 @@ import (
 )
 
 func createOpenCmd() *cobra.Command {
+	var ideName string
+
 	openCmd := &cobra.Command{
 		Use:   "open <branch>",
 		Short: "Open a worktree in the specified IDE",
@@ -63,6 +65,9 @@ Examples:
 			return nil
 		},
 	}
+
+	// Add IDE flag to open command
+	openCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE")
 
 	return openCmd
 }

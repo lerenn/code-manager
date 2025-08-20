@@ -1,3 +1,4 @@
+// Package main provides Git operations for the CM Dagger module.
 package main
 
 import (
@@ -41,7 +42,7 @@ func NewGit(ctx context.Context, opts NewGitOptions) (Git, error) {
 		// Change the url to use the token
 		container, err = container.WithExec([]string{
 			"git", "remote", "set-url", "origin",
-			"https://" + *opts.User + ":" + tokenString + "@github.com/lerenn/cm.git",
+			"https://" + *opts.User + ":" + tokenString + "@github.com/lerenn/code-manager.git",
 		}).Sync(ctx)
 		if err != nil {
 			return Git{}, err
