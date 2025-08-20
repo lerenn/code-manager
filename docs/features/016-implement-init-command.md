@@ -35,7 +35,7 @@ Currently, CM uses hardcoded default paths for configuration and data storage. U
 #### Updated Config Structure
 ```go
 type Config struct {
-    BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code)
+    BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code/src)
     StatusFile string `yaml:"status_file"` // Status file path (default: ~/.cm/status.yaml)
     // WorktreesDir field removed - computed as $base_path/worktrees
 }
@@ -57,7 +57,7 @@ type Status struct {
 #### Default Configuration Values
 ```yaml
 # Default configuration after init (configs/default.yaml updated)
-base_path: ~/Code                    # User's code directory
+base_path: ~/Code/src                    # User's code directory
 status_file: ~/.cm/status.yaml       # CM status tracking
 # worktrees_dir computed as $base_path/worktrees (not in config)
 ```
@@ -76,7 +76,7 @@ cm init [--force] [--base-path <path>]
 - `--reset`: Reset CM configuration and start fresh (with confirmation prompt unless --force is used)
 
 **Interactive Prompts**:
-1. **Base Path Selection**: "Choose the location of the repositories (ex: ~/Code, ~/Projects, ~/Development): [default: ~/Code]: "
+1. **Base Path Selection**: "Choose the location of the repositories (ex: ~/Code/src, ~/Projects, ~/Development): [default: ~/Code/src]: "
 2. **Reset Confirmation**: "This will reset your CM configuration and remove all existing worktrees. Are you sure? [y/N]: "
 3. **Final Confirmation**: "CM will be configured with the following settings: ... [Y/n]: "
 
@@ -126,7 +126,7 @@ type InitOpts struct {
 - `GetWorktreesDir() string`: Compute worktrees directory path
 
 **Updated Default Configuration**:
-- Change default `base_path` from `~/.cm` to `~/Code`
+- Change default `base_path` from `~/.cm` to `~/Code/src`
 - Remove `worktrees_dir` field (computed dynamically via `GetWorktreesDir()`)
 - Keep `status_file` configurable (default: `~/.cm/status.yaml`)
 - Update `configs/default.yaml` to reflect new defaults
@@ -228,10 +228,10 @@ Extends configuration management with save functionality:
 - `GetWorktreesDir() string`: Compute worktrees directory path
 
 **Updated Defaults**:
-- `base_path`: `~/Code` (instead of `~/.cm`)
+- `base_path`: `~/Code/src` (instead of `~/.cm`)
 - `status_file`: Configurable (default: `~/.cm/status.yaml`)
 - `worktrees_dir`: Computed as `$base_path/worktrees` via `GetWorktreesDir()`
-- Update `configs/default.yaml` to reflect new defaults (change base_path to ~/Code, remove worktrees_dir, keep status_file)
+- Update `configs/default.yaml` to reflect new defaults (change base_path to ~/Code/src, remove worktrees_dir, keep status_file)
 
 #### 5. FS Package Implementation
 Extends file system operations with directory creation:
@@ -380,10 +380,10 @@ pkg/
 
 ## Questions for Clarification
 
-1. **Default Base Path**: Should the default base path be `~/Code` or would you prefer a different default?
-   - **Answer**: Keep `~/Code` as default, include examples in prompt
+1. **Default Base Path**: Should the default base path be `~/Code/src` or would you prefer a different default?
+   - **Answer**: Keep `~/Code/src` as default, include examples in prompt
 
-2. **Interactive Prompts**: Should we provide suggestions for common code directory locations (e.g., `~/Code`, `~/Projects`, `~/Development`)?
+2. **Interactive Prompts**: Should we provide suggestions for common code directory locations (e.g., `~/Code/src`, `~/Projects`, `~/Development`)?
    - **Answer**: Provide examples in prompt, user types their choice or uses default if empty
 
 3. **Configuration Location**: Should the config file always be at `~/.cm/config.yaml` or should users be able to choose a different location?

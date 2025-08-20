@@ -19,12 +19,12 @@ func TestRealPrompt_PromptForBasePath(t *testing.T) {
 		{
 			name:     "empty input uses default",
 			input:    "\n",
-			expected: "~/Code",
+			expected: "~/Code/src",
 		},
 		{
 			name:     "whitespace input uses default",
 			input:    "   \n",
-			expected: "~/Code",
+			expected: "~/Code/src",
 		},
 		{
 			name:     "custom path",
@@ -38,7 +38,7 @@ func TestRealPrompt_PromptForBasePath(t *testing.T) {
 		},
 	}
 
-			for _, tt := range tests {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a prompt with a string reader
 			p := &realPrompt{

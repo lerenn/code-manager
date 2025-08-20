@@ -77,8 +77,8 @@ func TestRealCM_Init_Success(t *testing.T) {
 
 	// Mock initialization checks
 	mockStatus.EXPECT().IsInitialized().Return(false, nil)
-	mockPrompt.EXPECT().PromptForBasePath().Return("~/Code", nil)
-	mockFS.EXPECT().ExpandPath("~/Code").Return("/home/user/Code", nil)
+	mockPrompt.EXPECT().PromptForBasePath().Return("~/Code/src", nil)
+	mockFS.EXPECT().ExpandPath("~/Code/src").Return("/home/user/Code", nil)
 	mockFS.EXPECT().CreateDirectory("/home/user/Code", os.FileMode(0755)).Return(nil)
 	mockFS.EXPECT().GetHomeDir().Return("/home/user", nil).AnyTimes()
 	mockStatus.EXPECT().CreateInitialStatus().Return(nil).AnyTimes()
@@ -183,8 +183,8 @@ func TestRealCM_Init_ResetSuccess(t *testing.T) {
 	// Mock reset initialization
 	mockPrompt.EXPECT().PromptForConfirmation(
 		"This will reset your CM configuration and remove all existing worktrees. Are you sure?", false).Return(true, nil)
-	mockPrompt.EXPECT().PromptForBasePath().Return("~/Code", nil)
-	mockFS.EXPECT().ExpandPath("~/Code").Return("/home/user/Code", nil)
+	mockPrompt.EXPECT().PromptForBasePath().Return("~/Code/src", nil)
+	mockFS.EXPECT().ExpandPath("~/Code/src").Return("/home/user/Code", nil)
 	mockFS.EXPECT().CreateDirectory("/home/user/Code", os.FileMode(0755)).Return(nil)
 	mockFS.EXPECT().GetHomeDir().Return("/home/user", nil).AnyTimes()
 	mockStatus.EXPECT().CreateInitialStatus().Return(nil).AnyTimes()

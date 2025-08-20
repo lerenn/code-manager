@@ -14,7 +14,7 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code)
+	BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code/src)
 	StatusFile string `yaml:"status_file"` // Status file path (default: ~/.cm/status.yaml)
 }
 
