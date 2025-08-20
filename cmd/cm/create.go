@@ -23,12 +23,12 @@ Examples:
 			cmManager := cm.NewCM(cfg)
 			cmManager.SetVerbose(verbose)
 
-			var opts []cm.CreateWorkTreeOpts
+			var opts cm.CreateWorkTreeOpts
 			if ideName != "" {
-				opts = append(opts, cm.CreateWorkTreeOpts{IDEName: ideName})
+				opts.IDEName = ideName
 			}
 
-			return cmManager.CreateWorkTree(args[0], opts...)
+			return cmManager.CreateWorkTree(args[0], opts)
 		},
 	}
 
