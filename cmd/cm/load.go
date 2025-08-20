@@ -45,8 +45,14 @@ Examples:
 				return cm.ErrBranchNameContainsColon
 			}
 
+			// Prepare options for LoadWorktree
+			var opts []cm.LoadWorktreeOpts
+			if ideName != "" {
+				opts = append(opts, cm.LoadWorktreeOpts{IDEName: ideName})
+			}
+
 			// Load the worktree
-			return cmManager.LoadWorktree(args[0])
+			return cmManager.LoadWorktree(args[0], opts...)
 		},
 	}
 
