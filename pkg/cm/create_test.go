@@ -93,7 +93,7 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).Times(2)
 
 	// Mock status manager calls
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
 	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 
 	// Mock worktree creation calls
@@ -101,13 +101,17 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
-	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
+	// Mock worktree directory doesn't exist during creation
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(false, nil)
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
+	// Mock worktree path existence for OpenWorktree call (after creation)
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(true, nil)
+
 	// Mock IDE opening
 	ideName := "cursor"
-	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
 
 	err := cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: ideName})
 	assert.NoError(t, err)

@@ -38,6 +38,9 @@ func TestCM_OpenWorktree(t *testing.T) {
 	// Mock Git to return repository URL
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
 
+	// Mock worktree path existence check
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(true, nil)
+
 	// Mock IDE opening - now uses derived worktree path
 	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
 
@@ -69,6 +72,9 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 
 	// Mock Git to return repository URL
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+
+	// Mock worktree path existence check
+	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(true, nil)
 
 	// Mock IDE opening - the method will try to open the worktree path
 	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
