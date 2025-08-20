@@ -3,7 +3,7 @@ package cm
 
 import "errors"
 
-// Error definitions for CM package.
+// Error definitions for cm package.
 var (
 	// Git repository errors.
 	ErrGitRepositoryNotFound     = errors.New("not a valid Git repository: .git directory not found")
@@ -47,4 +47,8 @@ var (
 	ErrBranchNameContainsColon = errors.New("branch name contains invalid character ':'")
 	ErrOriginRemoteNotFound    = errors.New("origin remote not found or invalid")
 	ErrOriginRemoteInvalidURL  = errors.New("origin remote URL is not a valid Git hosting service URL")
+
+	// Initialization errors.
+	ErrAlreadyInitialized = errors.New("CM is already initialized")
+	ErrNotInitialized     = errors.New("CM is not initialized")
 )

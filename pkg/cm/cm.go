@@ -1,29 +1,15 @@
 package cm
 
 import (
-	"fmt"
-	"path/filepath"
-	"strings"
-
+	basepkg "github.com/lerenn/cm/internal/base"
 	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/forge"
 	"github.com/lerenn/cm/pkg/fs"
 	"github.com/lerenn/cm/pkg/git"
 	"github.com/lerenn/cm/pkg/ide"
 	"github.com/lerenn/cm/pkg/logger"
+	"github.com/lerenn/cm/pkg/prompt"
 	"github.com/lerenn/cm/pkg/status"
 )
-
-// CreateWorkTreeOpts contains optional parameters for CreateWorkTree.
-type CreateWorkTreeOpts struct {
-	IDEName  string
-	IssueRef string
-}
-
-// LoadWorktreeOpts contains optional parameters for LoadWorktree.
-type LoadWorktreeOpts struct {
-	IDEName string
-}
 
 // CM interface provides Git repository detection functionality.
 type CM interface {
@@ -42,12 +28,18 @@ type CM interface {
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
 	LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error
 
+	// Init initializes CM configuration.
+	Init(opts InitOpts) error
+
+	// IsInitialized checks if CM is initialized.
+	IsInitialized() (bool, error)
+
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
 }
 
 type realCM struct {
-	*base
+	*basepkg.Base
 	ideManager ide.ManagerInterface
 }
 
@@ -56,593 +48,35 @@ func NewCM(cfg *config.Config) CM {
 	fsInstance := fs.NewFS()
 	gitInstance := git.NewGit()
 	loggerInstance := logger.NewNoopLogger()
+	promptInstance := prompt.NewPrompt()
 
 	return &realCM{
-		base:       newBase(fsInstance, gitInstance, cfg, status.NewManager(fsInstance, cfg), loggerInstance, false),
+		Base: basepkg.NewBase(basepkg.NewBaseParams{
+			FS:            fsInstance,
+			Git:           gitInstance,
+			Config:        cfg,
+			StatusManager: status.NewManager(fsInstance, cfg),
+			Logger:        loggerInstance,
+			Prompt:        promptInstance,
+			Verbose:       false,
+		}),
 		ideManager: ide.NewManager(fsInstance, loggerInstance),
 	}
 }
 
 func (c *realCM) SetVerbose(verbose bool) {
-	c.verbose = verbose
-	if verbose {
-		c.logger = logger.NewDefaultLogger()
-	} else {
-		c.logger = logger.NewNoopLogger()
-	}
+	// Create a new Base with the updated verbose setting
+	newBase := basepkg.NewBase(basepkg.NewBaseParams{
+		FS:            c.FS,
+		Git:           c.Git,
+		Config:        c.Config,
+		StatusManager: c.StatusManager,
+		Logger:        c.Logger,
+		Prompt:        c.Prompt,
+		Verbose:       verbose,
+	})
+	c.Base = newBase
 
 	// Update the IDE manager with the new logger
-	c.ideManager = ide.NewManager(c.fs, c.logger)
-}
-
-// CreateWorkTree executes the main application logic.
-func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error {
-	// Extract and validate options
-	issueRef, ideName := c.extractCreateWorkTreeOptions(opts)
-
-	// Handle issue-based worktree creation
-	if issueRef != "" {
-		return c.createWorkTreeFromIssue(branch, issueRef, ideName)
-	}
-
-	// Handle regular worktree creation
-	return c.createRegularWorkTree(branch, ideName)
-}
-
-// extractCreateWorkTreeOptions extracts options from the variadic parameter.
-func (c *realCM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string, *string) {
-	var issueRef string
-	var ideName *string
-
-	if len(opts) > 0 {
-		if opts[0].IssueRef != "" {
-			issueRef = opts[0].IssueRef
-		}
-		if opts[0].IDEName != "" {
-			ideName = &opts[0].IDEName
-		}
-	}
-
-	return issueRef, ideName
-}
-
-// createRegularWorkTree handles regular worktree creation (non-issue based).
-func (c *realCM) createRegularWorkTree(branch string, ideName *string) error {
-	// Sanitize branch name first
-	sanitizedBranch, err := c.sanitizeBranchName(branch)
-	if err != nil {
-		return err
-	}
-
-	// Log if branch name was sanitized
-	if sanitizedBranch != branch {
-		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
-	}
-
-	c.verbosePrint(fmt.Sprintf("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch))
-
-	// Detect project mode and handle accordingly
-	worktreeErr := c.handleProjectMode(sanitizedBranch)
-
-	// Open IDE if specified and worktree creation was successful
-	if err := c.handleIDEOpening(worktreeErr, sanitizedBranch, ideName); err != nil {
-		return err
-	}
-
-	return worktreeErr
-}
-
-// handleProjectMode detects project mode and handles worktree creation accordingly.
-func (c *realCM) handleProjectMode(sanitizedBranch string) error {
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		c.verbosePrint(fmt.Sprintf("Error: %v", err))
-		return err
-	}
-
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		return c.handleRepositoryMode(sanitizedBranch)
-	case ProjectTypeWorkspace:
-		return c.handleWorkspaceMode(sanitizedBranch)
-	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
-	default:
-		return fmt.Errorf("unknown project type")
-	}
-}
-
-// DeleteWorkTree deletes a worktree for the specified branch.
-func (c *realCM) DeleteWorkTree(branch string, force bool) error {
-	// Sanitize branch name first
-	sanitizedBranch, err := c.sanitizeBranchName(branch)
-	if err != nil {
-		return err
-	}
-
-	// Log if branch name was sanitized (appears in normal and verbose modes, but not quiet)
-	if sanitizedBranch != branch {
-		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
-	}
-
-	c.verbosePrint(fmt.Sprintf("Starting CM deletion for branch: %s (sanitized: %s)", branch, sanitizedBranch))
-
-	// 1. Detect project mode (repository or workspace)
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		c.verbosePrint(fmt.Sprintf("Error: %v", err))
-		return err
-	}
-
-	// 2. Handle based on project type
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		return c.handleRepositoryDeletion(sanitizedBranch, force)
-	case ProjectTypeWorkspace:
-		return c.handleWorkspaceDeletion(sanitizedBranch, force)
-	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
-	default:
-		return fmt.Errorf("unknown project type")
-	}
-}
-
-// handleIDEOpening handles IDE opening if specified and worktree creation was successful.
-func (c *realCM) handleIDEOpening(worktreeErr error, branch string, ideName *string) error {
-	if worktreeErr == nil && ideName != nil && *ideName != "" {
-		if err := c.OpenWorktree(branch, *ideName); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// handleRepositoryDeletion handles repository mode: validation and worktree deletion.
-func (c *realCM) handleRepositoryDeletion(branch string, force bool) error {
-	c.verbosePrint("Handling repository deletion mode")
-
-	// Create a single repository instance for all repository operations
-	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-
-	// 1. Validate repository
-	if err := repo.Validate(); err != nil {
-		return err
-	}
-
-	// 2. Delete worktree for single repository
-	if err := repo.DeleteWorktree(branch, force); err != nil {
-		return err
-	}
-
-	c.verbosePrint("CM deletion completed successfully")
-
-	return nil
-}
-
-// handleWorkspaceDeletion handles workspace mode: validation and placeholder for worktree deletion.
-func (c *realCM) handleWorkspaceDeletion(branch string, force bool) error {
-	c.verbosePrint("Handling workspace deletion mode")
-
-	// Create a single workspace instance for all workspace operations
-	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-
-	// 1. Load workspace (detection, selection, and display)
-	if err := workspace.Load(); err != nil {
-		return err
-	}
-
-	// 2. Validate all repositories in workspace
-	if err := workspace.Validate(); err != nil {
-		return err
-	}
-
-	// 3. Delete worktree for workspace (placeholder)
-	if err := workspace.DeleteWorktree(branch, force); err != nil {
-		return err
-	}
-
-	c.verbosePrint("CM deletion completed successfully")
-
-	return nil
-}
-
-// detectProjectMode detects if this is a repository or workspace mode.
-func (c *realCM) detectProjectMode() (ProjectType, error) {
-	// First check for single repository mode
-	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	exists, err := repo.IsGitRepository()
-	if err != nil {
-		return ProjectTypeNone, fmt.Errorf("failed to detect repository mode: %w", err)
-	}
-
-	if exists {
-		return ProjectTypeSingleRepo, nil
-	}
-
-	// If no single repo found, check for workspace mode
-	hasWorkspace, err := repo.IsWorkspaceFile()
-	if err != nil {
-		return ProjectTypeNone, fmt.Errorf("failed to check for workspace files: %w", err)
-	}
-
-	if hasWorkspace {
-		return ProjectTypeWorkspace, nil
-	}
-
-	// No repository or workspace found
-	return ProjectTypeNone, nil
-}
-
-// handleRepositoryMode handles repository mode: validation and worktree creation.
-func (c *realCM) handleRepositoryMode(branch string) error {
-	c.verbosePrint("Handling repository mode")
-
-	// Create a single repository instance for all repository operations
-	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-
-	// 1. Validate repository
-	if err := repo.Validate(); err != nil {
-		return err
-	}
-
-	// 2. Create worktree for single repository
-	if err := repo.CreateWorktree(branch); err != nil {
-		return err
-	}
-
-	c.verbosePrint("CM execution completed successfully")
-
-	return nil
-}
-
-// handleWorkspaceMode handles workspace mode: validation and worktree creation.
-func (c *realCM) handleWorkspaceMode(branch string) error {
-	c.verbosePrint("Handling workspace mode")
-
-	// Create a single workspace instance for all workspace operations
-	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-
-	// Create worktrees for all repositories in workspace
-	if err := workspace.CreateWorktree(branch); err != nil {
-		return err
-	}
-
-	c.verbosePrint("CM execution completed successfully")
-
-	return nil
-}
-
-// OpenWorktree opens an existing worktree in the specified IDE.
-func (c *realCM) OpenWorktree(worktreeName, ideName string) error {
-	// 1. Detect project mode (repository or workspace)
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		return fmt.Errorf("failed to detect project mode: %w", err)
-	}
-
-	// 2. Handle based on project type
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		return c.openWorktreeForSingleRepo(worktreeName, ideName)
-	case ProjectTypeWorkspace:
-		return c.openWorktreeForWorkspace(worktreeName, ideName)
-	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
-	default:
-		return fmt.Errorf("unknown project type")
-	}
-}
-
-// openWorktreeForSingleRepo opens a worktree for single repository mode.
-func (c *realCM) openWorktreeForSingleRepo(worktreeName, ideName string) error {
-	// Get repository URL from local .git directory
-	repoURL, err := c.git.GetRepositoryName(".")
-	if err != nil {
-		return fmt.Errorf("failed to get repository URL: %w", err)
-	}
-
-	// Get worktree from status.yaml using repository URL and branch name to verify it exists
-	_, err = c.statusManager.GetWorktree(repoURL, worktreeName)
-	if err != nil {
-		return fmt.Errorf("%w: %s", ide.ErrWorktreeNotFound, worktreeName)
-	}
-
-	// Derive worktree path from original repository path and branch name
-	worktreePath := c.buildWorktreePath(repoURL, worktreeName)
-
-	// Open IDE with the derived worktree path
-	if err := c.ideManager.OpenIDE(ideName, worktreePath, c.verbose); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// openWorktreeForWorkspace opens a worktree for workspace mode.
-func (c *realCM) openWorktreeForWorkspace(worktreeName, ideName string) error {
-	// Create a workspace instance to get workspace information
-	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-
-	// Load workspace configuration
-	if err := workspace.Load(); err != nil {
-		return fmt.Errorf("failed to load workspace: %w", err)
-	}
-
-	// Get workspace name for worktree-specific workspace file
-	workspaceConfig, err := workspace.parseFile(workspace.originalFile)
-	if err != nil {
-		return fmt.Errorf("failed to parse workspace file: %w", err)
-	}
-	workspaceName := workspace.getName(workspaceConfig, workspace.originalFile)
-
-	// Sanitize branch name for filename (replace slashes with hyphens)
-	sanitizedBranchForFilename := strings.ReplaceAll(worktreeName, "/", "-")
-
-	// Construct path to worktree-specific workspace file
-	worktreeWorkspacePath := filepath.Join(
-		c.config.BasePath,
-		"workspaces",
-		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename),
-	)
-
-	// Check if worktree-specific workspace file exists
-	exists, err := c.fs.Exists(worktreeWorkspacePath)
-	if err != nil {
-		return fmt.Errorf("failed to check worktree workspace file existence: %w", err)
-	}
-
-	if !exists {
-		return fmt.Errorf("%w: %s", ide.ErrWorktreeNotFound, worktreeName)
-	}
-
-	// Open IDE with the worktree-specific workspace file
-	if err := c.ideManager.OpenIDE(ideName, worktreeWorkspacePath, c.verbose); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ListWorktrees lists worktrees for the current project with mode detection.
-func (c *realCM) ListWorktrees() ([]status.Repository, ProjectType, error) {
-	c.verbosePrint("Starting worktree listing")
-
-	// 1. Detect project mode (repository or workspace)
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		c.verbosePrint(fmt.Sprintf("Error: %v", err))
-		return nil, ProjectTypeNone, fmt.Errorf("failed to detect project mode: %w", err)
-	}
-
-	// 2. Handle based on project type
-	var worktrees []status.Repository
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		worktrees, err = c.listWorktreesForSingleRepo()
-	case ProjectTypeWorkspace:
-		worktrees, err = c.listWorktreesForWorkspace()
-	case ProjectTypeNone:
-		return nil, ProjectTypeNone, fmt.Errorf("no Git repository or workspace found")
-	default:
-		return nil, ProjectTypeNone, fmt.Errorf("unknown project type")
-	}
-
-	if err != nil {
-		return nil, ProjectTypeNone, err
-	}
-
-	return worktrees, projectType, nil
-}
-
-// listWorktreesForSingleRepo lists worktrees for the current repository.
-func (c *realCM) listWorktreesForSingleRepo() ([]status.Repository, error) {
-	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	return repo.ListWorktrees()
-}
-
-// listWorktreesForWorkspace lists worktrees for workspace mode (placeholder for future).
-func (c *realCM) listWorktreesForWorkspace() ([]status.Repository, error) {
-	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	return workspace.ListWorktrees()
-}
-
-// LoadWorktree loads a branch from a remote source and creates a worktree.
-func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error {
-	c.verbosePrint(fmt.Sprintf("Starting branch loading: %s", branchArg))
-
-	// 1. Parse the branch argument to extract remote and branch name
-	remoteSource, branchName, err := c.parseBranchArg(branchArg)
-	if err != nil {
-		return err
-	}
-
-	c.verbosePrint(fmt.Sprintf("Parsed: remote=%s, branch=%s", remoteSource, branchName))
-
-	// 2. Detect project mode (repository or workspace)
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		c.verbosePrint(fmt.Sprintf("Error: %v", err))
-		return fmt.Errorf("failed to detect project mode: %w", err)
-	}
-
-	// 3. Handle based on project type
-	var loadErr error
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		loadErr = c.loadWorktreeForSingleRepo(remoteSource, branchName)
-	case ProjectTypeWorkspace:
-		return fmt.Errorf("workspace mode not yet supported for load command")
-	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
-	default:
-		return fmt.Errorf("unknown project type")
-	}
-
-	// 4. Open IDE if specified and branch loading was successful
-	var ideName *string
-	if len(opts) > 0 && opts[0].IDEName != "" {
-		ideName = &opts[0].IDEName
-	}
-	if err := c.handleIDEOpening(loadErr, branchName, ideName); err != nil {
-		return err
-	}
-
-	return loadErr
-}
-
-// createWorkTreeFromIssue creates a worktree from a forge issue.
-func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string, ideName *string) error {
-	c.verbosePrint(fmt.Sprintf("Starting worktree creation from issue: %s", issueRef))
-
-	// 1. Detect project mode (repository or workspace)
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		c.verbosePrint(fmt.Sprintf("Error: %v", err))
-		return fmt.Errorf("failed to detect project mode: %w", err)
-	}
-
-	// 2. Handle based on project type
-	var createErr error
-	var branchName *string
-	if branch != "" {
-		branchName = &branch
-	}
-
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		createErr = c.createWorkTreeFromIssueForSingleRepo(branchName, issueRef)
-	case ProjectTypeWorkspace:
-		createErr = c.createWorkTreeFromIssueForWorkspace(branchName, issueRef)
-	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
-	default:
-		return fmt.Errorf("unknown project type")
-	}
-
-	// 3. Open IDE if specified and worktree creation was successful
-	if branchName != nil {
-		if err := c.handleIDEOpening(createErr, *branchName, ideName); err != nil {
-			return err
-		}
-	}
-
-	return createErr
-}
-
-// createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.
-func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueRef string) error {
-	c.verbosePrint("Creating worktree from issue for single repository mode")
-
-	// Create forge manager
-	forgeManager := forge.NewManager(c.logger)
-
-	// Get the appropriate forge for the repository
-	selectedForge, err := forgeManager.GetForgeForRepository(".")
-	if err != nil {
-		return fmt.Errorf("failed to get forge for repository: %w", err)
-	}
-
-	// Get issue information
-	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
-	if err != nil {
-		return fmt.Errorf("failed to get issue information: %w", err)
-	}
-
-	// Generate branch name if not provided
-	if branchName == nil || *branchName == "" {
-		generatedBranchName := selectedForge.GenerateBranchName(issueInfo)
-		branchName = &generatedBranchName
-	}
-
-	// Create worktree using existing logic
-	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	return repo.CreateWorktree(*branchName, CreateWorktreeOpts{IssueInfo: issueInfo})
-}
-
-// createWorkTreeFromIssueForWorkspace creates worktrees from issue for workspace.
-func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string) error {
-	c.verbosePrint("Creating worktrees from issue for workspace mode")
-
-	// Create forge manager
-	forgeManager := forge.NewManager(c.logger)
-
-	// Get the appropriate forge for the first repository (we'll use the same issue for all)
-	selectedForge, err := forgeManager.GetForgeForRepository(".")
-	if err != nil {
-		return fmt.Errorf("failed to get forge for repository: %w", err)
-	}
-
-	// Get issue information
-	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
-	if err != nil {
-		return fmt.Errorf("failed to get issue information: %w", err)
-	}
-
-	// Generate branch name if not provided
-	if branchName == nil || *branchName == "" {
-		generatedBranchName := selectedForge.GenerateBranchName(issueInfo)
-		branchName = &generatedBranchName
-	}
-
-	// Create worktrees for all repositories in workspace
-	workspace := newWorkspace(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	return workspace.CreateWorktree(*branchName, WorkspaceCreateWorktreeOpts{IssueInfo: issueInfo})
-}
-
-// loadWorktreeForSingleRepo loads a worktree for single repository mode.
-func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) error {
-	c.verbosePrint("Loading worktree for single repository mode")
-
-	repo := newRepository(c.fs, c.git, c.config, c.statusManager, c.logger, c.verbose)
-	return repo.LoadWorktree(remoteSource, branchName)
-}
-
-// parseBranchArg parses the remote:branch argument format.
-func (c *realCM) parseBranchArg(arg string) (remoteSource, branchName string, err error) {
-	// Check for edge cases
-	if arg == "" {
-		return "", "", fmt.Errorf("argument cannot be empty")
-	}
-
-	// Split on first colon
-	parts := strings.SplitN(arg, ":", 2)
-
-	if len(parts) == 1 {
-		// No colon found, treat as branch name only (default to origin)
-		branchName = parts[0]
-		if branchName == "" {
-			return "", "", fmt.Errorf("branch name cannot be empty")
-		}
-		if strings.Contains(branchName, ":") {
-			return "", "", fmt.Errorf("branch name contains invalid character ':'")
-		}
-		return "", branchName, nil // empty remoteSource defaults to origin
-	}
-
-	if len(parts) == 2 {
-		remoteSource = parts[0]
-		branchName = parts[1]
-
-		// Validate parts
-		if remoteSource == "" {
-			return "", "", fmt.Errorf("remote source cannot be empty")
-		}
-		if branchName == "" {
-			return "", "", fmt.Errorf("branch name cannot be empty")
-		}
-		if strings.Contains(branchName, ":") {
-			return "", "", fmt.Errorf("branch name contains invalid character ':'")
-		}
-
-		return remoteSource, branchName, nil
-	}
-
-	return "", "", fmt.Errorf("invalid argument format")
-}
-
-// verbosePrint prints a message only in verbose mode.
-func (c *realCM) verbosePrint(message string) {
-	if c.verbose {
-		c.logger.Logf(message)
-	}
+	c.ideManager = ide.NewManager(c.FS, c.Logger)
 }

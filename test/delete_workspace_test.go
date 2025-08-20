@@ -8,20 +8,26 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/lerenn/cm/pkg/cm"
 	"github.com/lerenn/cm/pkg/config"
 	"github.com/lerenn/cm/pkg/fs"
 	"github.com/lerenn/cm/pkg/status"
-	"github.com/lerenn/cm/pkg/cm"
+	"github.com/lerenn/cm/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
-	// Create temporary test directory
+	// Create temporary test directory for CM base path
 	tempDir, err := os.MkdirTemp("", "cm-workspace-delete-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
+
+	// Create separate directory for workspace structure
+	workspaceBaseDir, err := os.MkdirTemp("", "cm-workspace-structure-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
 	testConfig := &config.Config{
@@ -34,12 +40,13 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, configData, 0644))
 
 	// Create workspace structure
-	workspaceDir := filepath.Join(tempDir, "workspace")
+	workspaceDir := filepath.Join(workspaceBaseDir, "workspace")
 	require.NoError(t, os.MkdirAll(workspaceDir, 0755))
 
 	// Create workspace file
-	workspaceConfig := &cm.WorkspaceConfig{
-		Folders: []cm.WorkspaceFolder{
+	workspaceConfig := &workspace.Config{
+		Name: "test-workspace",
+		Folders: []workspace.Folder{
 			{Name: "Frontend", Path: "./frontend"},
 			{Name: "Backend", Path: "./backend"},
 		},
@@ -84,13 +91,13 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	assert.Len(t, worktrees, 2)
 
 	// Verify worktree directories exist
-	frontendWorktreePath := filepath.Join(tempDir, "frontend", branchName)
-	backendWorktreePath := filepath.Join(tempDir, "backend", branchName)
+	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
+	backendWorktreePath := filepath.Join(tempDir, "worktrees", "backend", branchName)
 	assert.DirExists(t, frontendWorktreePath)
 	assert.DirExists(t, backendWorktreePath)
 
 	// Verify worktree-specific workspace file was created
-	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "project-feature-test-branch.code-workspace")
+	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "test-workspace-feature-test-branch.code-workspace")
 	assert.FileExists(t, workspaceWorktreePath)
 
 	// Now delete the worktrees
@@ -117,10 +124,15 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 }
 
 func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
-	// Create temporary test directory
+	// Create temporary test directory for CM base path
 	tempDir, err := os.MkdirTemp("", "cm-workspace-delete-force-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
+
+	// Create separate directory for workspace structure
+	workspaceBaseDir, err := os.MkdirTemp("", "cm-workspace-structure-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
 	testConfig := &config.Config{
@@ -133,12 +145,13 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, configData, 0644))
 
 	// Create workspace structure
-	workspaceDir := filepath.Join(tempDir, "workspace")
+	workspaceDir := filepath.Join(workspaceBaseDir, "workspace")
 	require.NoError(t, os.MkdirAll(workspaceDir, 0755))
 
 	// Create workspace file
-	workspaceConfig := &cm.WorkspaceConfig{
-		Folders: []cm.WorkspaceFolder{
+	workspaceConfig := &workspace.Config{
+		Name: "test-workspace",
+		Folders: []workspace.Folder{
 			{Name: "Frontend", Path: "./frontend"},
 		},
 	}
@@ -179,7 +192,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	assert.Len(t, worktrees, 1)
 
 	// Verify worktree directory exists
-	frontendWorktreePath := filepath.Join(tempDir, "frontend", branchName)
+	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
 	assert.DirExists(t, frontendWorktreePath)
 
 	// Now delete the worktrees with force

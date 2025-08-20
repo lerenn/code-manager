@@ -1,7 +1,9 @@
-package cm
+// Package workspace provides workspace management functionality for CM.
+package workspace
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -9,53 +11,83 @@ import (
 	"github.com/lerenn/cm/pkg/config"
 	"github.com/lerenn/cm/pkg/fs"
 	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/issue"
 	"github.com/lerenn/cm/pkg/logger"
+	"github.com/lerenn/cm/pkg/prompt"
+	repo "github.com/lerenn/cm/pkg/repository"
 	"github.com/lerenn/cm/pkg/status"
 )
 
-// WorkspaceConfig represents a VS Code-like workspace configuration.
-type WorkspaceConfig struct {
-	Name       string                 `json:"name,omitempty"`
-	Folders    []WorkspaceFolder      `json:"folders"`
-	Settings   map[string]interface{} `json:"settings,omitempty"`
-	Extensions map[string]interface{} `json:"extensions,omitempty"`
+// Error definitions.
+var (
+	ErrWorkspaceFileNotFound = errors.New("workspace file not found")
+	ErrInvalidWorkspaceFile  = errors.New("invalid workspace file")
+	ErrNoRepositoriesFound   = errors.New("no repositories found in workspace")
+	ErrRepositoryNotFound    = errors.New("repository not found in workspace")
+	ErrWorktreeExists        = errors.New("worktree already exists")
+	ErrRepositoryNotClean    = errors.New("repository is not clean")
+	ErrDirectoryExists       = errors.New("directory already exists")
+	ErrWorktreeNotInStatus   = errors.New("worktree not found in status file")
+	ErrDeletionCancelled     = errors.New("deletion cancelled by user")
+)
+
+// Config represents the configuration of a workspace.
+type Config struct {
+	Name    string   `json:"name,omitempty"`
+	Folders []Folder `json:"folders"`
 }
 
-// WorkspaceFolder represents a folder in a workspace configuration.
-type WorkspaceFolder struct {
-	Name string `json:"name,omitempty"`
+// Folder represents a folder in a workspace.
+type Folder struct {
+	Name string `json:"name"`
 	Path string `json:"path"`
 }
 
-// WorkspaceCreateWorktreeOpts contains optional parameters for CreateWorktree.
-type WorkspaceCreateWorktreeOpts struct {
-	IssueInfo *issue.Info
+// Workspace represents a workspace and provides methods for workspace operations.
+type Workspace struct {
+	fs            fs.FS
+	git           git.Git
+	config        *config.Config
+	statusManager status.Manager
+	logger        logger.Logger
+	prompt        prompt.Prompt
+	verbose       bool
+	OriginalFile  string
 }
 
-// workspace represents a workspace and provides methods for workspace operations.
-type workspace struct {
-	*base
-	originalFile string
+// NewWorkspaceParams contains parameters for creating a new Workspace instance.
+type NewWorkspaceParams struct {
+	FS            fs.FS
+	Git           git.Git
+	Config        *config.Config
+	StatusManager status.Manager
+	Logger        logger.Logger
+	Prompt        prompt.Prompt
+	Verbose       bool
 }
 
-// newWorkspace creates a new Workspace instance.
-func newWorkspace(
-	fs fs.FS,
-	git git.Git,
-	config *config.Config,
-	statusManager status.Manager,
-	logger logger.Logger,
-	verbose bool,
-) *workspace {
-	return &workspace{
-		base: newBase(fs, git, config, statusManager, logger, verbose),
+// NewWorkspace creates a new Workspace instance.
+func NewWorkspace(params NewWorkspaceParams) *Workspace {
+	return &Workspace{
+		fs:            params.FS,
+		git:           params.Git,
+		config:        params.Config,
+		statusManager: params.StatusManager,
+		logger:        params.Logger,
+		prompt:        params.Prompt,
+		verbose:       params.Verbose,
 	}
 }
 
-// detectWorkspaceFiles checks if the current directory contains workspace files.
-func (w *workspace) detectWorkspaceFiles() ([]string, error) {
-	w.verbosePrint("Checking for .code-workspace files...")
+// verboseLogf prints a message if verbose mode is enabled.
+func (w *Workspace) verboseLogf(format string, args ...interface{}) {
+	if w.verbose {
+		fmt.Printf(format+"\n", args...)
+	}
+}
+
+// DetectWorkspaceFiles checks if the current directory contains workspace files.
+func (w *Workspace) DetectWorkspaceFiles() ([]string, error) {
+	w.verboseLogf("Checking for .code-workspace files...")
 
 	// Check for workspace files
 	workspaceFiles, err := w.fs.Glob("*.code-workspace")
@@ -64,37 +96,37 @@ func (w *workspace) detectWorkspaceFiles() ([]string, error) {
 	}
 
 	if len(workspaceFiles) == 0 {
-		w.verbosePrint("No .code-workspace files found")
+		w.verboseLogf("No .code-workspace files found")
 		return nil, nil
 	}
 
-	w.verbosePrint("Found %d workspace file(s)", len(workspaceFiles))
+	w.verboseLogf("Found %d workspace file(s)", len(workspaceFiles))
 	return workspaceFiles, nil
 }
 
-// parseFile parses a workspace configuration file.
-func (w *workspace) parseFile(filename string) (*WorkspaceConfig, error) {
-	w.verbosePrint("Parsing workspace configuration...")
+// ParseFile parses a workspace configuration file.
+func (w *Workspace) ParseFile(filename string) (*Config, error) {
+	w.verboseLogf("Parsing workspace configuration...")
 
 	// Read workspace file
 	content, err := w.fs.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrWorkspaceFileReadError, err)
+		return nil, fmt.Errorf("%w: %w", ErrWorkspaceFileNotFound, err)
 	}
 
 	// Parse JSON
-	var config WorkspaceConfig
+	var config Config
 	if err := json.Unmarshal(content, &config); err != nil {
-		return nil, ErrWorkspaceFileMalformed
+		return nil, ErrInvalidWorkspaceFile
 	}
 
 	// Validate folders array
 	if config.Folders == nil {
-		return nil, ErrWorkspaceEmptyFolders
+		return nil, ErrNoRepositoriesFound
 	}
 
 	// Filter out null values and validate structure
-	var validFolders []WorkspaceFolder
+	var validFolders []Folder
 	for _, folder := range config.Folders {
 		// Skip null values
 		if folder.Path == "" {
@@ -115,15 +147,15 @@ func (w *workspace) parseFile(filename string) (*WorkspaceConfig, error) {
 
 	// Check if we have any valid folders after filtering
 	if len(validFolders) == 0 {
-		return nil, ErrWorkspaceEmptyFolders
+		return nil, ErrNoRepositoriesFound
 	}
 
 	config.Folders = validFolders
 	return &config, nil
 }
 
-// getName extracts the workspace name from configuration or filename.
-func (w *workspace) getName(config *WorkspaceConfig, filename string) string {
+// GetName extracts the workspace name from configuration or filename.
+func (w *Workspace) GetName(config *Config, filename string) string {
 	// First try to get name from workspace configuration
 	if config.Name != "" {
 		return config.Name
@@ -134,8 +166,8 @@ func (w *workspace) getName(config *WorkspaceConfig, filename string) string {
 }
 
 // HandleMultipleFiles handles the selection of workspace files when multiple are found.
-func (w *workspace) HandleMultipleFiles(workspaceFiles []string) (string, error) {
-	w.verbosePrint("Multiple workspace files found: %d", len(workspaceFiles))
+func (w *Workspace) HandleMultipleFiles(workspaceFiles []string) (string, error) {
+	w.verboseLogf("Multiple workspace files found: %d", len(workspaceFiles))
 
 	// Display selection prompt
 	w.displaySelection(workspaceFiles)
@@ -159,22 +191,22 @@ func (w *workspace) HandleMultipleFiles(workspaceFiles []string) (string, error)
 		return w.HandleMultipleFiles(workspaceFiles)
 	}
 
-	w.verbosePrint("Selected workspace file: %s", selectedFile)
+	w.verboseLogf("Selected workspace file: %s", selectedFile)
 	return selectedFile, nil
 }
 
 // Validate validates all repositories in a workspace.
-func (w *workspace) Validate() error {
-	w.verbosePrint("Validating workspace: %s", w.originalFile)
+func (w *Workspace) Validate() error {
+	w.verboseLogf("Validating workspace: %s", w.OriginalFile)
 
-	workspaceConfig, err := w.parseFile(w.originalFile)
+	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
-		w.verbosePrint("Error: %v", err)
-		return fmt.Errorf("%w: %w", ErrWorkspaceFileRead, err)
+		w.verboseLogf("Error: %v", err)
+		return fmt.Errorf("%w: %w", ErrWorkspaceFileNotFound, err)
 	}
 
 	// Get workspace file directory for resolving relative paths
-	workspaceDir := filepath.Dir(w.originalFile)
+	workspaceDir := filepath.Dir(w.OriginalFile)
 
 	for _, folder := range workspaceConfig.Folders {
 		if err := w.validateRepository(folder, workspaceDir); err != nil {
@@ -186,11 +218,11 @@ func (w *workspace) Validate() error {
 }
 
 // validateRepository validates a single repository in a workspace.
-func (w *workspace) validateRepository(folder WorkspaceFolder, workspaceDir string) error {
+func (w *Workspace) validateRepository(folder Folder, workspaceDir string) error {
 	// Resolve relative path from workspace file location
 	resolvedPath := filepath.Join(workspaceDir, folder.Path)
 
-	w.verbosePrint("Validating repository: %s", resolvedPath)
+	w.verboseLogf("Validating repository: %s", resolvedPath)
 
 	if err := w.validateRepositoryPath(folder, resolvedPath); err != nil {
 		return err
@@ -201,60 +233,60 @@ func (w *workspace) validateRepository(folder WorkspaceFolder, workspaceDir stri
 	}
 
 	// Validate Git configuration is functional
-	err := w.validateGitConfiguration(resolvedPath)
+	err := w.validateGitConfiguration()
 	if err != nil {
-		w.verbosePrint("Error: %v", err)
-		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
+		w.verboseLogf("Error: %v", err)
+		return fmt.Errorf("%w: %s - %w", ErrRepositoryNotFound, folder.Path, err)
 	}
 
 	return nil
 }
 
 // validateRepositoryPath validates that the repository path exists.
-func (w *workspace) validateRepositoryPath(folder WorkspaceFolder, resolvedPath string) error {
+func (w *Workspace) validateRepositoryPath(folder Folder, resolvedPath string) error {
 	// Check repository path exists
 	exists, err := w.fs.Exists(resolvedPath)
 	if err != nil {
-		w.verbosePrint("Error: %v", err)
+		w.verboseLogf("Error: %v", err)
 		return fmt.Errorf("repository not found in workspace: %s - %w", folder.Path, err)
 	}
 
 	if !exists {
-		w.verbosePrint("Error: repository path does not exist")
-		return fmt.Errorf("%w: %s", ErrRepositoryNotFoundInWorkspace, folder.Path)
+		w.verboseLogf("Error: repository path does not exist")
+		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, folder.Path)
 	}
 
 	return nil
 }
 
 // validateRepositoryGit validates that the repository has a .git directory and git status works.
-func (w *workspace) validateRepositoryGit(folder WorkspaceFolder, resolvedPath string) error {
+func (w *Workspace) validateRepositoryGit(folder Folder, resolvedPath string) error {
 	// Verify path contains .git folder
 	gitPath := filepath.Join(resolvedPath, ".git")
 	exists, err := w.fs.Exists(gitPath)
 	if err != nil {
-		w.verbosePrint("Error: %v", err)
-		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
+		w.verboseLogf("Error: %v", err)
+		return fmt.Errorf("%w: %s - %w", ErrRepositoryNotFound, folder.Path, err)
 	}
 
 	if !exists {
-		w.verbosePrint("Error: .git directory not found in repository")
-		return fmt.Errorf("%w: %s", ErrInvalidRepositoryInWorkspaceNoGit, folder.Path)
+		w.verboseLogf("Error: .git directory not found in repository")
+		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, folder.Path)
 	}
 
 	// Execute git status to ensure repository is working
-	w.verbosePrint("Executing git status in: %s", resolvedPath)
+	w.verboseLogf("Executing git status in: %s", resolvedPath)
 	_, err = w.git.Status(resolvedPath)
 	if err != nil {
-		w.verbosePrint("Error: %v", err)
-		return fmt.Errorf("%w: %s - %w", ErrInvalidRepositoryInWorkspace, folder.Path, err)
+		w.verboseLogf("Error: %v", err)
+		return fmt.Errorf("%w: %s - %w", ErrRepositoryNotFound, folder.Path, err)
 	}
 
 	return nil
 }
 
 // displaySelection displays the workspace selection prompt.
-func (w *workspace) displaySelection(workspaceFiles []string) {
+func (w *Workspace) displaySelection(workspaceFiles []string) {
 	fmt.Println("Multiple workspace files found. Please select one:")
 	fmt.Println()
 
@@ -267,12 +299,12 @@ func (w *workspace) displaySelection(workspaceFiles []string) {
 }
 
 // getUserSelection gets and validates user input for workspace selection.
-func (w *workspace) getUserSelection(maxChoice int) (int, error) {
+func (w *Workspace) getUserSelection(maxChoice int) (int, error) {
 	return w.getUserSelectionWithRetries(maxChoice, 3)
 }
 
 // getUserSelectionWithRetries gets and validates user input with retry limit.
-func (w *workspace) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
+func (w *Workspace) getUserSelectionWithRetries(maxChoice int, retries int) (int, error) {
 	if retries <= 0 {
 		return 0, fmt.Errorf("too many invalid inputs, user cancelled selection")
 	}
@@ -304,12 +336,12 @@ func (w *workspace) getUserSelectionWithRetries(maxChoice int, retries int) (int
 }
 
 // confirmSelection asks the user to confirm their workspace selection.
-func (w *workspace) confirmSelection(workspaceFile string) (bool, error) {
+func (w *Workspace) confirmSelection(workspaceFile string) (bool, error) {
 	return w.confirmSelectionWithRetries(workspaceFile, 3)
 }
 
 // confirmSelectionWithRetries asks the user to confirm their workspace selection with retry limit.
-func (w *workspace) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
+func (w *Workspace) confirmSelectionWithRetries(workspaceFile string, retries int) (bool, error) {
 	if retries <= 0 {
 		return false, fmt.Errorf("too many invalid inputs, user cancelled confirmation")
 	}
@@ -336,56 +368,77 @@ func (w *workspace) confirmSelectionWithRetries(workspaceFile string, retries in
 // Load handles the complete workspace loading workflow.
 // It detects workspace files, handles user selection if multiple files are found,
 // and loads the workspace configuration for display.
-func (w *workspace) Load() error {
+func (w *Workspace) Load() error {
+	// If already loaded, just parse and display the configuration
+	if w.OriginalFile != "" {
+		workspaceConfig, err := w.ParseFile(w.OriginalFile)
+		if err != nil {
+			return fmt.Errorf("failed to parse workspace file: %w", err)
+		}
+
+		w.verboseLogf("Workspace mode detected")
+
+		workspaceName := w.GetName(workspaceConfig, w.OriginalFile)
+		w.verboseLogf("Found workspace: %s", workspaceName)
+
+		w.verboseLogf("Workspace configuration:")
+		w.verboseLogf("  Folders: %d", len(workspaceConfig.Folders))
+		for _, folder := range workspaceConfig.Folders {
+			w.verboseLogf("    - %s: %s", folder.Name, folder.Path)
+		}
+
+		return nil
+	}
+
 	// Detect workspace files
-	workspaceFiles, err := w.detectWorkspaceFiles()
+	workspaceFiles, err := w.DetectWorkspaceFiles()
 	if err != nil {
-		return fmt.Errorf("%w: %w", ErrWorkspaceDetection, err)
+		return fmt.Errorf("%w: %w", ErrWorkspaceFileNotFound, err)
 	}
 
 	if len(workspaceFiles) == 0 {
-		w.originalFile = ""
+		w.OriginalFile = ""
 		return nil
 	}
 
 	// If only one workspace file, store it directly
 	if len(workspaceFiles) == 1 {
-		w.originalFile = workspaceFiles[0]
+		w.OriginalFile = workspaceFiles[0]
 	} else {
 		// If multiple workspace files, handle user selection
 		selectedFile, err := w.HandleMultipleFiles(workspaceFiles)
 		if err != nil {
 			return err
 		}
-		w.originalFile = selectedFile
+		w.OriginalFile = selectedFile
 	}
 
 	// Load and display workspace configuration
-	workspaceConfig, err := w.parseFile(w.originalFile)
+	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
 	}
 
-	w.verbosePrint("Workspace mode detected")
+	w.verboseLogf("Workspace mode detected")
 
-	workspaceName := w.getName(workspaceConfig, w.originalFile)
-	w.verbosePrint("Found workspace: %s", workspaceName)
+	workspaceName := w.GetName(workspaceConfig, w.OriginalFile)
+	w.verboseLogf("Found workspace: %s", workspaceName)
 
-	w.verbosePrint("Workspace configuration:")
-	w.verbosePrint("  Folders: %d", len(workspaceConfig.Folders))
+	w.verboseLogf("Workspace configuration:")
+	w.verboseLogf("  Folders: %d", len(workspaceConfig.Folders))
 	for _, folder := range workspaceConfig.Folders {
-		w.verbosePrint("    - %s: %s", folder.Name, folder.Path)
+		w.verboseLogf("    - %s: %s", folder.Name, folder.Path)
 	}
 
 	return nil
 }
 
 // ListWorktrees lists worktrees for workspace mode.
-func (w *workspace) ListWorktrees() ([]status.Repository, error) {
-	w.verbosePrint("Listing worktrees for workspace mode")
+func (w *Workspace) ListWorktrees() ([]status.Repository, error) {
+	w.verboseLogf("Listing worktrees for workspace mode")
 
 	// Load workspace configuration (only if not already loaded)
-	if w.originalFile == "" {
+	if w.OriginalFile == "" {
 		if err := w.Load(); err != nil {
 			return nil, fmt.Errorf("failed to load workspace: %w", err)
 		}
@@ -398,43 +451,48 @@ func (w *workspace) ListWorktrees() ([]status.Repository, error) {
 	}
 
 	// Convert workspace path to absolute for comparison with status file
-	workspacePath, err := filepath.Abs(w.originalFile)
+	workspacePath, err := filepath.Abs(w.OriginalFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path for workspace file: %w", err)
 	}
 
-	w.verbosePrint("Looking for worktrees with workspace path: %s", workspacePath)
-	w.verbosePrint("Total worktrees available: %d", len(allWorktrees))
+	w.verboseLogf("Looking for worktrees with workspace path: %s", workspacePath)
+	w.verboseLogf("Total worktrees available: %d", len(allWorktrees))
 
 	// Filter worktrees for this workspace and add remote information
 	var workspaceWorktrees []status.Repository
 	for _, worktree := range allWorktrees {
-		w.verbosePrint("Checking worktree: URL=%s, Workspace=%s", worktree.URL, worktree.Workspace)
+		w.verboseLogf("Checking worktree: URL=%s, Workspace=%s", worktree.URL, worktree.Workspace)
 		if worktree.Workspace == workspacePath {
 			// Get the remote for this branch
 			remote, err := w.git.GetBranchRemote(".", worktree.Branch)
 			if err != nil {
 				// If we can't determine the remote, use "origin" as default
-				remote = defaultRemote
+				remote = repo.DefaultRemote
 			}
 
 			// Create a copy with remote information
 			worktreeWithRemote := worktree
 			worktreeWithRemote.Remote = remote
 			workspaceWorktrees = append(workspaceWorktrees, worktreeWithRemote)
-			w.verbosePrint("✓ Found matching worktree: %s with remote: %s", worktree.URL, remote)
+			w.verboseLogf("✓ Found matching worktree: %s with remote: %s", worktree.URL, remote)
 		}
 	}
 
 	return workspaceWorktrees, nil
 }
 
+// CreateWorktreeOpts contains optional parameters for worktree creation.
+type CreateWorktreeOpts struct {
+	IDEName string
+}
+
 // CreateWorktree creates worktrees for all repositories in the workspace.
-func (w *workspace) CreateWorktree(branch string, opts ...WorkspaceCreateWorktreeOpts) error {
-	w.verbosePrint("Creating worktrees for branch: %s", branch)
+func (w *Workspace) CreateWorktree(branch string, opts ...CreateWorktreeOpts) error {
+	w.verboseLogf("Creating worktrees for branch: %s", branch)
 
 	// 1. Load and validate workspace configuration (only if not already loaded)
-	if w.originalFile == "" {
+	if w.OriginalFile == "" {
 		if err := w.Load(); err != nil {
 			return fmt.Errorf("failed to load workspace: %w", err)
 		}
@@ -451,7 +509,7 @@ func (w *workspace) CreateWorktree(branch string, opts ...WorkspaceCreateWorktre
 	}
 
 	// 4. Create worktrees for all repositories
-	var workspaceOpts *WorkspaceCreateWorktreeOpts
+	var workspaceOpts *CreateWorktreeOpts
 	if len(opts) > 0 {
 		workspaceOpts = &opts[0]
 	}
@@ -459,24 +517,24 @@ func (w *workspace) CreateWorktree(branch string, opts ...WorkspaceCreateWorktre
 		return fmt.Errorf("failed to create worktrees: %w", err)
 	}
 
-	w.verbosePrint("Workspace worktree creation completed successfully")
+	w.verboseLogf("Workspace worktree creation completed successfully")
 	return nil
 }
 
 // validateWorkspaceForWorktreeCreation validates workspace state before worktree creation.
-func (w *workspace) validateWorkspaceForWorktreeCreation(branch string) error {
-	w.verbosePrint("Validating workspace for worktree creation")
+func (w *Workspace) validateWorkspaceForWorktreeCreation(branch string) error {
+	w.verboseLogf("Validating workspace for worktree creation")
 
-	workspaceConfig, err := w.parseFile(w.originalFile)
+	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
 	}
 
 	// Get workspace file directory for resolving relative paths
-	workspaceDir := filepath.Dir(w.originalFile)
+	workspaceDir := filepath.Dir(w.OriginalFile)
 
 	for i, folder := range workspaceConfig.Folders {
-		w.verbosePrint("Validating repository %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
+		w.verboseLogf("Validating repository %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
 
 		// Resolve relative path from workspace file location
 		resolvedPath := filepath.Join(workspaceDir, folder.Path)
@@ -500,7 +558,7 @@ func (w *workspace) validateWorkspaceForWorktreeCreation(branch string) error {
 		}
 
 		if !exists {
-			w.verbosePrint("Branch %s does not exist in %s, will create from current branch", branch, folder.Path)
+			w.verboseLogf("Branch %s does not exist in %s, will create from current branch", branch, folder.Path)
 		}
 
 		// Validate directory creation permissions
@@ -520,17 +578,17 @@ func (w *workspace) validateWorkspaceForWorktreeCreation(branch string) error {
 }
 
 // createWorktreesForWorkspace creates worktrees for all repositories in the workspace.
-func (w *workspace) createWorktreesForWorkspace(branch string, opts *WorkspaceCreateWorktreeOpts) error {
-	w.verbosePrint("Creating worktrees for all repositories in workspace")
+func (w *Workspace) createWorktreesForWorkspace(branch string, opts *CreateWorktreeOpts) error {
+	w.verboseLogf("Creating worktrees for all repositories in workspace")
 
-	workspaceConfig, err := w.parseFile(w.originalFile)
+	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
 	}
 
 	// Get workspace name for worktree-specific workspace file
-	workspaceName := w.getName(workspaceConfig, w.originalFile)
-	workspaceDir := filepath.Dir(w.originalFile)
+	workspaceName := w.GetName(workspaceConfig, w.OriginalFile)
+	workspaceDir := filepath.Dir(w.OriginalFile)
 
 	// Track created worktrees for cleanup on failure
 	var createdWorktrees []struct {
@@ -582,8 +640,8 @@ func (w *workspace) createWorktreesForWorkspace(branch string, opts *WorkspaceCr
 }
 
 // prepareWorktreeStatusEntries prepares status file entries for all worktrees.
-func (w *workspace) prepareWorktreeStatusEntries(
-	workspaceConfig *WorkspaceConfig,
+func (w *Workspace) prepareWorktreeStatusEntries(
+	workspaceConfig *Config,
 	workspaceDir string,
 	branch string,
 	createdWorktrees *[]struct {
@@ -591,10 +649,10 @@ func (w *workspace) prepareWorktreeStatusEntries(
 		branch  string
 		path    string
 	},
-	opts *WorkspaceCreateWorktreeOpts,
+	_ *CreateWorktreeOpts,
 ) error {
 	for i, folder := range workspaceConfig.Folders {
-		w.verbosePrint("Preparing worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
+		w.verboseLogf("Preparing worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
 
 		resolvedPath := filepath.Join(workspaceDir, folder.Path)
 		repoURL, err := w.git.GetRepositoryName(resolvedPath)
@@ -603,22 +661,17 @@ func (w *workspace) prepareWorktreeStatusEntries(
 		}
 
 		// Convert workspace path to absolute for status file storage
-		workspacePath, err := filepath.Abs(w.originalFile)
+		workspacePath, err := filepath.Abs(w.OriginalFile)
 		if err != nil {
 			return fmt.Errorf("failed to get absolute path for workspace file: %w", err)
 		}
 
 		// Add to status file
-		var issueInfo *issue.Info
-		if opts != nil && opts.IssueInfo != nil {
-			issueInfo = opts.IssueInfo
-		}
 		if err := w.statusManager.AddWorktree(status.AddWorktreeParams{
 			RepoURL:       repoURL,
 			Branch:        branch,
 			WorktreePath:  resolvedPath,
 			WorkspacePath: workspacePath,
-			IssueInfo:     issueInfo,
 		}); err != nil {
 			return fmt.Errorf("failed to add worktree to status file: %w", err)
 		}
@@ -634,8 +687,8 @@ func (w *workspace) prepareWorktreeStatusEntries(
 }
 
 // createWorktreeDirectories creates worktree directories and executes Git worktree commands.
-func (w *workspace) createWorktreeDirectories(
-	workspaceConfig *WorkspaceConfig,
+func (w *Workspace) createWorktreeDirectories(
+	workspaceConfig *Config,
 	workspaceDir string,
 	branch string,
 	createdWorktrees []struct {
@@ -644,10 +697,10 @@ func (w *workspace) createWorktreeDirectories(
 		path    string
 	},
 	worktreeWorkspacePath string,
-	opts *WorkspaceCreateWorktreeOpts,
+	_ *CreateWorktreeOpts,
 ) error {
 	for i, folder := range workspaceConfig.Folders {
-		w.verbosePrint("Creating worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
+		w.verboseLogf("Creating worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
 
 		if err := w.createSingleWorktree(createSingleWorktreeParams{
 			Folder:                folder,
@@ -655,12 +708,12 @@ func (w *workspace) createWorktreeDirectories(
 			Branch:                branch,
 			CreatedWorktrees:      createdWorktrees,
 			WorktreeWorkspacePath: worktreeWorkspacePath,
-			Opts:                  opts,
+			Opts:                  nil,
 		}); err != nil {
 			return err
 		}
 
-		w.verbosePrint("✓ Worktree created successfully for %s", folder.Path)
+		w.verboseLogf("✓ Worktree created successfully for %s", folder.Path)
 	}
 
 	return nil
@@ -668,7 +721,7 @@ func (w *workspace) createWorktreeDirectories(
 
 // createSingleWorktreeParams contains parameters for creating a single worktree.
 type createSingleWorktreeParams struct {
-	Folder           WorkspaceFolder
+	Folder           Folder
 	WorkspaceDir     string
 	Branch           string
 	CreatedWorktrees []struct {
@@ -677,11 +730,11 @@ type createSingleWorktreeParams struct {
 		path    string
 	}
 	WorktreeWorkspacePath string
-	Opts                  *WorkspaceCreateWorktreeOpts
+	Opts                  *CreateWorktreeOpts
 }
 
 // createSingleWorktree creates a single worktree for a folder.
-func (w *workspace) createSingleWorktree(params createSingleWorktreeParams) error {
+func (w *Workspace) createSingleWorktree(params createSingleWorktreeParams) error {
 	resolvedPath := filepath.Join(params.WorkspaceDir, params.Folder.Path)
 	repoURL, err := w.git.GetRepositoryName(resolvedPath)
 	if err != nil {
@@ -712,7 +765,7 @@ func (w *workspace) createSingleWorktree(params createSingleWorktreeParams) erro
 	if err := w.git.CreateWorktree(resolvedPath, worktreePath, params.Branch); err != nil {
 		w.cleanupOnFailure(params.CreatedWorktrees, params.WorktreeWorkspacePath)
 		if cleanupErr := w.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
-			w.verbosePrint("Warning: failed to clean up worktree directory: %v", cleanupErr)
+			w.verboseLogf("Warning: failed to clean up worktree directory: %v", cleanupErr)
 		}
 		return fmt.Errorf("failed to create Git worktree for %s: %w", params.Folder.Path, err)
 	}
@@ -721,7 +774,7 @@ func (w *workspace) createSingleWorktree(params createSingleWorktreeParams) erro
 }
 
 // cleanupOnFailure performs cleanup operations when worktree creation fails.
-func (w *workspace) cleanupOnFailure(
+func (w *Workspace) cleanupOnFailure(
 	createdWorktrees []struct {
 		repoURL string
 		branch  string
@@ -747,7 +800,7 @@ type ensureBranchExistsParams struct {
 }
 
 // ensureBranchExists ensures that the specified branch exists in the repository.
-func (w *workspace) ensureBranchExists(params ensureBranchExistsParams) error {
+func (w *Workspace) ensureBranchExists(params ensureBranchExistsParams) error {
 	// Check if branch exists
 	exists, err := w.git.BranchExists(params.ResolvedPath, params.Branch)
 	if err != nil {
@@ -758,7 +811,7 @@ func (w *workspace) ensureBranchExists(params ensureBranchExistsParams) error {
 	}
 
 	if !exists {
-		w.verbosePrint("Branch %s does not exist in %s, creating from current branch", params.Branch, params.FolderPath)
+		w.verboseLogf("Branch %s does not exist in %s, creating from current branch", params.Branch, params.FolderPath)
 		if err := w.git.CreateBranch(params.ResolvedPath, params.Branch); err != nil {
 			// Cleanup on failure
 			w.cleanupFailedWorktrees(params.CreatedWorktrees)
@@ -772,15 +825,15 @@ func (w *workspace) ensureBranchExists(params ensureBranchExistsParams) error {
 
 // createWorktreeWorkspaceFileParams contains parameters for creating a worktree workspace file.
 type createWorktreeWorkspaceFileParams struct {
-	WorkspaceConfig       *WorkspaceConfig
+	WorkspaceConfig       *Config
 	WorkspaceName         string
 	Branch                string
 	WorktreeWorkspacePath string
 }
 
 // createWorktreeWorkspaceFile creates the worktree-specific workspace file.
-func (w *workspace) createWorktreeWorkspaceFile(params createWorktreeWorkspaceFileParams) error {
-	w.verbosePrint("Creating worktree-specific workspace file")
+func (w *Workspace) createWorktreeWorkspaceFile(params createWorktreeWorkspaceFileParams) error {
+	w.verboseLogf("Creating worktree-specific workspace file")
 
 	// Ensure workspaces directory exists
 	workspacesDir := filepath.Dir(params.WorktreeWorkspacePath)
@@ -793,23 +846,23 @@ func (w *workspace) createWorktreeWorkspaceFile(params createWorktreeWorkspaceFi
 
 	// Create worktree workspace configuration
 	worktreeConfig := struct {
-		Name    string            `json:"name,omitempty"`
-		Folders []WorkspaceFolder `json:"folders"`
+		Name    string   `json:"name,omitempty"`
+		Folders []Folder `json:"folders"`
 	}{
 		Name:    fmt.Sprintf("%s-%s", params.WorkspaceName, sanitizedBranchForName),
-		Folders: make([]WorkspaceFolder, len(params.WorkspaceConfig.Folders)),
+		Folders: make([]Folder, len(params.WorkspaceConfig.Folders)),
 	}
 
 	// Update folder paths to point to worktree directories
 	for i, folder := range params.WorkspaceConfig.Folders {
 		// Get repository URL for this folder
-		resolvedPath := filepath.Join(filepath.Dir(w.originalFile), folder.Path)
+		resolvedPath := filepath.Join(filepath.Dir(w.OriginalFile), folder.Path)
 		repoURL, err := w.git.GetRepositoryName(resolvedPath)
 		if err != nil {
 			return fmt.Errorf("failed to get repository URL for %s: %w", folder.Path, err)
 		}
 
-		worktreeConfig.Folders[i] = WorkspaceFolder{
+		worktreeConfig.Folders[i] = Folder{
 			Name: folder.Name,
 			Path: w.buildWorktreePath(repoURL, params.Branch),
 		}
@@ -826,38 +879,38 @@ func (w *workspace) createWorktreeWorkspaceFile(params createWorktreeWorkspaceFi
 		return fmt.Errorf("failed to write worktree workspace file: %w", err)
 	}
 
-	w.verbosePrint("Worktree workspace file created: %s", params.WorktreeWorkspacePath)
+	w.verboseLogf("Worktree workspace file created: %s", params.WorktreeWorkspacePath)
 	return nil
 }
 
 // cleanupFailedWorktrees removes worktree entries from status file.
-func (w *workspace) cleanupFailedWorktrees(createdWorktrees []struct {
+func (w *Workspace) cleanupFailedWorktrees(createdWorktrees []struct {
 	repoURL string
 	branch  string
 	path    string
 }) {
-	w.verbosePrint("Cleaning up failed worktrees from status file")
+	w.verboseLogf("Cleaning up failed worktrees from status file")
 	for _, worktree := range createdWorktrees {
 		if err := w.statusManager.RemoveWorktree(worktree.repoURL, worktree.branch); err != nil {
-			w.verbosePrint("Warning: failed to remove worktree from status file: %v", err)
+			w.verboseLogf("Warning: failed to remove worktree from status file: %v", err)
 		}
 	}
 }
 
 // cleanupWorktreeWorkspaceFile removes the worktree-specific workspace file.
-func (w *workspace) cleanupWorktreeWorkspaceFile(worktreeWorkspacePath string) {
-	w.verbosePrint("Cleaning up worktree workspace file")
+func (w *Workspace) cleanupWorktreeWorkspaceFile(worktreeWorkspacePath string) {
+	w.verboseLogf("Cleaning up worktree workspace file")
 	if err := w.fs.RemoveAll(worktreeWorkspacePath); err != nil {
-		w.verbosePrint("Warning: failed to remove worktree workspace file: %v", err)
+		w.verboseLogf("Warning: failed to remove worktree workspace file: %v", err)
 	}
 }
 
 // DeleteWorktree deletes worktrees for the workspace with the specified branch.
-func (w *workspace) DeleteWorktree(branch string, force bool) error {
-	w.verbosePrint("Deleting worktrees for branch: %s", branch)
+func (w *Workspace) DeleteWorktree(branch string, force bool) error {
+	w.verboseLogf("Deleting worktrees for branch: %s", branch)
 
 	// Load workspace configuration (only if not already loaded)
-	if w.originalFile == "" {
+	if w.OriginalFile == "" {
 		if err := w.Load(); err != nil {
 			return fmt.Errorf("failed to load workspace: %w", err)
 		}
@@ -874,11 +927,11 @@ func (w *workspace) DeleteWorktree(branch string, force bool) error {
 	}
 
 	// Get workspace name for worktree-specific workspace file
-	workspaceConfig, err := w.parseFile(w.originalFile)
+	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
 	}
-	workspaceName := w.getName(workspaceConfig, w.originalFile)
+	workspaceName := w.GetName(workspaceConfig, w.OriginalFile)
 
 	// Sanitize branch name for filename (replace slashes with hyphens)
 	sanitizedBranchForFilename := strings.ReplaceAll(branch, "/", "-")
@@ -899,7 +952,7 @@ func (w *workspace) DeleteWorktree(branch string, force bool) error {
 		if !force {
 			return fmt.Errorf("failed to remove worktree workspace file: %w", err)
 		}
-		w.verbosePrint("Warning: failed to remove worktree workspace file: %v", err)
+		w.verboseLogf("Warning: failed to remove worktree workspace file: %v", err)
 	}
 
 	// Remove worktree entries from status file
@@ -907,12 +960,12 @@ func (w *workspace) DeleteWorktree(branch string, force bool) error {
 		return err
 	}
 
-	w.verbosePrint("Workspace worktree deletion completed successfully")
+	w.verboseLogf("Workspace worktree deletion completed successfully")
 	return nil
 }
 
 // getWorkspaceWorktrees gets all worktrees for this workspace and branch.
-func (w *workspace) getWorkspaceWorktrees(branch string) ([]status.Repository, error) {
+func (w *Workspace) getWorkspaceWorktrees(branch string) ([]status.Repository, error) {
 	// Get all worktrees for this workspace and branch
 	allWorktrees, err := w.statusManager.ListAllWorktrees()
 	if err != nil {
@@ -920,22 +973,22 @@ func (w *workspace) getWorkspaceWorktrees(branch string) ([]status.Repository, e
 	}
 
 	// Convert workspace path to absolute for comparison with status file
-	workspacePath, err := filepath.Abs(w.originalFile)
+	workspacePath, err := filepath.Abs(w.OriginalFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute path for workspace file: %w", err)
 	}
 
-	w.verbosePrint("Looking for worktrees with workspace path: %s", workspacePath)
-	w.verbosePrint("Total worktrees available: %d", len(allWorktrees))
+	w.verboseLogf("Looking for worktrees with workspace path: %s", workspacePath)
+	w.verboseLogf("Total worktrees available: %d", len(allWorktrees))
 
 	// Filter worktrees for this workspace and branch
 	var workspaceWorktrees []status.Repository
 	for _, worktree := range allWorktrees {
-		w.verbosePrint("Checking worktree: URL=%s, Workspace=%s, Branch=%s",
+		w.verboseLogf("Checking worktree: URL=%s, Workspace=%s, Branch=%s",
 			worktree.URL, worktree.Workspace, worktree.Branch)
 		if worktree.Workspace == workspacePath && worktree.Branch == branch {
 			workspaceWorktrees = append(workspaceWorktrees, worktree)
-			w.verbosePrint("✓ Found matching worktree: %s", worktree.URL)
+			w.verboseLogf("✓ Found matching worktree: %s", worktree.URL)
 		}
 	}
 
@@ -943,9 +996,9 @@ func (w *workspace) getWorkspaceWorktrees(branch string) ([]status.Repository, e
 }
 
 // deleteWorktreeRepositories deletes worktrees for all repositories.
-func (w *workspace) deleteWorktreeRepositories(workspaceWorktrees []status.Repository, force bool) error {
+func (w *Workspace) deleteWorktreeRepositories(workspaceWorktrees []status.Repository, force bool) error {
 	for i, worktree := range workspaceWorktrees {
-		w.verbosePrint("Deleting worktree %d/%d: %s", i+1, len(workspaceWorktrees), worktree.URL)
+		w.verboseLogf("Deleting worktree %d/%d: %s", i+1, len(workspaceWorktrees), worktree.URL)
 
 		// Get original repository path
 		originalRepoPath := worktree.Path
@@ -956,7 +1009,7 @@ func (w *workspace) deleteWorktreeRepositories(workspaceWorktrees []status.Repos
 			if !force {
 				return fmt.Errorf("failed to delete Git worktree for %s: %w", worktree.URL, err)
 			}
-			w.verbosePrint("Warning: failed to delete Git worktree for %s: %v", worktree.URL, err)
+			w.verboseLogf("Warning: failed to delete Git worktree for %s: %v", worktree.URL, err)
 		}
 
 		// Remove worktree directory
@@ -964,25 +1017,95 @@ func (w *workspace) deleteWorktreeRepositories(workspaceWorktrees []status.Repos
 			if !force {
 				return fmt.Errorf("failed to remove worktree directory %s: %w", worktreePath, err)
 			}
-			w.verbosePrint("Warning: failed to remove worktree directory %s: %v", worktreePath, err)
+			w.verboseLogf("Warning: failed to remove worktree directory %s: %v", worktreePath, err)
 		}
 
-		w.verbosePrint("✓ Worktree deleted successfully for %s", worktree.URL)
+		w.verboseLogf("✓ Worktree deleted successfully for %s", worktree.URL)
 	}
 
 	return nil
 }
 
 // removeWorktreeStatusEntries removes worktree entries from status file.
-func (w *workspace) removeWorktreeStatusEntries(workspaceWorktrees []status.Repository, force bool) error {
+func (w *Workspace) removeWorktreeStatusEntries(workspaceWorktrees []status.Repository, force bool) error {
 	for _, worktree := range workspaceWorktrees {
 		if err := w.statusManager.RemoveWorktree(worktree.URL, worktree.Branch); err != nil {
 			if !force {
 				return fmt.Errorf("failed to remove worktree from status file: %w", err)
 			}
-			w.verbosePrint("Warning: failed to remove worktree from status file: %v", err)
+			w.verboseLogf("Warning: failed to remove worktree from status file: %v", err)
 		}
 	}
 
+	return nil
+}
+
+// validateGitConfiguration validates Git configuration for the workspace.
+func (w *Workspace) validateGitConfiguration() error {
+	// Git validation is not implemented in the interface, so we'll skip it for now
+	// This method is kept for future implementation
+	return nil
+}
+
+// isQuitCommand checks if the input is a quit command.
+func (w *Workspace) isQuitCommand(input string) bool {
+	return strings.ToLower(strings.TrimSpace(input)) == "q" ||
+		strings.ToLower(strings.TrimSpace(input)) == "quit" ||
+		strings.ToLower(strings.TrimSpace(input)) == "exit"
+}
+
+// parseNumericInput parses numeric input from user.
+func (w *Workspace) parseNumericInput(input string) (int, error) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return 0, fmt.Errorf("empty input")
+	}
+
+	// Check for quit command
+	if w.isQuitCommand(input) {
+		return -1, nil
+	}
+
+	// Parse number
+	var choice int
+	_, err := fmt.Sscanf(input, "%d", &choice)
+	if err != nil {
+		return 0, fmt.Errorf("invalid numeric input: %s", input)
+	}
+
+	return choice, nil
+}
+
+// isValidChoice checks if the choice is valid for the given range.
+func (w *Workspace) isValidChoice(choice, maxChoice int) bool {
+	return choice >= 1 && choice <= maxChoice
+}
+
+// parseConfirmationInput parses confirmation input from user.
+func (w *Workspace) parseConfirmationInput(input string) (bool, error) {
+	input = strings.ToLower(strings.TrimSpace(input))
+
+	switch input {
+	case "y", "yes":
+		return true, nil
+	case "n", "no":
+		return false, nil
+	default:
+		return false, fmt.Errorf("invalid confirmation input: %s", input)
+	}
+}
+
+// buildWorktreePath builds the worktree path for a repository and branch.
+func (w *Workspace) buildWorktreePath(repoURL, branch string) string {
+	// Use computed worktrees directory and include repository URL in path
+	worktreesBase := filepath.Join(w.config.BasePath, "worktrees")
+	return filepath.Join(worktreesBase, repoURL, branch)
+}
+
+// cleanupWorktreeDirectory cleans up the worktree directory.
+func (w *Workspace) cleanupWorktreeDirectory(worktreePath string) error {
+	if err := w.fs.RemoveAll(worktreePath); err != nil {
+		return fmt.Errorf("failed to cleanup worktree directory: %w", err)
+	}
 	return nil
 }

@@ -27,7 +27,7 @@ type TestSetup struct {
 	TempDir    string
 	ConfigPath string
 	RepoPath   string
-	CmPath    string
+	CmPath     string
 	StatusPath string
 }
 
@@ -63,7 +63,7 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 		TempDir:    tempDir,
 		ConfigPath: configPath,
 		RepoPath:   repoPath,
-		CmPath:    cmPath,
+		CmPath:     cmPath,
 		StatusPath: statusPath,
 	}
 }
@@ -211,16 +211,17 @@ func readStatusFile(t *testing.T, statusPath string) *StatusFile {
 func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 	t.Helper()
 
-	// The worktree should be created in the .cm directory with repo name and branch structure
+	// The worktree should be created in the .cm/worktrees directory with repo name and branch structure
 	// Since we don't know the exact repo name, we'll check for any directory with the branch name
-	entries, err := os.ReadDir(setup.CmPath)
+	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
+	entries, err := os.ReadDir(worktreesDir)
 	require.NoError(t, err)
 
 	var worktreePath string
 	for _, entry := range entries {
-		if entry.IsDir() && entry.Name() != "status.yaml" {
+		if entry.IsDir() {
 			// This is likely the repository directory
-			repoDir := filepath.Join(setup.CmPath, entry.Name())
+			repoDir := filepath.Join(worktreesDir, entry.Name())
 			branchDir := filepath.Join(repoDir, branch)
 			if _, err := os.Stat(branchDir); err == nil {
 				worktreePath = branchDir
@@ -254,10 +255,10 @@ func assertWorktreeInRepo(t *testing.T, setup *TestSetup, branch string) {
 	output, err := cmd.Output()
 	require.NoError(t, err)
 
-	// The worktree path should be in the .cm directory with repo name and branch structure
+	// The worktree path should be in the .cm/worktrees directory with repo name and branch structure
 	// Since we don't know the exact repo name, we'll check for any path containing the branch name
 	assert.Contains(t, string(output), branch, "Worktree should be listed in the original repository")
-	assert.Contains(t, string(output), setup.CmPath, "Worktree should be in the .cm directory")
+	assert.Contains(t, string(output), filepath.Join(setup.CmPath, "worktrees"), "Worktree should be in the .cm/worktrees directory")
 }
 
 // getGitWorktreeList gets the list of worktrees from Git

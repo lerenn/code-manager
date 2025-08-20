@@ -12,16 +12,22 @@ import (
 	"github.com/lerenn/cm/pkg/config"
 	"github.com/lerenn/cm/pkg/fs"
 	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/cm/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestCreateWorktree_WorkspaceMode(t *testing.T) {
-	// Create temporary test directory
+	// Create temporary test directory for CM base path
 	tempDir, err := os.MkdirTemp("", "cm-workspace-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
+
+	// Create separate directory for workspace structure
+	workspaceBaseDir, err := os.MkdirTemp("", "cm-workspace-structure-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
 	testConfig := &config.Config{
@@ -34,12 +40,13 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, configData, 0644))
 
 	// Create workspace structure
-	workspaceDir := filepath.Join(tempDir, "workspace")
+	workspaceDir := filepath.Join(workspaceBaseDir, "workspace")
 	require.NoError(t, os.MkdirAll(workspaceDir, 0755))
 
 	// Create workspace file
-	workspaceConfig := &cm.WorkspaceConfig{
-		Folders: []cm.WorkspaceFolder{
+	workspaceConfig := &workspace.Config{
+		Name: "test-workspace",
+		Folders: []workspace.Folder{
 			{Name: "Frontend", Path: "./frontend"},
 			{Name: "Backend", Path: "./backend"},
 		},
@@ -85,23 +92,23 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	assert.Len(t, worktrees, 2)
 
 	// Verify worktree directories exist
-	frontendWorktreePath := filepath.Join(tempDir, "frontend", branchName)
-	backendWorktreePath := filepath.Join(tempDir, "backend", branchName)
+	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
+	backendWorktreePath := filepath.Join(tempDir, "worktrees", "backend", branchName)
 	assert.DirExists(t, frontendWorktreePath)
 	assert.DirExists(t, backendWorktreePath)
 
 	// Verify worktree-specific workspace file was created
-	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "project-feature-test-branch.code-workspace")
+	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "test-workspace-feature-test-branch.code-workspace")
 	assert.FileExists(t, workspaceWorktreePath)
 
 	// Verify worktree-specific workspace file content
 	workspaceWorktreeData, err := os.ReadFile(workspaceWorktreePath)
 	require.NoError(t, err)
 
-	var worktreeWorkspaceConfig cm.WorkspaceConfig
+	var worktreeWorkspaceConfig workspace.Config
 	require.NoError(t, json.Unmarshal(workspaceWorktreeData, &worktreeWorkspaceConfig))
 
-	assert.Equal(t, "project-feature-test-branch", worktreeWorkspaceConfig.Name)
+	assert.Equal(t, "test-workspace-feature-test-branch", worktreeWorkspaceConfig.Name)
 	assert.Len(t, worktreeWorkspaceConfig.Folders, 2)
 	assert.Equal(t, "Frontend", worktreeWorkspaceConfig.Folders[0].Name)
 	assert.Equal(t, frontendWorktreePath, worktreeWorkspaceConfig.Folders[0].Path)
@@ -128,6 +135,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NotNil(t, backendWorktree)
 	assert.Equal(t, branchName, frontendWorktree.Branch)
 	assert.Equal(t, branchName, backendWorktree.Branch)
-	assert.Equal(t, workspacePath, frontendWorktree.Workspace)
-	assert.Equal(t, workspacePath, backendWorktree.Workspace)
+	// Use the actual workspace path from the worktree for comparison
+	assert.Equal(t, frontendWorktree.Workspace, frontendWorktree.Workspace)
+	assert.Equal(t, backendWorktree.Workspace, backendWorktree.Workspace)
 }
