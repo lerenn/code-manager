@@ -16,7 +16,6 @@ var (
 	quiet      bool
 	verbose    bool
 	configPath string
-	ideName    string
 )
 
 // loadConfig loads the configuration with fallback to default.
@@ -104,12 +103,6 @@ func main() {
 	listCmd := createListCmd()
 	loadCmd := createLoadCmd()
 	initCmd := createInitCmd()
-
-	// Add IDE flag to create command
-	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
-
-	// Add IDE flag to load command
-	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
 
 	// Add initialization check to all commands except init
 	addInitializationCheck(createCmd)

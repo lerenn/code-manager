@@ -8,6 +8,8 @@ import (
 )
 
 func createLoadCmd() *cobra.Command {
+	var ideName string
+
 	loadCmd := &cobra.Command{
 		Use:   "load <remote-source:branch-name> [--ide <ide-name>]",
 		Short: "Load a branch from a remote source",
@@ -46,9 +48,17 @@ Examples:
 			}
 
 			// Load the worktree
-			return cmManager.LoadWorktree(args[0])
+			var opts []cm.LoadWorktreeOpts
+			if ideName != "" {
+				opts = append(opts, cm.LoadWorktreeOpts{IDEName: ideName})
+			}
+
+			return cmManager.LoadWorktree(args[0], opts...)
 		},
 	}
+
+	// Add IDE flag to load command
+	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
 
 	return loadCmd
 }
