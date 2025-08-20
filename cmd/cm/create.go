@@ -23,7 +23,7 @@ Examples:
 
 			var opts []cm.CreateWorkTreeOpts
 			if ideName != "" {
-				opts = append(opts, cm.CreateWorkTreeOpts{})
+				opts = append(opts, cm.CreateWorkTreeOpts{IDEName: ideName})
 			}
 
 			return cmManager.CreateWorkTree(args[0], opts...)
