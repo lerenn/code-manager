@@ -18,7 +18,10 @@ Examples:
   cm list`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := loadConfig()
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
 			cmManager := cm.NewCM(cfg)
 			cmManager.SetVerbose(verbose)
 

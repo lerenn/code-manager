@@ -24,7 +24,10 @@ Examples:
   cm open main --ide cursor`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			cfg := loadConfig()
+			cfg, err := loadConfig()
+			if err != nil {
+				return err
+			}
 			cmManager := cm.NewCM(cfg)
 			cmManager.SetVerbose(verbose)
 

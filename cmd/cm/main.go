@@ -19,37 +19,31 @@ var (
 	configPath string
 )
 
-// loadConfig loads the configuration strictly, failing if not found.
-func loadConfig() *config.Config {
-	var cfg *config.Config
-	var err error
+// loadConfig loads the configuration and returns an error if not found.
+func loadConfig() (*config.Config, error) {
 	manager := config.NewManager()
 
 	var path string
 	if configPath != "" {
 		path = configPath
 	} else {
-		homeDir, derr := os.UserHomeDir()
-		if derr != nil {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
 			homeDir = "."
 		}
 		path = filepath.Join(homeDir, ".cm", "config.yaml")
 	}
 
-	cfg, err = manager.LoadConfigStrict(path)
-	if err != nil {
-		if configPath != "" {
-			log.Fatalf("Configuration not found at %s. Run: cm init -c %s", path, path)
-		}
-		log.Fatalf("Configuration not found at %s. Run: cm init", path)
-	}
-
-	return cfg
+	return manager.LoadConfigStrict(path)
 }
 
 // checkInitialization checks if CM is initialized and returns an error if not.
 func checkInitialization() error {
-	cfg := loadConfig()
+	cfg, err := loadConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load configuration: %w", err)
+	}
+
 	fsInstance := fs.NewFS()
 
 	// Check if status file exists
