@@ -3,8 +3,6 @@ package cm
 import (
 	"fmt"
 	"strings"
-
-	repo "github.com/lerenn/code-manager/pkg/repository"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -60,16 +58,7 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) error {
 	c.VerbosePrint("Loading worktree for single repository mode")
 
-	repoInstance := repo.NewRepository(repo.NewRepositoryParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       c.IsVerbose(),
-	})
-	return repoInstance.LoadWorktree(remoteSource, branchName)
+	return c.repository.LoadWorktree(remoteSource, branchName)
 }
 
 // parseBranchArg parses the remote:branch argument format.

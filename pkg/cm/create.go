@@ -97,24 +97,13 @@ func (c *realCM) handleProjectMode(sanitizedBranch string) error {
 func (c *realCM) handleRepositoryMode(branch string) error {
 	c.VerbosePrint("Handling repository mode")
 
-	// Create a single repository instance for all repository operations
-	repoInstance := repo.NewRepository(repo.NewRepositoryParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       c.IsVerbose(),
-	})
-
 	// 1. Validate repository
-	if err := repoInstance.Validate(); err != nil {
+	if err := c.repository.Validate(); err != nil {
 		return c.translateRepositoryError(err)
 	}
 
 	// 2. Create worktree for single repository
-	if err := repoInstance.CreateWorktree(branch); err != nil {
+	if err := c.repository.CreateWorktree(branch); err != nil {
 		return c.translateRepositoryError(err)
 	}
 
@@ -154,19 +143,8 @@ func (c *realCM) translateRepositoryError(err error) error {
 func (c *realCM) handleWorkspaceMode(branch string) error {
 	c.VerbosePrint("Handling workspace mode")
 
-	// Create workspace instance
-	workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       c.IsVerbose(),
-	})
-
 	// Create worktree for workspace
-	if err := workspace.CreateWorktree(branch); err != nil {
+	if err := c.workspace.CreateWorktree(branch); err != nil {
 		return err
 	}
 

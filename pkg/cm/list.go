@@ -4,9 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	repo "github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/status"
-	ws "github.com/lerenn/code-manager/pkg/workspace"
 )
 
 // ListWorktrees lists worktrees for the current project with mode detection.
@@ -21,28 +19,10 @@ func (c *realCM) ListWorktrees() ([]status.WorktreeInfo, ProjectType, error) {
 
 	switch projectType {
 	case ProjectTypeSingleRepo:
-		repoInstance := repo.NewRepository(repo.NewRepositoryParams{
-			FS:            c.FS,
-			Git:           c.Git,
-			Config:        c.Config,
-			StatusManager: c.StatusManager,
-			Logger:        c.Logger,
-			Prompt:        c.Prompt,
-			Verbose:       c.IsVerbose(),
-		})
-		worktrees, err := repoInstance.ListWorktrees()
+		worktrees, err := c.repository.ListWorktrees()
 		return worktrees, ProjectTypeSingleRepo, c.translateListError(err)
 	case ProjectTypeWorkspace:
-		workspaceInstance := ws.NewWorkspace(ws.NewWorkspaceParams{
-			FS:            c.FS,
-			Git:           c.Git,
-			Config:        c.Config,
-			StatusManager: c.StatusManager,
-			Logger:        c.Logger,
-			Prompt:        c.Prompt,
-			Verbose:       c.IsVerbose(),
-		})
-		worktrees, err := workspaceInstance.ListWorktrees()
+		worktrees, err := c.workspace.ListWorktrees()
 		return worktrees, ProjectTypeWorkspace, c.translateListError(err)
 	case ProjectTypeNone:
 		return nil, ProjectTypeNone, ErrNoGitRepositoryOrWorkspaceFound

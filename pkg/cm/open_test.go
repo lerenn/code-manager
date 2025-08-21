@@ -8,7 +8,8 @@ import (
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/ide"
-	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/repository"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -17,23 +18,27 @@ func TestCM_OpenWorktree(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	mockRepository := repository.NewMockRepository(ctrl)
+	mockWorkspace := workspace.NewMockWorkspace(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	cm := NewCM(createTestConfig())
+	// Create CM with mocked dependencies
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: mockRepository,
+		Workspace:  mockWorkspace,
+		Config:     createTestConfig(),
+	})
 
-	// Override adapters with mocks
+	// Override dependencies with mocks
 	c := cm.(*realCM)
+	c.ideManager = mockIDE
 	c.FS = mockFS
 	c.Git = mockGit
-	c.StatusManager = mockStatus
-	c.ideManager = mockIDE
 
-	// Mock single repo detection - .git found
-	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(1)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(1)
+	// Mock repository detection
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 
 	// Mock Git to return repository URL
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
@@ -41,7 +46,7 @@ func TestCM_OpenWorktree(t *testing.T) {
 	// Mock worktree path existence check
 	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(true, nil)
 
-	// Mock IDE opening - now uses derived worktree path
+	// Mock IDE opening
 	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/origin/test-branch", false).Return(nil)
 
 	err := cm.OpenWorktree("test-branch", "cursor")
@@ -52,33 +57,35 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
+	mockRepository := repository.NewMockRepository(ctrl)
+	mockWorkspace := workspace.NewMockWorkspace(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	cm := NewCM(createTestConfig())
+	// Create CM with mocked dependencies
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: mockRepository,
+		Workspace:  mockWorkspace,
+		Config:     createTestConfig(),
+	})
 
-	// Override adapters with mocks
+	// Override dependencies with mocks
 	c := cm.(*realCM)
+	c.ideManager = mockIDE
 	c.FS = mockFS
 	c.Git = mockGit
-	c.StatusManager = mockStatus
-	c.ideManager = mockIDE
 
-	// Mock single repo detection - .git found
-	mockFS.EXPECT().Exists(".git").Return(true, nil).Times(1)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).Times(1)
+	// Mock repository detection
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 
 	// Mock Git to return repository URL
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
 
-	// Mock worktree path existence check
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(true, nil)
-
-	// Mock IDE opening - the method will try to open the worktree path
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/origin/test-branch", false).Return(nil)
+	// Mock worktree path existence check - worktree not found
+	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(false, nil)
 
 	err := cm.OpenWorktree("test-branch", "cursor")
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrWorktreeNotInStatus)
 }

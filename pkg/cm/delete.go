@@ -4,8 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	repo "github.com/lerenn/code-manager/pkg/repository"
-	ws "github.com/lerenn/code-manager/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/workspace"
 )
 
 // DeleteWorkTree deletes a worktree for the specified branch.
@@ -34,19 +33,8 @@ func (c *realCM) DeleteWorkTree(branch string, force bool) error {
 func (c *realCM) handleRepositoryDeleteMode(branch string, force bool) error {
 	c.VerbosePrint("Handling repository delete mode")
 
-	// Create a single repository instance for all repository operations
-	repoInstance := repo.NewRepository(repo.NewRepositoryParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       c.IsVerbose(),
-	})
-
 	// Delete worktree for single repository
-	if err := repoInstance.DeleteWorktree(branch, force); err != nil {
+	if err := c.repository.DeleteWorktree(branch, force); err != nil {
 		return c.translateRepositoryError(err)
 	}
 
@@ -59,19 +47,8 @@ func (c *realCM) handleRepositoryDeleteMode(branch string, force bool) error {
 func (c *realCM) handleWorkspaceDeleteMode(branch string, force bool) error {
 	c.VerbosePrint("Handling workspace delete mode")
 
-	// Create workspace instance
-	workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       c.IsVerbose(),
-	})
-
 	// Delete worktree for workspace
-	if err := workspace.DeleteWorktree(branch, force); err != nil {
+	if err := c.workspace.DeleteWorktree(branch, force); err != nil {
 		return c.translateWorkspaceError(err)
 	}
 
@@ -86,16 +63,16 @@ func (c *realCM) translateWorkspaceError(err error) error {
 	}
 
 	// Check for specific workspace errors and translate them
-	if errors.Is(err, ws.ErrWorktreeExists) {
+	if errors.Is(err, workspace.ErrWorktreeExists) {
 		return ErrWorktreeExists
 	}
-	if errors.Is(err, ws.ErrWorktreeNotInStatus) {
+	if errors.Is(err, workspace.ErrWorktreeNotInStatus) {
 		return ErrWorktreeNotInStatus
 	}
-	if errors.Is(err, ws.ErrRepositoryNotClean) {
+	if errors.Is(err, workspace.ErrRepositoryNotClean) {
 		return ErrRepositoryNotClean
 	}
-	if errors.Is(err, ws.ErrDirectoryExists) {
+	if errors.Is(err, workspace.ErrDirectoryExists) {
 		return ErrDirectoryExists
 	}
 
