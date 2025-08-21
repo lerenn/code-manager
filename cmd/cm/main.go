@@ -2,11 +2,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +17,6 @@ var (
 	quiet      bool
 	verbose    bool
 	configPath string
-	ideName    string
 )
 
 // loadConfig loads the configuration strictly, failing if not found.
@@ -45,6 +47,38 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
+// checkInitialization checks if CM is initialized and returns an error if not.
+func checkInitialization() error {
+	cfg := loadConfig()
+	fsInstance := fs.NewFS()
+
+	// Check if status file exists
+	exists, err := fsInstance.Exists(cfg.StatusFile)
+	if err != nil {
+		return fmt.Errorf("failed to check status file existence: %w", err)
+	}
+
+	if !exists {
+		return status.ErrNotInitialized
+	}
+
+	return nil
+}
+
+// addInitializationCheck adds a pre-run check to ensure CM is initialized.
+func addInitializationCheck(cmd *cobra.Command) {
+	originalRunE := cmd.RunE
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		if err := checkInitialization(); err != nil {
+			return err
+		}
+		if originalRunE != nil {
+			return originalRunE(cmd, args)
+		}
+		return nil
+	}
+}
+
 func main() {
 	var rootCmd = &cobra.Command{
 		Use:   "cm",
@@ -67,11 +101,12 @@ func main() {
 	initCmd := createInitCmd()
 	cloneCmd := createCloneCmd()
 
-	// Add IDE flag to create command
-	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
-
-	// Add IDE flag to load command
-	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
+	// Add initialization check to all commands except init
+	addInitializationCheck(createCmd)
+	addInitializationCheck(openCmd)
+	addInitializationCheck(deleteCmd)
+	addInitializationCheck(listCmd)
+	addInitializationCheck(loadCmd)
 
 	// Add subcommands
 	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd, cloneCmd)

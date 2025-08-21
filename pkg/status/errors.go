@@ -9,6 +9,7 @@ var (
 	ErrWorktreeAlreadyExists       = errors.New("worktree already exists")
 	ErrWorktreeNotFound            = errors.New("worktree not found")
 	ErrConfigurationNotInitialized = errors.New("configuration is not initialized")
+	ErrNotInitialized              = errors.New("CM is not initialized. Run 'cm init' to initialize")
 
 	// Repository management errors.
 	ErrRepositoryNotFound      = errors.New("repository not found in status")

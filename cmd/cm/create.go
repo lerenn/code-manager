@@ -6,6 +6,8 @@ import (
 )
 
 func createCreateCmd() *cobra.Command {
+	var ideName string
+
 	createCmd := &cobra.Command{
 		Use:   "create <branch> [--ide <ide-name>]",
 		Short: "Create a worktree for the specified branch",
@@ -21,14 +23,17 @@ Examples:
 			cmManager := cm.NewCM(cfg)
 			cmManager.SetVerbose(verbose)
 
-			var opts []cm.CreateWorkTreeOpts
+			var opts cm.CreateWorkTreeOpts
 			if ideName != "" {
-				opts = append(opts, cm.CreateWorkTreeOpts{})
+				opts.IDEName = ideName
 			}
 
-			return cmManager.CreateWorkTree(args[0], opts...)
+			return cmManager.CreateWorkTree(args[0], opts)
 		},
 	}
+
+	// Add IDE flag to create command
+	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
 
 	return createCmd
 }

@@ -8,15 +8,20 @@ import (
 )
 
 func createLoadCmd() *cobra.Command {
+	var ideName string
+
 	loadCmd := &cobra.Command{
-		Use:   "load <remote-source:branch-name> [--ide <ide-name>]",
+		Use:   "load [remote:]<branch-name> [--ide <ide-name>]",
 		Short: "Load a branch from a remote source",
 		Long: `Load a branch from a remote source and create a worktree.
 
+The remote part is optional and defaults to "origin" if not specified.
+
 Examples:
-  cm load origin:feature-branch
-  cm load upstream:main
-  cm load origin:feature-branch --ide vscode`,
+  cm load feature-branch          # Uses origin:feature-branch
+  cm load origin:feature-branch   # Explicitly specify remote
+  cm load upstream:main           # Use different remote
+  cm load feature-branch --ide vscode`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg := loadConfig()
@@ -45,10 +50,19 @@ Examples:
 				return cm.ErrBranchNameContainsColon
 			}
 
+			// Prepare options for LoadWorktree
+			var opts cm.LoadWorktreeOpts
+			if ideName != "" {
+				opts.IDEName = ideName
+			}
+
 			// Load the worktree
-			return cmManager.LoadWorktree(args[0])
+			return cmManager.LoadWorktree(args[0], opts)
 		},
 	}
+
+	// Add IDE flag to load command
+	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
 
 	return loadCmd
 }

@@ -1,4 +1,4 @@
-// Package main provides Git operations for the Dagger pipeline.
+// Package main provides Git operations for the CM Dagger module.
 package main
 
 import (
