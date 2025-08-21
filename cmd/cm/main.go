@@ -65,6 +65,7 @@ func main() {
 	listCmd := createListCmd()
 	loadCmd := createLoadCmd()
 	initCmd := createInitCmd()
+	cloneCmd := createCloneCmd()
 
 	// Add IDE flag to create command
 	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
@@ -73,7 +74,7 @@ func main() {
 	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
 
 	// Add subcommands
-	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd)
+	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd, cloneCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)

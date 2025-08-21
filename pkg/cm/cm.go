@@ -31,6 +31,9 @@ type CM interface {
 	// Init initializes CM configuration.
 	Init(opts InitOpts) error
 
+	// Clone clones a repository and initializes it in CM.
+	Clone(repoURL string, opts ...CloneOpts) error
+
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
 }

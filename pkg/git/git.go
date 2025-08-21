@@ -70,6 +70,12 @@ type Git interface {
 
 	// Commit creates a new commit with the specified message.
 	Commit(repoPath, message string) error
+
+	// Clone clones a repository to the specified path.
+	Clone(params CloneParams) error
+
+	// GetDefaultBranch gets the default branch name from a remote repository.
+	GetDefaultBranch(remoteURL string) (string, error)
 }
 
 type realGit struct {
@@ -356,6 +362,13 @@ type BranchExistsOnRemoteParams struct {
 	Branch     string
 }
 
+// CloneParams contains parameters for Clone.
+type CloneParams struct {
+	RepoURL    string
+	TargetPath string
+	Recursive  bool
+}
+
 // BranchExistsOnRemote checks if a branch exists on a specific remote.
 func (g *realGit) BranchExistsOnRemote(params BranchExistsOnRemoteParams) (bool, error) {
 	cmd := exec.Command("git", "ls-remote", "--heads", params.RemoteName, params.Branch)
@@ -485,4 +498,62 @@ func (g *realGit) Commit(repoPath, message string) error {
 			err, message, string(output))
 	}
 	return nil
+}
+
+// Clone clones a repository to the specified path.
+func (g *realGit) Clone(params CloneParams) error {
+	args := []string{"clone"}
+
+	// Add --no-recursive flag if not recursive
+	if !params.Recursive {
+		args = append(args, "--no-recursive")
+	}
+
+	// Add repository URL and target path
+	args = append(args, params.RepoURL, params.TargetPath)
+
+	cmd := exec.Command("git", args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git clone failed: %w (command: git %s, output: %s)",
+			err, strings.Join(args, " "), string(output))
+	}
+	return nil
+}
+
+// GetDefaultBranch gets the default branch name from a remote repository.
+func (g *realGit) GetDefaultBranch(remoteURL string) (string, error) {
+	// Use git ls-remote --symref to get the default branch
+	cmd := exec.Command("git", "ls-remote", "--symref", remoteURL, "HEAD")
+	// Set working directory to a temporary directory to avoid conflicts with worktrees
+	cmd.Dir = "/tmp"
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("git ls-remote failed: %w (command: git ls-remote --symref %s HEAD, output: %s)",
+			err, remoteURL, string(output))
+	}
+
+	// Parse the output to extract the default branch name
+	// Output format: "ref: refs/heads/main\t<commit-hash>"
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+
+		// Look for the HEAD reference line
+		if strings.HasPrefix(line, "ref:") {
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				ref := parts[1]
+				// Extract branch name from refs/heads/branch-name
+				if strings.HasPrefix(ref, "refs/heads/") {
+					return strings.TrimPrefix(ref, "refs/heads/"), nil
+				}
+			}
+		}
+	}
+
+	return "", fmt.Errorf("could not determine default branch from remote URL: %s", remoteURL)
 }

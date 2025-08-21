@@ -102,6 +102,20 @@ func (mr *MockGitMockRecorder) BranchExistsOnRemote(params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchExistsOnRemote", reflect.TypeOf((*MockGit)(nil).BranchExistsOnRemote), params)
 }
 
+// Clone mocks base method.
+func (m *MockGit) Clone(params CloneParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Clone", params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Clone indicates an expected call of Clone.
+func (mr *MockGitMockRecorder) Clone(params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clone", reflect.TypeOf((*MockGit)(nil).Clone), params)
+}
+
 // Commit mocks base method.
 func (m *MockGit) Commit(repoPath, message string) error {
 	m.ctrl.T.Helper()
@@ -201,6 +215,21 @@ func (m *MockGit) GetCurrentBranch(repoPath string) (string, error) {
 func (mr *MockGitMockRecorder) GetCurrentBranch(repoPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCurrentBranch", reflect.TypeOf((*MockGit)(nil).GetCurrentBranch), repoPath)
+}
+
+// GetDefaultBranch mocks base method.
+func (m *MockGit) GetDefaultBranch(remoteURL string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDefaultBranch", remoteURL)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDefaultBranch indicates an expected call of GetDefaultBranch.
+func (mr *MockGitMockRecorder) GetDefaultBranch(remoteURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultBranch", reflect.TypeOf((*MockGit)(nil).GetDefaultBranch), remoteURL)
 }
 
 // GetRemoteURL mocks base method.

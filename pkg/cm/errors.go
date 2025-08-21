@@ -56,4 +56,7 @@ var (
 	// Project detection errors.
 	ErrNoGitRepositoryOrWorkspaceFound = errors.New("no Git repository or workspace found")
 	ErrWorkspaceModeNotSupported       = errors.New("workspace mode not yet supported for load command")
+
+	// Clone errors.
+	ErrRepositoryExists = errors.New("repository already exists")
 )
