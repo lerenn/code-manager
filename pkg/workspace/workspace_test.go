@@ -10,9 +10,35 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+func TestNewWorkspace(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+	mockGit := git.NewMockGit(ctrl)
+	mockStatus := status.NewMockManager(ctrl)
+	mockLogger := logger.NewNoopLogger()
+	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
+
+	workspace := NewWorkspace(NewWorkspaceParams{
+		FS:            mockFS,
+		Git:           mockGit,
+		Config:        createTestConfig(),
+		StatusManager: mockStatus,
+		Logger:        mockLogger,
+		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
+		Verbose:       true,
+	})
+
+	assert.NotNil(t, workspace)
+}
 
 func TestWorkspace_ListWorktrees_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -23,6 +49,7 @@ func TestWorkspace_ListWorktrees_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -31,6 +58,7 @@ func TestWorkspace_ListWorktrees_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 	workspace.(*realWorkspace).OriginalFile = "/test/path/workspace.code-workspace"
@@ -89,6 +117,7 @@ func TestWorkspace_Load_SingleFile(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -97,6 +126,7 @@ func TestWorkspace_Load_SingleFile(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -129,6 +159,7 @@ func TestWorkspace_Load_NoFiles(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -137,6 +168,7 @@ func TestWorkspace_Load_NoFiles(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -157,6 +189,7 @@ func TestWorkspace_Load_AlreadyLoaded(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -165,6 +198,7 @@ func TestWorkspace_Load_AlreadyLoaded(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 	workspace.(*realWorkspace).OriginalFile = "already-loaded.code-workspace"

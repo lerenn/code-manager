@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // WorktreeWithRepo represents a worktree with its associated repository information.
@@ -69,23 +70,25 @@ func (w *realWorkspace) deleteWorktreeRepositories(workspaceWorktrees []Worktree
 		w.verboseLogf("Deleting worktree %d/%d: %s:%s for repository %s", i+1, len(workspaceWorktrees),
 			worktreeWithRepo.Remote, worktreeWithRepo.Branch, worktreeWithRepo.RepoURL)
 
-		// Delete Git worktree
-		worktreePath := w.buildWorktreePath(worktreeWithRepo.RepoURL, worktreeWithRepo.Remote, worktreeWithRepo.Branch)
-		if err := w.git.RemoveWorktree(worktreeWithRepo.RepoPath, worktreePath); err != nil {
+		// Get worktree path using worktree package
+		worktreePath := w.worktree.BuildPath(worktreeWithRepo.RepoURL, worktreeWithRepo.Remote, worktreeWithRepo.Branch)
+
+		// Delete worktree using the worktree package
+		err := w.worktree.Delete(worktree.DeleteParams{
+			RepoURL:      worktreeWithRepo.RepoURL,
+			Branch:       worktreeWithRepo.Branch,
+			WorktreePath: worktreePath,
+			RepoPath:     worktreeWithRepo.RepoPath,
+			Force:        force,
+		})
+
+		if err != nil {
 			if !force {
-				return fmt.Errorf("failed to delete Git worktree for %s:%s: %w",
+				return fmt.Errorf("failed to delete worktree for %s:%s: %w",
 					worktreeWithRepo.Remote, worktreeWithRepo.Branch, err)
 			}
-			w.verboseLogf("Warning: failed to delete Git worktree for %s:%s: %v",
+			w.verboseLogf("Warning: failed to delete worktree for %s:%s: %v",
 				worktreeWithRepo.Remote, worktreeWithRepo.Branch, err)
-		}
-
-		// Remove worktree directory
-		if err := w.fs.RemoveAll(worktreePath); err != nil {
-			if !force {
-				return fmt.Errorf("failed to remove worktree directory %s: %w", worktreePath, err)
-			}
-			w.verboseLogf("Warning: failed to remove worktree directory %s: %v", worktreePath, err)
 		}
 
 		w.verboseLogf("✓ Worktree deleted successfully for %s:%s", worktreeWithRepo.Remote, worktreeWithRepo.Branch)
@@ -97,7 +100,7 @@ func (w *realWorkspace) deleteWorktreeRepositories(workspaceWorktrees []Worktree
 // removeWorktreeStatusEntries removes worktree entries from status file.
 func (w *realWorkspace) removeWorktreeStatusEntries(workspaceWorktrees []WorktreeWithRepo, force bool) error {
 	for _, worktreeWithRepo := range workspaceWorktrees {
-		if err := w.statusManager.RemoveWorktree(worktreeWithRepo.RepoURL, worktreeWithRepo.Branch); err != nil {
+		if err := w.worktree.RemoveFromStatus(worktreeWithRepo.RepoURL, worktreeWithRepo.Branch); err != nil {
 			if !force {
 				return fmt.Errorf("failed to remove worktree from status file: %w", err)
 			}

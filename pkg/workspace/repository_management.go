@@ -127,7 +127,7 @@ func (w *realWorkspace) ensureRepositoryHasDefaultBranchWorktree(repoURL string,
 
 	// Check if there's already a worktree for this branch in the repository
 	// This is important for test environments where worktrees might already exist
-	worktreeExists, err := w.git.WorktreeExists(repo.Path, defaultBranch)
+	worktreeExists, err := w.worktree.Exists(repo.Path, defaultBranch)
 	if err != nil {
 		w.verboseLogf("Warning: failed to check if worktree exists for branch %s: %v", defaultBranch, err)
 		// Continue with creation attempt

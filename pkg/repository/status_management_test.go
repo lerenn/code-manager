@@ -10,6 +10,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -23,6 +24,7 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -31,6 +33,7 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -81,6 +84,7 @@ func TestRepository_ListWorktrees_RepositoryNotFound(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -89,6 +93,7 @@ func TestRepository_ListWorktrees_RepositoryNotFound(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -112,6 +117,7 @@ func TestRepository_AddWorktreeToStatus_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -120,10 +126,11 @@ func TestRepository_AddWorktreeToStatus_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
-	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	err := repo.AddWorktreeToStatus(StatusParams{
 		RepoURL:       "github.com/lerenn/example",
@@ -145,6 +152,7 @@ func TestRepository_RemoveWorktreeFromStatus_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -153,10 +161,11 @@ func TestRepository_RemoveWorktreeFromStatus_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
-	mockStatus.EXPECT().RemoveWorktree("github.com/lerenn/example", "test-branch").Return(nil)
+	mockWorktree.EXPECT().RemoveFromStatus("github.com/lerenn/example", "test-branch").Return(nil)
 
 	err := repo.RemoveWorktreeFromStatus("github.com/lerenn/example", "test-branch")
 	assert.NoError(t, err)
@@ -171,6 +180,7 @@ func TestRepository_AutoAddRepositoryToStatus_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -179,6 +189,7 @@ func TestRepository_AutoAddRepositoryToStatus_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -199,6 +210,7 @@ func TestRepository_AutoAddRepositoryToStatus_NoGitDir(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -207,6 +219,7 @@ func TestRepository_AutoAddRepositoryToStatus_NoGitDir(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 

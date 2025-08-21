@@ -140,20 +140,6 @@ func (mr *MockRepositoryMockRecorder) CreateWorktree(branch any, opts ...any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktree", reflect.TypeOf((*MockRepository)(nil).CreateWorktree), varargs...)
 }
 
-// CreateWorktreeWithCleanup mocks base method.
-func (m *MockRepository) CreateWorktreeWithCleanup(params CreateWorktreeWithCleanupParams) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWorktreeWithCleanup", params)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateWorktreeWithCleanup indicates an expected call of CreateWorktreeWithCleanup.
-func (mr *MockRepositoryMockRecorder) CreateWorktreeWithCleanup(params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktreeWithCleanup", reflect.TypeOf((*MockRepository)(nil).CreateWorktreeWithCleanup), params)
-}
-
 // DeleteWorktree mocks base method.
 func (m *MockRepository) DeleteWorktree(branch string, force bool) error {
 	m.ctrl.T.Helper()
@@ -180,48 +166,6 @@ func (m *MockRepository) DetermineProtocol(originURL string) string {
 func (mr *MockRepositoryMockRecorder) DetermineProtocol(originURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetermineProtocol", reflect.TypeOf((*MockRepository)(nil).DetermineProtocol), originURL)
-}
-
-// EnsureBranchExists mocks base method.
-func (m *MockRepository) EnsureBranchExists(currentDir, branch string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureBranchExists", currentDir, branch)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// EnsureBranchExists indicates an expected call of EnsureBranchExists.
-func (mr *MockRepositoryMockRecorder) EnsureBranchExists(currentDir, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureBranchExists", reflect.TypeOf((*MockRepository)(nil).EnsureBranchExists), currentDir, branch)
-}
-
-// ExecuteWorktreeCreation mocks base method.
-func (m *MockRepository) ExecuteWorktreeCreation(params WorktreeCreationParams) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecuteWorktreeCreation", params)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ExecuteWorktreeCreation indicates an expected call of ExecuteWorktreeCreation.
-func (mr *MockRepositoryMockRecorder) ExecuteWorktreeCreation(params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteWorktreeCreation", reflect.TypeOf((*MockRepository)(nil).ExecuteWorktreeCreation), params)
-}
-
-// ExecuteWorktreeDeletion mocks base method.
-func (m *MockRepository) ExecuteWorktreeDeletion(params WorktreeDeletionParams) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecuteWorktreeDeletion", params)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ExecuteWorktreeDeletion indicates an expected call of ExecuteWorktreeDeletion.
-func (mr *MockRepositoryMockRecorder) ExecuteWorktreeDeletion(params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteWorktreeDeletion", reflect.TypeOf((*MockRepository)(nil).ExecuteWorktreeDeletion), params)
 }
 
 // ExtractHostFromURL mocks base method.
@@ -380,67 +324,6 @@ func (m *MockRepository) ParseConfirmationInput(input string) (bool, error) {
 func (mr *MockRepositoryMockRecorder) ParseConfirmationInput(input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseConfirmationInput", reflect.TypeOf((*MockRepository)(nil).ParseConfirmationInput), input)
-}
-
-// PrepareWorktreeCreation mocks base method.
-func (m *MockRepository) PrepareWorktreeCreation(branch string) (string, string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareWorktreeCreation", branch)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// PrepareWorktreeCreation indicates an expected call of PrepareWorktreeCreation.
-func (mr *MockRepositoryMockRecorder) PrepareWorktreeCreation(branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareWorktreeCreation", reflect.TypeOf((*MockRepository)(nil).PrepareWorktreeCreation), branch)
-}
-
-// PrepareWorktreeDeletion mocks base method.
-func (m *MockRepository) PrepareWorktreeDeletion(branch string) (string, string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareWorktreeDeletion", branch)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// PrepareWorktreeDeletion indicates an expected call of PrepareWorktreeDeletion.
-func (mr *MockRepositoryMockRecorder) PrepareWorktreeDeletion(branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareWorktreeDeletion", reflect.TypeOf((*MockRepository)(nil).PrepareWorktreeDeletion), branch)
-}
-
-// PrepareWorktreePath mocks base method.
-func (m *MockRepository) PrepareWorktreePath(repoURL, branch string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrepareWorktreePath", repoURL, branch)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PrepareWorktreePath indicates an expected call of PrepareWorktreePath.
-func (mr *MockRepositoryMockRecorder) PrepareWorktreePath(repoURL, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareWorktreePath", reflect.TypeOf((*MockRepository)(nil).PrepareWorktreePath), repoURL, branch)
-}
-
-// PromptForConfirmation mocks base method.
-func (m *MockRepository) PromptForConfirmation(branch, worktreePath string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PromptForConfirmation", branch, worktreePath)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// PromptForConfirmation indicates an expected call of PromptForConfirmation.
-func (mr *MockRepositoryMockRecorder) PromptForConfirmation(branch, worktreePath any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForConfirmation", reflect.TypeOf((*MockRepository)(nil).PromptForConfirmation), branch, worktreePath)
 }
 
 // RemoveWorktreeFromStatus mocks base method.

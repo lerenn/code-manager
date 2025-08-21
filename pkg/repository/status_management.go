@@ -8,6 +8,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // StatusParams contains parameters for status operations.
@@ -22,7 +23,7 @@ type StatusParams struct {
 
 // AddWorktreeToStatus adds the worktree to the status file with proper error handling.
 func (r *realRepository) AddWorktreeToStatus(params StatusParams) error {
-	if err := r.StatusManager.AddWorktree(status.AddWorktreeParams{
+	if err := r.worktree.AddToStatus(worktree.AddToStatusParams{
 		RepoURL:       params.RepoURL,
 		Branch:        params.Branch,
 		WorktreePath:  params.WorktreePath,
@@ -61,7 +62,7 @@ func (r *realRepository) HandleRepositoryNotFoundError(params StatusParams) erro
 	}
 
 	// Try adding the worktree again
-	if err := r.StatusManager.AddWorktree(status.AddWorktreeParams{
+	if err := r.worktree.AddToStatus(worktree.AddToStatusParams{
 		RepoURL:       params.RepoURL,
 		Branch:        params.Branch,
 		WorktreePath:  params.WorktreePath,
@@ -118,12 +119,12 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 
 // RemoveWorktreeFromStatus removes a worktree from the status file.
 func (r *realRepository) RemoveWorktreeFromStatus(repoURL, branch string) error {
-	return r.StatusManager.RemoveWorktree(repoURL, branch)
+	return r.worktree.RemoveFromStatus(repoURL, branch)
 }
 
 // CleanupWorktreeDirectory cleans up the worktree directory.
 func (r *realRepository) CleanupWorktreeDirectory(worktreePath string) {
-	if cleanupErr := r.Base.CleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+	if cleanupErr := r.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
 		r.Logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
 	}
 }
@@ -133,7 +134,7 @@ func (r *realRepository) CleanupOnWorktreeCreationFailure(repoURL, branch, workt
 	if cleanupErr := r.StatusManager.RemoveWorktree(repoURL, branch); cleanupErr != nil {
 		r.Logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
 	}
-	if cleanupErr := r.Base.CleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+	if cleanupErr := r.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
 		r.Logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
 	}
 }

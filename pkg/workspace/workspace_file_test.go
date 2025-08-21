@@ -11,6 +11,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -52,6 +53,7 @@ func TestWorkspace_DetectWorkspaceFiles_NoFiles(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -60,6 +62,7 @@ func TestWorkspace_DetectWorkspaceFiles_NoFiles(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -80,6 +83,7 @@ func TestWorkspace_DetectWorkspaceFiles_Error(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -88,6 +92,7 @@ func TestWorkspace_DetectWorkspaceFiles_Error(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -109,6 +114,7 @@ func TestWorkspace_ParseFile_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -117,6 +123,7 @@ func TestWorkspace_ParseFile_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 

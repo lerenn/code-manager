@@ -11,6 +11,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // CM interface provides Git repository detection functionality.
@@ -60,6 +61,15 @@ func NewCM(cfg *config.Config) CM {
 	gitInstance := git.NewGit()
 	loggerInstance := logger.NewNoopLogger()
 	promptInstance := prompt.NewPrompt()
+	worktreeInstance := worktree.NewWorktree(worktree.NewWorktreeParams{
+		FS:            fsInstance,
+		Git:           gitInstance,
+		StatusManager: status.NewManager(fsInstance, cfg),
+		Logger:        loggerInstance,
+		Prompt:        promptInstance,
+		BasePath:      cfg.BasePath,
+		Verbose:       false,
+	})
 
 	// Create repository and workspace instances
 	repoInstance := repository.NewRepository(repository.NewRepositoryParams{
@@ -69,6 +79,7 @@ func NewCM(cfg *config.Config) CM {
 		StatusManager: status.NewManager(fsInstance, cfg),
 		Logger:        loggerInstance,
 		Prompt:        promptInstance,
+		Worktree:      worktreeInstance,
 		Verbose:       false,
 	})
 
@@ -79,6 +90,7 @@ func NewCM(cfg *config.Config) CM {
 		StatusManager: status.NewManager(fsInstance, cfg),
 		Logger:        loggerInstance,
 		Prompt:        promptInstance,
+		Worktree:      worktreeInstance,
 		Verbose:       false,
 	})
 

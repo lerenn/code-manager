@@ -140,7 +140,7 @@ func (w *realWorkspace) createWorktreeWorkspaceFile(params createWorktreeWorkspa
 
 		worktreeConfig.Folders[i] = Folder{
 			Name: folder.Name,
-			Path: w.buildWorktreePath(repoURL, "origin", params.Branch),
+			Path: w.worktree.BuildPath(repoURL, "origin", params.Branch),
 		}
 	}
 

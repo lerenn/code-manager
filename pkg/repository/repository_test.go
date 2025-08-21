@@ -10,6 +10,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -23,6 +24,7 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -31,6 +33,7 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -43,12 +46,10 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
-	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
-	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
-	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
-	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
-	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
+	mockWorktree.EXPECT().BuildPath("github.com/lerenn/example", "origin", "test-branch").Return("/test/path/github.com/lerenn/example/origin/test-branch")
+	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	err := repo.CreateWorktree("test-branch")
 	assert.NoError(t, err)
@@ -63,6 +64,7 @@ func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -71,6 +73,7 @@ func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -91,6 +94,7 @@ func TestRepository_IsWorkspaceFile_NotFound(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -99,6 +103,7 @@ func TestRepository_IsWorkspaceFile_NotFound(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -238,6 +243,7 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -246,6 +252,7 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -261,9 +268,7 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 		Branch: "test-branch",
 	}, nil)
 	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "test-branch").Return("/test/path/worktree", nil)
-	mockGit.EXPECT().RemoveWorktree(gomock.Any(), "/test/path/worktree").Return(nil)
-	mockFS.EXPECT().RemoveAll("/test/path/worktree").Return(nil)
-	mockStatus.EXPECT().RemoveWorktree("github.com/lerenn/example", "test-branch").Return(nil)
+	mockWorktree.EXPECT().Delete(gomock.Any()).Return(nil)
 
 	err := repo.DeleteWorktree("test-branch", true) // Force deletion
 	assert.NoError(t, err)
@@ -278,6 +283,7 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -286,6 +292,7 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
+		Worktree:      mockWorktree,
 		Verbose:       true,
 	})
 
@@ -310,12 +317,10 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
-	mockFS.EXPECT().Exists(gomock.Any()).Return(false, nil).AnyTimes()
-	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
-	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
-	mockGit.EXPECT().CreateBranch(gomock.Any(), "feature-branch").Return(nil)
-	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
+	mockWorktree.EXPECT().BuildPath("github.com/lerenn/example", "origin", "feature-branch").Return("/test/path/github.com/lerenn/example/origin/feature-branch")
+	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	err := repo.LoadWorktree("origin", "feature-branch")
 	assert.NoError(t, err)

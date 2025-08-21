@@ -4,6 +4,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/lerenn/code-manager/internal/base"
@@ -15,6 +16,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // DefaultRemote is the default remote name used for Git operations.
@@ -54,16 +56,6 @@ type Repository interface {
 	ValidateGitStatus() error
 	ValidateOriginRemote() error
 
-	// Worktree operation methods
-	PrepareWorktreeCreation(branch string) (string, string, error)
-	PrepareWorktreePath(repoURL, branch string) (string, error)
-	ExecuteWorktreeCreation(params WorktreeCreationParams) error
-	EnsureBranchExists(currentDir, branch string) error
-	CreateWorktreeWithCleanup(params CreateWorktreeWithCleanupParams) error
-	PrepareWorktreeDeletion(branch string) (string, string, error)
-	ExecuteWorktreeDeletion(params WorktreeDeletionParams) error
-	PromptForConfirmation(branch, worktreePath string) error
-
 	// Status management methods
 	AddWorktreeToStatus(params StatusParams) error
 	HandleStatusAddError(err error, params StatusParams) error
@@ -86,6 +78,7 @@ type Repository interface {
 // realRepository represents a single Git repository and provides methods for repository operations.
 type realRepository struct {
 	*base.Base
+	worktree worktree.Worktree
 }
 
 // NewRepositoryParams contains parameters for creating a new Repository instance.
@@ -96,6 +89,7 @@ type NewRepositoryParams struct {
 	StatusManager status.Manager
 	Logger        logger.Logger
 	Prompt        prompt.Prompt
+	Worktree      worktree.Worktree
 	Verbose       bool
 }
 
@@ -111,6 +105,7 @@ func NewRepository(params NewRepositoryParams) Repository {
 			Prompt:        params.Prompt,
 			Verbose:       params.Verbose,
 		}),
+		worktree: params.Worktree,
 	}
 }
 
@@ -144,27 +139,66 @@ type CreateWorktreeOpts struct {
 func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) error {
 	r.VerbosePrint("Creating worktree for single repository with branch: %s", branch)
 
-	// Validate and prepare repository
-	repoURL, worktreePath, err := r.PrepareWorktreeCreation(branch)
+	// Validate repository
+	validationResult, err := r.ValidateRepository(ValidationParams{Branch: branch})
 	if err != nil {
 		return err
 	}
 
-	// Create the worktree
-	var issueInfo *issue.Info
-	if len(opts) > 0 && opts[0].IssueInfo != nil {
-		issueInfo = opts[0].IssueInfo
-	}
-	if err := r.ExecuteWorktreeCreation(WorktreeCreationParams{
-		RepoURL:      repoURL,
+	// Build worktree path
+	worktreePath := r.worktree.BuildPath(validationResult.RepoURL, "origin", branch)
+	r.VerbosePrint("Worktree path: %s", worktreePath)
+
+	// Validate creation
+	if err := r.worktree.ValidateCreation(worktree.ValidateCreationParams{
+		RepoURL:      validationResult.RepoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
-		IssueInfo:    issueInfo,
+		RepoPath:     ".",
 	}); err != nil {
 		return err
 	}
 
-	// Issue information is now stored in status file instead of creating initial commits
+	// Get current directory
+	currentDir, err := filepath.Abs(".")
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Get issue info if provided
+	var issueInfo *issue.Info
+	if len(opts) > 0 && opts[0].IssueInfo != nil {
+		issueInfo = opts[0].IssueInfo
+	}
+
+	// Create the worktree
+	if err := r.worktree.Create(worktree.CreateParams{
+		RepoURL:      validationResult.RepoURL,
+		Branch:       branch,
+		WorktreePath: worktreePath,
+		RepoPath:     currentDir,
+		Remote:       "origin",
+		IssueInfo:    issueInfo,
+		Force:        false,
+	}); err != nil {
+		return err
+	}
+
+	// Add to status file with auto-repository handling
+	if err := r.AddWorktreeToStatus(StatusParams{
+		RepoURL:       validationResult.RepoURL,
+		Branch:        branch,
+		WorktreePath:  worktreePath,
+		WorkspacePath: "",
+		Remote:        "origin",
+		IssueInfo:     issueInfo,
+	}); err != nil {
+		// Clean up worktree on status failure
+		if cleanupErr := r.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
+			r.Logger.Logf("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
+		}
+		return err
+	}
 
 	r.VerbosePrint("Successfully created worktree for branch %s at %s", branch, worktreePath)
 
@@ -277,17 +311,37 @@ func (r *realRepository) IsWorkspaceFile() (bool, error) {
 func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 	r.VerbosePrint("Deleting worktree for single repository with branch: %s", branch)
 
-	// Validate and prepare worktree deletion
-	repoURL, worktreePath, err := r.PrepareWorktreeDeletion(branch)
+	// Validate repository
+	validationResult, err := r.ValidateRepository(ValidationParams{})
 	if err != nil {
 		return err
 	}
 
-	// Execute the deletion
-	if err := r.ExecuteWorktreeDeletion(WorktreeDeletionParams{
-		RepoURL:      repoURL,
+	// Check if worktree exists in status file
+	if err := r.ValidateWorktreeExists(validationResult.RepoURL, branch); err != nil {
+		return err
+	}
+
+	// Get worktree path from Git
+	worktreePath, err := r.Git.GetWorktreePath(validationResult.RepoPath, branch)
+	if err != nil {
+		return fmt.Errorf("failed to get worktree path: %w", err)
+	}
+
+	r.VerbosePrint("Worktree path: %s", worktreePath)
+
+	// Get current directory
+	currentDir, err := filepath.Abs(".")
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	// Delete the worktree
+	if err := r.worktree.Delete(worktree.DeleteParams{
+		RepoURL:      validationResult.RepoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
+		RepoPath:     currentDir,
 		Force:        force,
 	}); err != nil {
 		return err

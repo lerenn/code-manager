@@ -13,6 +13,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 //go:generate mockgen -source=workspace.go -destination=mockworkspace.gen.go -package=workspace
@@ -72,6 +73,7 @@ type realWorkspace struct {
 	statusManager status.Manager
 	logger        logger.Logger
 	prompt        prompt.Prompt
+	worktree      worktree.Worktree
 	verbose       bool
 	OriginalFile  string
 }
@@ -84,6 +86,7 @@ type NewWorkspaceParams struct {
 	StatusManager status.Manager
 	Logger        logger.Logger
 	Prompt        prompt.Prompt
+	Worktree      worktree.Worktree
 	Verbose       bool
 }
 
@@ -96,6 +99,7 @@ func NewWorkspace(params NewWorkspaceParams) Workspace {
 		statusManager: params.StatusManager,
 		logger:        params.Logger,
 		prompt:        params.Prompt,
+		worktree:      params.Worktree,
 		verbose:       params.Verbose,
 	}
 }

@@ -155,8 +155,8 @@ func (w *realWorkspace) validateWorkspaceForWorktreeCreation(branch string) erro
 			w.verboseLogf("Branch %s does not exist in %s, will create from current branch", branch, folder.Path)
 		}
 
-		// Validate directory creation permissions
-		worktreePath := w.buildWorktreePath(repoURL, "origin", branch)
+		// Validate directory creation permissions using worktree package
+		worktreePath := w.worktree.BuildPath(repoURL, "origin", branch)
 
 		// Check if worktree directory already exists
 		exists, err = w.fs.Exists(worktreePath)
