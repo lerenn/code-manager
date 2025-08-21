@@ -45,8 +45,8 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	workspaceConfig := &workspace.Config{
 		Name: "test-workspace",
 		Folders: []workspace.Folder{
-			{Name: "Frontend", Path: "./frontend"},
-			{Name: "Backend", Path: "./backend"},
+			{Name: "Hello-World", Path: "./Hello-World"},
+			{Name: "Spoon-Knife", Path: "./Spoon-Knife"},
 		},
 	}
 
@@ -56,14 +56,14 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.WriteFile(workspacePath, workspaceData, 0644))
 
 	// Create repositories
-	frontendDir := filepath.Join(workspaceDir, "frontend")
-	backendDir := filepath.Join(workspaceDir, "backend")
-	require.NoError(t, os.MkdirAll(frontendDir, 0755))
-	require.NoError(t, os.MkdirAll(backendDir, 0755))
+	helloWorldDir := filepath.Join(workspaceDir, "Hello-World")
+	spoonKnifeDir := filepath.Join(workspaceDir, "Spoon-Knife")
+	require.NoError(t, os.MkdirAll(helloWorldDir, 0755))
+	require.NoError(t, os.MkdirAll(spoonKnifeDir, 0755))
 
 	// Initialize Git repositories
-	createTestGitRepo(t, frontendDir)
-	createTestGitRepo(t, backendDir)
+	createTestGitRepo(t, helloWorldDir)
+	createTestGitRepo(t, spoonKnifeDir)
 
 	// Change to workspace directory
 	originalDir, err := os.Getwd()

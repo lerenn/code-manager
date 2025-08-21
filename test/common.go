@@ -3,7 +3,6 @@
 package test
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -136,9 +135,30 @@ func createTestGitRepo(t *testing.T, repoPath string) {
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 
-	// Add a remote origin with a unique URL based on the directory name
+	// Get directory name for repository-specific configuration
 	dirName := filepath.Base(repoPath)
-	remoteURL := fmt.Sprintf("https://github.com/test/%s.git", dirName)
+
+	// Set the default branch to match the remote repository
+	// octocat/Hello-World uses master, octocat/Spoon-Knife uses main
+	defaultBranch := "master"
+	if dirName == "Spoon-Knife" {
+		defaultBranch = "main" // Spoon-Knife uses main
+	}
+	cmd = exec.Command("git", "branch", "-M", defaultBranch)
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Add a remote origin with a real public repository URL to avoid authentication issues
+	// Use different repositories for Hello-World and Spoon-Knife to simulate real workspace scenario
+	var remoteURL string
+	if dirName == "Hello-World" {
+		remoteURL = "https://github.com/octocat/Hello-World.git"
+	} else if dirName == "Spoon-Knife" {
+		remoteURL = "https://github.com/octocat/Spoon-Knife.git"
+	} else {
+		// Default fallback for other test scenarios
+		remoteURL = "https://github.com/octocat/Hello-World.git"
+	}
 	cmd = exec.Command("git", "remote", "add", "origin", remoteURL)
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())

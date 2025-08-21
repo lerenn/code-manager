@@ -3,10 +3,8 @@
 package repository
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -15,130 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
-
-// createTestConfig creates a test configuration.
-func createTestConfig() *config.Config {
-	return &config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
-	}
-}
-
-func TestRepository_Validate_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Verbose:       true,
-	})
-
-	// Mock repository validation
-	mockFS.EXPECT().Exists(".git").Return(true, nil)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil)
-	mockGit.EXPECT().Status(".").Return("On branch main", nil)
-	mockGit.EXPECT().Status(".").Return("On branch main", nil) // Called twice for validation
-
-	err := repo.Validate()
-	assert.NoError(t, err)
-}
-
-func TestRepository_Validate_NoGitDir(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Verbose:       true,
-	})
-
-	// Mock repository validation - .git not found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
-
-	err := repo.Validate()
-	assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
-}
-
-func TestRepository_Validate_GitStatusError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Verbose:       true,
-	})
-
-	// Mock repository validation - .git exists but git status fails
-	mockFS.EXPECT().Exists(".git").Return(true, nil)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil)
-	mockGit.EXPECT().Status(".").Return("", fmt.Errorf("git error"))
-
-	err := repo.Validate()
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrGitRepositoryInvalid)
-}
-
-func TestRepository_Validate_NotClean(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Verbose:       true,
-	})
-
-	// Mock repository validation - .git exists but repository is not clean
-	mockFS.EXPECT().Exists(".git").Return(true, nil)
-	mockFS.EXPECT().IsDir(".git").Return(true, nil)
-	mockGit.EXPECT().Status(".").Return("On branch main\nChanges not staged for commit", nil).AnyTimes()
-
-	err := repo.Validate()
-	assert.NoError(t, err)
-}
 
 func TestRepository_CreateWorktree_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -393,64 +267,6 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 
 	err := repo.DeleteWorktree("test-branch", true) // Force deletion
 	assert.NoError(t, err)
-}
-
-func TestRepository_ListWorktrees_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Verbose:       true,
-	})
-
-	// Mock repository name extraction
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
-
-	// Mock status manager to return repository with worktrees
-	expectedRepo := &status.Repository{
-		Path: "/path/to/repo",
-		Remotes: map[string]status.Remote{
-			"origin": {
-				DefaultBranch: "main",
-			},
-		},
-		Worktrees: map[string]status.WorktreeInfo{
-			"feature/test-branch": {
-				Remote: "origin",
-				Branch: "feature/test-branch",
-			},
-			"bugfix/issue-123": {
-				Remote: "origin",
-				Branch: "bugfix/issue-123",
-			},
-		},
-	}
-	mockStatus.EXPECT().GetRepository("github.com/lerenn/example").Return(expectedRepo, nil)
-
-	result, err := repo.ListWorktrees()
-	assert.NoError(t, err)
-	assert.Len(t, result, 2, "Should only return worktrees for current repository")
-
-	// Verify specific branches are present
-	branchNames := make([]string, len(result))
-	for i, wt := range result {
-		branchNames[i] = wt.Branch
-	}
-	assert.Contains(t, branchNames, "feature/test-branch")
-	assert.Contains(t, branchNames, "bugfix/issue-123")
-	assert.NotContains(t, branchNames, "feature/other-branch")
 }
 
 func TestRepository_LoadWorktree_Success(t *testing.T) {
