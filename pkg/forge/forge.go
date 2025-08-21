@@ -3,8 +3,8 @@ package forge
 import (
 	"fmt"
 
-	"github.com/lerenn/cm/pkg/issue"
-	"github.com/lerenn/cm/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/issue"
+	"github.com/lerenn/code-manager/pkg/logger"
 )
 
 //go:generate mockgen -source=forge.go -destination=mockforge.gen.go -package=forge

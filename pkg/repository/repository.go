@@ -7,31 +7,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/cm/internal/base"
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/issue"
-	"github.com/lerenn/cm/pkg/logger"
-	"github.com/lerenn/cm/pkg/prompt"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/internal/base"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/issue"
+	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/prompt"
+	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/workspace"
 )
 
 // DefaultRemote is the default remote name used for Git operations.
 const DefaultRemote = "origin"
-
-// Error definitions.
-var (
-	ErrGitRepositoryNotFound  = errors.New("not a valid Git repository: .git directory not found")
-	ErrGitRepositoryInvalid   = errors.New("git repository is in an invalid state")
-	ErrWorktreeExists         = errors.New("worktree already exists")
-	ErrRepositoryNotClean     = errors.New("repository is not clean")
-	ErrDirectoryExists        = errors.New("directory already exists")
-	ErrWorktreeNotInStatus    = errors.New("worktree not found in status file")
-	ErrDeletionCancelled      = errors.New("deletion cancelled by user")
-	ErrOriginRemoteNotFound   = errors.New("origin remote not found or invalid")
-	ErrOriginRemoteInvalidURL = errors.New("origin remote URL is not a valid Git hosting service URL")
-)
 
 // Repository represents a single Git repository and provides methods for repository operations.
 type Repository struct {
@@ -122,7 +110,7 @@ func (r *Repository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) e
 }
 
 // ListWorktrees lists all worktrees for the current repository.
-func (r *Repository) ListWorktrees() ([]status.Repository, error) {
+func (r *Repository) ListWorktrees() ([]status.WorktreeInfo, error) {
 	r.VerbosePrint("Listing worktrees for single repository mode")
 
 	// Note: Repository validation is already done in mode detection, so we skip it here
@@ -136,35 +124,26 @@ func (r *Repository) ListWorktrees() ([]status.Repository, error) {
 
 	r.VerbosePrint("Repository name: %s", repoName)
 
-	// 2. Load all worktrees from status file
-	allWorktrees, err := r.StatusManager.ListAllWorktrees()
+	// 2. Get repository from status file
+	repo, err := r.StatusManager.GetRepository(repoName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load worktrees from status file: %w", err)
-	}
-
-	r.VerbosePrint("Found %d total worktrees in status file", len(allWorktrees))
-
-	// 3. Filter worktrees to only include those for the current repository and add remote information
-	var filteredWorktrees []status.Repository
-	for _, worktree := range allWorktrees {
-		if worktree.URL == repoName {
-			// Get the remote for this branch
-			remote, err := r.Git.GetBranchRemote(".", worktree.Branch)
-			if err != nil {
-				// If we can't determine the remote, use "origin" as default
-				remote = DefaultRemote
-			}
-
-			// Create a copy with remote information
-			worktreeWithRemote := worktree
-			worktreeWithRemote.Remote = remote
-			filteredWorktrees = append(filteredWorktrees, worktreeWithRemote)
+		// If repository not found, return empty list
+		// But propagate other errors (like status file corruption)
+		if errors.Is(err, status.ErrRepositoryNotFound) {
+			return []status.WorktreeInfo{}, nil
 		}
+		return nil, err
 	}
 
-	r.VerbosePrint("Found %d worktrees for current repository", len(filteredWorktrees))
+	// 3. Convert repository worktrees to WorktreeInfo slice
+	var worktrees []status.WorktreeInfo
+	for _, worktree := range repo.Worktrees {
+		worktrees = append(worktrees, worktree)
+	}
 
-	return filteredWorktrees, nil
+	r.VerbosePrint("Found %d worktrees for current repository", len(worktrees))
+
+	return worktrees, nil
 }
 
 // IsGitRepository checks if the current directory is a Git repository (including worktrees).
@@ -220,7 +199,7 @@ func (r *Repository) IsWorkspaceFile() (bool, error) {
 	// Check for .code-workspace files
 	workspaceFiles, err := r.FS.Glob("*.code-workspace")
 	if err != nil {
-		return false, fmt.Errorf("failed to check for workspace files: %w", err)
+		return false, fmt.Errorf("%w: %w", workspace.ErrFailedToCheckWorkspaceFiles, err)
 	}
 
 	if len(workspaceFiles) > 0 {
@@ -308,7 +287,7 @@ func (r *Repository) validateRepository(branch string) (string, error) {
 // prepareWorktreePath prepares the worktree directory path.
 func (r *Repository) prepareWorktreePath(repoURL, branch string) (string, error) {
 	// Create worktree directory path
-	worktreePath := r.BuildWorktreePath(repoURL, branch)
+	worktreePath := r.BuildWorktreePath(repoURL, "origin", branch)
 
 	r.VerbosePrint("Worktree path: %s", worktreePath)
 
@@ -392,31 +371,123 @@ type createWorktreeWithCleanupParams struct {
 // createWorktreeWithCleanup creates the worktree with proper cleanup on failure.
 func (r *Repository) createWorktreeWithCleanup(params createWorktreeWithCleanupParams) error {
 	// Update status file with worktree entry (before creating the worktree for proper cleanup)
-	// Store the original repository path, not the worktree path
-	if err := r.StatusManager.AddWorktree(status.AddWorktreeParams{
-		RepoURL:       params.RepoURL,
-		Branch:        params.Branch,
-		WorktreePath:  params.CurrentDir,
-		WorkspacePath: "",
-		IssueInfo:     params.IssueInfo,
-	}); err != nil {
-		// Clean up created directory on status update failure
-		if cleanupErr := r.CleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
-			r.Logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
-		}
-		return fmt.Errorf("failed to add worktree to status: %w", err)
+	if err := r.addWorktreeToStatus(params); err != nil {
+		return err
 	}
 
 	// Create the Git worktree
 	if err := r.Git.CreateWorktree(params.CurrentDir, params.WorktreePath, params.Branch); err != nil {
 		// Clean up on worktree creation failure
-		if cleanupErr := r.StatusManager.RemoveWorktree(params.RepoURL, params.Branch); cleanupErr != nil {
-			r.Logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
-		}
-		if cleanupErr := r.CleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
-			r.Logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
-		}
+		r.cleanupOnWorktreeCreationFailure(params.RepoURL, params.Branch, params.WorktreePath)
 		return fmt.Errorf("failed to create Git worktree: %w", err)
+	}
+
+	return nil
+}
+
+// addWorktreeToStatus adds the worktree to the status file with proper error handling.
+func (r *Repository) addWorktreeToStatus(params createWorktreeWithCleanupParams) error {
+	if err := r.StatusManager.AddWorktree(status.AddWorktreeParams{
+		RepoURL:       params.RepoURL,
+		Branch:        params.Branch,
+		WorktreePath:  params.WorktreePath,
+		WorkspacePath: "",
+		Remote:        "origin", // Set the remote to "origin" for repository worktrees
+		IssueInfo:     params.IssueInfo,
+	}); err != nil {
+		return r.handleStatusAddError(err, params)
+	}
+	return nil
+}
+
+// handleStatusAddError handles errors when adding worktree to status.
+func (r *Repository) handleStatusAddError(err error, params createWorktreeWithCleanupParams) error {
+	// Check if the error is due to repository not found, and auto-add it
+	if errors.Is(err, status.ErrRepositoryNotFound) {
+		return r.handleRepositoryNotFoundError(params)
+	}
+
+	// Clean up created directory on status update failure
+	r.cleanupWorktreeDirectory(params.WorktreePath)
+	return fmt.Errorf("failed to add worktree to status: %w", err)
+}
+
+// handleRepositoryNotFoundError handles the case when repository is not found in status.
+func (r *Repository) handleRepositoryNotFoundError(params createWorktreeWithCleanupParams) error {
+	if addErr := r.autoAddRepositoryToStatus(params.RepoURL, params.CurrentDir); addErr != nil {
+		// Clean up created directory on status update failure
+		r.cleanupWorktreeDirectory(params.WorktreePath)
+		return fmt.Errorf("failed to auto-add repository to status: %w", addErr)
+	}
+
+	// Try adding the worktree again
+	if err := r.StatusManager.AddWorktree(status.AddWorktreeParams{
+		RepoURL:       params.RepoURL,
+		Branch:        params.Branch,
+		WorktreePath:  params.WorktreePath,
+		WorkspacePath: "",
+		Remote:        "origin", // Set the remote to "origin" for repository worktrees
+		IssueInfo:     params.IssueInfo,
+	}); err != nil {
+		// Clean up created directory on status update failure
+		r.cleanupWorktreeDirectory(params.WorktreePath)
+		return fmt.Errorf("failed to add worktree to status: %w", err)
+	}
+
+	return nil
+}
+
+// cleanupWorktreeDirectory cleans up the worktree directory.
+func (r *Repository) cleanupWorktreeDirectory(worktreePath string) {
+	if cleanupErr := r.CleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+		r.Logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
+	}
+}
+
+// cleanupOnWorktreeCreationFailure cleans up on worktree creation failure.
+func (r *Repository) cleanupOnWorktreeCreationFailure(repoURL, branch, worktreePath string) {
+	if cleanupErr := r.StatusManager.RemoveWorktree(repoURL, branch); cleanupErr != nil {
+		r.Logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
+	}
+	if cleanupErr := r.CleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+		r.Logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
+	}
+}
+
+// autoAddRepositoryToStatus automatically adds a repository to the status file.
+func (r *Repository) autoAddRepositoryToStatus(repoURL, repoPath string) error {
+	// Get absolute path
+	absPath, err := filepath.Abs(repoPath)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Check if it's a Git repository
+	exists, err := r.FS.Exists(filepath.Join(absPath, ".git"))
+	if err != nil {
+		return fmt.Errorf("failed to check .git existence: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("not a Git repository: .git directory not found")
+	}
+
+	// Get remotes information
+	remotes := make(map[string]status.Remote)
+
+	// Check for origin remote
+	originURL, err := r.Git.GetRemoteURL(absPath, "origin")
+	if err == nil && originURL != "" {
+		remotes["origin"] = status.Remote{
+			DefaultBranch: "main", // Default to main, could be enhanced to detect actual default branch
+		}
+	}
+
+	// Add the repository to status
+	if err := r.StatusManager.AddRepository(repoURL, status.AddRepositoryParams{
+		Path:    absPath,
+		Remotes: remotes,
+	}); err != nil {
+		return fmt.Errorf("failed to add repository to status: %w", err)
 	}
 
 	return nil

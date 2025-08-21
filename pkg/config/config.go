@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lerenn/code-manager/configs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -14,22 +15,19 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code/src)
+	BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code)
 	StatusFile string `yaml:"status_file"` // Status file path (default: ~/.cm/status.yaml)
-}
-
-// GetWorktreesDir returns the computed worktrees directory path.
-func (c *Config) GetWorktreesDir() string {
-	return filepath.Join(c.BasePath, "worktrees")
 }
 
 // Manager interface provides configuration management functionality.
 type Manager interface {
 	LoadConfig(configPath string) (*Config, error)
+	LoadConfigStrict(configPath string) (*Config, error)
 	DefaultConfig() *Config
 	SaveConfig(config *Config, configPath string) error
 	CreateConfigDirectory(configPath string) error
 	ValidateBasePath(basePath string) error
+	EnsureConfigFile(configPath string) (*Config, bool, error)
 }
 
 type realManager struct {
@@ -71,6 +69,11 @@ func (c *realManager) LoadConfig(configPath string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+// LoadConfigStrict loads configuration and returns an error if the file is missing.
+func (c *realManager) LoadConfigStrict(configPath string) (*Config, error) {
+	return c.LoadConfig(configPath)
 }
 
 // DefaultConfig returns the default configuration.
@@ -232,4 +235,32 @@ func LoadConfigWithFallback(configPath string) (*Config, error) {
 
 	// Fallback to default configuration
 	return manager.DefaultConfig(), nil
+}
+
+// EnsureConfigFile ensures the config file exists at path, creating it from embedded defaults if missing.
+// Returns the loaded config and a boolean indicating whether the file already existed.
+func (c *realManager) EnsureConfigFile(configPath string) (*Config, bool, error) {
+	if _, err := os.Stat(configPath); err == nil {
+		cfg, err := c.LoadConfig(configPath)
+		if err != nil {
+			return nil, true, err
+		}
+		return cfg, true, nil
+	} else if !os.IsNotExist(err) {
+		return nil, false, fmt.Errorf("failed to stat config file: %w", err)
+	}
+
+	if err := c.CreateConfigDirectory(configPath); err != nil {
+		return nil, false, fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, configs.DefaultConfigYAML, 0644); err != nil {
+		return nil, false, fmt.Errorf("failed to write default config: %w", err)
+	}
+
+	cfg, err := c.LoadConfig(configPath)
+	if err != nil {
+		return nil, false, err
+	}
+	return cfg, false, nil
 }

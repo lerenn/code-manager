@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/status"
-	"github.com/lerenn/cm/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -90,9 +90,9 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2)
 
-	// Verify worktree directories exist
-	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
-	backendWorktreePath := filepath.Join(tempDir, "worktrees", "backend", branchName)
+	// Verify worktree directories exist (using the correct path structure)
+	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "github.com", "test", "frontend", "origin", branchName)
+	backendWorktreePath := filepath.Join(tempDir, "worktrees", "github.com", "test", "backend", "origin", branchName)
 	assert.DirExists(t, frontendWorktreePath)
 	assert.DirExists(t, backendWorktreePath)
 
@@ -107,7 +107,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	// Verify worktrees were deleted
 	worktrees, _, err = cmInstance.ListWorktrees()
 	require.NoError(t, err)
-	assert.Len(t, worktrees, 0)
+	assert.Len(t, worktrees, 0, "Should have no worktrees after deletion")
 
 	// Verify worktree directories were removed
 	assert.NoDirExists(t, frontendWorktreePath)
@@ -120,7 +120,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	statusManager := status.NewManager(fs.NewFS(), cfg)
 	allWorktrees, err := statusManager.ListAllWorktrees()
 	require.NoError(t, err)
-	assert.Len(t, allWorktrees, 0)
+	assert.Len(t, allWorktrees, 0, "Should have no worktrees in status file after deletion")
 }
 
 func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
@@ -191,8 +191,8 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1)
 
-	// Verify worktree directory exists
-	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
+	// Verify worktree directory exists (using the correct path structure)
+	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "github.com", "test", "frontend", "origin", branchName)
 	assert.DirExists(t, frontendWorktreePath)
 
 	// Now delete the worktrees with force

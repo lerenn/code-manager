@@ -63,9 +63,6 @@ func TestRealManager_DefaultConfig(t *testing.T) {
 	assert.NotNil(t, config)
 	assert.NotEmpty(t, config.BasePath)
 	assert.Contains(t, config.BasePath, "Code")
-	assert.NotEmpty(t, config.GetWorktreesDir())
-	assert.Contains(t, config.GetWorktreesDir(), "Code")
-	assert.Contains(t, config.GetWorktreesDir(), "worktrees")
 }
 
 func TestRealManager_LoadConfig(t *testing.T) {
@@ -85,7 +82,6 @@ func TestRealManager_LoadConfig(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.BasePath)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm", "worktrees"), config.GetWorktreesDir())
 }
 
 func TestRealManager_LoadConfig_FileNotFound(t *testing.T) {
@@ -130,7 +126,6 @@ func TestLoadConfigWithFallback_WithValidFile(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
 	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.BasePath)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm", "worktrees"), config.GetWorktreesDir())
 }
 
 func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
@@ -139,8 +134,6 @@ func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
 	assert.NoError(t, err) // Should not error, should fallback to default
 	assert.NotNil(t, config)
 	assert.Contains(t, config.BasePath, "Code")
-	assert.Contains(t, config.GetWorktreesDir(), "Code")
-	assert.Contains(t, config.GetWorktreesDir(), "worktrees")
 }
 
 func TestConfig_ExpandTildes(t *testing.T) {
@@ -157,7 +150,6 @@ func TestConfig_ExpandTildes(t *testing.T) {
 
 	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.BasePath)
 	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "status.yaml"), config.StatusFile)
-	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "worktrees"), config.GetWorktreesDir())
 }
 
 func TestConfig_ExpandTildes_NoTildes(t *testing.T) {
@@ -175,7 +167,6 @@ func TestConfig_ExpandTildes_NoTildes(t *testing.T) {
 	// Paths should remain unchanged
 	assert.Equal(t, originalBasePath, config.BasePath)
 	assert.Equal(t, originalStatusFile, config.StatusFile)
-	assert.Equal(t, filepath.Join(originalBasePath, "worktrees"), config.GetWorktreesDir())
 }
 
 func TestRealManager_LoadConfig_WithTildes(t *testing.T) {
@@ -201,5 +192,4 @@ status_file: ~/.cm-test/status.yaml
 
 	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.BasePath)
 	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "status.yaml"), config.StatusFile)
-	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "worktrees"), config.GetWorktreesDir())
 }

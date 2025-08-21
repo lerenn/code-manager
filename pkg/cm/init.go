@@ -4,13 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/code-manager/pkg/config"
 )
-
-// IsInitialized checks if CM is initialized.
-func (c *realCM) IsInitialized() (bool, error) {
-	return c.StatusManager.IsInitialized()
-}
 
 // InitOpts contains optional parameters for Init.
 type InitOpts struct {
@@ -22,11 +17,6 @@ type InitOpts struct {
 // Init initializes CM configuration.
 func (c *realCM) Init(opts InitOpts) error {
 	c.VerbosePrint("Starting CM initialization")
-
-	// Check if already initialized (unless reset is requested)
-	if err := c.checkInitializationStatus(opts.Reset); err != nil {
-		return err
-	}
 
 	// Handle reset flag
 	if opts.Reset {
@@ -51,9 +41,15 @@ func (c *realCM) Init(opts InitOpts) error {
 		return err
 	}
 
-	// Initialize status
-	if err := c.initializeStatus(); err != nil {
-		return err
+	// Ensure status exists (create initial on first run). If reset, it was recreated earlier.
+	exists, err := c.FS.Exists(c.Config.StatusFile)
+	if err != nil {
+		return fmt.Errorf("failed to check status existence: %w", err)
+	}
+	if !exists {
+		if err := c.StatusManager.CreateInitialStatus(); err != nil {
+			return fmt.Errorf("failed to create initial status: %w", err)
+		}
 	}
 
 	c.VerbosePrint("CM initialization completed successfully")
@@ -61,23 +57,6 @@ func (c *realCM) Init(opts InitOpts) error {
 	fmt.Printf("Base path: %s\n", expandedBasePath)
 	fmt.Printf("Configuration: %s\n", c.getConfigPath())
 	fmt.Printf("Status file: %s\n", c.Config.StatusFile)
-
-	return nil
-}
-
-// checkInitializationStatus checks if CM is already initialized.
-func (c *realCM) checkInitializationStatus(reset bool) error {
-	if reset {
-		return nil
-	}
-
-	initialized, err := c.IsInitialized()
-	if err != nil {
-		return fmt.Errorf("failed to check initialization status: %w", err)
-	}
-	if initialized {
-		return fmt.Errorf("%w. Use --reset to clear existing configuration and start fresh", ErrAlreadyInitialized)
-	}
 
 	return nil
 }
@@ -92,7 +71,7 @@ func (c *realCM) getAndValidateBasePath(flagBasePath string) (string, error) {
 	// Validate and expand base path
 	expandedBasePath, err := c.FS.ExpandPath(basePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to expand base path: %w", err)
+		return "", fmt.Errorf("%w: %w", ErrFailedToExpandBasePath, err)
 	}
 
 	// Validate base path
@@ -116,21 +95,6 @@ func (c *realCM) updateConfiguration(expandedBasePath string) error {
 
 	if err := configManager.SaveConfig(newConfig, configPath); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
-	}
-
-	return nil
-}
-
-// initializeStatus creates initial status and sets initialized flag.
-func (c *realCM) initializeStatus() error {
-	// Create initial status file
-	if err := c.StatusManager.CreateInitialStatus(); err != nil {
-		return fmt.Errorf("failed to create initial status: %w", err)
-	}
-
-	// Set initialized flag to true
-	if err := c.StatusManager.SetInitialized(true); err != nil {
-		return fmt.Errorf("failed to set initialization status: %w", err)
 	}
 
 	return nil
@@ -161,7 +125,7 @@ func (c *realCM) handleReset(force bool) error {
 
 	c.VerbosePrint("Resetting CM configuration")
 
-	// Clear status file
+	// Clear status file by recreating empty structure
 	if err := c.StatusManager.CreateInitialStatus(); err != nil {
 		return fmt.Errorf("failed to reset status: %w", err)
 	}
@@ -176,5 +140,5 @@ func (c *realCM) getBasePath(flagBasePath string) (string, error) {
 	}
 
 	// Interactive prompt
-	return c.Prompt.PromptForBasePath()
+	return c.Prompt.PromptForBasePath(c.Config.BasePath)
 }

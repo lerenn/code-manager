@@ -3,7 +3,7 @@
 
 # Base path for code storage
 # Default: $HOME/Code
-base_path: ~/Code/src
+base_path: ~/Code
 
 # Status file path
 # Default: $HOME/.cm/status.yaml

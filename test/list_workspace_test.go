@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -98,11 +98,10 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 4) // 2 repositories × 2 branches
 
-	// Verify all worktrees have the correct workspace path
+	// Verify all worktrees have the correct branches and remotes
 	for _, worktree := range worktrees {
-		assert.NotEmpty(t, worktree.Workspace)
 		assert.Contains(t, []string{branchName1, branchName2}, worktree.Branch)
-		assert.Contains(t, []string{"frontend", "backend"}, worktree.URL)
+		assert.Equal(t, "origin", worktree.Remote, "Should have origin remote")
 	}
 
 	// Delete one branch
@@ -117,8 +116,7 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	// Verify all remaining worktrees have the correct branch
 	for _, worktree := range worktrees {
 		assert.Equal(t, branchName2, worktree.Branch)
-		assert.NotEmpty(t, worktree.Workspace)
-		assert.Contains(t, []string{"frontend", "backend"}, worktree.URL)
+		assert.Equal(t, "origin", worktree.Remote, "Should have origin remote")
 	}
 }
 
@@ -194,9 +192,8 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	worktrees, _, err = cmInstance.ListWorktrees()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1)
-	assert.Equal(t, "frontend", worktrees[0].URL)
 	assert.Equal(t, branchName, worktrees[0].Branch)
-	assert.NotEmpty(t, worktrees[0].Workspace)
+	assert.Equal(t, "origin", worktrees[0].Remote, "Should have origin remote")
 
 	// Delete the worktree
 	err = cmInstance.DeleteWorkTree(branchName, false)

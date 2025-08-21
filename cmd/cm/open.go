@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log"
 
-	cm "github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/status"
+	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +31,7 @@ Examples:
 			}
 
 			// Find the worktree for the specified branch
-			var targetWorktree *status.Repository
+			var targetWorktree *status.WorktreeInfo
 			for _, worktree := range worktrees {
 				if worktree.Branch == args[0] {
 					targetWorktree = &worktree

@@ -1,7 +1,11 @@
 package main
 
 import (
-	cm "github.com/lerenn/cm/pkg/cm"
+	"os"
+	"path/filepath"
+
+	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +27,25 @@ Flags:
   --reset       Reset existing CM configuration and start fresh`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg := loadConfig()
+			// Resolve config path
+			var path string
+			if configPath != "" {
+				path = configPath
+			} else {
+				homeDir, err := os.UserHomeDir()
+				if err != nil {
+					homeDir = "."
+				}
+				path = filepath.Join(homeDir, ".cm", "config.yaml")
+			}
+
+			// Ensure config file exists (copy embedded default if missing)
+			manager := config.NewManager()
+			cfg, _, err := manager.EnsureConfigFile(path)
+			if err != nil {
+				return err
+			}
+
 			cmManager := cm.NewCM(cfg)
 			cmManager.SetVerbose(verbose)
 

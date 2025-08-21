@@ -5,10 +5,10 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/ide"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -33,12 +33,10 @@ func TestCM_ListWorktrees_NoRepository(t *testing.T) {
 
 	// Mock single repo detection - no .git found
 	mockFS.EXPECT().Exists(".git").Return(false, nil)
-
-	// Mock workspace detection - no workspace files found
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
 	result, _, err := cm.ListWorktrees()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no Git repository or workspace found")
+	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)
 	assert.Nil(t, result)
 }

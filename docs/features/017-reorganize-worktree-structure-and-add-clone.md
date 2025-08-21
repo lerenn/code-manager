@@ -34,10 +34,8 @@ $base_path/
 The status file will be reorganized to group repositories by URL and separate workspaces, with remotes and default branches separate from worktrees:
 
 ```yaml
-initialized: true
 repositories:
   github.com/lerenn/example:
-    managed: true
     path: /path/to/base/github.com/lerenn/example/origin/main
     remotes:
       origin:
@@ -65,10 +63,9 @@ Add a new `cm clone` command that:
 2. Automatically detects the default branch from the remote by querying directly
 3. Initializes the repository in CM
 4. Creates the initial status entry with remote and default branch in `remotes` section
-5. Sets `managed: true` for cloned repositories
-6. Returns an error if the target path already exists (regardless of protocol differences)
-7. Supports non-recursive cloning option with `--shallow` flag
-8. Requires full repository URLs (e.g., `https://github.com/lerenn/example.git`)
+5. Returns an error if the target path already exists (regardless of protocol differences)
+6. Supports non-recursive cloning option with `--shallow` flag
+7. Requires full repository URLs (e.g., `https://github.com/lerenn/example.git`)
 
 ## Implementation Plan
 
@@ -95,7 +92,7 @@ Add a new `cm clone` command that:
    - Handle path conflicts and validation (return error if exists)
    - Validate repository exists and default branch exists before creating worktrees
    - Validate remote exists in repository's remotes section
-   - Automatically detect and add remotes for existing (unmanaged) repositories
+   - Automatically detect and add remotes for existing repositories
 
 2. **Update Git package**:
    - Ensure worktree operations work with new paths
@@ -122,7 +119,7 @@ Add a new `cm clone` command that:
    - Update workspace path references to point to new worktree paths
    - Maintain workspace functionality with new schema
    - Validate workspace references only point to worktrees (create them if they don't exist)
-   - Workspace repositories reference repository entries (managed or unmanaged)
+   - Workspace repositories reference repository entries
    - Each repository in workspace must have a matching worktree
    - Automatically create worktrees from repository's default branch when missing
 
@@ -132,13 +129,11 @@ Add a new `cm clone` command that:
 
 ```go
 type Status struct {
-    Initialized   bool                    `yaml:"initialized"`
     Repositories  map[string]Repository   `yaml:"repositories"`
     Workspaces    map[string]Workspace    `yaml:"workspaces"`
 }
 
 type Repository struct {
-    Managed  bool                      `yaml:"managed"`
     Path     string                    `yaml:"path"`
     Remotes  map[string]Remote         `yaml:"remotes"`
     Worktrees map[string]WorktreeInfo  `yaml:"worktrees"`
@@ -204,11 +199,9 @@ Since we're starting from a clean state, no migration is needed. The new structu
 
 ### Repository Management Rules
 
-1. **Managed repositories**: Only repositories cloned by CM are marked as `managed: true`
-2. **Existing repositories**: Never become managed - they remain `managed: false` even if later used by CM
-3. **Repository path**: For managed repositories, points to default branch worktree path; for unmanaged, points to base directory
-4. **URL normalization**: Use github.com/lerenn/example.git format regardless of original protocol
-5. **Path conflicts**: Return error if repository already exists (even with different protocol)
+1. **Repository path**: Points to default branch worktree path
+2. **URL normalization**: Use github.com/lerenn/example.git format regardless of original protocol
+3. **Path conflicts**: Return error if repository already exists (even with different protocol)
 
 ## Implementation Tasks
 
@@ -231,7 +224,6 @@ Since we're starting from a clean state, no migration is needed. The new structu
 
 ### Task 3: Repository Management Updates
 - Update repository creation and management logic
-- Implement managed field handling
 - Add automatic remote detection for existing repositories
 - Update repository validation logic
 - **Testing**: Unit tests for repository management
@@ -271,7 +263,6 @@ Since we're starting from a clean state, no migration is needed. The new structu
 1. **Status structure tests**:
    - Test new hierarchical structure
    - Test workspace separation
-   - Test managed field handling
    - Test error handling with specific error types
 
 2. **Path generation tests**:
@@ -283,7 +274,6 @@ Since we're starting from a clean state, no migration is needed. The new structu
    - Test default branch detection (success and failure cases)
    - Test cloning process (recursive and shallow)
    - Test error scenarios
-   - Test managed field setting
    - Test URL validation (require full URLs)
 
 4. **Remote detection tests**:
@@ -324,8 +314,7 @@ Since we're starting from a clean state, no migration is needed. The new structu
 - **Default branch**: Always use remote's default branch for clone
 - **Validation**: Validate workspace references to existing worktrees and repositories
 - **Error handling**: Return error immediately for missing references with specific error messages
-- **Repository path**: Points to default branch worktree path for cloned repos, base directory for existing repos
-- **Managed field**: Distinguishes between cloned repositories (true) and existing repositories (false)
+- **Repository path**: Points to default branch worktree path
 - **Clone behavior**: Recursive by default, with shallow option (`--shallow` flag)
 - **Remote detection**: Automatically detect and add remotes for existing repositories
 - **URL normalization**: Use consistent format regardless of original protocol

@@ -1,7 +1,7 @@
 package main
 
 import (
-	cm "github.com/lerenn/cm/pkg/cm"
+	cm "github.com/lerenn/code-manager/pkg/cm"
 	"github.com/spf13/cobra"
 )
 

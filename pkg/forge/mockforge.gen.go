@@ -12,7 +12,7 @@ package forge
 import (
 	reflect "reflect"
 
-	issue "github.com/lerenn/cm/pkg/issue"
+	issue "github.com/lerenn/code-manager/pkg/issue"
 	gomock "go.uber.org/mock/gomock"
 )
 

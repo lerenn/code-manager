@@ -1,7 +1,6 @@
 package cm
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 )
@@ -27,17 +26,17 @@ func (c *realCM) sanitizeBranchName(branchName string) (string, error) {
 
 	// Check for single @ character (not allowed)
 	if branchName == "@" {
-		return "", fmt.Errorf("branch name cannot be the single character @")
+		return "", ErrBranchNameSingleAt
 	}
 
 	// Check for @{ sequence (not allowed)
 	if strings.Contains(branchName, "@{") {
-		return "", fmt.Errorf("branch name cannot contain the sequence @{")
+		return "", ErrBranchNameContainsAtBrace
 	}
 
 	// Check for backslash (not allowed)
 	if strings.Contains(branchName, "\\") {
-		return "", fmt.Errorf("branch name cannot contain backslash")
+		return "", ErrBranchNameContainsBackslash
 	}
 
 	// Replace invalid characters with underscores

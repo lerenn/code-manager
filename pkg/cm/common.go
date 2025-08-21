@@ -3,8 +3,7 @@ package cm
 import (
 	"fmt"
 
-	repo "github.com/lerenn/cm/pkg/repository"
-	ws "github.com/lerenn/cm/pkg/workspace"
+	repo "github.com/lerenn/code-manager/pkg/repository"
 )
 
 // detectProjectMode detects the type of project (single repository or workspace).
@@ -34,17 +33,7 @@ func (c *realCM) detectProjectMode() (ProjectType, error) {
 	}
 
 	// If not a Git repository, check for workspace files
-	workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       c.IsVerbose(),
-	})
-
-	workspaceFiles, err := workspace.DetectWorkspaceFiles()
+	workspaceFiles, err := c.FS.Glob("*.code-workspace")
 	if err != nil {
 		return ProjectTypeNone, fmt.Errorf("failed to detect workspace files: %w", err)
 	}

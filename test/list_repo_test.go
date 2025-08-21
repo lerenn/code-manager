@@ -10,15 +10,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 // listWorktrees lists worktrees using the CM instance
-func listWorktrees(t *testing.T, setup *TestSetup) ([]Repository, error) {
+func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error) {
 	t.Helper()
 
 	cmInstance := cm.NewCM(&config.Config{
@@ -92,7 +93,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 		} else {
 			output.WriteString("Worktrees for workspace:\n")
 			for _, wt := range worktrees {
-				output.WriteString(fmt.Sprintf("  %s [%s]\n", wt.Branch, wt.URL))
+				output.WriteString(fmt.Sprintf("  %s [%s]\n", wt.Branch, wt.Remote))
 			}
 		}
 	}
@@ -143,13 +144,8 @@ func TestListWorktreesWithWorktrees(t *testing.T) {
 	branchNames := make([]string, len(worktrees))
 	for i, wt := range worktrees {
 		branchNames[i] = wt.Branch
-		assert.NotEmpty(t, wt.URL, "Repository URL should be set")
-		assert.NotEmpty(t, wt.Path, "Repository path should be set")
-		expectedPath, err := filepath.EvalSymlinks(setup.RepoPath)
-		require.NoError(t, err)
-		actualPath, err := filepath.EvalSymlinks(wt.Path)
-		require.NoError(t, err)
-		assert.Equal(t, expectedPath, actualPath, "Path should be the original repository directory")
+		assert.NotEmpty(t, wt.Remote, "Repository remote should be set")
+		// Note: WorktreeInfo doesn't have Path field, path verification is done through status manager
 	}
 
 	// Check that both expected branches are present
@@ -220,7 +216,7 @@ func TestListWorktreesNoRepository(t *testing.T) {
 	// Test listing worktrees when not in a Git repository
 	worktrees, err := listWorktrees(t, setup)
 	require.Error(t, err, "Should return error when not in Git repository")
-	assert.Contains(t, err.Error(), "no Git repository or workspace found", "Should show appropriate error message")
+	assert.ErrorIs(t, err, cm.ErrNoGitRepositoryOrWorkspaceFound, "Should show appropriate error message")
 	assert.Nil(t, worktrees, "Should return nil worktrees")
 
 	// Test CLI command output
@@ -265,19 +261,14 @@ func TestListWorktreesStatusFileCorruption(t *testing.T) {
 	// Create a test Git repository
 	createTestGitRepo(t, setup.RepoPath)
 
-	// Create a corrupted status file
-	corruptedContent := `repositories:
-  - name: test-repo
-    branch: test-branch
-    path: /invalid/path
-    invalid_field: this should cause an error
-    [invalid yaml: this is not valid yaml`
+	// Create a corrupted status file with obviously invalid YAML
+	corruptedContent := `this is completely invalid yaml content: [missing quotes, no structure`
 	require.NoError(t, os.WriteFile(setup.StatusPath, []byte(corruptedContent), 0644))
 
 	// Test listing worktrees with corrupted status file
 	worktrees, err := listWorktrees(t, setup)
 	require.Error(t, err, "Should return error with corrupted status file")
-	assert.Contains(t, err.Error(), "failed to load worktrees from status file", "Should show appropriate error message")
+	assert.Contains(t, err.Error(), "failed to parse status file", "Should show appropriate error message")
 	assert.Nil(t, worktrees, "Should return nil worktrees")
 }
 
@@ -295,11 +286,18 @@ func TestListWorktreesMultipleRepositories(t *testing.T) {
 
 	// Manually add a worktree for a different repository to the status file
 	status := readStatusFile(t, setup.StatusPath)
-	status.Repositories = append(status.Repositories, Repository{
-		URL:    "github.com/other/repo",
-		Branch: "feature/other-branch",
-		Path:   filepath.Join(setup.CmPath, "github.com/other/repo/feature/other-branch"),
-	})
+
+	// Add a different repository with its worktree
+	repoURL := "github.com/other/repo"
+	status.Repositories[repoURL] = Repository{
+		Path: setup.RepoPath,
+		Remotes: map[string]Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+		Worktrees: make(map[string]WorktreeInfo),
+	}
 
 	// Write the updated status file
 	statusData, err := yaml.Marshal(status)
@@ -334,8 +332,12 @@ func TestListWorktreesRepositoryNameExtraction(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
+	// Remove existing origin remote if it exists
+	cmd := exec.Command("git", "remote", "remove", "origin")
+	_ = cmd.Run() // Ignore error if remote doesn't exist
+
 	// Add remote origin
-	cmd := exec.Command("git", "remote", "add", "origin", "https://github.com/testuser/testrepo.git")
+	cmd = exec.Command("git", "remote", "add", "origin", "https://github.com/testuser/testrepo.git")
 	require.NoError(t, cmd.Run())
 
 	// Create a worktree
@@ -349,7 +351,7 @@ func TestListWorktreesRepositoryNameExtraction(t *testing.T) {
 
 	// Verify repository name was extracted correctly
 	worktree := worktrees[0]
-	assert.Equal(t, "github.com/testuser/testrepo", worktree.URL, "Should extract repository name from remote origin")
+	assert.Equal(t, "origin", worktree.Remote, "Should have origin remote")
 	assert.Equal(t, "feature/test-branch", worktree.Branch, "Should have correct branch name")
 }
 
@@ -372,10 +374,9 @@ func TestListWorktreesNoRemoteOrigin(t *testing.T) {
 
 	// Verify repository name was extracted correctly (should use local path)
 	worktree := worktrees[0]
-	assert.NotEmpty(t, worktree.URL, "Should have repository name")
+	assert.NotEmpty(t, worktree.Remote, "Should have remote name")
 	assert.Equal(t, "feature/test-branch", worktree.Branch, "Should have correct branch name")
 
-	// The URL should be the directory name (since no remote origin)
-	// This will depend on the temp directory name, so we just check it's not empty
-	assert.True(t, len(worktree.URL) > 0, "Should have non-empty repository name")
+	// The remote should be the default remote (origin)
+	assert.Equal(t, "origin", worktree.Remote, "Should have origin remote")
 }

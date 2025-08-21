@@ -5,8 +5,8 @@ package status
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v3"
@@ -29,38 +29,56 @@ func TestAddWorktree(t *testing.T) {
 	}
 
 	// Test data
-	repoName := "github.com/lerenn/example"
+	repoURL := "github.com/lerenn/example"
 	branch := "feature-a"
+	remote := "origin"
 	worktreePath := "/home/user/.cmrepos/github.com/lerenn/example/feature-a"
 	workspacePath := ""
 
 	// Expected status file content
 	expectedStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       repoName,
-				Branch:    branch,
-				Path:      worktreePath,
-				Workspace: workspacePath,
+		Repositories: map[string]Repository{
+			repoURL: {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-a": {
+						Remote: remote,
+						Branch: branch,
+					},
+				},
 			},
 		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	expectedData, _ := yaml.Marshal(expectedStatus)
 
 	// Mock expectations
-	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(false, nil)
-	mockFS.EXPECT().FileLock("/home/user/.cmstatus.yaml").Return(func() {}, nil)
-	mockFS.EXPECT().WriteFileAtomic("/home/user/.cmstatus.yaml", gomock.Any(), gomock.Any()).Return(nil)
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return([]byte(`initialized: true
+repositories:
+  github.com/lerenn/example:
+    path: /home/user/.cmrepos/github.com/lerenn/example/origin/main
+    remotes:
+      origin:
+        default_branch: main
+    worktrees: {}
+workspaces: {}`), nil)
 	mockFS.EXPECT().FileLock("/home/user/.cmstatus.yaml").Return(func() {}, nil)
 	mockFS.EXPECT().WriteFileAtomic("/home/user/.cmstatus.yaml", expectedData, gomock.Any()).Return(nil)
 
 	// Execute
 	err := manager.AddWorktree(AddWorktreeParams{
-		RepoURL:       repoName,
+		RepoURL:       repoURL,
 		Branch:        branch,
 		WorktreePath:  worktreePath,
 		WorkspacePath: workspacePath,
+		Remote:        remote,
 	})
 
 	// Assert
@@ -84,21 +102,29 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	}
 
 	// Test data
-	repoName := "github.com/lerenn/example"
+	repoURL := "github.com/lerenn/example"
 	branch := "feature-a"
-	worktreePath := "/home/user/.cmrepos/github.com/lerenn/example/feature-a"
-	workspacePath := ""
+	remote := "origin"
 
 	// Existing status with duplicate
 	existingStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       repoName,
-				Branch:    branch,
-				Path:      "/existing/path",
-				Workspace: "",
+		Repositories: map[string]Repository{
+			repoURL: {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-a": {
+						Remote: remote,
+						Branch: branch,
+					},
+				},
 			},
 		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	existingData, _ := yaml.Marshal(existingStatus)
@@ -109,14 +135,59 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 
 	// Execute
 	err := manager.AddWorktree(AddWorktreeParams{
-		RepoURL:       repoName,
-		Branch:        branch,
-		WorktreePath:  worktreePath,
-		WorkspacePath: workspacePath,
+		RepoURL: repoURL,
+		Branch:  branch,
+		Remote:  remote,
 	})
 
 	// Assert
 	assert.ErrorIs(t, err, ErrWorktreeAlreadyExists)
+}
+
+func TestAddWorktree_RepositoryNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	repoURL := "github.com/lerenn/example"
+	branch := "feature-a"
+	remote := "origin"
+	worktreePath := "/home/user/.cmrepos/github.com/lerenn/example/origin/feature-a"
+
+	// Existing status without the repository
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces:   make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations for status file operations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	err := manager.AddWorktree(AddWorktreeParams{
+		RepoURL:      repoURL,
+		Branch:       branch,
+		Remote:       remote,
+		WorktreePath: worktreePath,
+	})
+
+	// Assert
+	assert.ErrorIs(t, err, ErrRepositoryNotFound)
 }
 
 func TestRemoveWorktree(t *testing.T) {
@@ -136,37 +207,53 @@ func TestRemoveWorktree(t *testing.T) {
 	}
 
 	// Test data
-	repoName := "github.com/lerenn/example"
+	repoURL := "github.com/lerenn/example"
 	branch := "feature-a"
 
 	// Existing status with the worktree to remove
 	existingStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       repoName,
-				Branch:    branch,
-				Path:      "/home/user/.cmrepos/github.com/lerenn/example/feature-a",
-				Workspace: "",
-			},
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/.cmrepos/github.com/lerenn/other/feature-b",
-				Workspace: "",
+		Repositories: map[string]Repository{
+			repoURL: {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-a": {
+						Remote: "origin",
+						Branch: branch,
+					},
+					"origin:feature-b": {
+						Remote: "origin",
+						Branch: "feature-b",
+					},
+				},
 			},
 		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	// Expected status after removal
 	expectedStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/.cmrepos/github.com/lerenn/other/feature-b",
-				Workspace: "",
+		Repositories: map[string]Repository{
+			repoURL: {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-b": {
+						Remote: "origin",
+						Branch: "feature-b",
+					},
+				},
 			},
 		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	existingData, _ := yaml.Marshal(existingStatus)
@@ -179,7 +266,7 @@ func TestRemoveWorktree(t *testing.T) {
 	mockFS.EXPECT().WriteFileAtomic("/home/user/.cmstatus.yaml", expectedData, gomock.Any()).Return(nil)
 
 	// Execute
-	err := manager.RemoveWorktree(repoName, branch)
+	err := manager.RemoveWorktree(repoURL, branch)
 
 	// Assert
 	assert.NoError(t, err)
@@ -202,19 +289,28 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoName := "github.com/lerenn/example"
+	repoURL := "github.com/lerenn/example"
 	branch := "feature-a"
 
 	// Existing status without the worktree to remove
 	existingStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/.cmrepos/github.com/lerenn/other/feature-b",
-				Workspace: "",
+		Repositories: map[string]Repository{
+			repoURL: {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-b": {
+						Remote: "origin",
+						Branch: "feature-b",
+					},
+				},
 			},
 		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	existingData, _ := yaml.Marshal(existingStatus)
@@ -224,10 +320,49 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
 
 	// Execute
-	err := manager.RemoveWorktree(repoName, branch)
+	err := manager.RemoveWorktree(repoURL, branch)
 
 	// Assert
 	assert.ErrorIs(t, err, ErrWorktreeNotFound)
+}
+
+func TestRemoveWorktree_RepositoryNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	repoURL := "github.com/lerenn/example"
+	branch := "feature-a"
+
+	// Existing status without the repository
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces:   make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	err := manager.RemoveWorktree(repoURL, branch)
+
+	// Assert
+	assert.ErrorIs(t, err, ErrRepositoryNotFound)
 }
 
 func TestGetWorktree(t *testing.T) {
@@ -247,26 +382,33 @@ func TestGetWorktree(t *testing.T) {
 	}
 
 	// Test data
-	repoName := "github.com/lerenn/example"
+	repoURL := "github.com/lerenn/example"
 	branch := "feature-a"
-	expectedRepo := Repository{
-		URL:       repoName,
-		Branch:    branch,
-		Path:      "/home/user/.cmrepos/github.com/lerenn/example/feature-a",
-		Workspace: "",
+	expectedWorktree := WorktreeInfo{
+		Remote: "origin",
+		Branch: branch,
 	}
 
 	// Existing status
 	existingStatus := &Status{
-		Repositories: []Repository{
-			expectedRepo,
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/.cmrepos/github.com/lerenn/other/feature-b",
-				Workspace: "",
+		Repositories: map[string]Repository{
+			repoURL: {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-a": expectedWorktree,
+					"origin:feature-b": {
+						Remote: "origin",
+						Branch: "feature-b",
+					},
+				},
 			},
 		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	existingData, _ := yaml.Marshal(existingStatus)
@@ -276,11 +418,11 @@ func TestGetWorktree(t *testing.T) {
 	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
 
 	// Execute
-	repo, err := manager.GetWorktree(repoName, branch)
+	worktree, err := manager.GetWorktree(repoURL, branch)
 
 	// Assert
 	assert.NoError(t, err)
-	assert.Equal(t, &expectedRepo, repo)
+	assert.Equal(t, &expectedWorktree, worktree)
 }
 
 func TestGetWorktree_NotFound(t *testing.T) {
@@ -300,19 +442,28 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoName := "github.com/lerenn/example"
+	repoURL := "github.com/lerenn/example"
 	branch := "feature-a"
 
 	// Existing status without the requested worktree
 	existingStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/.cmrepos/github.com/lerenn/other/feature-b",
-				Workspace: "",
+		Repositories: map[string]Repository{
+			repoURL: {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-b": {
+						Remote: "origin",
+						Branch: "feature-b",
+					},
+				},
 			},
 		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	existingData, _ := yaml.Marshal(existingStatus)
@@ -322,11 +473,51 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
 
 	// Execute
-	repo, err := manager.GetWorktree(repoName, branch)
+	worktree, err := manager.GetWorktree(repoURL, branch)
 
 	// Assert
-	assert.Nil(t, repo)
+	assert.Nil(t, worktree)
 	assert.ErrorIs(t, err, ErrWorktreeNotFound)
+}
+
+func TestGetWorktree_RepositoryNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	repoURL := "github.com/lerenn/example"
+	branch := "feature-a"
+
+	// Existing status without the repository
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces:   make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	worktree, err := manager.GetWorktree(repoURL, branch)
+
+	// Assert
+	assert.Nil(t, worktree)
+	assert.ErrorIs(t, err, ErrRepositoryNotFound)
 }
 
 func TestListAllWorktrees(t *testing.T) {
@@ -345,25 +536,35 @@ func TestListAllWorktrees(t *testing.T) {
 		config: cfg,
 	}
 
-	// Expected repositories
-	expectedRepos := []Repository{
+	// Expected worktrees
+	expectedWorktrees := []WorktreeInfo{
 		{
-			URL:       "github.com/lerenn/example",
-			Branch:    "feature-a",
-			Path:      "/home/user/.cmrepos/github.com/lerenn/example/feature-a",
-			Workspace: "",
+			Remote: "origin",
+			Branch: "feature-a",
 		},
 		{
-			URL:       "github.com/lerenn/other",
-			Branch:    "feature-b",
-			Path:      "/home/user/.cmrepos/github.com/lerenn/other/feature-b",
-			Workspace: "/home/user/workspace.code-workspace",
+			Remote: "origin",
+			Branch: "feature-b",
 		},
 	}
 
 	// Existing status
 	existingStatus := &Status{
-		Repositories: expectedRepos,
+		Repositories: map[string]Repository{
+			"github.com/lerenn/example": {
+				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Remotes: map[string]Remote{
+					"origin": {
+						DefaultBranch: "main",
+					},
+				},
+				Worktrees: map[string]WorktreeInfo{
+					"origin:feature-a": expectedWorktrees[0],
+					"origin:feature-b": expectedWorktrees[1],
+				},
+			},
+		},
+		Workspaces: make(map[string]Workspace),
 	}
 
 	existingData, _ := yaml.Marshal(existingStatus)
@@ -373,11 +574,11 @@ func TestListAllWorktrees(t *testing.T) {
 	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
 
 	// Execute
-	repos, err := manager.ListAllWorktrees()
+	worktrees, err := manager.ListAllWorktrees()
 
 	// Assert
 	assert.NoError(t, err)
-	assert.Equal(t, expectedRepos, repos)
+	assert.ElementsMatch(t, expectedWorktrees, worktrees)
 }
 
 func TestListAllWorktrees_Empty(t *testing.T) {
@@ -398,7 +599,8 @@ func TestListAllWorktrees_Empty(t *testing.T) {
 
 	// Empty status
 	existingStatus := &Status{
-		Repositories: []Repository{},
+		Repositories: make(map[string]Repository),
+		Workspaces:   make(map[string]Workspace),
 	}
 
 	existingData, _ := yaml.Marshal(existingStatus)
@@ -408,11 +610,516 @@ func TestListAllWorktrees_Empty(t *testing.T) {
 	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
 
 	// Execute
-	repos, err := manager.ListAllWorktrees()
+	worktrees, err := manager.ListAllWorktrees()
 
 	// Assert
 	assert.NoError(t, err)
-	assert.Empty(t, repos)
+	assert.Empty(t, worktrees)
+}
+
+func TestAddRepository(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	repoURL := "github.com/lerenn/example"
+	params := AddRepositoryParams{
+		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Remotes: map[string]Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+	}
+
+	// Expected repository
+	expectedRepo := Repository{
+		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Remotes: map[string]Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+		Worktrees: make(map[string]WorktreeInfo),
+	}
+
+	// Existing status
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces:   make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Expected status after addition
+	expectedStatus := &Status{
+		Repositories: map[string]Repository{
+			repoURL: expectedRepo,
+		},
+		Workspaces: make(map[string]Workspace),
+	}
+
+	expectedData, _ := yaml.Marshal(expectedStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+	mockFS.EXPECT().FileLock("/home/user/.cmstatus.yaml").Return(func() {}, nil)
+	mockFS.EXPECT().WriteFileAtomic("/home/user/.cmstatus.yaml", expectedData, gomock.Any()).Return(nil)
+
+	// Execute
+	err := manager.AddRepository(repoURL, params)
+
+	// Assert
+	assert.NoError(t, err)
+}
+
+func TestAddRepository_AlreadyExists(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	repoURL := "github.com/lerenn/example"
+	params := AddRepositoryParams{
+		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Remotes: map[string]Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+	}
+
+	// Existing repository
+	existingRepo := Repository{
+		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Remotes: map[string]Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+		Worktrees: make(map[string]WorktreeInfo),
+	}
+
+	// Existing status with repository
+	existingStatus := &Status{
+		Repositories: map[string]Repository{
+			repoURL: existingRepo,
+		},
+		Workspaces: make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	err := manager.AddRepository(repoURL, params)
+
+	// Assert
+	assert.ErrorIs(t, err, ErrRepositoryAlreadyExists)
+}
+
+func TestGetRepository(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	repoURL := "github.com/lerenn/example"
+	expectedRepo := Repository{
+		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Remotes: map[string]Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+		Worktrees: make(map[string]WorktreeInfo),
+	}
+
+	// Existing status
+	existingStatus := &Status{
+		Repositories: map[string]Repository{
+			repoURL: expectedRepo,
+		},
+		Workspaces: make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	repo, err := manager.GetRepository(repoURL)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, &expectedRepo, repo)
+}
+
+func TestGetRepository_NotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	repoURL := "github.com/lerenn/example"
+
+	// Existing status without the repository
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces:   make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	repo, err := manager.GetRepository(repoURL)
+
+	// Assert
+	assert.Nil(t, repo)
+	assert.ErrorIs(t, err, ErrRepositoryNotFound)
+}
+
+func TestListRepositories(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Expected repositories
+	expectedRepos := map[string]Repository{
+		"github.com/lerenn/example": {
+			Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+			Remotes: map[string]Remote{
+				"origin": {
+					DefaultBranch: "main",
+				},
+			},
+			Worktrees: make(map[string]WorktreeInfo),
+		},
+		"github.com/lerenn/other": {
+			Path: "/home/user/repos/other",
+			Remotes: map[string]Remote{
+				"origin": {
+					DefaultBranch: "master",
+				},
+			},
+			Worktrees: make(map[string]WorktreeInfo),
+		},
+	}
+
+	// Existing status
+	existingStatus := &Status{
+		Repositories: expectedRepos,
+		Workspaces:   make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	repos, err := manager.ListRepositories()
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, expectedRepos, repos)
+}
+
+func TestAddWorkspace(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	workspacePath := "/home/user/workspace.code-workspace"
+	params := AddWorkspaceParams{
+		Worktree:     "origin:feature-a",
+		Repositories: []string{"github.com/lerenn/example", "github.com/lerenn/other"},
+	}
+
+	// Expected status file content
+	expectedStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces: map[string]Workspace{
+			workspacePath: {
+				Worktree:     params.Worktree,
+				Repositories: params.Repositories,
+			},
+		},
+	}
+
+	expectedData, _ := yaml.Marshal(expectedStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return([]byte(`initialized: true
+repositories: {}
+workspaces: {}`), nil)
+	mockFS.EXPECT().FileLock("/home/user/.cmstatus.yaml").Return(func() {}, nil)
+	mockFS.EXPECT().WriteFileAtomic("/home/user/.cmstatus.yaml", expectedData, gomock.Any()).Return(nil)
+
+	// Execute
+	err := manager.AddWorkspace(workspacePath, params)
+
+	// Assert
+	assert.NoError(t, err)
+}
+
+func TestAddWorkspace_Duplicate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	workspacePath := "/home/user/workspace.code-workspace"
+	params := AddWorkspaceParams{
+		Worktree:     "origin:feature-a",
+		Repositories: []string{"github.com/lerenn/example"},
+	}
+
+	// Existing status with duplicate workspace
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces: map[string]Workspace{
+			workspacePath: {
+				Worktree:     "origin:feature-b",
+				Repositories: []string{"github.com/lerenn/other"},
+			},
+		},
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	err := manager.AddWorkspace(workspacePath, params)
+
+	// Assert
+	assert.ErrorIs(t, err, ErrWorkspaceAlreadyExists)
+}
+
+func TestGetWorkspace(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	workspacePath := "/home/user/workspace.code-workspace"
+	expectedWorkspace := Workspace{
+		Worktree:     "origin:feature-a",
+		Repositories: []string{"github.com/lerenn/example", "github.com/lerenn/other"},
+	}
+
+	// Existing status
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces: map[string]Workspace{
+			workspacePath: expectedWorkspace,
+		},
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	workspace, err := manager.GetWorkspace(workspacePath)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, &expectedWorkspace, workspace)
+}
+
+func TestGetWorkspace_NotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Test data
+	workspacePath := "/home/user/workspace.code-workspace"
+
+	// Existing status without the workspace
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces:   make(map[string]Workspace),
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	workspace, err := manager.GetWorkspace(workspacePath)
+
+	// Assert
+	assert.Nil(t, workspace)
+	assert.ErrorIs(t, err, ErrWorkspaceNotFound)
+}
+
+func TestListWorkspaces(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fs.NewMockFS(ctrl)
+
+	cfg := &config.Config{
+		BasePath:   "/home/user/.cm",
+		StatusFile: "/home/user/.cmstatus.yaml",
+	}
+
+	manager := &realManager{
+		fs:     mockFS,
+		config: cfg,
+	}
+
+	// Expected workspaces
+	expectedWorkspaces := map[string]Workspace{
+		"/home/user/workspace1.code-workspace": {
+			Worktree:     "origin:feature-a",
+			Repositories: []string{"github.com/lerenn/example"},
+		},
+		"/home/user/workspace2.code-workspace": {
+			Worktree:     "origin:feature-b",
+			Repositories: []string{"github.com/lerenn/other"},
+		},
+	}
+
+	// Existing status
+	existingStatus := &Status{
+		Repositories: make(map[string]Repository),
+		Workspaces:   expectedWorkspaces,
+	}
+
+	existingData, _ := yaml.Marshal(existingStatus)
+
+	// Mock expectations
+	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
+	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
+
+	// Execute
+	workspaces, err := manager.ListWorkspaces()
+
+	// Assert
+	assert.NoError(t, err)
+	assert.Equal(t, expectedWorkspaces, workspaces)
 }
 
 func TestNewManager(t *testing.T) {
@@ -436,372 +1143,6 @@ func TestNewManager(t *testing.T) {
 	assert.Implements(t, (*Manager)(nil), manager)
 }
 
-func TestGetWorkspaceWorktrees(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
-	}
-
-	// Test data
-	workspacePath := "/home/user/workspace.code-workspace"
-	branchName := "feature-a"
-
-	// Expected repositories for the workspace and branch
-	expectedRepos := []Repository{
-		{
-			URL:       "github.com/lerenn/frontend",
-			Branch:    branchName,
-			Path:      "/home/user/repos/frontend",
-			Workspace: workspacePath,
-		},
-		{
-			URL:       "github.com/lerenn/backend",
-			Branch:    branchName,
-			Path:      "/home/user/repos/backend",
-			Workspace: workspacePath,
-		},
-	}
-
-	// Existing status with workspace repositories
-	existingStatus := &Status{
-		Repositories: []Repository{
-			// Repositories for the target workspace and branch
-			expectedRepos[0],
-			expectedRepos[1],
-			// Repository for different workspace
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/repos/other",
-				Workspace: "/home/user/other-workspace.code-workspace",
-			},
-			// Repository for same workspace but different branch
-			{
-				URL:       "github.com/lerenn/frontend",
-				Branch:    "feature-b",
-				Path:      "/home/user/repos/frontend-b",
-				Workspace: workspacePath,
-			},
-			// Non-workspace repository
-			{
-				URL:       "github.com/lerenn/standalone",
-				Branch:    "main",
-				Path:      "/home/user/repos/standalone",
-				Workspace: "",
-			},
-		},
-	}
-
-	existingData, _ := yaml.Marshal(existingStatus)
-
-	// Mock expectations for initialization
-	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
-
-	manager := NewManager(mockFS, cfg).(*realManager)
-
-	// Execute
-	repos, err := manager.GetWorkspaceWorktrees(workspacePath, branchName)
-
-	// Assert
-	assert.NoError(t, err)
-	assert.Equal(t, expectedRepos, repos)
-}
-
-func TestGetWorkspaceWorktrees_EmptyWorkspace(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
-	}
-
-	// Test data
-	workspacePath := "/home/user/empty-workspace.code-workspace"
-	branchName := "feature-a"
-
-	// Existing status without the target workspace
-	existingStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/repos/other",
-				Workspace: "/home/user/other-workspace.code-workspace",
-			},
-			// Non-workspace repository
-			{
-				URL:       "github.com/lerenn/standalone",
-				Branch:    "main",
-				Path:      "/home/user/repos/standalone",
-				Workspace: "",
-			},
-		},
-	}
-
-	existingData, _ := yaml.Marshal(existingStatus)
-
-	// Mock expectations for initialization
-	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
-
-	manager := NewManager(mockFS, cfg).(*realManager)
-
-	// Execute
-	repos, err := manager.GetWorkspaceWorktrees(workspacePath, branchName)
-
-	// Assert
-	assert.NoError(t, err)
-	assert.Empty(t, repos)
-}
-
-func TestGetWorkspaceWorktrees_EmptyBranch(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
-	}
-
-	// Test data
-	workspacePath := "/home/user/workspace.code-workspace"
-	branchName := "non-existent-branch"
-
-	// Existing status with workspace but different branch
-	existingStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       "github.com/lerenn/frontend",
-				Branch:    "feature-a",
-				Path:      "/home/user/repos/frontend",
-				Workspace: workspacePath,
-			},
-		},
-	}
-
-	existingData, _ := yaml.Marshal(existingStatus)
-
-	// Mock expectations for initialization
-	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
-
-	manager := NewManager(mockFS, cfg).(*realManager)
-
-	// Execute
-	repos, err := manager.GetWorkspaceWorktrees(workspacePath, branchName)
-
-	// Assert
-	assert.NoError(t, err)
-	assert.Empty(t, repos)
-}
-
-func TestGetWorkspaceBranches(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
-	}
-
-	// Test data
-	workspacePath := "/home/user/workspace.code-workspace"
-
-	// Expected branches for the workspace
-	expectedBranches := []string{"feature-a", "feature-b"}
-
-	// Existing status with workspace repositories
-	existingStatus := &Status{
-		Repositories: []Repository{
-			// Repositories for the target workspace
-			{
-				URL:       "github.com/lerenn/frontend",
-				Branch:    "feature-a",
-				Path:      "/home/user/repos/frontend",
-				Workspace: workspacePath,
-			},
-			{
-				URL:       "github.com/lerenn/backend",
-				Branch:    "feature-a",
-				Path:      "/home/user/repos/backend",
-				Workspace: workspacePath,
-			},
-			{
-				URL:       "github.com/lerenn/frontend",
-				Branch:    "feature-b",
-				Path:      "/home/user/repos/frontend-b",
-				Workspace: workspacePath,
-			},
-			// Repository for different workspace
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-c",
-				Path:      "/home/user/repos/other",
-				Workspace: "/home/user/other-workspace.code-workspace",
-			},
-			// Non-workspace repository
-			{
-				URL:       "github.com/lerenn/standalone",
-				Branch:    "main",
-				Path:      "/home/user/repos/standalone",
-				Workspace: "",
-			},
-		},
-	}
-
-	existingData, _ := yaml.Marshal(existingStatus)
-
-	// Mock expectations for initialization
-	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
-
-	manager := NewManager(mockFS, cfg).(*realManager)
-
-	// Execute
-	branches, err := manager.GetWorkspaceBranches(workspacePath)
-
-	// Assert
-	assert.NoError(t, err)
-	assert.ElementsMatch(t, expectedBranches, branches)
-}
-
-func TestGetWorkspaceBranches_EmptyWorkspace(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
-	}
-
-	// Test data
-	workspacePath := "/home/user/empty-workspace.code-workspace"
-
-	// Existing status without the target workspace
-	existingStatus := &Status{
-		Repositories: []Repository{
-			{
-				URL:       "github.com/lerenn/other",
-				Branch:    "feature-b",
-				Path:      "/home/user/repos/other",
-				Workspace: "/home/user/other-workspace.code-workspace",
-			},
-			// Non-workspace repository
-			{
-				URL:       "github.com/lerenn/standalone",
-				Branch:    "main",
-				Path:      "/home/user/repos/standalone",
-				Workspace: "",
-			},
-		},
-	}
-
-	existingData, _ := yaml.Marshal(existingStatus)
-
-	// Mock expectations for initialization
-	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
-	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return(existingData, nil)
-
-	manager := NewManager(mockFS, cfg).(*realManager)
-
-	// Execute
-	branches, err := manager.GetWorkspaceBranches(workspacePath)
-
-	// Assert
-	assert.NoError(t, err)
-	assert.Empty(t, branches)
-}
-
-func TestComputeWorkspacesMap(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
-	}
-
-	manager := &realManager{
-		fs:         mockFS,
-		config:     cfg,
-		workspaces: make(map[string]map[string][]Repository),
-	}
-
-	// Test data
-	repositories := []Repository{
-		// Workspace1 repositories
-		{
-			URL:       "github.com/lerenn/frontend",
-			Branch:    "feature-a",
-			Path:      "/home/user/repos/frontend",
-			Workspace: "/home/user/workspace1.code-workspace",
-		},
-		{
-			URL:       "github.com/lerenn/backend",
-			Branch:    "feature-a",
-			Path:      "/home/user/repos/backend",
-			Workspace: "/home/user/workspace1.code-workspace",
-		},
-		{
-			URL:       "github.com/lerenn/frontend",
-			Branch:    "feature-b",
-			Path:      "/home/user/repos/frontend-b",
-			Workspace: "/home/user/workspace1.code-workspace",
-		},
-		// Workspace2 repositories
-		{
-			URL:       "github.com/lerenn/other",
-			Branch:    "feature-c",
-			Path:      "/home/user/repos/other",
-			Workspace: "/home/user/workspace2.code-workspace",
-		},
-		// Non-workspace repository
-		{
-			URL:       "github.com/lerenn/standalone",
-			Branch:    "main",
-			Path:      "/home/user/repos/standalone",
-			Workspace: "",
-		},
-	}
-
-	// Execute
-	manager.computeWorkspacesMap(repositories)
-
-	// Verify the map structure
-	assert.NotNil(t, manager.workspaces)
-
-	// Check workspace1
-	workspace1 := manager.workspaces["workspace1"]
-	assert.NotNil(t, workspace1)
-	assert.Len(t, workspace1["feature-a"], 2)
-	assert.Len(t, workspace1["feature-b"], 1)
-
-	// Check workspace2
-	workspace2 := manager.workspaces["workspace2"]
-	assert.NotNil(t, workspace2)
-	assert.Len(t, workspace2["feature-c"], 1)
-
-	// Verify non-workspace repository is not included
-	assert.NotContains(t, manager.workspaces, "")
-}
-
 func TestGetWorkspaceNameFromPath(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -816,7 +1157,7 @@ func TestGetWorkspaceNameFromPath(t *testing.T) {
 	manager := &realManager{
 		fs:         mockFS,
 		config:     cfg,
-		workspaces: make(map[string]map[string][]Repository),
+		workspaces: make(map[string]map[string][]WorktreeInfo),
 	}
 
 	// Test cases

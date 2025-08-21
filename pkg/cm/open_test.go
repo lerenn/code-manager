@@ -5,10 +5,10 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/ide"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -39,10 +39,10 @@ func TestCM_OpenWorktree(t *testing.T) {
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
 
 	// Mock worktree path existence check
-	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(true, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(true, nil)
 
 	// Mock IDE opening - now uses derived worktree path
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/origin/test-branch", false).Return(nil)
 
 	err := cm.OpenWorktree("test-branch", "cursor")
 	assert.NoError(t, err)
@@ -74,10 +74,10 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
 
 	// Mock worktree path existence check
-	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(true, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(true, nil)
 
 	// Mock IDE opening - the method will try to open the worktree path
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/origin/test-branch", false).Return(nil)
 
 	err := cm.OpenWorktree("test-branch", "cursor")
 	assert.NoError(t, err)

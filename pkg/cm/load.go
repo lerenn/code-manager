@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	repo "github.com/lerenn/cm/pkg/repository"
+	repo "github.com/lerenn/code-manager/pkg/repository"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -37,9 +37,9 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 	case ProjectTypeSingleRepo:
 		loadErr = c.loadWorktreeForSingleRepo(remoteSource, branchName)
 	case ProjectTypeWorkspace:
-		return fmt.Errorf("workspace mode not yet supported for load command")
+		return ErrWorkspaceModeNotSupported
 	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
+		return ErrNoGitRepositoryOrWorkspaceFound
 	default:
 		return fmt.Errorf("unknown project type")
 	}

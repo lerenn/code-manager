@@ -2,11 +2,9 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
 
-	cm "github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/status"
+	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +42,7 @@ Examples:
 }
 
 // displayWorktrees displays worktrees based on project type.
-func displayWorktrees(worktrees []status.Repository, projectType cm.ProjectType) {
+func displayWorktrees(worktrees []status.WorktreeInfo, projectType cm.ProjectType) {
 	switch projectType {
 	case cm.ProjectTypeSingleRepo:
 		displaySingleRepoWorktrees(worktrees)
@@ -57,8 +55,13 @@ func displayWorktrees(worktrees []status.Repository, projectType cm.ProjectType)
 }
 
 // displaySingleRepoWorktrees displays worktrees for single repository mode.
-func displaySingleRepoWorktrees(worktrees []status.Repository) {
-	fmt.Printf("Worktrees for repository %s:\n", worktrees[0].URL)
+func displaySingleRepoWorktrees(worktrees []status.WorktreeInfo) {
+	if len(worktrees) == 0 {
+		fmt.Println("No worktrees found.")
+		return
+	}
+
+	fmt.Printf("Worktrees:\n")
 
 	for _, worktree := range worktrees {
 		remote := worktree.Remote
@@ -70,12 +73,11 @@ func displaySingleRepoWorktrees(worktrees []status.Repository) {
 }
 
 // displayWorkspaceWorktrees displays worktrees for workspace mode.
-func displayWorkspaceWorktrees(worktrees []status.Repository) {
-	workspaceName := getWorkspaceName(worktrees)
-	fmt.Printf("Worktrees for workspace: %s\n\n", workspaceName)
+func displayWorkspaceWorktrees(worktrees []status.WorktreeInfo) {
+	fmt.Printf("Worktrees for workspace:\n\n")
 
 	// Group worktrees by branch
-	branchGroups := make(map[string][]status.Repository)
+	branchGroups := make(map[string][]status.WorktreeInfo)
 	for _, worktree := range worktrees {
 		branchGroups[worktree.Branch] = append(branchGroups[worktree.Branch], worktree)
 	}
@@ -84,32 +86,16 @@ func displayWorkspaceWorktrees(worktrees []status.Repository) {
 	displayUniqueBranches(branchGroups)
 }
 
-// getWorkspaceName extracts workspace name from worktrees.
-func getWorkspaceName(worktrees []status.Repository) string {
-	if len(worktrees) == 0 {
-		return "Unknown"
-	}
-
-	// Try to extract workspace name from the first worktree's workspace path
-	workspacePath := worktrees[0].Workspace
-	if workspacePath != "" {
-		workspaceFile := filepath.Base(workspacePath)
-		return strings.TrimSuffix(workspaceFile, ".code-workspace")
-	}
-
-	return "Unknown"
-}
-
-// displayUniqueBranches displays branches with their repositories.
-func displayUniqueBranches(branchGroups map[string][]status.Repository) {
-	for branch, repos := range branchGroups {
+// displayUniqueBranches displays branches with their remotes.
+func displayUniqueBranches(branchGroups map[string][]status.WorktreeInfo) {
+	for branch, worktrees := range branchGroups {
 		fmt.Printf("  %s:\n", branch)
-		for _, repo := range repos {
-			remote := repo.Remote
+		for _, worktree := range worktrees {
+			remote := worktree.Remote
 			if remote == "" {
 				remote = "origin"
 			}
-			fmt.Printf("    %s [%s]\n", repo.URL, remote)
+			fmt.Printf("    [%s]\n", remote)
 		}
 		fmt.Println()
 	}

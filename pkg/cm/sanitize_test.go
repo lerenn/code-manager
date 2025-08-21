@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -120,7 +120,7 @@ func TestRealCM_sanitizeBranchName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := cm.(*realCM).sanitizeBranchName(tt.input)
+			result, err := c.sanitizeBranchName(tt.input)
 			if tt.wantErr {
 				if tt.input == "" {
 					assert.ErrorIs(t, err, ErrBranchNameEmpty)
@@ -128,11 +128,11 @@ func TestRealCM_sanitizeBranchName(t *testing.T) {
 					assert.Error(t, err)
 					// Check for specific error messages for new Git rule violations
 					if tt.input == "@" {
-						assert.Contains(t, err.Error(), "branch name cannot be the single character @")
+						assert.ErrorIs(t, err, ErrBranchNameSingleAt)
 					} else if strings.Contains(tt.input, "@{") {
-						assert.Contains(t, err.Error(), "branch name cannot contain the sequence @{")
+						assert.ErrorIs(t, err, ErrBranchNameContainsAtBrace)
 					} else if strings.Contains(tt.input, "\\") {
-						assert.Contains(t, err.Error(), "branch name cannot contain backslash")
+						assert.ErrorIs(t, err, ErrBranchNameContainsBackslash)
 					}
 				}
 			} else {

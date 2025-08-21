@@ -6,8 +6,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )

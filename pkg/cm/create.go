@@ -1,11 +1,13 @@
 package cm
 
 import (
+	"errors"
 	"fmt"
 
-	"github.com/lerenn/cm/pkg/forge"
-	repo "github.com/lerenn/cm/pkg/repository"
-	ws "github.com/lerenn/cm/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/forge"
+	"github.com/lerenn/code-manager/pkg/issue"
+	repo "github.com/lerenn/code-manager/pkg/repository"
+	ws "github.com/lerenn/code-manager/pkg/workspace"
 )
 
 // CreateWorkTreeOpts contains optional parameters for CreateWorkTree.
@@ -85,7 +87,7 @@ func (c *realCM) handleProjectMode(sanitizedBranch string) error {
 	case ProjectTypeWorkspace:
 		return c.handleWorkspaceMode(sanitizedBranch)
 	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
+		return ErrNoGitRepositoryOrWorkspaceFound
 	default:
 		return fmt.Errorf("unknown project type")
 	}
@@ -108,12 +110,12 @@ func (c *realCM) handleRepositoryMode(branch string) error {
 
 	// 1. Validate repository
 	if err := repoInstance.Validate(); err != nil {
-		return err
+		return c.translateRepositoryError(err)
 	}
 
 	// 2. Create worktree for single repository
 	if err := repoInstance.CreateWorktree(branch); err != nil {
-		return err
+		return c.translateRepositoryError(err)
 	}
 
 	c.VerbosePrint("CM execution completed successfully")
@@ -121,11 +123,38 @@ func (c *realCM) handleRepositoryMode(branch string) error {
 	return nil
 }
 
+// translateRepositoryError translates repository package errors to CM package errors.
+func (c *realCM) translateRepositoryError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Check for specific repository errors and translate them
+	if errors.Is(err, repo.ErrWorktreeExists) {
+		return ErrWorktreeExists
+	}
+	if errors.Is(err, repo.ErrWorktreeNotInStatus) {
+		return ErrWorktreeNotInStatus
+	}
+	if errors.Is(err, repo.ErrRepositoryNotClean) {
+		return ErrRepositoryNotClean
+	}
+	if errors.Is(err, repo.ErrDirectoryExists) {
+		return ErrDirectoryExists
+	}
+	if errors.Is(err, repo.ErrGitRepositoryNotFound) {
+		return ErrGitRepositoryNotFound
+	}
+
+	// Return the original error if no translation is needed
+	return err
+}
+
 // handleWorkspaceMode handles workspace mode: validation and worktree creation.
 func (c *realCM) handleWorkspaceMode(branch string) error {
 	c.VerbosePrint("Handling workspace mode")
 
-	// Create a single workspace instance for all workspace operations
+	// Create workspace instance
 	workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
 		FS:            c.FS,
 		Git:           c.Git,
@@ -136,13 +165,12 @@ func (c *realCM) handleWorkspaceMode(branch string) error {
 		Verbose:       c.IsVerbose(),
 	})
 
-	// Create worktrees for all repositories in workspace
+	// Create worktree for workspace
 	if err := workspace.CreateWorktree(branch); err != nil {
 		return err
 	}
 
-	c.VerbosePrint("CM execution completed successfully")
-
+	c.VerbosePrint("Workspace worktree creation completed successfully")
 	return nil
 }
 
@@ -170,7 +198,7 @@ func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string, ideName
 	case ProjectTypeWorkspace:
 		createErr = c.createWorkTreeFromIssueForWorkspace(branchName, issueRef)
 	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
+		return ErrNoGitRepositoryOrWorkspaceFound
 	default:
 		return fmt.Errorf("unknown project type")
 	}
@@ -201,7 +229,7 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 	// Get issue information
 	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
 	if err != nil {
-		return fmt.Errorf("failed to get issue information: %w", err)
+		return c.translateIssueError(err)
 	}
 
 	// Generate branch name if not provided
@@ -225,12 +253,12 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 
 // createWorkTreeFromIssueForWorkspace creates worktrees from issue for workspace.
 func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string) error {
-	c.VerbosePrint("Creating worktrees from issue for workspace mode")
+	c.VerbosePrint("Creating worktree from issue for workspace mode")
 
 	// Create forge manager
 	forgeManager := forge.NewManager(c.Logger)
 
-	// Get the appropriate forge for the first repository (we'll use the same issue for all)
+	// Get the appropriate forge for the repository
 	selectedForge, err := forgeManager.GetForgeForRepository(".")
 	if err != nil {
 		return fmt.Errorf("failed to get forge for repository: %w", err)
@@ -239,7 +267,7 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 	// Get issue information
 	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
 	if err != nil {
-		return fmt.Errorf("failed to get issue information: %w", err)
+		return c.translateIssueError(err)
 	}
 
 	// Generate branch name if not provided
@@ -248,7 +276,7 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 		branchName = &generatedBranchName
 	}
 
-	// Create worktrees for all repositories in workspace
+	// Create workspace instance
 	workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
 		FS:            c.FS,
 		Git:           c.Git,
@@ -258,5 +286,25 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 		Prompt:        c.Prompt,
 		Verbose:       c.IsVerbose(),
 	})
-	return workspace.CreateWorktree(*branchName, ws.CreateWorktreeOpts{})
+	return workspace.CreateWorktree(*branchName)
+}
+
+// translateIssueError translates issue-related errors to preserve the original error types.
+func (c *realCM) translateIssueError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Check for specific issue errors and preserve them
+	if errors.Is(err, issue.ErrIssueNumberRequiresContext) {
+		return issue.ErrIssueNumberRequiresContext
+	}
+
+	// Check for specific forge errors and preserve them
+	if errors.Is(err, forge.ErrInvalidIssueRef) {
+		return forge.ErrInvalidIssueRef
+	}
+
+	// Return the original error if no translation is needed
+	return err
 }

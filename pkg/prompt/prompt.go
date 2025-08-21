@@ -12,7 +12,7 @@ import (
 // Prompt interface provides user interaction functionality.
 type Prompt interface {
 	// PromptForBasePath prompts the user for the base path with examples.
-	PromptForBasePath() (string, error)
+	PromptForBasePath(defaultBasePath string) (string, error)
 
 	// PromptForConfirmation prompts the user for confirmation with a default value.
 	PromptForConfirmation(message string, defaultYes bool) (bool, error)
@@ -30,8 +30,12 @@ func NewPrompt() Prompt {
 }
 
 // PromptForBasePath prompts the user for the base path with examples.
-func (p *realPrompt) PromptForBasePath() (string, error) {
-	fmt.Print("Choose the location of the repositories (ex: ~/Code/src, ~/Projects, ~/Development): [default: ~/Code/src]: ")
+func (p *realPrompt) PromptForBasePath(defaultBasePath string) (string, error) {
+	if defaultBasePath == "" {
+		defaultBasePath = "~/Code"
+	}
+	fmt.Printf("Choose the location of the repositories (ex: ~/Code, ~/Projects, ~/Worktrees): "+
+		"[default: %s]: ", defaultBasePath)
 
 	input, err := p.reader.ReadString('\n')
 	if err != nil {
@@ -43,7 +47,7 @@ func (p *realPrompt) PromptForBasePath() (string, error) {
 
 	// Use default if input is empty
 	if input == "" {
-		return "~/Code/src", nil
+		return defaultBasePath, nil
 	}
 
 	return input, nil
@@ -80,6 +84,6 @@ func (p *realPrompt) PromptForConfirmation(message string, defaultYes bool) (boo
 	case "n", "no":
 		return false, nil
 	default:
-		return false, fmt.Errorf("invalid input: please enter 'y' or 'n'")
+		return false, ErrInvalidConfirmationInput
 	}
 }

@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/status"
-	"github.com/lerenn/cm/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -91,9 +91,9 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2)
 
-	// Verify worktree directories exist
-	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
-	backendWorktreePath := filepath.Join(tempDir, "worktrees", "backend", branchName)
+	// Verify worktree directories exist (new structure: repo/origin/branch)
+	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "github.com/test/frontend", "origin", branchName)
+	backendWorktreePath := filepath.Join(tempDir, "worktrees", "github.com/test/backend", "origin", branchName)
 	assert.DirExists(t, frontendWorktreePath)
 	assert.DirExists(t, backendWorktreePath)
 
@@ -122,20 +122,26 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	assert.Len(t, allWorktrees, 2)
 
 	// Find frontend and backend worktrees
-	var frontendWorktree, backendWorktree *status.Repository
+	var frontendWorktree, backendWorktree *status.WorktreeInfo
+	foundFrontend := false
+	foundBackend := false
+
 	for _, worktree := range allWorktrees {
-		if worktree.URL == "frontend" {
-			frontendWorktree = &worktree
-		} else if worktree.URL == "backend" {
-			backendWorktree = &worktree
+		if worktree.Branch == branchName {
+			if !foundFrontend {
+				frontendWorktree = &worktree
+				foundFrontend = true
+			} else if !foundBackend {
+				backendWorktree = &worktree
+				foundBackend = true
+			}
 		}
 	}
 
-	require.NotNil(t, frontendWorktree)
-	require.NotNil(t, backendWorktree)
+	require.NotNil(t, frontendWorktree, "Should have frontend worktree")
+	require.NotNil(t, backendWorktree, "Should have backend worktree")
 	assert.Equal(t, branchName, frontendWorktree.Branch)
 	assert.Equal(t, branchName, backendWorktree.Branch)
-	// Use the actual workspace path from the worktree for comparison
-	assert.Equal(t, frontendWorktree.Workspace, frontendWorktree.Workspace)
-	assert.Equal(t, backendWorktree.Workspace, backendWorktree.Workspace)
+	assert.Equal(t, "origin", frontendWorktree.Remote, "Should have origin remote")
+	assert.Equal(t, "origin", backendWorktree.Remote, "Should have origin remote")
 }

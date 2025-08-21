@@ -5,10 +5,11 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/ide"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/repository"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -111,7 +112,7 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound).AnyTimes()
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 	// Mock worktree directory doesn't exist during creation
-	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/feature-branch").Return(false, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/feature-branch").Return(false, nil)
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
 	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 	mockGit.EXPECT().BranchExists(gomock.Any(), "feature-branch").Return(false, nil)
@@ -119,11 +120,11 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "feature-branch").Return(nil)
 
 	// Mock worktree path existence for OpenWorktree call (after creation)
-	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/feature-branch").Return(true, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/feature-branch").Return(true, nil)
 
 	// Mock IDE opening
 	ideName := "cursor"
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/feature-branch", false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/origin/feature-branch", false).Return(nil)
 
 	err := cm.LoadWorktree("origin:feature-branch", LoadWorktreeOpts{IDEName: ideName})
 	assert.NoError(t, err)
@@ -273,7 +274,7 @@ func TestCM_LoadWorktree_NoRepository(t *testing.T) {
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no Git repository or workspace found")
+	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)
 }
 
 func TestCM_LoadWorktree_WorkspaceMode(t *testing.T) {
@@ -300,7 +301,7 @@ func TestCM_LoadWorktree_WorkspaceMode(t *testing.T) {
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "workspace mode not yet supported for load command")
+	assert.ErrorIs(t, err, ErrWorkspaceModeNotSupported)
 }
 
 func TestCM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
@@ -333,7 +334,7 @@ func TestCM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "origin remote not found or invalid")
+	assert.ErrorIs(t, err, repository.ErrOriginRemoteNotFound)
 }
 
 func TestCM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
@@ -367,7 +368,7 @@ func TestCM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "origin remote URL is not a valid Git hosting service URL")
+	assert.ErrorIs(t, err, repository.ErrOriginRemoteInvalidURL)
 }
 
 func TestCM_LoadWorktree_FetchFailed(t *testing.T) {
@@ -404,7 +405,7 @@ func TestCM_LoadWorktree_FetchFailed(t *testing.T) {
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to fetch from remote")
+	assert.ErrorIs(t, err, git.ErrFetchFailed)
 }
 
 func TestCM_LoadWorktree_BranchNotFound(t *testing.T) {
@@ -448,7 +449,7 @@ func TestCM_LoadWorktree_BranchNotFound(t *testing.T) {
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "branch not found on remote")
+	assert.ErrorIs(t, err, git.ErrBranchNotFoundOnRemote)
 }
 
 func TestCM_LoadWorktree_DefaultRemote(t *testing.T) {

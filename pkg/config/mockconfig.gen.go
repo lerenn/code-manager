@@ -67,6 +67,22 @@ func (mr *MockManagerMockRecorder) DefaultConfig() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultConfig", reflect.TypeOf((*MockManager)(nil).DefaultConfig))
 }
 
+// EnsureConfigFile mocks base method.
+func (m *MockManager) EnsureConfigFile(configPath string) (*Config, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureConfigFile", configPath)
+	ret0, _ := ret[0].(*Config)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// EnsureConfigFile indicates an expected call of EnsureConfigFile.
+func (mr *MockManagerMockRecorder) EnsureConfigFile(configPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureConfigFile", reflect.TypeOf((*MockManager)(nil).EnsureConfigFile), configPath)
+}
+
 // LoadConfig mocks base method.
 func (m *MockManager) LoadConfig(configPath string) (*Config, error) {
 	m.ctrl.T.Helper()
@@ -80,6 +96,21 @@ func (m *MockManager) LoadConfig(configPath string) (*Config, error) {
 func (mr *MockManagerMockRecorder) LoadConfig(configPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfig", reflect.TypeOf((*MockManager)(nil).LoadConfig), configPath)
+}
+
+// LoadConfigStrict mocks base method.
+func (m *MockManager) LoadConfigStrict(configPath string) (*Config, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadConfigStrict", configPath)
+	ret0, _ := ret[0].(*Config)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// LoadConfigStrict indicates an expected call of LoadConfigStrict.
+func (mr *MockManagerMockRecorder) LoadConfigStrict(configPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadConfigStrict", reflect.TypeOf((*MockManager)(nil).LoadConfigStrict), configPath)
 }
 
 // SaveConfig mocks base method.

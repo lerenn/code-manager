@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/logger"
-	"github.com/lerenn/cm/pkg/prompt"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/prompt"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -106,7 +106,7 @@ func TestWorkspace_DetectWorkspaceFiles_Error(t *testing.T) {
 	files, err := workspace.DetectWorkspaceFiles()
 	assert.Error(t, err)
 	assert.Nil(t, files)
-	assert.Contains(t, err.Error(), "failed to check for workspace files")
+	assert.ErrorIs(t, err, ErrFailedToCheckWorkspaceFiles)
 }
 
 func TestWorkspace_ParseFile_Success(t *testing.T) {
@@ -386,41 +386,40 @@ func TestWorkspace_ListWorktrees_Success(t *testing.T) {
 	})
 	workspace.OriginalFile = "/test/path/workspace.code-workspace"
 
-	// Mock status manager to return worktrees
-	allWorktrees := []status.Repository{
-		{
-			URL:       "github.com/lerenn/example",
-			Branch:    "feature/test-branch",
-			Path:      "/test/base/path/worktrees/github.com/lerenn/example/feature/test-branch",
-			Workspace: "/test/path/workspace.code-workspace",
-		},
-		{
-			URL:       "github.com/other/repo",
-			Branch:    "feature/other-branch",
-			Path:      "/test/base/path/github.com/other/repo/feature/other-branch",
-			Workspace: "/test/other/workspace.code-workspace",
-		},
-		{
-			URL:       "github.com/lerenn/example",
-			Branch:    "bugfix/issue-123",
-			Path:      "/test/base/path/worktrees/github.com/lerenn/example/bugfix/issue-123",
-			Workspace: "/test/path/workspace.code-workspace",
+	// Mock GetWorkspace call
+	workspaceInfo := &status.Workspace{
+		Repositories: []string{"github.com/example/repo1", "github.com/example/repo2"},
+	}
+	mockStatus.EXPECT().GetWorkspace("/test/path/workspace.code-workspace").Return(workspaceInfo, nil)
+
+	// Mock GetRepository calls - each repository can be called multiple times
+	repo1 := &status.Repository{
+		Worktrees: map[string]status.WorktreeInfo{
+			"origin:feature/test-branch": {
+				Remote: "origin",
+				Branch: "feature/test-branch",
+			},
 		},
 	}
-	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)
-
-	// Mock GetBranchRemote calls for the filtered worktrees
-	mockGit.EXPECT().GetBranchRemote(".", "feature/test-branch").Return("origin", nil)
-	mockGit.EXPECT().GetBranchRemote(".", "bugfix/issue-123").Return("origin", nil)
+	repo2 := &status.Repository{
+		Worktrees: map[string]status.WorktreeInfo{
+			"origin:bugfix/issue-123": {
+				Remote: "origin",
+				Branch: "bugfix/issue-123",
+			},
+		},
+	}
+	// Each repository can be called multiple times as the algorithm checks all repos for each worktree
+	mockStatus.EXPECT().GetRepository("github.com/example/repo1").Return(repo1, nil).AnyTimes()
+	mockStatus.EXPECT().GetRepository("github.com/example/repo2").Return(repo2, nil).AnyTimes()
 
 	result, err := workspace.ListWorktrees()
 	assert.NoError(t, err)
 	assert.Len(t, result, 2, "Should only return worktrees for current workspace")
 
 	// Verify only current workspace worktrees are returned
-	for _, wt := range result {
-		assert.Equal(t, "/test/path/workspace.code-workspace", wt.Workspace)
-	}
+	// Note: WorktreeInfo doesn't have Workspace field, so we can't verify this directly
+	// The filtering is done internally by the workspace implementation
 
 	// Verify specific branches are present
 	branchNames := make([]string, len(result))

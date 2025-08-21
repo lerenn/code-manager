@@ -5,11 +5,11 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/ide"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -102,16 +102,16 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	mockGit.EXPECT().BranchExists(gomock.Any(), "test-branch").Return(false, nil)
 	mockGit.EXPECT().CreateBranch(gomock.Any(), "test-branch").Return(nil)
 	// Mock worktree directory doesn't exist during creation
-	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(false, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(false, nil)
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
 	mockGit.EXPECT().CreateWorktree(gomock.Any(), gomock.Any(), "test-branch").Return(nil)
 
 	// Mock worktree path existence for OpenWorktree call (after creation)
-	mockFS.EXPECT().Exists("/test/base/path/worktrees/github.com/lerenn/example/test-branch").Return(true, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(true, nil)
 
 	// Mock IDE opening
 	ideName := "cursor"
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/worktrees/github.com/lerenn/example/test-branch", false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/origin/test-branch", false).Return(nil)
 
 	err := cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: ideName})
 	assert.NoError(t, err)

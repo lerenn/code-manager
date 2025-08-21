@@ -1,6 +1,6 @@
 {
-  "name": "cm",
-  "engineVersion": "v0.18.14",
+  "name": "code-manager",
+  "engineVersion": "v0.18.16",
   "sdk": {
     "source": "go"
   },

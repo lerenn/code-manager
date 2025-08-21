@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/logger"
-	"github.com/lerenn/cm/pkg/prompt"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/prompt"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -108,7 +108,7 @@ func TestRepository_Validate_GitStatusError(t *testing.T) {
 
 	err := repo.Validate()
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "git repository is in an invalid state")
+	assert.ErrorIs(t, err, ErrGitRepositoryInvalid)
 }
 
 func TestRepository_Validate_NotClean(t *testing.T) {
@@ -382,10 +382,9 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 
 	// Mock worktree deletion
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
-		URL:    "github.com/lerenn/example",
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.WorktreeInfo{
+		Remote: "origin",
 		Branch: "test-branch",
-		Path:   "/test/path/worktree",
 	}, nil)
 	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "test-branch").Return("/test/path/worktree", nil)
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), "/test/path/worktree").Return(nil)
@@ -419,38 +418,30 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 	// Mock repository name extraction
 	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
 
-	// Mock status manager to return worktrees
-	allWorktrees := []status.Repository{
-		{
-			URL:    "github.com/lerenn/example",
-			Branch: "feature/test-branch",
-			Path:   "/test/base/path/worktrees/github.com/lerenn/example/feature/test-branch",
+	// Mock status manager to return repository with worktrees
+	expectedRepo := &status.Repository{
+		Path: "/path/to/repo",
+		Remotes: map[string]status.Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
 		},
-		{
-			URL:    "github.com/other/repo",
-			Branch: "feature/other-branch",
-			Path:   "/test/base/path/github.com/other/repo/feature/other-branch",
-		},
-		{
-			URL:    "github.com/lerenn/example",
-			Branch: "bugfix/issue-123",
-			Path:   "/test/base/path/worktrees/github.com/lerenn/example/bugfix/issue-123",
+		Worktrees: map[string]status.WorktreeInfo{
+			"feature/test-branch": {
+				Remote: "origin",
+				Branch: "feature/test-branch",
+			},
+			"bugfix/issue-123": {
+				Remote: "origin",
+				Branch: "bugfix/issue-123",
+			},
 		},
 	}
-	mockStatus.EXPECT().ListAllWorktrees().Return(allWorktrees, nil)
-
-	// Mock GetBranchRemote calls for the filtered worktrees
-	mockGit.EXPECT().GetBranchRemote(".", "feature/test-branch").Return("origin", nil)
-	mockGit.EXPECT().GetBranchRemote(".", "bugfix/issue-123").Return("origin", nil)
+	mockStatus.EXPECT().GetRepository("github.com/lerenn/example").Return(expectedRepo, nil)
 
 	result, err := repo.ListWorktrees()
 	assert.NoError(t, err)
 	assert.Len(t, result, 2, "Should only return worktrees for current repository")
-
-	// Verify only current repository worktrees are returned
-	for _, wt := range result {
-		assert.Equal(t, "github.com/lerenn/example", wt.URL)
-	}
 
 	// Verify specific branches are present
 	branchNames := make([]string, len(result))

@@ -12,29 +12,46 @@ import (
 
 func TestRealPrompt_PromptForBasePath(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    string
-		expected string
+		name        string
+		defaultPath string
+		input       string
+		expected    string
 	}{
 		{
-			name:     "empty input uses default",
-			input:    "\n",
-			expected: "~/Code/src",
+			name:        "empty input uses default",
+			defaultPath: "~/Code",
+			input:       "\n",
+			expected:    "~/Code",
 		},
 		{
-			name:     "whitespace input uses default",
-			input:    "   \n",
-			expected: "~/Code/src",
+			name:        "whitespace input uses default",
+			defaultPath: "~/Code",
+			input:       "   \n",
+			expected:    "~/Code",
 		},
 		{
-			name:     "custom path",
-			input:    "~/Projects\n",
-			expected: "~/Projects",
+			name:        "custom path",
+			defaultPath: "~/Code",
+			input:       "~/Projects\n",
+			expected:    "~/Projects",
 		},
 		{
-			name:     "custom path with whitespace",
-			input:    "  ~/Development  \n",
-			expected: "~/Development",
+			name:        "custom path with whitespace",
+			defaultPath: "~/Code",
+			input:       "  ~/Development  \n",
+			expected:    "~/Development",
+		},
+		{
+			name:        "empty default uses hardcoded default",
+			defaultPath: "",
+			input:       "\n",
+			expected:    "~/Code",
+		},
+		{
+			name:        "custom default path",
+			defaultPath: "~/Custom/Path",
+			input:       "\n",
+			expected:    "~/Custom/Path",
 		},
 	}
 
@@ -45,7 +62,7 @@ func TestRealPrompt_PromptForBasePath(t *testing.T) {
 				reader: bufio.NewReader(strings.NewReader(tt.input)),
 			}
 
-			result, err := p.PromptForBasePath()
+			result, err := p.PromptForBasePath(tt.defaultPath)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -122,7 +139,7 @@ func TestRealPrompt_PromptForConfirmation(t *testing.T) {
 			result, err := p.PromptForConfirmation(tt.message, tt.defaultYes)
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "invalid input")
+				assert.ErrorIs(t, err, ErrInvalidConfirmationInput)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)

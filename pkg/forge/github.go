@@ -2,6 +2,7 @@ package forge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,8 +11,8 @@ import (
 	"time"
 
 	"github.com/google/go-github/v62/github"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/issue"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/issue"
 )
 
 const (
@@ -90,7 +91,7 @@ func (g *GitHub) parseIssueReference(issueRef string) (*issue.Reference, error) 
 	ref, err := g.ParseIssueReference(issueRef)
 	if err != nil {
 		// If it's an issue number format error, try to extract repository info from current repo
-		if strings.Contains(err.Error(), "issue number format requires repository context") {
+		if errors.Is(err, issue.ErrIssueNumberRequiresContext) {
 			ref, err = g.parseIssueNumberWithContext(issueRef)
 			if err != nil {
 				return nil, fmt.Errorf("%w: %w", ErrInvalidIssueRef, err)
@@ -155,7 +156,7 @@ func (g *GitHub) ParseIssueReference(issueRef string) (*issue.Reference, error) 
 	// 3. Issue number only: 123 (requires current repository to be GitHub)
 	// This will be handled by the caller who needs to provide the repository context
 	if matched, _ := regexp.MatchString(`^\d+$`, issueRef); matched {
-		return nil, fmt.Errorf("issue number format requires repository context")
+		return nil, issue.ErrIssueNumberRequiresContext
 	}
 
 	return nil, fmt.Errorf("unsupported issue reference format: %s", issueRef)

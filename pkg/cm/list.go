@@ -1,15 +1,16 @@
 package cm
 
 import (
+	"errors"
 	"fmt"
 
-	repo "github.com/lerenn/cm/pkg/repository"
-	"github.com/lerenn/cm/pkg/status"
-	ws "github.com/lerenn/cm/pkg/workspace"
+	repo "github.com/lerenn/code-manager/pkg/repository"
+	"github.com/lerenn/code-manager/pkg/status"
+	ws "github.com/lerenn/code-manager/pkg/workspace"
 )
 
 // ListWorktrees lists worktrees for the current project with mode detection.
-func (c *realCM) ListWorktrees() ([]status.Repository, ProjectType, error) {
+func (c *realCM) ListWorktrees() ([]status.WorktreeInfo, ProjectType, error) {
 	c.VerbosePrint("Listing worktrees with mode detection")
 
 	// Detect project mode
@@ -30,9 +31,9 @@ func (c *realCM) ListWorktrees() ([]status.Repository, ProjectType, error) {
 			Verbose:       c.IsVerbose(),
 		})
 		worktrees, err := repoInstance.ListWorktrees()
-		return worktrees, ProjectTypeSingleRepo, err
+		return worktrees, ProjectTypeSingleRepo, c.translateListError(err)
 	case ProjectTypeWorkspace:
-		workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
+		workspaceInstance := ws.NewWorkspace(ws.NewWorkspaceParams{
 			FS:            c.FS,
 			Git:           c.Git,
 			Config:        c.Config,
@@ -41,11 +42,26 @@ func (c *realCM) ListWorktrees() ([]status.Repository, ProjectType, error) {
 			Prompt:        c.Prompt,
 			Verbose:       c.IsVerbose(),
 		})
-		worktrees, err := workspace.ListWorktrees()
-		return worktrees, ProjectTypeWorkspace, err
+		worktrees, err := workspaceInstance.ListWorktrees()
+		return worktrees, ProjectTypeWorkspace, c.translateListError(err)
 	case ProjectTypeNone:
-		return nil, ProjectTypeNone, fmt.Errorf("no Git repository or workspace found")
+		return nil, ProjectTypeNone, ErrNoGitRepositoryOrWorkspaceFound
 	default:
 		return nil, ProjectTypeNone, fmt.Errorf("unknown project type")
 	}
+}
+
+// translateListError translates errors from list operations to CM package errors.
+func (c *realCM) translateListError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	// Check for specific status errors and translate them
+	if errors.Is(err, status.ErrConfigurationNotInitialized) {
+		return ErrNotInitialized
+	}
+
+	// Return the original error if no translation is needed
+	return err
 }

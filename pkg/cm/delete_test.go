@@ -5,10 +5,10 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/ide"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -37,10 +37,9 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 
 	// Mock worktree deletion
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
-		URL:    "github.com/lerenn/example",
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.WorktreeInfo{
+		Remote: "origin",
 		Branch: "test-branch",
-		Path:   "/test/path/worktree",
 	}, nil)
 	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "test-branch").Return("/test/path/worktree", nil)
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), "/test/path/worktree").Return(nil)
@@ -81,7 +80,7 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 
 	err := cm.DeleteWorkTree("test-branch", true)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no Git repository or workspace found")
+	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)
 }
 
 func TestCM_DeleteWorkTree_VerboseMode(t *testing.T) {
@@ -109,10 +108,9 @@ func TestCM_DeleteWorkTree_VerboseMode(t *testing.T) {
 
 	// Mock worktree deletion
 	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
-		URL:    "github.com/lerenn/example",
+	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.WorktreeInfo{
+		Remote: "origin",
 		Branch: "test-branch",
-		Path:   "/test/path/worktree",
 	}, nil)
 	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "test-branch").Return("/test/path/worktree", nil)
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), "/test/path/worktree").Return(nil)
