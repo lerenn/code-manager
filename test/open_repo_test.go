@@ -7,8 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/ide"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,10 +47,16 @@ func TestOpenExistingWorktree(t *testing.T) {
 	require.NotNil(t, status.Repositories, "Status file should have repositories section")
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
-	worktreeEntry := status.Repositories[0]
+	// Get the first repository from the map
+	var repo Repository
+	for _, r := range status.Repositories {
+		repo = r
+		break
+	}
+
 	expectedPath, err := filepath.EvalSymlinks(setup.RepoPath)
 	require.NoError(t, err)
-	actualPath, err := filepath.EvalSymlinks(worktreeEntry.Path)
+	actualPath, err := filepath.EvalSymlinks(repo.Path)
 	require.NoError(t, err)
 	assert.Equal(t, expectedPath, actualPath, "Path should be the original repository directory, not the worktree directory")
 }
@@ -77,7 +84,7 @@ func TestOpenNonExistentWorktree(t *testing.T) {
 
 	err = cmInstance.OpenWorktree("non-existent-branch", "dummy")
 	assert.Error(t, err, "Opening non-existent worktree should fail")
-	assert.Contains(t, err.Error(), "worktree not found", "Error should mention worktree not found")
+	assert.ErrorIs(t, err, cm.ErrWorktreeNotInStatus, "Error should mention worktree not found")
 }
 
 // TestOpenWorktreeWithUnsupportedIDE tests opening a worktree with unsupported IDE
@@ -107,5 +114,5 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	// Try to open with unsupported IDE
 	err = cmInstance.OpenWorktree("feature/unsupported-ide", "unsupported-ide")
 	assert.Error(t, err, "Opening with unsupported IDE should fail")
-	assert.Contains(t, err.Error(), "unsupported IDE", "Error should mention unsupported IDE")
+	assert.ErrorIs(t, err, ide.ErrUnsupportedIDE, "Error should mention unsupported IDE")
 }

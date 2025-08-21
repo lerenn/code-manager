@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/config"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

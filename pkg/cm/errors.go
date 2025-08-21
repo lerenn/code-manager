@@ -15,9 +15,9 @@ var (
 	ErrBranchNameEmpty                      = errors.New("branch name cannot be empty")
 	ErrRepositoryNameEmptyAfterSanitization = errors.New("repository name is empty after sanitization")
 	ErrBranchNameEmptyAfterSanitization     = errors.New("branch name is empty after sanitization")
-
-	// Configuration errors.
-	ErrConfigurationNotInitialized = errors.New("configuration is not initialized")
+	ErrBranchNameSingleAt                   = errors.New("branch name cannot be the single character @")
+	ErrBranchNameContainsAtBrace            = errors.New("branch name cannot contain the sequence @{")
+	ErrBranchNameContainsBackslash          = errors.New("branch name cannot contain backslash")
 
 	// Workspace errors.
 	ErrWorkspaceFileMalformed            = errors.New("invalid .code-workspace file: malformed JSON")
@@ -49,6 +49,14 @@ var (
 	ErrOriginRemoteInvalidURL  = errors.New("origin remote URL is not a valid Git hosting service URL")
 
 	// Initialization errors.
-	ErrAlreadyInitialized = errors.New("CM is already initialized")
-	ErrNotInitialized     = errors.New("CM is not initialized")
+	ErrAlreadyInitialized     = errors.New("CM is already initialized")
+	ErrNotInitialized         = errors.New("CM is not initialized")
+	ErrFailedToExpandBasePath = errors.New("failed to expand base path")
+
+	// Project detection errors.
+	ErrNoGitRepositoryOrWorkspaceFound = errors.New("no Git repository or workspace found")
+	ErrWorkspaceModeNotSupported       = errors.New("workspace mode not yet supported for load command")
+
+	// Clone errors.
+	ErrRepositoryExists = errors.New("repository already exists")
 )

@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -68,10 +68,15 @@ func TestDeleteWorktreeSingleRepo(t *testing.T) {
 
 	// Verify the worktree was deleted from status.yaml
 	status = readStatusFile(t, setup.StatusPath)
-	assert.Len(t, status.Repositories, 0, "Should have no repository entries after deletion")
+	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
 
-	// Verify the worktree directory was removed
-	worktreePath := filepath.Join(setup.CmPath, "test-repo", "feature/test-delete-branch")
+	// Check that the repository has no worktrees
+	repo := status.Repositories["github.com/test/repo"]
+	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
+
+	// Verify the worktree directory was removed (using the correct path structure)
+	// The worktree should be in worktrees/github.com/test/repo/origin/feature/test-delete-branch
+	worktreePath := filepath.Join(setup.CmPath, "worktrees", "github.com", "test", "repo", "origin", "feature/test-delete-branch")
 	_, err = os.Stat(worktreePath)
 	assert.True(t, os.IsNotExist(err), "Worktree directory should be removed")
 
@@ -102,7 +107,7 @@ func TestDeleteWorktreeNonExistentBranch(t *testing.T) {
 		Force:  true,
 	})
 	assert.Error(t, err, "Should fail when deleting non-existent worktree")
-	assert.Contains(t, err.Error(), "worktree not found in status file")
+	assert.ErrorIs(t, err, cm.ErrWorktreeNotInStatus)
 }
 
 // TestDeleteWorktreeVerboseMode tests deleting a worktree with verbose output
@@ -136,7 +141,11 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 
 	// Verify the worktree was deleted
 	status := readStatusFile(t, setup.StatusPath)
-	assert.Len(t, status.Repositories, 0, "Should have no repository entries after deletion")
+	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
+
+	// Check that the repository has no worktrees
+	repo := status.Repositories["github.com/test/repo"]
+	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
 }
 
 // TestDeleteWorktreeCLI tests deleting a worktree using the CM instance directly
@@ -165,10 +174,14 @@ func TestDeleteWorktreeCLI(t *testing.T) {
 
 	// Verify the worktree was deleted
 	status = readStatusFile(t, setup.StatusPath)
-	assert.Len(t, status.Repositories, 0, "Should have no repository entries after deletion")
+	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
 
-	// Verify the worktree directory was removed
-	worktreePath := filepath.Join(setup.CmPath, "test-repo", "feature/cli-test")
+	// Check that the repository has no worktrees
+	repo := status.Repositories["github.com/test/repo"]
+	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
+
+	// Verify the worktree directory was removed (using the correct path structure)
+	worktreePath := filepath.Join(setup.CmPath, "worktrees", "github.com", "test", "repo", "origin", "feature/cli-test")
 	_, err = os.Stat(worktreePath)
 	assert.True(t, os.IsNotExist(err), "Worktree directory should be removed")
 }
@@ -204,7 +217,11 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 
 	// Verify the worktree was deleted
 	status := readStatusFile(t, setup.StatusPath)
-	assert.Len(t, status.Repositories, 0, "Should have no repository entries after deletion")
+	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
+
+	// Check that the repository has no worktrees
+	repo := status.Repositories["github.com/test/repo"]
+	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
 }
 
 // TestDeleteWorktreeCLINonExistentBranch tests delete command with non-existent branch
@@ -222,5 +239,5 @@ func TestDeleteWorktreeCLINonExistentBranch(t *testing.T) {
 		Force:  true,
 	})
 	assert.Error(t, err, "Should fail when deleting non-existent worktree")
-	assert.Contains(t, err.Error(), "worktree not found in status file")
+	assert.ErrorIs(t, err, cm.ErrWorktreeNotInStatus)
 }

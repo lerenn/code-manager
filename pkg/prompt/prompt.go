@@ -12,8 +12,8 @@ import (
 // Prompt interface provides user interaction functionality.
 type Prompt interface {
 	// PromptForBasePath prompts the user for the base path with examples.
-	PromptForBasePath() (string, error)
-	
+	PromptForBasePath(defaultBasePath string) (string, error)
+
 	// PromptForConfirmation prompts the user for confirmation with a default value.
 	PromptForConfirmation(message string, defaultYes bool) (bool, error)
 }
@@ -30,22 +30,26 @@ func NewPrompt() Prompt {
 }
 
 // PromptForBasePath prompts the user for the base path with examples.
-func (p *realPrompt) PromptForBasePath() (string, error) {
-	fmt.Print("Choose the location of the repositories (ex: ~/Code, ~/Projects, ~/Development): [default: ~/Code]: ")
-	
+func (p *realPrompt) PromptForBasePath(defaultBasePath string) (string, error) {
+	if defaultBasePath == "" {
+		defaultBasePath = "~/Code"
+	}
+	fmt.Printf("Choose the location of the repositories (ex: ~/Code, ~/Projects, ~/Worktrees): "+
+		"[default: %s]: ", defaultBasePath)
+
 	input, err := p.reader.ReadString('\n')
 	if err != nil {
 		return "", fmt.Errorf("failed to read user input: %w", err)
 	}
-	
+
 	// Trim whitespace and newlines
 	input = strings.TrimSpace(input)
-	
+
 	// Use default if input is empty
 	if input == "" {
-		return "~/Code", nil
+		return defaultBasePath, nil
 	}
-	
+
 	return input, nil
 }
 
@@ -57,22 +61,22 @@ func (p *realPrompt) PromptForConfirmation(message string, defaultYes bool) (boo
 	} else {
 		defaultText = "[y/N]"
 	}
-	
+
 	fmt.Printf("%s %s: ", message, defaultText)
-	
+
 	input, err := p.reader.ReadString('\n')
 	if err != nil {
 		return false, fmt.Errorf("failed to read user input: %w", err)
 	}
-	
+
 	// Trim whitespace and newlines
 	input = strings.TrimSpace(strings.ToLower(input))
-	
+
 	// Use default if input is empty
 	if input == "" {
 		return defaultYes, nil
 	}
-	
+
 	// Check for yes/no responses
 	switch input {
 	case "y", "yes":
@@ -80,6 +84,6 @@ func (p *realPrompt) PromptForConfirmation(message string, defaultYes bool) (boo
 	case "n", "no":
 		return false, nil
 	default:
-		return false, fmt.Errorf("invalid input: please enter 'y' or 'n'")
+		return false, ErrInvalidConfirmationInput
 	}
 }

@@ -5,12 +5,12 @@ package base
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/logger"
-	"github.com/lerenn/cm/pkg/prompt"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/prompt"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -128,7 +128,7 @@ func TestBase_validateGitConfiguration(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "git configuration error")
+				assert.ErrorIs(t, err, ErrGitConfiguration)
 			} else {
 				assert.NoError(t, err)
 			}
@@ -218,7 +218,11 @@ func TestBase_cleanupWorktreeDirectory(t *testing.T) {
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.expectedError != "" {
-					assert.Contains(t, err.Error(), tt.expectedError)
+					if tt.expectedError == "failed to check if worktree directory exists" {
+						assert.ErrorIs(t, err, ErrFailedToCheckWorktreeDirectoryExists)
+					} else if tt.expectedError == "failed to remove worktree directory" {
+						assert.ErrorIs(t, err, ErrFailedToRemoveWorktreeDirectory)
+					}
 				}
 			} else {
 				assert.NoError(t, err)
@@ -237,32 +241,44 @@ func TestBase_buildWorktreePath(t *testing.T) {
 	mockLogger := logger.NewNoopLogger()
 	mockPrompt := prompt.NewMockPrompt(ctrl)
 	tests := []struct {
-		name     string
-		basePath string
-		repoURL  string
-		branch   string
-		expected string
+		name       string
+		basePath   string
+		repoURL    string
+		remoteName string
+		branch     string
+		expected   string
 	}{
 		{
-			name:     "Simple path construction with base path",
-			basePath: "/base/path",
-			repoURL:  "github.com/lerenn/example",
-			branch:   "main",
-			expected: "/base/path/worktrees/github.com/lerenn/example/main",
+			name:       "Simple path construction with base path",
+			basePath:   "/base/path",
+			repoURL:    "github.com/lerenn/example",
+			remoteName: "origin",
+			branch:     "main",
+			expected:   "/base/path/github.com/lerenn/example/origin/main",
 		},
 		{
-			name:     "Path with branch containing slash",
-			basePath: "/base/path",
-			repoURL:  "github.com/lerenn/example",
-			branch:   "feature/new-feature",
-			expected: "/base/path/worktrees/github.com/lerenn/example/feature/new-feature",
+			name:       "Path with branch containing slash",
+			basePath:   "/base/path",
+			repoURL:    "github.com/lerenn/example",
+			remoteName: "origin",
+			branch:     "feature/new-feature",
+			expected:   "/base/path/github.com/lerenn/example/origin/feature/new-feature",
 		},
 		{
-			name:     "Empty base path",
-			basePath: "",
-			repoURL:  "github.com/lerenn/example",
-			branch:   "main",
-			expected: "worktrees/github.com/lerenn/example/main",
+			name:       "Empty base path",
+			basePath:   "",
+			repoURL:    "github.com/lerenn/example",
+			remoteName: "origin",
+			branch:     "main",
+			expected:   "github.com/lerenn/example/origin/main",
+		},
+		{
+			name:       "Custom remote name",
+			basePath:   "/base/path",
+			repoURL:    "github.com/lerenn/example",
+			remoteName: "upstream",
+			branch:     "main",
+			expected:   "/base/path/github.com/lerenn/example/upstream/main",
 		},
 	}
 
@@ -280,7 +296,7 @@ func TestBase_buildWorktreePath(t *testing.T) {
 				Verbose:       false,
 			})
 
-			result := base.BuildWorktreePath(tt.repoURL, tt.branch)
+			result := base.BuildWorktreePath(tt.repoURL, tt.remoteName, tt.branch)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

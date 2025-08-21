@@ -32,7 +32,7 @@ cm create custom-branch-name --from-issue 456
 
 ```bash
 # Create worktree from GitHub issue URL (infer branch name)
-cm create --from-issue https://github.com/lerenn/cm/issues/42
+cm create --from-issue https://github.com/lerenn/code-manager/issues/42
 
 # Create worktree from issue number (current repo, infer branch name)
 cm create --from-issue 42

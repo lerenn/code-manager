@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -18,6 +18,12 @@ import (
 
 // Repository represents a repository entry in the status.yaml file
 type Repository = status.Repository
+
+// Remote represents a remote configuration for a repository
+type Remote = status.Remote
+
+// WorktreeInfo represents worktree information
+type WorktreeInfo = status.WorktreeInfo
 
 // StatusFile represents the structure of the status.yaml file
 type StatusFile = status.Status
@@ -129,6 +135,34 @@ func createTestGitRepo(t *testing.T, repoPath string) {
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 
+	// Get directory name for repository-specific configuration
+	dirName := filepath.Base(repoPath)
+
+	// Set the default branch to match the remote repository
+	// octocat/Hello-World uses master, octocat/Spoon-Knife uses main
+	defaultBranch := "master"
+	if dirName == "Spoon-Knife" {
+		defaultBranch = "main" // Spoon-Knife uses main
+	}
+	cmd = exec.Command("git", "branch", "-M", defaultBranch)
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Add a remote origin with a real public repository URL to avoid authentication issues
+	// Use different repositories for Hello-World and Spoon-Knife to simulate real workspace scenario
+	var remoteURL string
+	if dirName == "Hello-World" {
+		remoteURL = "https://github.com/octocat/Hello-World.git"
+	} else if dirName == "Spoon-Knife" {
+		remoteURL = "https://github.com/octocat/Spoon-Knife.git"
+	} else {
+		// Default fallback for other test scenarios
+		remoteURL = "https://github.com/octocat/Hello-World.git"
+	}
+	cmd = exec.Command("git", "remote", "add", "origin", remoteURL)
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
 	// Create initial commit
 	readmePath := filepath.Join(repoPath, "README.md")
 	require.NoError(t, os.WriteFile(readmePath, []byte("# Test Repository\n\nThis is a test repository for CM e2e tests.\n"), 0644))
@@ -199,7 +233,10 @@ func readStatusFile(t *testing.T, statusPath string) *StatusFile {
 
 	data, err := os.ReadFile(statusPath)
 	if err != nil {
-		return &StatusFile{Repositories: []Repository{}}
+		return &StatusFile{
+			Repositories: make(map[string]status.Repository),
+			Workspaces:   make(map[string]status.Workspace),
+		}
 	}
 
 	var status StatusFile
@@ -211,20 +248,127 @@ func readStatusFile(t *testing.T, statusPath string) *StatusFile {
 func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 	t.Helper()
 
-	// The worktree should be created in the .cm/worktrees directory with repo name and branch structure
+	// The worktree should be created in the .cm directory with repo name and branch structure
 	// Since we don't know the exact repo name, we'll check for any directory with the branch name
 	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
+
+	// First check if worktrees directory exists
+	if _, err := os.Stat(worktreesDir); os.IsNotExist(err) {
+		// If worktrees directory doesn't exist, search in the .cm directory itself
+		// This handles the case where worktrees are created directly in .cm/github.com/...
+		var worktreePath string
+
+		// List the contents of the .cm directory to see what's there
+		cmEntries, err := os.ReadDir(setup.CmPath)
+		if err != nil {
+			t.Fatalf("Worktree directory should exist for branch %s", branch)
+		}
+
+		// Function to recursively search for worktree in directory structure
+		var findWorktree func(dir string) string
+		findWorktree = func(dir string) string {
+			// Check if this directory has origin/branch structure
+			originDir := filepath.Join(dir, "origin")
+			if _, err := os.Stat(originDir); err == nil {
+				branchDir := filepath.Join(originDir, branch)
+				if _, err := os.Stat(branchDir); err == nil {
+					return branchDir
+				}
+			}
+
+			// If not, recursively check subdirectories
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				return ""
+			}
+
+			for _, entry := range entries {
+				if entry.IsDir() {
+					subDir := filepath.Join(dir, entry.Name())
+					if result := findWorktree(subDir); result != "" {
+						return result
+					}
+				}
+			}
+
+			return ""
+		}
+
+		// Search for worktree in each top-level directory in .cm
+		for _, entry := range cmEntries {
+			if entry.IsDir() {
+				repoDir := filepath.Join(setup.CmPath, entry.Name())
+				if result := findWorktree(repoDir); result != "" {
+					worktreePath = result
+					break
+				}
+			}
+		}
+
+		if worktreePath != "" {
+			// Found the worktree, continue with validation
+			require.NotEmpty(t, worktreePath, "Worktree directory should exist for branch %s", branch)
+			assert.DirExists(t, worktreePath, "Worktree directory should exist")
+
+			// Check that it's a valid Git worktree
+			gitDir := filepath.Join(worktreePath, ".git")
+			assert.FileExists(t, gitDir, "Worktree should have .git file")
+
+			// Check that the branch is correct
+			cmd := exec.Command("git", "branch", "--show-current")
+			cmd.Dir = worktreePath
+			output, err := cmd.Output()
+			require.NoError(t, err)
+			assert.Equal(t, branch, strings.TrimSpace(string(output)), "Worktree should be on the correct branch")
+			return
+		}
+
+		t.Fatalf("Worktree directory should exist for branch %s", branch)
+		return
+	}
+
+	// If worktrees directory exists, use the original logic
 	entries, err := os.ReadDir(worktreesDir)
 	require.NoError(t, err)
 
 	var worktreePath string
+
+	// Function to recursively search for worktree in directory structure
+	var findWorktree func(dir string) string
+	findWorktree = func(dir string) string {
+		// Check if this directory has origin/branch structure
+		originDir := filepath.Join(dir, "origin")
+		if _, err := os.Stat(originDir); err == nil {
+			branchDir := filepath.Join(originDir, branch)
+			if _, err := os.Stat(branchDir); err == nil {
+				return branchDir
+			}
+		}
+
+		// If not, recursively check subdirectories
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return ""
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				subDir := filepath.Join(dir, entry.Name())
+				if result := findWorktree(subDir); result != "" {
+					return result
+				}
+			}
+		}
+
+		return ""
+	}
+
+	// Search for worktree in each top-level directory
 	for _, entry := range entries {
 		if entry.IsDir() {
-			// This is likely the repository directory
 			repoDir := filepath.Join(worktreesDir, entry.Name())
-			branchDir := filepath.Join(repoDir, branch)
-			if _, err := os.Stat(branchDir); err == nil {
-				worktreePath = branchDir
+			if result := findWorktree(repoDir); result != "" {
+				worktreePath = result
 				break
 			}
 		}
@@ -255,10 +399,10 @@ func assertWorktreeInRepo(t *testing.T, setup *TestSetup, branch string) {
 	output, err := cmd.Output()
 	require.NoError(t, err)
 
-	// The worktree path should be in the .cm/worktrees directory with repo name and branch structure
+	// The worktree path should be in the .cm directory with repo name and branch structure
 	// Since we don't know the exact repo name, we'll check for any path containing the branch name
 	assert.Contains(t, string(output), branch, "Worktree should be listed in the original repository")
-	assert.Contains(t, string(output), filepath.Join(setup.CmPath, "worktrees"), "Worktree should be in the .cm/worktrees directory")
+	assert.Contains(t, string(output), setup.CmPath, "Worktree should be in the .cm directory")
 }
 
 // getGitWorktreeList gets the list of worktrees from Git

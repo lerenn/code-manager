@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/logger"
-	"github.com/lerenn/cm/pkg/prompt"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/prompt"
+	"github.com/lerenn/code-manager/pkg/status"
 )
 
 // Base provides common functionality for CM components.
@@ -68,7 +68,7 @@ func (b *Base) ValidateGitConfiguration(workDir string) error {
 	_, err := b.Git.Status(workDir)
 	if err != nil {
 		b.VerbosePrint("Error: %v", err)
-		return fmt.Errorf("git configuration error: %w", err)
+		return fmt.Errorf("%w: %w", ErrGitConfiguration, err)
 	}
 
 	return nil
@@ -80,21 +80,20 @@ func (b *Base) CleanupWorktreeDirectory(worktreePath string) error {
 
 	exists, err := b.FS.Exists(worktreePath)
 	if err != nil {
-		return fmt.Errorf("failed to check if worktree directory exists: %w", err)
+		return fmt.Errorf("%w: %w", ErrFailedToCheckWorktreeDirectoryExists, err)
 	}
 
 	if exists {
 		if err := b.FS.RemoveAll(worktreePath); err != nil {
-			return fmt.Errorf("failed to remove worktree directory: %w", err)
+			return fmt.Errorf("%w: %w", ErrFailedToRemoveWorktreeDirectory, err)
 		}
 	}
 
 	return nil
 }
 
-// BuildWorktreePath constructs a worktree path from base path, repository URL, and branch.
-func (b *Base) BuildWorktreePath(repoURL, branch string) string {
-	// Use computed worktrees directory
-	worktreesBase := b.Config.GetWorktreesDir()
-	return filepath.Join(worktreesBase, repoURL, branch)
+// BuildWorktreePath constructs a worktree path from base path, repository URL, remote name, and branch.
+func (b *Base) BuildWorktreePath(repoURL, remoteName, branch string) string {
+	// Use base path directly with structure: $base_path/<repo_url>/<remote_name>/<branch>
+	return filepath.Join(b.Config.BasePath, repoURL, remoteName, branch)
 }

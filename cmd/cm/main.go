@@ -2,13 +2,14 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -18,51 +19,40 @@ var (
 	configPath string
 )
 
-// loadConfig loads the configuration with fallback to default.
-func loadConfig() *config.Config {
-	var cfg *config.Config
-	var err error
+// loadConfig loads the configuration and returns an error if not found.
+func loadConfig() (*config.Config, error) {
+	manager := config.NewManager()
 
+	var path string
 	if configPath != "" {
-		// Use custom config path if provided
-		manager := config.NewManager()
-		cfg, err = manager.LoadConfig(configPath)
-		if err != nil {
-			log.Printf("Failed to load custom config from %s: %v", configPath, err)
-			// Fall back to default config
-			cfg = manager.DefaultConfig()
-		}
+		path = configPath
 	} else {
-		// Use default config loading logic
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
-			// Fallback to current directory if home directory cannot be determined
 			homeDir = "."
 		}
-
-		defaultConfigPath := filepath.Join(homeDir, ".cm", "config.yaml")
-		cfg, err = config.LoadConfigWithFallback(defaultConfigPath)
-		if err != nil {
-			// If there's an error, use default config
-			cfg = config.NewManager().DefaultConfig()
-		}
+		path = filepath.Join(homeDir, ".cm", "config.yaml")
 	}
 
-	return cfg
+	return manager.LoadConfigStrict(path)
 }
 
 // checkInitialization checks if CM is initialized and returns an error if not.
 func checkInitialization() error {
-	cfg := loadConfig()
-	fsInstance := fs.NewFS()
-	statusManager := status.NewManager(fsInstance, cfg)
-
-	initialized, err := statusManager.IsInitialized()
+	cfg, err := loadConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load configuration: %w", err)
 	}
 
-	if !initialized {
+	fsInstance := fs.NewFS()
+
+	// Check if status file exists
+	exists, err := fsInstance.Exists(cfg.StatusFile)
+	if err != nil {
+		return fmt.Errorf("failed to check status file existence: %w", err)
+	}
+
+	if !exists {
 		return status.ErrNotInitialized
 	}
 
@@ -103,6 +93,7 @@ func main() {
 	listCmd := createListCmd()
 	loadCmd := createLoadCmd()
 	initCmd := createInitCmd()
+	cloneCmd := createCloneCmd()
 
 	// Add initialization check to all commands except init
 	addInitializationCheck(createCmd)
@@ -112,7 +103,7 @@ func main() {
 	addInitializationCheck(loadCmd)
 
 	// Add subcommands
-	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd)
+	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd, cloneCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)

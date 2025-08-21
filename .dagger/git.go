@@ -5,7 +5,7 @@ import (
 	"context"
 	"strings"
 
-	"dagger/cm/internal/dagger"
+	"code-manager/dagger/internal/dagger"
 )
 
 // Git provides access to a git repository.

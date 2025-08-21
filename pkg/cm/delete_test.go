@@ -5,10 +5,9 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/git"
-	"github.com/lerenn/cm/pkg/ide"
-	"github.com/lerenn/cm/pkg/status"
+	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/repository"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -17,35 +16,24 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
+	mockRepository := repository.NewMockRepository(ctrl)
+	mockWorkspace := workspace.NewMockWorkspace(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	cm := NewCM(createTestConfig())
+	// Create CM with mocked dependencies
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: mockRepository,
+		Workspace:  mockWorkspace,
+		Config:     createTestConfig(),
+	})
 
-	// Override adapters with mocks
+	// Override IDE manager with mock
 	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
-	c.StatusManager = mockStatus
 	c.ideManager = mockIDE
 
-	// Mock single repo detection
-	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
-
-	// Mock worktree deletion
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
-		URL:    "github.com/lerenn/example",
-		Branch: "test-branch",
-		Path:   "/test/path/worktree",
-	}, nil)
-	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "test-branch").Return("/test/path/worktree", nil)
-	mockGit.EXPECT().RemoveWorktree(gomock.Any(), "/test/path/worktree").Return(nil)
-	mockFS.EXPECT().RemoveAll("/test/path/worktree").Return(nil)
-	mockStatus.EXPECT().RemoveWorktree("github.com/lerenn/example", "test-branch").Return(nil)
+	// Mock repository detection and worktree deletion
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
+	mockRepository.EXPECT().DeleteWorktree("test-branch", true).Return(nil)
 
 	err := cm.DeleteWorkTree("test-branch", true) // Force deletion
 	assert.NoError(t, err)
@@ -61,64 +49,55 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
+	mockRepository := repository.NewMockRepository(ctrl)
+	mockWorkspace := workspace.NewMockWorkspace(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	cm := NewCM(createTestConfig())
+	// Create CM with mocked dependencies
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: mockRepository,
+		Workspace:  mockWorkspace,
+		Config:     createTestConfig(),
+	})
 
-	// Override adapters with mocks
+	// Override IDE manager with mock
 	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
-	c.StatusManager = mockStatus
 	c.ideManager = mockIDE
 
-	// Mock no repository or workspace found
-	mockFS.EXPECT().Exists(".git").Return(false, nil)
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
+	// Mock no repository found
+	mockRepository.EXPECT().IsGitRepository().Return(false, nil)
 
 	err := cm.DeleteWorkTree("test-branch", true)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no Git repository or workspace found")
+	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)
 }
 
 func TestCM_DeleteWorkTree_VerboseMode(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
+	mockRepository := repository.NewMockRepository(ctrl)
+	mockWorkspace := workspace.NewMockWorkspace(ctrl)
 	mockIDE := ide.NewMockManagerInterface(ctrl)
 
-	cm := NewCM(createTestConfig())
-	cm.SetVerbose(true)
+	// Create CM with mocked dependencies
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: mockRepository,
+		Workspace:  mockWorkspace,
+		Config:     createTestConfig(),
+	})
 
-	// Override adapters with mocks
+	// Override IDE manager with mock
 	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
-	c.StatusManager = mockStatus
 	c.ideManager = mockIDE
 
-	// Mock single repo detection
-	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
-	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+	// Enable verbose mode
+	cm.SetVerbose(true)
 
-	// Mock worktree deletion
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.Repository{
-		URL:    "github.com/lerenn/example",
-		Branch: "test-branch",
-		Path:   "/test/path/worktree",
-	}, nil)
-	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "test-branch").Return("/test/path/worktree", nil)
-	mockGit.EXPECT().RemoveWorktree(gomock.Any(), "/test/path/worktree").Return(nil)
-	mockFS.EXPECT().RemoveAll("/test/path/worktree").Return(nil)
-	mockStatus.EXPECT().RemoveWorktree("github.com/lerenn/example", "test-branch").Return(nil)
+	// Mock repository detection and worktree deletion
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
+	mockRepository.EXPECT().DeleteWorktree("test-branch", true).Return(nil)
 
-	err := cm.DeleteWorkTree("test-branch", true) // Force deletion
+	err := cm.DeleteWorkTree("test-branch", true)
 	assert.NoError(t, err)
 }

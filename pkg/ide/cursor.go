@@ -4,7 +4,7 @@ package ide
 import (
 	"fmt"
 
-	"github.com/lerenn/cm/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/fs"
 )
 
 const (

@@ -1,4 +1,4 @@
-module dagger/cm
+module code-manager/dagger
 
 go 1.24.4
 

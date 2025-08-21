@@ -39,6 +39,34 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
+// AddRepository mocks base method.
+func (m *MockManager) AddRepository(repoURL string, params AddRepositoryParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddRepository", repoURL, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddRepository indicates an expected call of AddRepository.
+func (mr *MockManagerMockRecorder) AddRepository(repoURL, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRepository", reflect.TypeOf((*MockManager)(nil).AddRepository), repoURL, params)
+}
+
+// AddWorkspace mocks base method.
+func (m *MockManager) AddWorkspace(workspacePath string, params AddWorkspaceParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddWorkspace", workspacePath, params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// AddWorkspace indicates an expected call of AddWorkspace.
+func (mr *MockManagerMockRecorder) AddWorkspace(workspacePath, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddWorkspace", reflect.TypeOf((*MockManager)(nil).AddWorkspace), workspacePath, params)
+}
+
 // AddWorktree mocks base method.
 func (m *MockManager) AddWorktree(params AddWorktreeParams) error {
 	m.ctrl.T.Helper()
@@ -67,6 +95,36 @@ func (mr *MockManagerMockRecorder) CreateInitialStatus() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInitialStatus", reflect.TypeOf((*MockManager)(nil).CreateInitialStatus))
 }
 
+// GetRepository mocks base method.
+func (m *MockManager) GetRepository(repoURL string) (*Repository, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRepository", repoURL)
+	ret0, _ := ret[0].(*Repository)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRepository indicates an expected call of GetRepository.
+func (mr *MockManagerMockRecorder) GetRepository(repoURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepository", reflect.TypeOf((*MockManager)(nil).GetRepository), repoURL)
+}
+
+// GetWorkspace mocks base method.
+func (m *MockManager) GetWorkspace(workspacePath string) (*Workspace, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetWorkspace", workspacePath)
+	ret0, _ := ret[0].(*Workspace)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetWorkspace indicates an expected call of GetWorkspace.
+func (mr *MockManagerMockRecorder) GetWorkspace(workspacePath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorkspace", reflect.TypeOf((*MockManager)(nil).GetWorkspace), workspacePath)
+}
+
 // GetWorkspaceBranches mocks base method.
 func (m *MockManager) GetWorkspaceBranches(workspacePath string) ([]string, error) {
 	m.ctrl.T.Helper()
@@ -83,10 +141,10 @@ func (mr *MockManagerMockRecorder) GetWorkspaceBranches(workspacePath any) *gomo
 }
 
 // GetWorkspaceWorktrees mocks base method.
-func (m *MockManager) GetWorkspaceWorktrees(workspacePath, branchName string) ([]Repository, error) {
+func (m *MockManager) GetWorkspaceWorktrees(workspacePath, branchName string) ([]WorktreeInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetWorkspaceWorktrees", workspacePath, branchName)
-	ret0, _ := ret[0].([]Repository)
+	ret0, _ := ret[0].([]WorktreeInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -98,10 +156,10 @@ func (mr *MockManagerMockRecorder) GetWorkspaceWorktrees(workspacePath, branchNa
 }
 
 // GetWorktree mocks base method.
-func (m *MockManager) GetWorktree(repoURL, branch string) (*Repository, error) {
+func (m *MockManager) GetWorktree(repoURL, branch string) (*WorktreeInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetWorktree", repoURL, branch)
-	ret0, _ := ret[0].(*Repository)
+	ret0, _ := ret[0].(*WorktreeInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -112,26 +170,11 @@ func (mr *MockManagerMockRecorder) GetWorktree(repoURL, branch any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetWorktree", reflect.TypeOf((*MockManager)(nil).GetWorktree), repoURL, branch)
 }
 
-// IsInitialized mocks base method.
-func (m *MockManager) IsInitialized() (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsInitialized")
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsInitialized indicates an expected call of IsInitialized.
-func (mr *MockManagerMockRecorder) IsInitialized() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsInitialized", reflect.TypeOf((*MockManager)(nil).IsInitialized))
-}
-
 // ListAllWorktrees mocks base method.
-func (m *MockManager) ListAllWorktrees() ([]Repository, error) {
+func (m *MockManager) ListAllWorktrees() ([]WorktreeInfo, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListAllWorktrees")
-	ret0, _ := ret[0].([]Repository)
+	ret0, _ := ret[0].([]WorktreeInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -140,6 +183,36 @@ func (m *MockManager) ListAllWorktrees() ([]Repository, error) {
 func (mr *MockManagerMockRecorder) ListAllWorktrees() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAllWorktrees", reflect.TypeOf((*MockManager)(nil).ListAllWorktrees))
+}
+
+// ListRepositories mocks base method.
+func (m *MockManager) ListRepositories() (map[string]Repository, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListRepositories")
+	ret0, _ := ret[0].(map[string]Repository)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListRepositories indicates an expected call of ListRepositories.
+func (mr *MockManagerMockRecorder) ListRepositories() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositories", reflect.TypeOf((*MockManager)(nil).ListRepositories))
+}
+
+// ListWorkspaces mocks base method.
+func (m *MockManager) ListWorkspaces() (map[string]Workspace, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkspaces")
+	ret0, _ := ret[0].(map[string]Workspace)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWorkspaces indicates an expected call of ListWorkspaces.
+func (mr *MockManagerMockRecorder) ListWorkspaces() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkspaces", reflect.TypeOf((*MockManager)(nil).ListWorkspaces))
 }
 
 // RemoveWorktree mocks base method.
@@ -154,18 +227,4 @@ func (m *MockManager) RemoveWorktree(repoURL, branch string) error {
 func (mr *MockManagerMockRecorder) RemoveWorktree(repoURL, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockManager)(nil).RemoveWorktree), repoURL, branch)
-}
-
-// SetInitialized mocks base method.
-func (m *MockManager) SetInitialized(initialized bool) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetInitialized", initialized)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// SetInitialized indicates an expected call of SetInitialized.
-func (mr *MockManagerMockRecorder) SetInitialized(initialized any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetInitialized", reflect.TypeOf((*MockManager)(nil).SetInitialized), initialized)
 }

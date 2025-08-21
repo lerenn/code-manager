@@ -3,8 +3,6 @@ package cm
 import (
 	"fmt"
 	"strings"
-
-	repo "github.com/lerenn/cm/pkg/repository"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -37,9 +35,9 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 	case ProjectTypeSingleRepo:
 		loadErr = c.loadWorktreeForSingleRepo(remoteSource, branchName)
 	case ProjectTypeWorkspace:
-		return fmt.Errorf("workspace mode not yet supported for load command")
+		return ErrWorkspaceModeNotSupported
 	case ProjectTypeNone:
-		return fmt.Errorf("no Git repository or workspace found")
+		return ErrNoGitRepositoryOrWorkspaceFound
 	default:
 		return fmt.Errorf("unknown project type")
 	}
@@ -60,16 +58,7 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) error {
 	c.VerbosePrint("Loading worktree for single repository mode")
 
-	repoInstance := repo.NewRepository(repo.NewRepositoryParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       c.IsVerbose(),
-	})
-	return repoInstance.LoadWorktree(remoteSource, branchName)
+	return c.repository.LoadWorktree(remoteSource, branchName)
 }
 
 // parseBranchArg parses the remote:branch argument format.

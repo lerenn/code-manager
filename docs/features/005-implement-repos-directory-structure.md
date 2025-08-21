@@ -10,7 +10,7 @@ The Code Manager (cm) needs a standardized directory structure to organize and m
 
 ### Functional Requirements
 1. **Directory Structure Creation**: Create the full directory path `$HOME/.cm/repos/<repo>/<branch>/`
-2. **Repository Name Handling**: Extract and sanitize repository names from Git remote URLs (full path format: e.g., "github.com/lerenn/cm")
+2. **Repository Name Handling**: Extract and sanitize repository names from Git remote URLs (full path format: e.g., "github.com/lerenn/code-manager")
 3. **Branch Name Handling**: Validate and sanitize branch names for safe directory creation (replace invalid characters with underscores/hyphens)
 4. **Path Validation**: Ensure the base directory (`$HOME/.cm/`) can be accessed and created
 5. **Error Handling**: Provide clear error messages for directory creation failures
@@ -237,7 +237,7 @@ The `CreateReposDirectoryStructure()` method will be called from the existing `R
 The `NewCM()` function will be updated to accept a `*config.Config` parameter, allowing configuration to be injected at construction time. This maintains dependency injection principles and makes the code more testable.
 
 ### Repository Name Format Decision
-- **Format**: Full repository path (e.g., "github.com/lerenn/cm")
+- **Format**: Full repository path (e.g., "github.com/lerenn/code-manager")
 - **Rationale**: Provides better organization and avoids naming conflicts
 - **Sanitization**: Replace invalid characters with underscores/hyphens
 

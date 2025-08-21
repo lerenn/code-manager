@@ -207,7 +207,7 @@ $ cm load user:branch-name
 ✓ Fetched from remote 'user'
 ✓ Branch 'branch-name' found on remote
 ✓ Created worktree for 'branch-name'
-✓ Worktree ready at: /Users/user/.cm/github.com/lerenn/cm/branch-name
+✓ Worktree ready at: /Users/user/.cm/github.com/lerenn/code-manager/branch-name
 ```
 
 #### Error Scenarios

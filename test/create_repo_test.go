@@ -5,10 +5,12 @@ package test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/ide"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,11 +50,33 @@ func TestCreateWorktreeSingleRepo(t *testing.T) {
 	// Check that we have one repository entry
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
-	// Check that the worktree entry exists
-	entry := status.Repositories[0]
-	assert.Equal(t, "feature/test-branch", entry.Branch, "Branch should match")
-	assert.NotEmpty(t, entry.URL, "Repository URL should be set")
-	assert.NotEmpty(t, entry.Path, "Repository path should be set")
+	// Check that we have a repository entry (repositories is now a map)
+	require.True(t, len(status.Repositories) > 0, "Should have at least one repository")
+
+	// Get the first repository from the map
+	var repoURL string
+	var repo Repository
+	for url, r := range status.Repositories {
+		repoURL = url
+		repo = r
+		break
+	}
+
+	assert.NotEmpty(t, repoURL, "Repository URL should be set")
+	assert.NotEmpty(t, repo.Path, "Repository path should be set")
+
+	// Check that the repository has the worktree
+	require.True(t, len(repo.Worktrees) > 0, "Repository should have at least one worktree")
+
+	// Check that the worktree for our branch exists
+	var foundWorktree bool
+	for _, worktree := range repo.Worktrees {
+		if worktree.Branch == "feature/test-branch" {
+			foundWorktree = true
+			break
+		}
+	}
+	assert.True(t, foundWorktree, "Should have worktree for feature/test-branch")
 
 	// Verify the worktree exists in the .cm directory
 	assertWorktreeExists(t, setup, "feature/test-branch")
@@ -81,19 +105,43 @@ func TestCreateWorktreeNonExistentBranch(t *testing.T) {
 	// Check that we have one repository entry
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
-	// Check that the worktree entry exists
-	entry := status.Repositories[0]
-	// The branch name might include "heads/" prefix, so we check if it contains our branch name
-	assert.Contains(t, entry.Branch, "non-existent-branch", "Branch should contain the branch name")
-	assert.NotEmpty(t, entry.URL, "Repository URL should be set")
-	assert.NotEmpty(t, entry.Path, "Repository path should be set")
+	// Check that we have a repository entry (repositories is now a map)
+	require.True(t, len(status.Repositories) > 0, "Should have at least one repository")
+
+	// Get the first repository from the map
+	var repoURL string
+	var repo Repository
+	for url, r := range status.Repositories {
+		repoURL = url
+		repo = r
+		break
+	}
+
+	assert.NotEmpty(t, repoURL, "Repository URL should be set")
+	assert.NotEmpty(t, repo.Path, "Repository path should be set")
+
+	// Check that the repository has the worktree
+	require.True(t, len(repo.Worktrees) > 0, "Repository should have at least one worktree")
+
+	// Find the worktree for non-existent-branch
+	var foundWorktree *WorktreeInfo
+	var actualBranchName string
+	for _, worktree := range repo.Worktrees {
+		if strings.Contains(worktree.Branch, "non-existent-branch") {
+			foundWorktree = &worktree
+			actualBranchName = worktree.Branch
+			break
+		}
+	}
+	require.NotNil(t, foundWorktree, "Should have worktree for non-existent-branch")
+	assert.Contains(t, actualBranchName, "non-existent-branch", "Branch should contain the branch name")
 
 	// Verify the worktree exists in the .cm directory
 	// Use the actual branch name from the status file
-	assertWorktreeExists(t, setup, entry.Branch)
+	assertWorktreeExists(t, setup, actualBranchName)
 
 	// Verify the worktree is properly linked in the original repository
-	assertWorktreeInRepo(t, setup, entry.Branch)
+	assertWorktreeInRepo(t, setup, actualBranchName)
 }
 
 // TestCreateWorktreeAlreadyExists tests creating a worktree that already exists
@@ -111,7 +159,7 @@ func TestCreateWorktreeAlreadyExists(t *testing.T) {
 	// Try to create the same worktree again
 	err = createWorktree(t, setup, "feature/test-branch")
 	assert.Error(t, err, "Second creation should fail")
-	assert.Contains(t, err.Error(), "already exists", "Error should mention worktree already exists")
+	assert.ErrorIs(t, err, cm.ErrWorktreeExists, "Error should mention worktree already exists")
 
 	// Verify only one worktree entry exists in status file
 	status := readStatusFile(t, setup.StatusPath)
@@ -128,7 +176,7 @@ func TestCreateWorktreeOutsideGitRepo(t *testing.T) {
 	// Test creating a worktree outside a Git repository
 	err := createWorktree(t, setup, "feature/test-branch")
 	assert.Error(t, err, "Command should fail outside Git repository")
-	assert.Contains(t, err.Error(), "no Git repository or workspace found", "Error should mention no Git repository found")
+	assert.ErrorIs(t, err, cm.ErrNoGitRepositoryOrWorkspaceFound, "Error should mention no Git repository found")
 
 	// Verify status file exists but is empty (created during CM initialization)
 	_, err = os.Stat(setup.StatusPath)
@@ -217,10 +265,16 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	require.Len(t, status.Repositories, 1, "Should have one repository entry")
 
 	// Verify that the original repository path in status.yaml is correct (not the worktree path)
-	worktreeEntry := status.Repositories[0]
+	// Get the first repository from the map
+	var repo Repository
+	for _, r := range status.Repositories {
+		repo = r
+		break
+	}
+
 	expectedPath, err := filepath.EvalSymlinks(setup.RepoPath)
 	require.NoError(t, err)
-	actualPath, err := filepath.EvalSymlinks(worktreeEntry.Path)
+	actualPath, err := filepath.EvalSymlinks(repo.Path)
 	require.NoError(t, err)
 	assert.Equal(t, expectedPath, actualPath, "Path should be the original repository directory, not the worktree directory")
 }
@@ -246,5 +300,5 @@ func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
 	ideName := "unsupported-ide"
 	err := cmInstance.CreateWorkTree("feature/unsupported-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
 	assert.Error(t, err, "Command should fail with unsupported IDE")
-	assert.Contains(t, err.Error(), "unsupported IDE", "Error should mention unsupported IDE")
+	assert.ErrorIs(t, err, ide.ErrUnsupportedIDE, "Error should mention unsupported IDE")
 }

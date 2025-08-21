@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/status"
-	"github.com/lerenn/cm/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -47,8 +47,8 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	workspaceConfig := &workspace.Config{
 		Name: "test-workspace",
 		Folders: []workspace.Folder{
-			{Name: "Frontend", Path: "./frontend"},
-			{Name: "Backend", Path: "./backend"},
+			{Name: "Hello-World", Path: "./Hello-World"},
+			{Name: "Spoon-Knife", Path: "./Spoon-Knife"},
 		},
 	}
 
@@ -58,14 +58,14 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.WriteFile(workspacePath, workspaceData, 0644))
 
 	// Create repositories
-	frontendDir := filepath.Join(workspaceDir, "frontend")
-	backendDir := filepath.Join(workspaceDir, "backend")
-	require.NoError(t, os.MkdirAll(frontendDir, 0755))
-	require.NoError(t, os.MkdirAll(backendDir, 0755))
+	helloWorldDir := filepath.Join(workspaceDir, "Hello-World")
+	spoonKnifeDir := filepath.Join(workspaceDir, "Spoon-Knife")
+	require.NoError(t, os.MkdirAll(helloWorldDir, 0755))
+	require.NoError(t, os.MkdirAll(spoonKnifeDir, 0755))
 
 	// Initialize Git repositories
-	createTestGitRepo(t, frontendDir)
-	createTestGitRepo(t, backendDir)
+	createTestGitRepo(t, helloWorldDir)
+	createTestGitRepo(t, spoonKnifeDir)
 
 	// Change to workspace directory
 	originalDir, err := os.Getwd()
@@ -91,11 +91,11 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2)
 
-	// Verify worktree directories exist
-	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
-	backendWorktreePath := filepath.Join(tempDir, "worktrees", "backend", branchName)
-	assert.DirExists(t, frontendWorktreePath)
-	assert.DirExists(t, backendWorktreePath)
+	// Verify worktree directories exist (new structure: repo/origin/branch)
+	helloWorldWorktreePath := filepath.Join(tempDir, "github.com/octocat/Hello-World", "origin", branchName)
+	spoonKnifeWorktreePath := filepath.Join(tempDir, "github.com/octocat/Spoon-Knife", "origin", branchName)
+	assert.DirExists(t, helloWorldWorktreePath)
+	assert.DirExists(t, spoonKnifeWorktreePath)
 
 	// Verify worktree-specific workspace file was created
 	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "test-workspace-feature-test-branch.code-workspace")
@@ -110,10 +110,10 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 
 	assert.Equal(t, "test-workspace-feature-test-branch", worktreeWorkspaceConfig.Name)
 	assert.Len(t, worktreeWorkspaceConfig.Folders, 2)
-	assert.Equal(t, "Frontend", worktreeWorkspaceConfig.Folders[0].Name)
-	assert.Equal(t, frontendWorktreePath, worktreeWorkspaceConfig.Folders[0].Path)
-	assert.Equal(t, "Backend", worktreeWorkspaceConfig.Folders[1].Name)
-	assert.Equal(t, backendWorktreePath, worktreeWorkspaceConfig.Folders[1].Path)
+	assert.Equal(t, "Hello-World", worktreeWorkspaceConfig.Folders[0].Name)
+	assert.Equal(t, helloWorldWorktreePath, worktreeWorkspaceConfig.Folders[0].Path)
+	assert.Equal(t, "Spoon-Knife", worktreeWorkspaceConfig.Folders[1].Name)
+	assert.Equal(t, spoonKnifeWorktreePath, worktreeWorkspaceConfig.Folders[1].Path)
 
 	// Verify status file entries
 	statusManager := status.NewManager(fs.NewFS(), cfg)
@@ -121,21 +121,27 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, allWorktrees, 2)
 
-	// Find frontend and backend worktrees
-	var frontendWorktree, backendWorktree *status.Repository
+	// Find Hello-World and Spoon-Knife worktrees
+	var helloWorldWorktree, spoonKnifeWorktree *status.WorktreeInfo
+	foundHelloWorld := false
+	foundSpoonKnife := false
+
 	for _, worktree := range allWorktrees {
-		if worktree.URL == "frontend" {
-			frontendWorktree = &worktree
-		} else if worktree.URL == "backend" {
-			backendWorktree = &worktree
+		if worktree.Branch == branchName {
+			if !foundHelloWorld {
+				helloWorldWorktree = &worktree
+				foundHelloWorld = true
+			} else if !foundSpoonKnife {
+				spoonKnifeWorktree = &worktree
+				foundSpoonKnife = true
+			}
 		}
 	}
 
-	require.NotNil(t, frontendWorktree)
-	require.NotNil(t, backendWorktree)
-	assert.Equal(t, branchName, frontendWorktree.Branch)
-	assert.Equal(t, branchName, backendWorktree.Branch)
-	// Use the actual workspace path from the worktree for comparison
-	assert.Equal(t, frontendWorktree.Workspace, frontendWorktree.Workspace)
-	assert.Equal(t, backendWorktree.Workspace, backendWorktree.Workspace)
+	require.NotNil(t, helloWorldWorktree, "Should have Hello-World worktree")
+	require.NotNil(t, spoonKnifeWorktree, "Should have Spoon-Knife worktree")
+	assert.Equal(t, branchName, helloWorldWorktree.Branch)
+	assert.Equal(t, branchName, spoonKnifeWorktree.Branch)
+	assert.Equal(t, "origin", helloWorldWorktree.Remote, "Should have origin remote")
+	assert.Equal(t, "origin", spoonKnifeWorktree.Remote, "Should have origin remote")
 }

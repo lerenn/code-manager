@@ -1,4 +1,4 @@
-module github.com/lerenn/cm
+module github.com/lerenn/code-manager
 
 go 1.24.4
 

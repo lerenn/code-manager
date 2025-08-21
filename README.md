@@ -43,7 +43,7 @@ A powerful Go CLI tool for managing code development workflows, Git worktrees, a
 
 ```bash
 # Install directly from GitHub
-go install github.com/lerenn/cm@latest
+go install github.com/lerenn/code-manager@latest
 
 # Verify installation
 cm --help

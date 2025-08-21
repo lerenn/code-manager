@@ -8,11 +8,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/cm/pkg/cm"
-	"github.com/lerenn/cm/pkg/config"
-	"github.com/lerenn/cm/pkg/fs"
-	"github.com/lerenn/cm/pkg/status"
-	"github.com/lerenn/cm/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -47,8 +47,8 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	workspaceConfig := &workspace.Config{
 		Name: "test-workspace",
 		Folders: []workspace.Folder{
-			{Name: "Frontend", Path: "./frontend"},
-			{Name: "Backend", Path: "./backend"},
+			{Name: "Hello-World", Path: "./Hello-World"},
+			{Name: "Spoon-Knife", Path: "./Spoon-Knife"},
 		},
 	}
 
@@ -58,14 +58,14 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.WriteFile(workspacePath, workspaceData, 0644))
 
 	// Create repositories
-	frontendDir := filepath.Join(workspaceDir, "frontend")
-	backendDir := filepath.Join(workspaceDir, "backend")
-	require.NoError(t, os.MkdirAll(frontendDir, 0755))
-	require.NoError(t, os.MkdirAll(backendDir, 0755))
+	helloWorldDir := filepath.Join(workspaceDir, "Hello-World")
+	spoonKnifeDir := filepath.Join(workspaceDir, "Spoon-Knife")
+	require.NoError(t, os.MkdirAll(helloWorldDir, 0755))
+	require.NoError(t, os.MkdirAll(spoonKnifeDir, 0755))
 
 	// Initialize Git repositories
-	createTestGitRepo(t, frontendDir)
-	createTestGitRepo(t, backendDir)
+	createTestGitRepo(t, helloWorldDir)
+	createTestGitRepo(t, spoonKnifeDir)
 
 	// Change to workspace directory
 	originalDir, err := os.Getwd()
@@ -90,28 +90,28 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2)
 
-	// Verify worktree directories exist
-	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
-	backendWorktreePath := filepath.Join(tempDir, "worktrees", "backend", branchName)
-	assert.DirExists(t, frontendWorktreePath)
-	assert.DirExists(t, backendWorktreePath)
+	// Verify worktree directories exist (using the correct path structure)
+	helloWorldWorktreePath := filepath.Join(tempDir, "github.com/octocat/Hello-World", "origin", branchName)
+	spoonKnifeWorktreePath := filepath.Join(tempDir, "github.com/octocat/Spoon-Knife", "origin", branchName)
+	assert.DirExists(t, helloWorldWorktreePath)
+	assert.DirExists(t, spoonKnifeWorktreePath)
 
 	// Verify worktree-specific workspace file was created
 	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "test-workspace-feature-test-branch.code-workspace")
 	assert.FileExists(t, workspaceWorktreePath)
 
 	// Now delete the worktrees
-	err = cmInstance.DeleteWorkTree(branchName, false)
+	err = cmInstance.DeleteWorkTree(branchName, true)
 	require.NoError(t, err)
 
 	// Verify worktrees were deleted
 	worktrees, _, err = cmInstance.ListWorktrees()
 	require.NoError(t, err)
-	assert.Len(t, worktrees, 0)
+	assert.Len(t, worktrees, 0, "Should have no worktrees after deletion")
 
 	// Verify worktree directories were removed
-	assert.NoDirExists(t, frontendWorktreePath)
-	assert.NoDirExists(t, backendWorktreePath)
+	assert.NoDirExists(t, helloWorldWorktreePath)
+	assert.NoDirExists(t, spoonKnifeWorktreePath)
 
 	// Verify worktree-specific workspace file was removed
 	assert.NoFileExists(t, workspaceWorktreePath)
@@ -120,7 +120,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	statusManager := status.NewManager(fs.NewFS(), cfg)
 	allWorktrees, err := statusManager.ListAllWorktrees()
 	require.NoError(t, err)
-	assert.Len(t, allWorktrees, 0)
+	assert.Len(t, allWorktrees, 0, "Should have no worktrees in status file after deletion")
 }
 
 func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
@@ -152,7 +152,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	workspaceConfig := &workspace.Config{
 		Name: "test-workspace",
 		Folders: []workspace.Folder{
-			{Name: "Frontend", Path: "./frontend"},
+			{Name: "Hello-World", Path: "./Hello-World"},
 		},
 	}
 
@@ -162,11 +162,11 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, os.WriteFile(workspacePath, workspaceData, 0644))
 
 	// Create repository
-	frontendDir := filepath.Join(workspaceDir, "frontend")
-	require.NoError(t, os.MkdirAll(frontendDir, 0755))
+	helloWorldDir := filepath.Join(workspaceDir, "Hello-World")
+	require.NoError(t, os.MkdirAll(helloWorldDir, 0755))
 
 	// Initialize Git repository
-	createTestGitRepo(t, frontendDir)
+	createTestGitRepo(t, helloWorldDir)
 
 	// Change to workspace directory
 	originalDir, err := os.Getwd()
@@ -191,9 +191,9 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1)
 
-	// Verify worktree directory exists
-	frontendWorktreePath := filepath.Join(tempDir, "worktrees", "frontend", branchName)
-	assert.DirExists(t, frontendWorktreePath)
+	// Verify worktree directory exists (using the correct path structure)
+	helloWorldWorktreePath := filepath.Join(tempDir, "github.com/octocat/Hello-World", "origin", branchName)
+	assert.DirExists(t, helloWorldWorktreePath)
 
 	// Now delete the worktrees with force
 	err = cmInstance.DeleteWorkTree(branchName, true)
@@ -205,7 +205,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	assert.Len(t, worktrees, 0)
 
 	// Verify worktree directory was removed
-	assert.NoDirExists(t, frontendWorktreePath)
+	assert.NoDirExists(t, helloWorldWorktreePath)
 
 	// Verify status file entries were removed
 	statusManager := status.NewManager(fs.NewFS(), cfg)

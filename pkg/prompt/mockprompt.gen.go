@@ -40,18 +40,18 @@ func (m *MockPrompt) EXPECT() *MockPromptMockRecorder {
 }
 
 // PromptForBasePath mocks base method.
-func (m *MockPrompt) PromptForBasePath() (string, error) {
+func (m *MockPrompt) PromptForBasePath(defaultBasePath string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PromptForBasePath")
+	ret := m.ctrl.Call(m, "PromptForBasePath", defaultBasePath)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PromptForBasePath indicates an expected call of PromptForBasePath.
-func (mr *MockPromptMockRecorder) PromptForBasePath() *gomock.Call {
+func (mr *MockPromptMockRecorder) PromptForBasePath(defaultBasePath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForBasePath", reflect.TypeOf((*MockPrompt)(nil).PromptForBasePath))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForBasePath", reflect.TypeOf((*MockPrompt)(nil).PromptForBasePath), defaultBasePath)
 }
 
 // PromptForConfirmation mocks base method.
