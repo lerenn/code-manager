@@ -101,7 +101,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	assert.FileExists(t, workspaceWorktreePath)
 
 	// Now delete the worktrees
-	err = cmInstance.DeleteWorkTree(branchName, false)
+	err = cmInstance.DeleteWorkTree(branchName, true)
 	require.NoError(t, err)
 
 	// Verify worktrees were deleted

@@ -105,7 +105,7 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	}
 
 	// Delete one branch
-	err = cmInstance.DeleteWorkTree(branchName1, false)
+	err = cmInstance.DeleteWorkTree(branchName1, true)
 	require.NoError(t, err)
 
 	// Verify only the remaining worktrees are listed
@@ -196,7 +196,7 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	assert.Equal(t, "origin", worktrees[0].Remote, "Should have origin remote")
 
 	// Delete the worktree
-	err = cmInstance.DeleteWorkTree(branchName, false)
+	err = cmInstance.DeleteWorkTree(branchName, true)
 	require.NoError(t, err)
 
 	// Verify no worktrees are listed
