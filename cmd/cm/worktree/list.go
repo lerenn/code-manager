@@ -1,8 +1,9 @@
-package main
+package worktree
 
 import (
 	"fmt"
 
+	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
@@ -15,15 +16,21 @@ func createListCmd() *cobra.Command {
 		Long: `List all worktrees for the current repository or workspace.
 
 Examples:
-  cm list`,
+  cm worktree list
+  cm wt list
+  cm w list`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			cfg, err := loadConfig()
+			if err := config.CheckInitialization(); err != nil {
+				return err
+			}
+
+			cfg, err := config.LoadConfig()
 			if err != nil {
 				return err
 			}
 			cmManager := cm.NewCM(cfg)
-			cmManager.SetVerbose(verbose)
+			cmManager.SetVerbose(config.Verbose)
 
 			worktrees, projectType, err := cmManager.ListWorktrees()
 			if err != nil {

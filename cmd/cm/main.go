@@ -2,76 +2,13 @@
 package main
 
 import (
-	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 
-	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/cmd/cm/internal/config"
+	"github.com/lerenn/code-manager/cmd/cm/repository"
+	"github.com/lerenn/code-manager/cmd/cm/worktree"
 	"github.com/spf13/cobra"
 )
-
-var (
-	quiet      bool
-	verbose    bool
-	configPath string
-)
-
-// loadConfig loads the configuration and returns an error if not found.
-func loadConfig() (*config.Config, error) {
-	manager := config.NewManager()
-
-	var path string
-	if configPath != "" {
-		path = configPath
-	} else {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			homeDir = "."
-		}
-		path = filepath.Join(homeDir, ".cm", "config.yaml")
-	}
-
-	return manager.LoadConfigStrict(path)
-}
-
-// checkInitialization checks if CM is initialized and returns an error if not.
-func checkInitialization() error {
-	cfg, err := loadConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	fsInstance := fs.NewFS()
-
-	// Check if status file exists
-	exists, err := fsInstance.Exists(cfg.StatusFile)
-	if err != nil {
-		return fmt.Errorf("failed to check status file existence: %w", err)
-	}
-
-	if !exists {
-		return status.ErrNotInitialized
-	}
-
-	return nil
-}
-
-// addInitializationCheck adds a pre-run check to ensure CM is initialized.
-func addInitializationCheck(cmd *cobra.Command) {
-	originalRunE := cmd.RunE
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		if err := checkInitialization(); err != nil {
-			return err
-		}
-		if originalRunE != nil {
-			return originalRunE(cmd, args)
-		}
-		return nil
-	}
-}
 
 func main() {
 	var rootCmd = &cobra.Command{
@@ -82,28 +19,20 @@ func main() {
 	}
 
 	// Add global flags
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress all output except errors")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
-	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Specify a custom config file path")
+	rootCmd.PersistentFlags().BoolVarP(&config.Quiet, "quiet", "q", false, "Suppress all output except errors")
+	rootCmd.PersistentFlags().BoolVarP(&config.Verbose, "verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().StringVarP(&config.ConfigPath, "config", "c", "", "Specify a custom config file path")
 
-	// Create commands
-	createCmd := createCreateCmd()
-	openCmd := createOpenCmd()
-	deleteCmd := createDeleteCmd()
-	listCmd := createListCmd()
-	loadCmd := createLoadCmd()
+	// Create subcommands
+	repositoryCmd := repository.CreateRepositoryCmd()
+	worktreeCmd := worktree.CreateWorktreeCmd()
 	initCmd := createInitCmd()
-	cloneCmd := createCloneCmd()
 
 	// Add initialization check to all commands except init
-	addInitializationCheck(createCmd)
-	addInitializationCheck(openCmd)
-	addInitializationCheck(deleteCmd)
-	addInitializationCheck(listCmd)
-	addInitializationCheck(loadCmd)
+	// Note: Individual subcommands will handle their own initialization checks
 
 	// Add subcommands
-	rootCmd.AddCommand(createCmd, openCmd, deleteCmd, listCmd, loadCmd, initCmd, cloneCmd)
+	rootCmd.AddCommand(repositoryCmd, worktreeCmd, initCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)

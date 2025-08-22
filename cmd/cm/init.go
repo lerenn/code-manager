@@ -4,8 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/config"
+	pkgconfig "github.com/lerenn/code-manager/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -29,8 +30,8 @@ Flags:
 		RunE: func(_ *cobra.Command, _ []string) error {
 			// Resolve config path
 			var path string
-			if configPath != "" {
-				path = configPath
+			if config.ConfigPath != "" {
+				path = config.ConfigPath
 			} else {
 				homeDir, err := os.UserHomeDir()
 				if err != nil {
@@ -40,14 +41,14 @@ Flags:
 			}
 
 			// Ensure config file exists (copy embedded default if missing)
-			manager := config.NewManager()
+			manager := pkgconfig.NewManager()
 			cfg, _, err := manager.EnsureConfigFile(path)
 			if err != nil {
 				return err
 			}
 
 			cmManager := cm.NewCM(cfg)
-			cmManager.SetVerbose(verbose)
+			cmManager.SetVerbose(config.Verbose)
 
 			opts := cm.InitOpts{
 				Force:    force,
