@@ -38,6 +38,9 @@ type Git interface {
 	// CreateBranch creates a new branch from the current branch.
 	CreateBranch(repoPath, branch string) error
 
+	// CreateBranchFrom creates a new branch from a specific branch.
+	CreateBranchFrom(params CreateBranchFromParams) error
+
 	// WorktreeExists checks if a worktree exists for the specified branch.
 	WorktreeExists(repoPath, branch string) (bool, error)
 
@@ -264,6 +267,20 @@ func (g *realGit) CreateBranch(repoPath, branch string) error {
 	return nil
 }
 
+// CreateBranchFrom creates a new branch from a specific branch.
+func (g *realGit) CreateBranchFrom(params CreateBranchFromParams) error {
+	cmd := exec.Command("git", "branch", params.NewBranch, params.FromBranch)
+	cmd.Dir = params.RepoPath
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git branch failed: %w (command: git branch %s %s, output: %s)",
+			err, params.NewBranch, params.FromBranch, string(output))
+	}
+
+	return nil
+}
+
 // WorktreeExists checks if a worktree exists for the specified branch.
 func (g *realGit) WorktreeExists(repoPath, branch string) (bool, error) {
 	cmd := exec.Command("git", "worktree", "list")
@@ -360,6 +377,13 @@ type BranchExistsOnRemoteParams struct {
 	RepoPath   string
 	RemoteName string
 	Branch     string
+}
+
+// CreateBranchFromParams contains parameters for CreateBranchFrom.
+type CreateBranchFromParams struct {
+	RepoPath   string
+	NewBranch  string
+	FromBranch string
 }
 
 // CloneParams contains parameters for Clone.
