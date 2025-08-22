@@ -6,7 +6,6 @@ import (
 
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -48,25 +47,6 @@ func openWorktree(branchName, ideName string) error {
 	cmManager := cm.NewCM(cfg)
 	cmManager.SetVerbose(config.Verbose)
 
-	// Get worktrees for the branch
-	worktrees, _, err := cmManager.ListWorktrees()
-	if err != nil {
-		return fmt.Errorf("failed to list worktrees: %w", err)
-	}
-
-	// Find the worktree for the specified branch
-	var targetWorktree *status.WorktreeInfo
-	for _, worktree := range worktrees {
-		if worktree.Branch == branchName {
-			targetWorktree = &worktree
-			break
-		}
-	}
-
-	if targetWorktree == nil {
-		return fmt.Errorf("no worktree found for branch: %s", branchName)
-	}
-
 	// Determine IDE to use (default to "cursor" if not specified)
 	ideToUse := "cursor"
 	if ideName != "" {
@@ -74,7 +54,7 @@ func openWorktree(branchName, ideName string) error {
 	}
 
 	// Open the worktree
-	if err := cmManager.OpenWorktree(targetWorktree.Branch, ideToUse); err != nil {
+	if err := cmManager.OpenWorktree(branchName, ideToUse); err != nil {
 		return fmt.Errorf("failed to open worktree: %w", err)
 	}
 
