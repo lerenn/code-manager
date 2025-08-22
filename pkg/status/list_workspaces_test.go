@@ -32,7 +32,7 @@ func TestListWorkspaces(t *testing.T) {
 	expectedWorkspaces := map[string]Workspace{
 		"/home/user/workspace1.code-workspace": {
 			Worktree:     "origin:feature-a",
-			Repositories: []string{"github.com/lerenn/example"},
+			Repositories: []string{"github.com/octocat/Hello-World"},
 		},
 		"/home/user/workspace2.code-workspace": {
 			Worktree:     "origin:feature-b",

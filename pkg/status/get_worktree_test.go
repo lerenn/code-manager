@@ -29,7 +29,7 @@ func TestGetWorktree(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 	expectedWorktree := WorktreeInfo{
 		Remote: "origin",
@@ -40,7 +40,7 @@ func TestGetWorktree(t *testing.T) {
 	existingStatus := &Status{
 		Repositories: map[string]Repository{
 			repoURL: {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",
@@ -89,14 +89,14 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 
 	// Existing status without the requested worktree
 	existingStatus := &Status{
 		Repositories: map[string]Repository{
 			repoURL: {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",
@@ -144,7 +144,7 @@ func TestGetWorktree_RepositoryNotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 
 	// Existing status without the repository

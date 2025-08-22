@@ -38,7 +38,7 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 	})
 
 	// Mock repository name extraction
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
 
 	// Mock status manager to return repository with worktrees
 	expectedRepo := &status.Repository{
@@ -59,7 +59,7 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 			},
 		},
 	}
-	mockStatus.EXPECT().GetRepository("github.com/lerenn/example").Return(expectedRepo, nil)
+	mockStatus.EXPECT().GetRepository("github.com/octocat/Hello-World").Return(expectedRepo, nil)
 
 	result, err := repo.ListWorktrees()
 	assert.NoError(t, err)
@@ -98,10 +98,10 @@ func TestRepository_ListWorktrees_RepositoryNotFound(t *testing.T) {
 	})
 
 	// Mock repository name extraction
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
 
 	// Mock status manager to return repository not found
-	mockStatus.EXPECT().GetRepository("github.com/lerenn/example").Return(nil, status.ErrRepositoryNotFound)
+	mockStatus.EXPECT().GetRepository("github.com/octocat/Hello-World").Return(nil, status.ErrRepositoryNotFound)
 
 	result, err := repo.ListWorktrees()
 	assert.NoError(t, err)
@@ -133,7 +133,7 @@ func TestRepository_AddWorktreeToStatus_Success(t *testing.T) {
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	err := repo.AddWorktreeToStatus(StatusParams{
-		RepoURL:       "github.com/lerenn/example",
+		RepoURL:       "github.com/octocat/Hello-World",
 		Branch:        "test-branch",
 		WorktreePath:  "/test/path",
 		WorkspacePath: "",
@@ -165,9 +165,9 @@ func TestRepository_RemoveWorktreeFromStatus_Success(t *testing.T) {
 		Verbose:       true,
 	})
 
-	mockWorktree.EXPECT().RemoveFromStatus("github.com/lerenn/example", "test-branch").Return(nil)
+	mockWorktree.EXPECT().RemoveFromStatus("github.com/octocat/Hello-World", "test-branch").Return(nil)
 
-	err := repo.RemoveWorktreeFromStatus("github.com/lerenn/example", "test-branch")
+	err := repo.RemoveWorktreeFromStatus("github.com/octocat/Hello-World", "test-branch")
 	assert.NoError(t, err)
 }
 
@@ -194,10 +194,10 @@ func TestRepository_AutoAddRepositoryToStatus_Success(t *testing.T) {
 	})
 
 	mockFS.EXPECT().Exists("/test/path/.git").Return(true, nil)
-	mockGit.EXPECT().GetRemoteURL("/test/path", "origin").Return("https://github.com/lerenn/example.git", nil)
-	mockStatus.EXPECT().AddRepository("github.com/lerenn/example", gomock.Any()).Return(nil)
+	mockGit.EXPECT().GetRemoteURL("/test/path", "origin").Return("https://github.com/octocat/Hello-World.git", nil)
+	mockStatus.EXPECT().AddRepository("github.com/octocat/Hello-World", gomock.Any()).Return(nil)
 
-	err := repo.AutoAddRepositoryToStatus("github.com/lerenn/example", "/test/path")
+	err := repo.AutoAddRepositoryToStatus("github.com/octocat/Hello-World", "/test/path")
 	assert.NoError(t, err)
 }
 
@@ -225,7 +225,7 @@ func TestRepository_AutoAddRepositoryToStatus_NoGitDir(t *testing.T) {
 
 	mockFS.EXPECT().Exists("/test/path/.git").Return(false, nil)
 
-	err := repo.AutoAddRepositoryToStatus("github.com/lerenn/example", "/test/path")
+	err := repo.AutoAddRepositoryToStatus("github.com/octocat/Hello-World", "/test/path")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not a Git repository")
 }

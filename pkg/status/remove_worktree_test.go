@@ -29,14 +29,14 @@ func TestRemoveWorktree(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 
 	// Existing status with the worktree to remove
 	existingStatus := &Status{
 		Repositories: map[string]Repository{
 			repoURL: {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",
@@ -61,7 +61,7 @@ func TestRemoveWorktree(t *testing.T) {
 	expectedStatus := &Status{
 		Repositories: map[string]Repository{
 			repoURL: {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",
@@ -111,14 +111,14 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 
 	// Existing status without the worktree to remove
 	existingStatus := &Status{
 		Repositories: map[string]Repository{
 			repoURL: {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",
@@ -165,7 +165,7 @@ func TestRemoveWorktree_RepositoryNotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 
 	// Existing status without the repository

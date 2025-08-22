@@ -39,10 +39,10 @@ func TestRealCM_Clone_Success(t *testing.T) {
 		ideManager: ide.NewManager(mockFS, mockLogger),
 	}
 
-	repoURL := "https://github.com/lerenn/example.git"
-	normalizedURL := "github.com/lerenn/example"
+	repoURL := "https://github.com/octocat/Hello-World.git"
+	normalizedURL := "github.com/octocat/Hello-World"
 	defaultBranch := "main"
-	targetPath := "/test/base/path/github.com/lerenn/example/origin/main"
+	targetPath := "/test/base/path/github.com/octocat/Hello-World/origin/main"
 
 	// Mock repository existence check
 	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{}, nil)
@@ -94,10 +94,10 @@ func TestRealCM_Clone_ShallowSuccess(t *testing.T) {
 		ideManager: ide.NewManager(mockFS, mockLogger),
 	}
 
-	repoURL := "https://github.com/lerenn/example.git"
-	normalizedURL := "github.com/lerenn/example"
+	repoURL := "https://github.com/octocat/Hello-World.git"
+	normalizedURL := "github.com/octocat/Hello-World"
 	defaultBranch := "main"
-	targetPath := "/test/base/path/github.com/lerenn/example/origin/main"
+	targetPath := "/test/base/path/github.com/octocat/Hello-World/origin/main"
 
 	// Mock repository existence check
 	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{}, nil)
@@ -178,8 +178,8 @@ func TestRealCM_Clone_RepositoryExists(t *testing.T) {
 		ideManager: ide.NewManager(mockFS, mockLogger),
 	}
 
-	repoURL := "https://github.com/lerenn/example.git"
-	normalizedURL := "github.com/lerenn/example"
+	repoURL := "https://github.com/octocat/Hello-World.git"
+	normalizedURL := "github.com/octocat/Hello-World"
 
 	// Mock repository existence check - repository already exists
 	existingRepos := map[string]status.Repository{
@@ -217,7 +217,7 @@ func TestRealCM_Clone_DefaultBranchDetectionFailure(t *testing.T) {
 		ideManager: ide.NewManager(mockFS, mockLogger),
 	}
 
-	repoURL := "https://github.com/lerenn/example.git"
+	repoURL := "https://github.com/octocat/Hello-World.git"
 
 	// Mock repository existence check
 	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{}, nil)
@@ -253,7 +253,7 @@ func TestRealCM_Clone_CloneFailure(t *testing.T) {
 		ideManager: ide.NewManager(mockFS, mockLogger),
 	}
 
-	repoURL := "https://github.com/lerenn/example.git"
+	repoURL := "https://github.com/octocat/Hello-World.git"
 	defaultBranch := "main"
 
 	// Mock repository existence check
@@ -293,7 +293,7 @@ func TestRealCM_Clone_InitializationFailure(t *testing.T) {
 		ideManager: ide.NewManager(mockFS, mockLogger),
 	}
 
-	repoURL := "https://github.com/lerenn/example.git"
+	repoURL := "https://github.com/octocat/Hello-World.git"
 	defaultBranch := "main"
 
 	// Mock repository existence check
@@ -337,14 +337,14 @@ func TestRealCM_NormalizeRepositoryURL_HTTPS(t *testing.T) {
 	}
 
 	// Test HTTPS URL with .git suffix
-	result, err := cm.normalizeRepositoryURL("https://github.com/lerenn/example.git")
+	result, err := cm.normalizeRepositoryURL("https://github.com/octocat/Hello-World.git")
 	assert.NoError(t, err)
-	assert.Equal(t, "github.com/lerenn/example", result)
+	assert.Equal(t, "github.com/octocat/Hello-World", result)
 
 	// Test HTTPS URL without .git suffix
-	result, err = cm.normalizeRepositoryURL("https://github.com/lerenn/example")
+	result, err = cm.normalizeRepositoryURL("https://github.com/octocat/Hello-World")
 	assert.NoError(t, err)
-	assert.Equal(t, "github.com/lerenn/example", result)
+	assert.Equal(t, "github.com/octocat/Hello-World", result)
 }
 
 func TestRealCM_NormalizeRepositoryURL_SSH(t *testing.T) {
@@ -371,14 +371,14 @@ func TestRealCM_NormalizeRepositoryURL_SSH(t *testing.T) {
 	}
 
 	// Test SSH URL with .git suffix
-	result, err := cm.normalizeRepositoryURL("git@github.com:lerenn/example.git")
+	result, err := cm.normalizeRepositoryURL("git@github.com:octocat/Hello-World.git")
 	assert.NoError(t, err)
-	assert.Equal(t, "github.com/lerenn/example", result)
+	assert.Equal(t, "github.com/octocat/Hello-World", result)
 
 	// Test SSH URL without .git suffix
-	result, err = cm.normalizeRepositoryURL("git@github.com:lerenn/example")
+	result, err = cm.normalizeRepositoryURL("git@github.com:octocat/Hello-World")
 	assert.NoError(t, err)
-	assert.Equal(t, "github.com/lerenn/example", result)
+	assert.Equal(t, "github.com/octocat/Hello-World", result)
 }
 
 func TestRealCM_NormalizeRepositoryURL_InvalidURL(t *testing.T) {
@@ -433,10 +433,10 @@ func TestRealCM_GenerateClonePath(t *testing.T) {
 		ideManager: ide.NewManager(mockFS, mockLogger),
 	}
 
-	normalizedURL := "github.com/lerenn/example"
+	normalizedURL := "github.com/octocat/Hello-World"
 	defaultBranch := "main"
 
 	result := cm.generateClonePath(normalizedURL, defaultBranch)
-	expected := "/test/base/path/github.com/lerenn/example/origin/main"
+	expected := "/test/base/path/github.com/octocat/Hello-World/origin/main"
 	assert.Equal(t, expected, result)
 }

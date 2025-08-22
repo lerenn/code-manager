@@ -43,8 +43,8 @@ func TestListAllWorktrees(t *testing.T) {
 	// Existing status
 	existingStatus := &Status{
 		Repositories: map[string]Repository{
-			"github.com/lerenn/example": {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+			"github.com/octocat/Hello-World": {
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",

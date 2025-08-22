@@ -59,8 +59,8 @@ func TestWorktree_BuildPath(t *testing.T) {
 		verbose:       false,
 	}
 
-	path := worktree.BuildPath("github.com/test/repo", "origin", "feature-branch")
-	expected := "/test/base/github.com/test/repo/origin/feature-branch"
+	path := worktree.BuildPath("github.com/octocat/Hello-World", "origin", "feature-branch")
+	expected := "/test/base/github.com/octocat/Hello-World/origin/feature-branch"
 	assert.Equal(t, expected, path)
 }
 
@@ -85,9 +85,9 @@ func TestWorktree_Create_Success(t *testing.T) {
 	}
 
 	params := CreateParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Remote:       "origin",
 		IssueInfo:    nil,
@@ -127,9 +127,9 @@ func TestWorktree_Create_DirectoryExists(t *testing.T) {
 	}
 
 	params := CreateParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Remote:       "origin",
 		IssueInfo:    nil,
@@ -164,9 +164,9 @@ func TestWorktree_Create_WorktreeExists(t *testing.T) {
 	}
 
 	params := CreateParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Remote:       "origin",
 		IssueInfo:    nil,
@@ -207,9 +207,9 @@ func TestWorktree_Create_BranchDoesNotExist(t *testing.T) {
 	}
 
 	params := CreateParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Remote:       "origin",
 		IssueInfo:    nil,
@@ -250,9 +250,9 @@ func TestWorktree_Delete_Success(t *testing.T) {
 	}
 
 	params := DeleteParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Force:        true,
 	}
@@ -293,9 +293,9 @@ func TestWorktree_Delete_WorktreeNotInStatus(t *testing.T) {
 	}
 
 	params := DeleteParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Force:        true,
 	}
@@ -328,9 +328,9 @@ func TestWorktree_Delete_WithConfirmation(t *testing.T) {
 	}
 
 	params := DeleteParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Force:        false,
 	}
@@ -372,9 +372,9 @@ func TestWorktree_Delete_ConfirmationCancelled(t *testing.T) {
 	}
 
 	params := DeleteParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 		Force:        false,
 	}
@@ -413,9 +413,9 @@ func TestWorktree_ValidateCreation_Success(t *testing.T) {
 	}
 
 	params := ValidateCreationParams{
-		RepoURL:      "github.com/test/repo",
+		RepoURL:      "github.com/octocat/Hello-World",
 		Branch:       "feature-branch",
-		WorktreePath: "/test/base/github.com/test/repo/origin/feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
 		RepoPath:     "/test/repo",
 	}
 
@@ -449,7 +449,7 @@ func TestWorktree_ValidateDeletion_Success(t *testing.T) {
 	}
 
 	params := ValidateDeletionParams{
-		RepoURL: "github.com/test/repo",
+		RepoURL: "github.com/octocat/Hello-World",
 		Branch:  "feature-branch",
 	}
 
@@ -547,7 +547,7 @@ func TestWorktree_AddToStatus_Success(t *testing.T) {
 	}
 
 	params := AddToStatusParams{
-		RepoURL:       "github.com/test/repo",
+		RepoURL:       "github.com/octocat/Hello-World",
 		Branch:        "feature-branch",
 		WorktreePath:  "/test/path",
 		WorkspacePath: "",
@@ -582,7 +582,7 @@ func TestWorktree_RemoveFromStatus_Success(t *testing.T) {
 		verbose:       false,
 	}
 
-	repoURL := "github.com/test/repo"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-branch"
 
 	// Mock expectations

@@ -41,13 +41,13 @@ func TestCM_OpenWorktree(t *testing.T) {
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 
 	// Mock Git to return repository URL
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
 
 	// Mock worktree path existence check
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(true, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/octocat/Hello-World/origin/test-branch").Return(true, nil)
 
 	// Mock IDE opening
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/lerenn/example/origin/test-branch", false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/octocat/Hello-World/origin/test-branch", false).Return(nil)
 
 	err := cm.OpenWorktree("test-branch", "cursor")
 	assert.NoError(t, err)
@@ -80,10 +80,10 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 
 	// Mock Git to return repository URL
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
 
 	// Mock worktree path existence check - worktree not found
-	mockFS.EXPECT().Exists("/test/base/path/github.com/lerenn/example/origin/test-branch").Return(false, nil)
+	mockFS.EXPECT().Exists("/test/base/path/github.com/octocat/Hello-World/origin/test-branch").Return(false, nil)
 
 	err := cm.OpenWorktree("test-branch", "cursor")
 	assert.Error(t, err)

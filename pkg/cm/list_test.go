@@ -35,7 +35,7 @@ func TestCM_ListWorktrees_NoRepository(t *testing.T) {
 	// Mock repository detection to return false (no repository)
 	mockRepository.EXPECT().IsGitRepository().Return(false, nil).AnyTimes()
 
-	result, _, err := cm.ListWorktrees()
+	result, _, err := cm.ListWorktrees(false)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)
 	assert.Nil(t, result)
@@ -68,7 +68,7 @@ func TestCM_ListWorktrees_SingleRepository(t *testing.T) {
 	}
 	mockRepository.EXPECT().ListWorktrees().Return(expectedWorktrees, nil)
 
-	result, projectType, err := cm.ListWorktrees()
+	result, projectType, err := cm.ListWorktrees(false)
 	assert.NoError(t, err)
 	assert.Equal(t, ProjectTypeSingleRepo, projectType)
 	assert.Equal(t, expectedWorktrees, result)

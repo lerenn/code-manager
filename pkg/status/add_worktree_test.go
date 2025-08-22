@@ -29,17 +29,17 @@ func TestAddWorktree(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 	remote := "origin"
-	worktreePath := "/home/user/.cmrepos/github.com/lerenn/example/feature-a"
+	worktreePath := "/home/user/.cmrepos/github.com/octocat/Hello-World/feature-a"
 	workspacePath := ""
 
 	// Expected status file content
 	expectedStatus := &Status{
 		Repositories: map[string]Repository{
 			repoURL: {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",
@@ -62,8 +62,8 @@ func TestAddWorktree(t *testing.T) {
 	mockFS.EXPECT().Exists("/home/user/.cmstatus.yaml").Return(true, nil)
 	mockFS.EXPECT().ReadFile("/home/user/.cmstatus.yaml").Return([]byte(`initialized: true
 repositories:
-  github.com/lerenn/example:
-    path: /home/user/.cmrepos/github.com/lerenn/example/origin/main
+  github.com/octocat/Hello-World:
+    path: /home/user/.cmrepos/github.com/octocat/Hello-World/origin/main
     remotes:
       origin:
         default_branch: main
@@ -102,7 +102,7 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 	remote := "origin"
 
@@ -110,7 +110,7 @@ func TestAddWorktree_Duplicate(t *testing.T) {
 	existingStatus := &Status{
 		Repositories: map[string]Repository{
 			repoURL: {
-				Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+				Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 				Remotes: map[string]Remote{
 					"origin": {
 						DefaultBranch: "main",
@@ -161,10 +161,10 @@ func TestAddWorktree_RepositoryNotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	branch := "feature-a"
 	remote := "origin"
-	worktreePath := "/home/user/.cmrepos/github.com/lerenn/example/origin/feature-a"
+	worktreePath := "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/feature-a"
 
 	// Existing status without the repository
 	existingStatus := &Status{

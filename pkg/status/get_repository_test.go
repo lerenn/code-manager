@@ -29,9 +29,9 @@ func TestGetRepository(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	expectedRepo := Repository{
-		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 		Remotes: map[string]Remote{
 			"origin": {
 				DefaultBranch: "main",
@@ -79,7 +79,7 @@ func TestGetRepository_NotFound(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 
 	// Existing status without the repository
 	existingStatus := &Status{

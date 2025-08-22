@@ -43,7 +43,7 @@ func NewManager() Manager {
 func (c *realManager) LoadConfig(configPath string) (*Config, error) {
 	// Check if config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("%w: %s", ErrConfigFileNotFound, configPath)
+		return nil, fmt.Errorf("%w: %s", ErrConfigNotInitialized, configPath)
 	}
 
 	// Read config file

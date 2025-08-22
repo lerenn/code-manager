@@ -32,7 +32,7 @@ func TestAddWorkspace(t *testing.T) {
 	workspacePath := "/home/user/workspace.code-workspace"
 	params := AddWorkspaceParams{
 		Worktree:     "origin:feature-a",
-		Repositories: []string{"github.com/lerenn/example", "github.com/lerenn/other"},
+		Repositories: []string{"github.com/octocat/Hello-World", "github.com/lerenn/other"},
 	}
 
 	// Expected status file content
@@ -83,7 +83,7 @@ func TestAddWorkspace_Duplicate(t *testing.T) {
 	workspacePath := "/home/user/workspace.code-workspace"
 	params := AddWorkspaceParams{
 		Worktree:     "origin:feature-a",
-		Repositories: []string{"github.com/lerenn/example"},
+		Repositories: []string{"github.com/octocat/Hello-World"},
 	}
 
 	// Existing status with duplicate workspace

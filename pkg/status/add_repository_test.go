@@ -29,9 +29,9 @@ func TestAddRepository(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	params := AddRepositoryParams{
-		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 		Remotes: map[string]Remote{
 			"origin": {
 				DefaultBranch: "main",
@@ -41,7 +41,7 @@ func TestAddRepository(t *testing.T) {
 
 	// Expected repository
 	expectedRepo := Repository{
-		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 		Remotes: map[string]Remote{
 			"origin": {
 				DefaultBranch: "main",
@@ -98,9 +98,9 @@ func TestAddRepository_AlreadyExists(t *testing.T) {
 	}
 
 	// Test data
-	repoURL := "github.com/lerenn/example"
+	repoURL := "github.com/octocat/Hello-World"
 	params := AddRepositoryParams{
-		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 		Remotes: map[string]Remote{
 			"origin": {
 				DefaultBranch: "main",
@@ -110,7 +110,7 @@ func TestAddRepository_AlreadyExists(t *testing.T) {
 
 	// Existing repository
 	existingRepo := Repository{
-		Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 		Remotes: map[string]Remote{
 			"origin": {
 				DefaultBranch: "main",

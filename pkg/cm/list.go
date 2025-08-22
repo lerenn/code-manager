@@ -8,7 +8,7 @@ import (
 )
 
 // ListWorktrees lists worktrees for the current project with mode detection.
-func (c *realCM) ListWorktrees() ([]status.WorktreeInfo, ProjectType, error) {
+func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, ProjectType, error) {
 	c.VerbosePrint("Listing worktrees with mode detection")
 
 	// Detect project mode
@@ -22,7 +22,7 @@ func (c *realCM) ListWorktrees() ([]status.WorktreeInfo, ProjectType, error) {
 		worktrees, err := c.repository.ListWorktrees()
 		return worktrees, ProjectTypeSingleRepo, c.translateListError(err)
 	case ProjectTypeWorkspace:
-		worktrees, err := c.workspace.ListWorktrees()
+		worktrees, err := c.workspace.ListWorktrees(force)
 		return worktrees, ProjectTypeWorkspace, c.translateListError(err)
 	case ProjectTypeNone:
 		return nil, ProjectTypeNone, ErrNoGitRepositoryOrWorkspaceFound

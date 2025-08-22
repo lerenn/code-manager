@@ -9,6 +9,8 @@ import (
 )
 
 func createListCmd() *cobra.Command {
+	var force bool
+
 	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all worktrees",
@@ -25,7 +27,7 @@ Examples:
 			cmManager := cm.NewCM(cfg)
 			cmManager.SetVerbose(verbose)
 
-			worktrees, projectType, err := cmManager.ListWorktrees()
+			worktrees, projectType, err := cmManager.ListWorktrees(force)
 			if err != nil {
 				return fmt.Errorf("failed to list worktrees: %w", err)
 			}
@@ -40,6 +42,9 @@ Examples:
 			return nil
 		},
 	}
+
+	// Add force flag to list command
+	listCmd.Flags().BoolVarP(&force, "force", "f", false, "Force listing without prompts")
 
 	return listCmd
 }
