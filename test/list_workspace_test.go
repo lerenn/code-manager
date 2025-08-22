@@ -79,7 +79,7 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	cmInstance := cm.NewCM(cfg)
 
 	// Initially, no worktrees should exist
-	worktrees, _, err := cmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
 
@@ -94,7 +94,7 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify worktrees are listed
-	worktrees, _, err = cmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 4) // 2 repositories × 2 branches
 
@@ -109,7 +109,7 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify only the remaining worktrees are listed
-	worktrees, _, err = cmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2) // 2 repositories × 1 branch
 
@@ -179,7 +179,7 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	cmInstance := cm.NewCM(cfg)
 
 	// Initially, no worktrees should exist
-	worktrees, _, err := cmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
 
@@ -189,7 +189,7 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify worktree is listed
-	worktrees, _, err = cmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1)
 	assert.Equal(t, branchName, worktrees[0].Branch)
@@ -200,7 +200,7 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify no worktrees are listed
-	worktrees, _, err = cmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
 }

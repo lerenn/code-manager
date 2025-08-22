@@ -86,7 +86,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify worktrees were created
-	worktrees, _, err := cmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2)
 
@@ -105,7 +105,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify worktrees were deleted
-	worktrees, _, err = cmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0, "Should have no worktrees after deletion")
 
@@ -187,7 +187,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify worktree was created
-	worktrees, _, err := cmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1)
 
@@ -200,7 +200,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify worktree was deleted
-	worktrees, _, err = cmInstance.ListWorktrees()
+	worktrees, _, err = cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
 

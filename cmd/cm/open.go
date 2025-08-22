@@ -5,7 +5,6 @@ import (
 	"log"
 
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
 )
 
@@ -31,25 +30,6 @@ Examples:
 			cmManager := cm.NewCM(cfg)
 			cmManager.SetVerbose(verbose)
 
-			// Get worktrees for the branch
-			worktrees, _, err := cmManager.ListWorktrees()
-			if err != nil {
-				return fmt.Errorf("failed to list worktrees: %w", err)
-			}
-
-			// Find the worktree for the specified branch
-			var targetWorktree *status.WorktreeInfo
-			for _, worktree := range worktrees {
-				if worktree.Branch == args[0] {
-					targetWorktree = &worktree
-					break
-				}
-			}
-
-			if targetWorktree == nil {
-				return fmt.Errorf("no worktree found for branch: %s", args[0])
-			}
-
 			// Determine IDE to use (default to "cursor" if not specified)
 			ideToUse := "cursor"
 			if ideName != "" {
@@ -57,7 +37,7 @@ Examples:
 			}
 
 			// Open the worktree
-			if err := cmManager.OpenWorktree(targetWorktree.Branch, ideToUse); err != nil {
+			if err := cmManager.OpenWorktree(args[0], ideToUse); err != nil {
 				return fmt.Errorf("failed to open worktree: %w", err)
 			}
 

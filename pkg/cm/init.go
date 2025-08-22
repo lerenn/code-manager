@@ -9,9 +9,10 @@ import (
 
 // InitOpts contains optional parameters for Init.
 type InitOpts struct {
-	Force    bool
-	Reset    bool
-	BasePath string
+	Force          bool
+	Reset          bool
+	BasePath       string
+	NonInteractive bool
 }
 
 // Init initializes CM configuration.
@@ -26,7 +27,7 @@ func (c *realCM) Init(opts InitOpts) error {
 	}
 
 	// Get and validate base path
-	expandedBasePath, err := c.getAndValidateBasePath(opts.BasePath)
+	expandedBasePath, err := c.getAndValidateBasePath(opts.BasePath, opts.NonInteractive)
 	if err != nil {
 		return err
 	}
@@ -62,8 +63,8 @@ func (c *realCM) Init(opts InitOpts) error {
 }
 
 // getAndValidateBasePath gets and validates the base path.
-func (c *realCM) getAndValidateBasePath(flagBasePath string) (string, error) {
-	basePath, err := c.getBasePath(flagBasePath)
+func (c *realCM) getAndValidateBasePath(flagBasePath string, nonInteractive bool) (string, error) {
+	basePath, err := c.getBasePath(flagBasePath, nonInteractive)
 	if err != nil {
 		return "", err
 	}
@@ -134,9 +135,14 @@ func (c *realCM) handleReset(force bool) error {
 }
 
 // getBasePath gets the base path from user input, flag, or default.
-func (c *realCM) getBasePath(flagBasePath string) (string, error) {
+func (c *realCM) getBasePath(flagBasePath string, nonInteractive bool) (string, error) {
 	if flagBasePath != "" {
 		return flagBasePath, nil
+	}
+
+	if nonInteractive {
+		// Use default base path instead of prompting
+		return c.Config.BasePath, nil
 	}
 
 	// Interactive prompt

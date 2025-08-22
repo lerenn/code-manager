@@ -371,12 +371,12 @@ func TestRealCM_NormalizeRepositoryURL_SSH(t *testing.T) {
 	}
 
 	// Test SSH URL with .git suffix
-	result, err := cm.normalizeRepositoryURL("git@github.com:lerenn/example.git")
+	result, err := cm.normalizeRepositoryURL("git@github.com:octocat/Hello-World.git")
 	assert.NoError(t, err)
 	assert.Equal(t, "github.com/octocat/Hello-World", result)
 
 	// Test SSH URL without .git suffix
-	result, err = cm.normalizeRepositoryURL("git@github.com:lerenn/example")
+	result, err = cm.normalizeRepositoryURL("git@github.com:octocat/Hello-World")
 	assert.NoError(t, err)
 	assert.Equal(t, "github.com/octocat/Hello-World", result)
 }
