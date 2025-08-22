@@ -1,6 +1,8 @@
-package main
+// Package worktree provides worktree management commands for the CM CLI.
+package worktree
 
 import (
+	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	"github.com/spf13/cobra"
 )
@@ -15,17 +17,21 @@ func createCreateCmd() *cobra.Command {
 		Long: `Create a worktree for the specified branch in the current repository or workspace.
 
 Examples:
-  cm create feature-branch
-  cm create feature-branch --ide vscode
-  cm create feature-branch --ide cursor`,
+  cm worktree create feature-branch
+  cm wt create feature-branch --ide vscode
+  cm w create feature-branch --ide cursor`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			cfg, err := loadConfig()
+			if err := config.CheckInitialization(); err != nil {
+				return err
+			}
+
+			cfg, err := config.LoadConfig()
 			if err != nil {
 				return err
 			}
 			cmManager := cm.NewCM(cfg)
-			cmManager.SetVerbose(verbose)
+			cmManager.SetVerbose(config.Verbose)
 
 			var opts cm.CreateWorkTreeOpts
 			if ideName != "" {

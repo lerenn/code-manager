@@ -1,6 +1,6 @@
 //go:build unit
 
-package main
+package config
 
 import (
 	"testing"
@@ -13,11 +13,11 @@ func TestCheckInitialization(t *testing.T) {
 	// We'll test both scenarios: when CM is initialized and when it's not
 
 	// Test 1: When config file doesn't exist (should return error)
-	originalConfigPath := configPath
-	configPath = "/tmp/nonexistent/config.yaml"
-	defer func() { configPath = originalConfigPath }()
+	originalConfigPath := ConfigPath
+	ConfigPath = "/tmp/nonexistent/config.yaml"
+	defer func() { ConfigPath = originalConfigPath }()
 
-	err := checkInitialization()
+	err := CheckInitialization()
 
 	// Should return configuration error when config file doesn't exist
 	assert.Error(t, err)
@@ -26,11 +26,11 @@ func TestCheckInitialization(t *testing.T) {
 
 func TestLoadConfig(t *testing.T) {
 	// Test that loadConfig returns an error when config file doesn't exist
-	originalConfigPath := configPath
-	configPath = "/tmp/nonexistent/config.yaml"
-	defer func() { configPath = originalConfigPath }()
+	originalConfigPath := ConfigPath
+	ConfigPath = "/tmp/nonexistent/config.yaml"
+	defer func() { ConfigPath = originalConfigPath }()
 
-	_, err := loadConfig()
+	_, err := LoadConfig()
 
 	// Should return error when config file doesn't exist
 	assert.Error(t, err)

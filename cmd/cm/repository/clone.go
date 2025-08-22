@@ -1,6 +1,8 @@
-package main
+// Package repository provides repository management commands for the CM CLI.
+package repository
 
 import (
+	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	"github.com/spf13/cobra"
 )
@@ -17,17 +19,21 @@ The repository will be cloned to $base_path/<repo_url>/<remote_name>/<default_br
 and automatically initialized in CM with the detected default branch.
 
 Examples:
-  cm clone https://github.com/octocat/Hello-World.git
-  cm clone git@github.com:lerenn/example.git
-  cm clone https://github.com/octocat/Hello-World.git --shallow`,
+  cm repository clone https://github.com/octocat/Hello-World.git
+  cm repo clone git@github.com:lerenn/example.git
+  cm r clone https://github.com/octocat/Hello-World.git --shallow`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			cfg, err := loadConfig()
+			if err := config.CheckInitialization(); err != nil {
+				return err
+			}
+
+			cfg, err := config.LoadConfig()
 			if err != nil {
 				return err
 			}
 			cmManager := cm.NewCM(cfg)
-			cmManager.SetVerbose(verbose)
+			cmManager.SetVerbose(config.Verbose)
 
 			// Create clone options
 			opts := cm.CloneOpts{
