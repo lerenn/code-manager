@@ -17,6 +17,7 @@ A powerful Go CLI tool for managing code development workflows, Git worktrees, a
 - Safe creation with collision detection
 - Automatic cleanup for ephemeral worktrees
 - Support for both single repos and multi-repo workspaces
+- Organized directory structure: `$base_path/<repo_url>/<remote_name>/<branch>`
 
 ### 🚀 IDE Integration
 - Direct IDE launch with `-i` flag
@@ -39,11 +40,16 @@ A powerful Go CLI tool for managing code development workflows, Git worktrees, a
 - Support for multiple remote configurations
 - Automatic remote management and validation
 
+### 🏗️ Repository Management
+- Clone repositories with automatic CM initialization
+- Organized repository structure with remote tracking
+- Default branch detection and management
+
 ## Installation
 
 ```bash
 # Install directly from GitHub
-go install github.com/lerenn/code-manager@latest
+go install github.com/lerenn/code-manager/cmd/cm@latest
 
 # Verify installation
 cm --help
@@ -56,31 +62,49 @@ cm --help
 **For GitHub Integration:**
 - `GITHUB_TOKEN` environment variable (optional, for private repositories or rate limit increases)
 
+## First-Time Setup
+
+Before using CM, you need to initialize it:
+
+```bash
+# Interactive initialization
+cm init
+
+# Initialize with default settings
+cm init --base-path ~/Code
+
+# Reset existing configuration
+cm init --reset
+```
+
 ## Usage
 
 ### Basic Commands
 
 ```bash
+# Initialize CM configuration
+cm init
+
+# Clone a repository
+cm repository clone <repository-url>
+
 # Create a worktree for a branch
-cm create <branch-name>
+cm worktree create <branch-name>
 
-# Create an ephemeral worktree
-cm create <branch-name> -e
-
-# Open worktree in IDE
-cm create <branch-name> -i cursor
+# Create worktree and open in IDE
+cm worktree create <branch-name> -i cursor
 
 # List all worktrees
-cm list
-
-# List worktrees in JSON format
-cm list --json
-
-# Delete a worktree
-cm delete <branch-name>
+cm worktree list
 
 # Load a branch from remote
-cm load <remote>:<branch-name>
+cm worktree load <remote>:<branch-name>
+
+# Open existing worktree in IDE
+cm worktree open <branch-name> -i cursor
+
+# Delete a worktree
+cm worktree delete <branch-name>
 ```
 
 ### Project Structure
@@ -88,107 +112,173 @@ cm load <remote>:<branch-name>
 #### Single Repository Mode
 Worktrees are created at:
 ```
-$HOME/.cm/repos/<repo-name>/<branch-name>/
+$base_path/<repo_url>/<remote_name>/<branch>/
 ```
 
 #### Workspace Mode
 Worktrees are created at:
 ```
-$HOME/.cm/workspaces/<workspace-name>/<branch-name>/<repo-name>/
+$base_path/<repo_url>/<remote_name>/<branch>/<repo_name>/
 ```
 
 ## Command Reference
 
-### `create <branch> [options]`
+### `init [options]`
+Initializes CM configuration for first-time use.
+
+**Options:**
+- `--base-path <path>`: Set the base path for code storage directly
+- `--reset`: Reset existing CM configuration and start fresh
+- `--force`: Skip interactive confirmation when using --reset flag
+
+**Examples:**
+```bash
+# Interactive initialization
+cm init
+
+# Initialize with specific base path
+cm init --base-path ~/Projects
+
+# Reset existing configuration
+cm init --reset --force
+```
+
+### `repository clone <repository-url> [options]`
+Clones a repository and initializes it in CM.
+
+**Options:**
+- `--shallow, -s`: Perform a shallow clone (non-recursive)
+
+**Examples:**
+```bash
+# Clone repository
+cm repository clone https://github.com/octocat/Hello-World.git
+
+# Shallow clone
+cm repository clone git@github.com:lerenn/example.git --shallow
+
+# Using aliases
+cm repo clone https://github.com/octocat/Hello-World.git
+cm r clone git@github.com:lerenn/example.git
+```
+
+### `worktree create <branch> [options]`
 Creates a new worktree for the specified branch.
 
 **Options:**
-- `-i, --ide`: Open the worktree in IDE after creation
-- `--from-issue`: Create worktree from a forge issue (GitHub issue URL, issue number, or owner/repo#issue format)
-- `--json`: Output creation details in JSON format
+- `-i, --ide <ide-name>`: Open the worktree in IDE after creation
+- `-f, --force`: Force creation without prompts
 
 **Examples:**
 ```bash
 # Create persistent worktree
-cm create feature/new-feature
+cm worktree create feature/new-feature
 
 # Create worktree and open in Cursor IDE
-cm create hotfix/bug-fix -i cursor
+cm worktree create hotfix/bug-fix -i cursor
 
-# Create worktree from GitHub issue (auto-generates branch name)
-cm create --from-issue https://github.com/owner/repo/issues/123
+# Force creation
+cm worktree create feature-branch --force
 
-# Create worktree from GitHub issue with custom branch name
-cm create custom-branch-name --from-issue owner/repo#456
-
-# Create worktree from issue and open in IDE
-cm create --from-issue 789 -i cursor
+# Using aliases
+cm wt create feature-branch
+cm w create feature-branch -i vscode
 ```
 
-### Issue Reference Formats
-
-The `--from-issue` flag supports multiple formats for referencing GitHub issues:
-
-- **GitHub URL**: `https://github.com/owner/repo/issues/123`
-- **Owner/Repo format**: `owner/repo#456`
-- **Issue number only**: `789` (requires current repository to be GitHub)
-
-**Branch Name Generation:**
-When using `--from-issue` without specifying a branch name, CM automatically generates a branch name in the format:
-```
-<issue-number>-<sanitized-issue-title>
-```
-
-The title is sanitized by:
-- Converting to lowercase
-- Replacing spaces with hyphens
-- Removing non-alphanumeric characters (except hyphens)
-- Limiting to 80 characters
-- Ensuring no consecutive hyphens
-
-### `load [remote-source:]<branch-name>`
+### `worktree load [remote:]<branch-name> [options]`
 Loads a branch from a remote source and creates a worktree.
+
+**Options:**
+- `-i, --ide <ide-name>`: Open in specified IDE after loading
 
 **Examples:**
 ```bash
 # Load branch from origin
-cm load origin:feature-branch
+cm worktree load origin:feature-branch
 
 # Load branch from another user's fork
-cm load otheruser:feature-branch
+cm worktree load otheruser:feature-branch
 
-# Load branch using default remote (origin)
-cm load feature-branch
+# Load and open in IDE
+cm worktree load feature-branch -i cursor
+
+# Using aliases
+cm wt load upstream:main
+cm w load feature-branch --ide vscode
 ```
 
-### `list [options]`
+### `worktree list [options]`
 Lists all active worktrees for the current project.
 
 **Options:**
-- `--json`: Output in JSON format for extension parsing
-- `--all`: List worktrees for all projects
+- `-f, --force`: Force listing without prompts
 
-**JSON Output Format:**
-```json
-{
-  "worktrees": [
-    {
-      "repo": "my-project",
-      "branch": "feature/new-feature",
-      "path": "/home/user/.cm/repos/my-project/feature/new-feature",
-      "type": "persistent",
-      "workspace": "my-workspace"
-    }
-  ]
-}
+**Examples:**
+```bash
+# List worktrees
+cm worktree list
+
+# Force listing
+cm worktree list --force
+
+# Using aliases
+cm wt list
+cm w list
 ```
 
-### `delete <branch> [options]`
+**Output Format:**
+```
+Worktrees:
+  [origin] main
+  [origin] feature/new-feature
+  [upstream] develop
+```
+
+### `worktree open <branch> [options]`
+Opens a worktree in the specified IDE.
+
+**Options:**
+- `-i, --ide <ide-name>`: Open in specified IDE (defaults to cursor)
+
+**Examples:**
+```bash
+# Open worktree in default IDE (cursor)
+cm worktree open feature-branch
+
+# Open in specific IDE
+cm worktree open main -i vscode
+
+# Using aliases
+cm wt open feature-branch
+cm w open main --ide goland
+```
+
+### `worktree delete <branch> [options]`
 Safely removes a worktree and cleans up Git state.
 
 **Options:**
 - `--force`: Force deletion without confirmation
-- `--json`: Output deletion details in JSON format
+
+**Examples:**
+```bash
+# Delete with confirmation
+cm worktree delete feature/new-feature
+
+# Force delete without confirmation
+cm worktree delete bugfix/issue-123 --force
+
+# Using aliases
+cm wt delete feature-branch
+cm w delete hotfix/critical-fix --force
+```
+
+## Global Options
+
+All commands support these global options:
+
+- `-v, --verbose`: Enable verbose output
+- `-q, --quiet`: Suppress all output except errors
+- `-c, --config <path>`: Specify a custom config file path
 
 ## Worktree Types
 
@@ -203,6 +293,23 @@ Safely removes a worktree and cleans up Git state.
 - **Safe Deletion**: Confirms before removing worktrees
 - **Git State Cleanup**: Properly removes worktree references from Git
 - **Path Validation**: Ensures valid worktree paths
+- **Repository Validation**: Validates repository structure and Git configuration
+
+## Configuration
+
+Configuration files are stored in `$HOME/.cm/`:
+
+- `config.yaml`: Main configuration file with base path and status file location
+- `status.yaml`: Status file tracking repositories, worktrees, and workspaces
+
+### Default Configuration
+```yaml
+# Base path for code storage
+base_path: ~/Code
+
+# Status file path
+status_file: ~/.cm/status.yaml
+```
 
 ## Extension Integration
 
@@ -210,18 +317,11 @@ The `--json` flag enables structured output for extension development:
 
 ```bash
 # Get worktree list in JSON format
-cm list --json
+cm worktree list --json
 
 # Create worktree with JSON response
-cm create feature-branch --json
+cm worktree create feature-branch --json
 ```
-
-## Configuration
-
-Configuration files are stored in `$HOME/.cm/config/`:
-
-- `settings.json`: Global settings
-- `workspaces.json`: Workspace-specific configurations
 
 ## Contributing
 
