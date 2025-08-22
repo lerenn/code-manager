@@ -55,22 +55,14 @@ func TestLoadWorktreeWithOptionalRemote(t *testing.T) {
 
 	// Test 1: Load branch without specifying remote (should default to origin)
 	t.Run("LoadBranchWithoutRemote", func(t *testing.T) {
-		err := loadWorktree(t, setup, "feature/test-branch")
-		// This will fail because the remote doesn't exist in the test environment
-		// but it tests that the parsing works correctly
-		assert.Error(t, err)
-		// The error should be about the remote not being found, not about parsing
-		assert.NotContains(t, err.Error(), "invalid argument format")
+		err := loadWorktree(t, setup, "test")
+		assert.NoError(t, err)
 	})
 
 	// Test 2: Load branch with explicit remote
 	t.Run("LoadBranchWithExplicitRemote", func(t *testing.T) {
-		err := loadWorktree(t, setup, "origin:feature/test-branch")
-		// This will fail because the remote doesn't exist in the test environment
-		// but it tests that the parsing works correctly
-		assert.Error(t, err)
-		// The error should be about the remote not being found, not about parsing
-		assert.NotContains(t, err.Error(), "invalid argument format")
+		err := loadWorktree(t, setup, "origin:octocat-patch-1")
+		assert.NoError(t, err)
 	})
 
 	// Test 3: Error case - invalid format
@@ -115,10 +107,7 @@ func TestLoadWorktreeWithNewRemote(t *testing.T) {
 
 	// Test loading from a new remote (this will fail in real scenario but tests the parsing)
 	t.Run("LoadFromNewRemote", func(t *testing.T) {
-		err := loadWorktree(t, setup, "otheruser:feature-branch")
-		// This will fail because the remote doesn't exist, but it tests that the parsing works
-		assert.Error(t, err)
-		// The error should be about the remote not being found, not about parsing
-		assert.NotContains(t, err.Error(), "invalid argument format")
+		err := loadWorktree(t, setup, "george-wicked:patch-1")
+		assert.NoError(t, err)
 	})
 }

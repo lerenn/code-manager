@@ -159,6 +159,20 @@ func (mr *MockGitMockRecorder) CreateBranch(repoPath, branch any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBranch", reflect.TypeOf((*MockGit)(nil).CreateBranch), repoPath, branch)
 }
 
+// CreateBranchFrom mocks base method.
+func (m *MockGit) CreateBranchFrom(params CreateBranchFromParams) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateBranchFrom", params)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateBranchFrom indicates an expected call of CreateBranchFrom.
+func (mr *MockGitMockRecorder) CreateBranchFrom(params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBranchFrom", reflect.TypeOf((*MockGit)(nil).CreateBranchFrom), params)
+}
+
 // CreateWorktree mocks base method.
 func (m *MockGit) CreateWorktree(repoPath, worktreePath, branch string) error {
 	m.ctrl.T.Helper()
