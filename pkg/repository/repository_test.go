@@ -43,10 +43,10 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
 
 	// Mock worktree creation
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
-	mockWorktree.EXPECT().BuildPath("github.com/lerenn/example", "origin", "test-branch").Return("/test/path/github.com/lerenn/example/origin/test-branch")
+	mockWorktree.EXPECT().BuildPath("github.com/octocat/Hello-World", "origin", "test-branch").Return("/test/path/github.com/octocat/Hello-World/origin/test-branch")
 	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
@@ -262,8 +262,8 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
 
 	// Mock worktree deletion
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.WorktreeInfo{
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(&status.WorktreeInfo{
 		Remote: "origin",
 		Branch: "test-branch",
 	}, nil)
@@ -305,7 +305,7 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 
 	// Mock origin remote validation
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
-	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 
 	// Mock fetch from remote
 	mockGit.EXPECT().FetchRemote(".", "origin").Return(nil)
@@ -314,10 +314,10 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(true, nil)
 
 	// Mock worktree creation (reusing existing logic) - called by CreateWorktree
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "feature-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
-	mockWorktree.EXPECT().BuildPath("github.com/lerenn/example", "origin", "feature-branch").Return("/test/path/github.com/lerenn/example/origin/feature-branch")
+	mockWorktree.EXPECT().BuildPath("github.com/octocat/Hello-World", "origin", "feature-branch").Return("/test/path/github.com/octocat/Hello-World/origin/feature-branch")
 	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)

@@ -30,8 +30,8 @@ func TestListRepositories(t *testing.T) {
 
 	// Expected repositories
 	expectedRepos := map[string]Repository{
-		"github.com/lerenn/example": {
-			Path: "/home/user/.cmrepos/github.com/lerenn/example/origin/main",
+		"github.com/octocat/Hello-World": {
+			Path: "/home/user/.cmrepos/github.com/octocat/Hello-World/origin/main",
 			Remotes: map[string]Remote{
 				"origin": {
 					DefaultBranch: "main",

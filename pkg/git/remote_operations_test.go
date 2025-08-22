@@ -13,7 +13,7 @@ func TestGit_AddRemote(t *testing.T) {
 
 	// Test adding a new remote
 	remoteName := "test-remote"
-	remoteURL := "https://github.com/testuser/testrepo.git"
+	remoteURL := "https://github.com/octocat/Hello-World.git"
 
 	err := git.AddRemote(".", remoteName, remoteURL)
 	if err != nil {

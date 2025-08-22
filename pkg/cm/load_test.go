@@ -69,7 +69,7 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(nil)
 
 	// Mock Git and FS operations for OpenWorktree
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
 
 	// Mock IDE opening

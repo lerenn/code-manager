@@ -12,7 +12,7 @@ func TestIssueInfo_Fields(t *testing.T) {
 		Title:       "Test Issue",
 		Description: "This is a test issue",
 		State:       "open",
-		URL:         "https://github.com/test/repo/issues/123",
+		URL:         "https://github.com/octocat/Hello-World/issues/123",
 		Repository:  "repo",
 		Owner:       "test",
 	}
@@ -21,7 +21,7 @@ func TestIssueInfo_Fields(t *testing.T) {
 	assert.Equal(t, "Test Issue", info.Title)
 	assert.Equal(t, "This is a test issue", info.Description)
 	assert.Equal(t, "open", info.State)
-	assert.Equal(t, "https://github.com/test/repo/issues/123", info.URL)
+	assert.Equal(t, "https://github.com/octocat/Hello-World/issues/123", info.URL)
 	assert.Equal(t, "repo", info.Repository)
 	assert.Equal(t, "test", info.Owner)
 }
@@ -31,13 +31,13 @@ func TestIssueReference_Fields(t *testing.T) {
 		Owner:       "test",
 		Repository:  "repo",
 		IssueNumber: 123,
-		URL:         "https://github.com/test/repo/issues/123",
+		URL:         "https://github.com/octocat/Hello-World/issues/123",
 	}
 
 	assert.Equal(t, "test", ref.Owner)
 	assert.Equal(t, "repo", ref.Repository)
 	assert.Equal(t, 123, ref.IssueNumber)
-	assert.Equal(t, "https://github.com/test/repo/issues/123", ref.URL)
+	assert.Equal(t, "https://github.com/octocat/Hello-World/issues/123", ref.URL)
 }
 
 func TestErrorTypes(t *testing.T) {

@@ -46,7 +46,7 @@ func TestLoadWorktreeWithOptionalRemote(t *testing.T) {
 	bare = false
 	logallrefupdates = true
 [remote "origin"]
-	url = https://github.com/testuser/testrepo.git
+	url = https://github.com/octocat/Hello-World.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
 [branch "main"]
 	remote = origin
@@ -106,7 +106,7 @@ func TestLoadWorktreeWithNewRemote(t *testing.T) {
 	bare = false
 	logallrefupdates = true
 [remote "origin"]
-	url = https://github.com/testuser/testrepo.git
+	url = https://github.com/octocat/Hello-World.git
 	fetch = +refs/heads/*:refs/remotes/origin/*
 [branch "main"]
 	remote = origin

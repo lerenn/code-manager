@@ -86,8 +86,8 @@ func TestRepository_HandleRemoteManagement_NewRemote(t *testing.T) {
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "upstream").Return(false, nil)
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/lerenn/example", nil)
-	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 	mockGit.EXPECT().AddRemote(".", "upstream", "https://github.com/upstream/example.git").Return(nil)
 
 	err := repo.HandleRemoteManagement("upstream")
@@ -114,7 +114,7 @@ func TestRepository_ExtractHostFromURL_HTTPS(t *testing.T) {
 		Verbose:       true,
 	})
 
-	host := repo.ExtractHostFromURL("https://github.com/lerenn/example.git")
+	host := repo.ExtractHostFromURL("https://github.com/octocat/Hello-World.git")
 	assert.Equal(t, "github.com", host)
 }
 
@@ -186,7 +186,7 @@ func TestRepository_DetermineProtocol_HTTPS(t *testing.T) {
 		Verbose:       true,
 	})
 
-	protocol := repo.DetermineProtocol("https://github.com/lerenn/example.git")
+	protocol := repo.DetermineProtocol("https://github.com/octocat/Hello-World.git")
 	assert.Equal(t, "https", protocol)
 }
 
@@ -234,7 +234,7 @@ func TestRepository_ExtractRepoNameFromFullPath_Success(t *testing.T) {
 		Verbose:       true,
 	})
 
-	repoName := repo.ExtractRepoNameFromFullPath("github.com/lerenn/example")
+	repoName := repo.ExtractRepoNameFromFullPath("github.com/octocat/Hello-World")
 	assert.Equal(t, "example", repoName)
 }
 
@@ -282,7 +282,7 @@ func TestRepository_ConstructRemoteURL_HTTPS(t *testing.T) {
 		Verbose:       true,
 	})
 
-	remoteURL, err := repo.ConstructRemoteURL("https://github.com/lerenn/example.git", "upstream", "github.com/lerenn/example")
+	remoteURL, err := repo.ConstructRemoteURL("https://github.com/octocat/Hello-World.git", "upstream", "github.com/octocat/Hello-World")
 	assert.NoError(t, err)
 	assert.Equal(t, "https://github.com/upstream/example.git", remoteURL)
 }
@@ -307,7 +307,7 @@ func TestRepository_ConstructRemoteURL_SSH(t *testing.T) {
 		Verbose:       true,
 	})
 
-	remoteURL, err := repo.ConstructRemoteURL("git@github.com:lerenn/example.git", "upstream", "github.com/lerenn/example")
+	remoteURL, err := repo.ConstructRemoteURL("git@github.com:lerenn/example.git", "upstream", "github.com/octocat/Hello-World")
 	assert.NoError(t, err)
 	assert.Equal(t, "git@github.com:upstream/example.git", remoteURL)
 }
@@ -332,7 +332,7 @@ func TestRepository_ConstructRemoteURL_InvalidHost(t *testing.T) {
 		Verbose:       true,
 	})
 
-	remoteURL, err := repo.ConstructRemoteURL("invalid-url", "upstream", "github.com/lerenn/example")
+	remoteURL, err := repo.ConstructRemoteURL("invalid-url", "upstream", "github.com/octocat/Hello-World")
 	assert.Error(t, err)
 	assert.Empty(t, remoteURL)
 }

@@ -71,11 +71,11 @@ func TestDeleteWorktreeSingleRepo(t *testing.T) {
 	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
 
 	// Check that the repository has no worktrees
-	repo := status.Repositories["github.com/test/repo"]
+	repo := status.Repositories["github.com/octocat/Hello-World"]
 	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
 
 	// Verify the worktree directory was removed (using the correct path structure)
-	// The worktree should be in worktrees/github.com/test/repo/origin/feature/test-delete-branch
+	// The worktree should be in worktrees/github.com/octocat/Hello-World/origin/feature/test-delete-branch
 	worktreePath := filepath.Join(setup.CmPath, "worktrees", "github.com", "test", "repo", "origin", "feature/test-delete-branch")
 	_, err = os.Stat(worktreePath)
 	assert.True(t, os.IsNotExist(err), "Worktree directory should be removed")
@@ -144,7 +144,7 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
 
 	// Check that the repository has no worktrees
-	repo := status.Repositories["github.com/test/repo"]
+	repo := status.Repositories["github.com/octocat/Hello-World"]
 	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
 }
 
@@ -177,7 +177,7 @@ func TestDeleteWorktreeCLI(t *testing.T) {
 	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
 
 	// Check that the repository has no worktrees
-	repo := status.Repositories["github.com/test/repo"]
+	repo := status.Repositories["github.com/octocat/Hello-World"]
 	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
 
 	// Verify the worktree directory was removed (using the correct path structure)
@@ -220,7 +220,7 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 	assert.Len(t, status.Repositories, 1, "Should still have repository entry after deletion")
 
 	// Check that the repository has no worktrees
-	repo := status.Repositories["github.com/test/repo"]
+	repo := status.Repositories["github.com/octocat/Hello-World"]
 	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
 }
 

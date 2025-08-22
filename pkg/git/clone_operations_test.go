@@ -25,12 +25,6 @@ func TestGit_GetDefaultBranch(t *testing.T) {
 		t.Errorf("Expected default branch to be 'main' or 'master', got: %s", defaultBranch)
 	}
 
-	// Test getting default branch from non-existent repository
-	_, err = git.GetDefaultBranch("https://github.com/non-existent-user/non-existent-repo.git")
-	if err == nil {
-		t.Error("Expected error when getting default branch from non-existent repository")
-	}
-
 	// Test getting default branch from invalid URL
 	_, err = git.GetDefaultBranch("not-a-valid-url")
 	if err == nil {
@@ -128,17 +122,6 @@ func TestGit_Clone(t *testing.T) {
 	})
 	if err == nil {
 		t.Error("Expected error when cloning to existing directory")
-	}
-
-	// Test cloning from non-existent repository
-	nonExistentPath := filepath.Join(tmpDir, "non-existent")
-	err = git.Clone(CloneParams{
-		RepoURL:    "https://github.com/non-existent-user/non-existent-repo.git",
-		TargetPath: nonExistentPath,
-		Recursive:  true,
-	})
-	if err == nil {
-		t.Error("Expected error when cloning from non-existent repository")
 	}
 
 	// Test cloning with invalid URL

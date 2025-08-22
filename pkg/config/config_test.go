@@ -89,7 +89,7 @@ func TestRealManager_LoadConfig_FileNotFound(t *testing.T) {
 	config, err := manager.LoadConfig("/nonexistent/path/config.yaml")
 
 	assert.Nil(t, config)
-	assert.ErrorIs(t, err, ErrConfigFileNotFound)
+	assert.ErrorIs(t, err, ErrConfigNotInitialized)
 }
 
 func TestRealManager_LoadConfig_InvalidYAML(t *testing.T) {

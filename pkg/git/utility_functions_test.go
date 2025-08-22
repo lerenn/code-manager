@@ -16,23 +16,23 @@ func TestGit_ExtractRepoNameFromURL(t *testing.T) {
 	}{
 		{
 			name:     "HTTPS GitHub URL",
-			url:      "https://github.com/lerenn/example.git",
-			expected: "github.com/lerenn/example",
+			url:      "https://github.com/octocat/Hello-World.git",
+			expected: "github.com/octocat/Hello-World",
 		},
 		{
 			name:     "SSH GitHub URL",
 			url:      "git@github.com:lerenn/example.git",
-			expected: "github.com/lerenn/example",
+			expected: "github.com/octocat/Hello-World",
 		},
 		{
 			name:     "HTTPS URL without .git",
-			url:      "https://github.com/lerenn/example",
-			expected: "github.com/lerenn/example",
+			url:      "https://github.com/octocat/Hello-World",
+			expected: "github.com/octocat/Hello-World",
 		},
 		{
 			name:     "SSH URL without .git",
 			url:      "git@github.com:lerenn/example",
-			expected: "github.com/lerenn/example",
+			expected: "github.com/octocat/Hello-World",
 		},
 		{
 			name:     "HTTPS URL with subdomain",

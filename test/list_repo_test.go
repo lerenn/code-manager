@@ -337,7 +337,7 @@ func TestListWorktreesRepositoryNameExtraction(t *testing.T) {
 	_ = cmd.Run() // Ignore error if remote doesn't exist
 
 	// Add remote origin
-	cmd = exec.Command("git", "remote", "add", "origin", "https://github.com/testuser/testrepo.git")
+	cmd = exec.Command("git", "remote", "add", "origin", "https://github.com/octocat/Hello-World.git")
 	require.NoError(t, cmd.Run())
 
 	// Create a worktree

@@ -163,13 +163,13 @@ func TestRepository_ValidateRepository_Success(t *testing.T) {
 	// Mock repository validation
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
 	mockFS.EXPECT().IsDir(".git").Return(true, nil)
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
 
 	result, err := repo.ValidateRepository(ValidationParams{Branch: "test-branch"})
 	assert.NoError(t, err)
-	assert.Equal(t, "github.com/lerenn/example", result.RepoURL)
+	assert.Equal(t, "github.com/octocat/Hello-World", result.RepoURL)
 }
 
 func TestRepository_ValidateRepository_WorktreeExists(t *testing.T) {
@@ -195,8 +195,8 @@ func TestRepository_ValidateRepository_WorktreeExists(t *testing.T) {
 	// Mock repository validation
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
 	mockFS.EXPECT().IsDir(".git").Return(true, nil)
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.WorktreeInfo{}, nil)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(&status.WorktreeInfo{}, nil)
 
 	result, err := repo.ValidateRepository(ValidationParams{Branch: "test-branch"})
 	assert.Error(t, err)
@@ -227,8 +227,8 @@ func TestRepository_ValidateRepository_NotClean(t *testing.T) {
 	// Mock repository validation
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
 	mockFS.EXPECT().IsDir(".git").Return(true, nil)
-	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/lerenn/example", nil)
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound)
 	mockGit.EXPECT().IsClean(gomock.Any()).Return(false, nil)
 
 	result, err := repo.ValidateRepository(ValidationParams{Branch: "test-branch"})
@@ -257,9 +257,9 @@ func TestRepository_ValidateWorktreeExists_Success(t *testing.T) {
 		Verbose:       true,
 	})
 
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(&status.WorktreeInfo{}, nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(&status.WorktreeInfo{}, nil)
 
-	err := repo.ValidateWorktreeExists("github.com/lerenn/example", "test-branch")
+	err := repo.ValidateWorktreeExists("github.com/octocat/Hello-World", "test-branch")
 	assert.NoError(t, err)
 }
 
@@ -283,9 +283,9 @@ func TestRepository_ValidateWorktreeExists_NotFound(t *testing.T) {
 		Verbose:       true,
 	})
 
-	mockStatus.EXPECT().GetWorktree("github.com/lerenn/example", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound)
 
-	err := repo.ValidateWorktreeExists("github.com/lerenn/example", "test-branch")
+	err := repo.ValidateWorktreeExists("github.com/octocat/Hello-World", "test-branch")
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrWorktreeNotInStatus)
 }
@@ -364,7 +364,7 @@ func TestRepository_ValidateOriginRemote_Success(t *testing.T) {
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
-	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().GetRemoteURL(".", "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 
 	err := repo.ValidateOriginRemote()
 	assert.NoError(t, err)

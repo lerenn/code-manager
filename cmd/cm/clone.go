@@ -17,9 +17,9 @@ The repository will be cloned to $base_path/<repo_url>/<remote_name>/<default_br
 and automatically initialized in CM with the detected default branch.
 
 Examples:
-  cm clone https://github.com/lerenn/example.git
+  cm clone https://github.com/octocat/Hello-World.git
   cm clone git@github.com:lerenn/example.git
-  cm clone https://github.com/lerenn/example.git --shallow`,
+  cm clone https://github.com/octocat/Hello-World.git --shallow`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := loadConfig()

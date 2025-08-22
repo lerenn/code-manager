@@ -54,25 +54,25 @@ func TestWorkspace_ValidateWorkspaceReferences_Success(t *testing.T) {
 	mockGit.EXPECT().Status("frontend").Return("On branch main", nil)
 
 	// Mock repository URL extraction
-	mockGit.EXPECT().GetRepositoryName("frontend").Return("github.com/lerenn/example", nil)
+	mockGit.EXPECT().GetRepositoryName("frontend").Return("github.com/octocat/Hello-World", nil)
 
 	// Mock repository not found in status (will be added)
-	mockStatus.EXPECT().GetRepository("github.com/lerenn/example").Return(nil, status.ErrRepositoryNotFound)
+	mockStatus.EXPECT().GetRepository("github.com/octocat/Hello-World").Return(nil, status.ErrRepositoryNotFound)
 
 	// Mock checking if origin remote exists
 	mockGit.EXPECT().RemoteExists("frontend", "origin").Return(true, nil)
 
 	// Mock getting remotes
-	mockGit.EXPECT().GetRemoteURL("frontend", "origin").Return("https://github.com/lerenn/example.git", nil)
+	mockGit.EXPECT().GetRemoteURL("frontend", "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 
 	// Mock getting default branch
-	mockGit.EXPECT().GetDefaultBranch("https://github.com/lerenn/example.git").Return("main", nil)
+	mockGit.EXPECT().GetDefaultBranch("https://github.com/octocat/Hello-World.git").Return("main", nil)
 
 	// Mock adding repository to status
-	mockStatus.EXPECT().AddRepository("github.com/lerenn/example", gomock.Any()).Return(nil)
+	mockStatus.EXPECT().AddRepository("github.com/octocat/Hello-World", gomock.Any()).Return(nil)
 
 	// Mock getting repository after adding
-	mockStatus.EXPECT().GetRepository("github.com/lerenn/example").Return(&status.Repository{
+	mockStatus.EXPECT().GetRepository("github.com/octocat/Hello-World").Return(&status.Repository{
 		Path: "frontend",
 		Remotes: map[string]status.Remote{
 			"origin": {DefaultBranch: "main"},
@@ -81,7 +81,7 @@ func TestWorkspace_ValidateWorkspaceReferences_Success(t *testing.T) {
 	}, nil)
 
 	// Mock worktree operations
-	mockWorktree.EXPECT().BuildPath("github.com/lerenn/example", "origin", "main").Return("/test/path/github.com/lerenn/example/origin/main")
+	mockWorktree.EXPECT().BuildPath("github.com/octocat/Hello-World", "origin", "main").Return("/test/path/github.com/octocat/Hello-World/origin/main")
 	mockWorktree.EXPECT().Exists("frontend", "main").Return(false, nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)

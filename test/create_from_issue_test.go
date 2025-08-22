@@ -49,7 +49,7 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 		Title:       "Test Issue Title",
 		Description: "This is a test issue description",
 		State:       "open",
-		URL:         "https://github.com/test-owner/test-repo/issues/123",
+		URL:         "https://github.com/octocat/Hello-World/issues/123",
 		Repository:  "test-repo",
 		Owner:       "test-owner",
 	}
@@ -69,7 +69,7 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 
 	// Create a worktree with issue information
 	err = cmInstance.CreateWorkTree("test-branch", cm.CreateWorkTreeOpts{
-		IssueRef: "https://github.com/test-owner/test-repo/issues/123",
+		IssueRef: "https://github.com/octocat/Hello-World/issues/123",
 	})
 
 	// The creation will fail due to API call, but we can still verify the status file structure
@@ -169,7 +169,7 @@ func TestCreateFromIssue_WorkspaceStatusFileVerification(t *testing.T) {
 		Title:       "Workspace Test Issue",
 		Description: "This is a test issue for workspace mode",
 		State:       "open",
-		URL:         "https://github.com/test-owner/test-repo/issues/456",
+		URL:         "https://github.com/octocat/Hello-World/issues/456",
 		Repository:  "test-repo",
 		Owner:       "test-owner",
 	}
@@ -339,7 +339,7 @@ func TestCreateFromIssue_ValidGitHubURL(t *testing.T) {
 	// Test with valid GitHub URL format
 	// Note: This will fail because we don't have a real GitHub API connection
 	// but it should parse the URL correctly
-	err := createWorktreeFromIssue(t, setup, "https://github.com/owner/repo/issues/123")
+	err := createWorktreeFromIssue(t, setup, "https://github.com/octocat/Hello-World/issues/123")
 	assert.Error(t, err)
 	// Should fail due to API call, not parsing
 	assert.NotContains(t, err.Error(), "invalid issue reference format")
@@ -358,7 +358,7 @@ func TestCreateFromIssue_ValidOwnerRepoFormat(t *testing.T) {
 	// Test with valid owner/repo#issue format
 	// Note: This will fail because we don't have a real GitHub API connection
 	// but it should parse the format correctly
-	err := createWorktreeFromIssue(t, setup, "owner/repo#456")
+	err := createWorktreeFromIssue(t, setup, "octocat/Hello-World#456")
 	assert.Error(t, err)
 	// Should fail due to API call, not parsing
 	assert.NotContains(t, err.Error(), "invalid issue reference format")
@@ -380,7 +380,7 @@ func TestCreateFromIssue_WithCustomBranchName(t *testing.T) {
 	err := createWorktreeFromIssueWithBranch(t, createWorktreeFromIssueWithBranchParams{
 		Setup:      setup,
 		BranchName: "custom-branch-name",
-		IssueRef:   "https://github.com/owner/repo/issues/123",
+		IssueRef:   "https://github.com/octocat/Hello-World/issues/123",
 	})
 	assert.Error(t, err)
 	// Should fail due to API call, not parsing
@@ -403,7 +403,7 @@ func TestCreateFromIssue_WithIDE(t *testing.T) {
 	err := createWorktreeFromIssueWithIDE(t, createWorktreeFromIssueWithIDEParams{
 		Setup:    setup,
 		IDEName:  "cursor",
-		IssueRef: "https://github.com/owner/repo/issues/123",
+		IssueRef: "https://github.com/octocat/Hello-World/issues/123",
 	})
 	assert.Error(t, err)
 	// Should fail due to API call, not parsing
@@ -483,7 +483,7 @@ func addGitHubRemote(t *testing.T, repoPath string) {
 	_ = cmd.Run()
 
 	// Add GitHub remote origin
-	cmd = exec.Command("git", "remote", "add", "origin", "https://github.com/test-owner/test-repo.git")
+	cmd = exec.Command("git", "remote", "add", "origin", "https://github.com/octocat/Hello-World.git")
 	cmd.Env = append(os.Environ(),
 		"GIT_AUTHOR_NAME=Test User",
 		"GIT_AUTHOR_EMAIL=test@example.com",
@@ -525,7 +525,7 @@ func TestCreateFromIssue_WorkspaceMode(t *testing.T) {
 	// Test with valid GitHub URL format in workspace mode
 	// Note: This will fail because we don't have a real GitHub API connection
 	// but it should parse the URL correctly
-	err = createWorktreeFromIssue(t, setup, "https://github.com/owner/repo/issues/123")
+	err = createWorktreeFromIssue(t, setup, "https://github.com/octocat/Hello-World/issues/123")
 	assert.Error(t, err)
 	// Should fail due to API call, not parsing
 	assert.NotContains(t, err.Error(), "invalid issue reference format")
