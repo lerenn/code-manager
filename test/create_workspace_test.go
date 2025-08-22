@@ -87,7 +87,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify worktrees were created
-	worktrees, _, err := cmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 2)
 

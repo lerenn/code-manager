@@ -9,6 +9,7 @@ import (
 
 func createCreateCmd() *cobra.Command {
 	var ideName string
+	var force bool
 
 	createCmd := &cobra.Command{
 		Use:   "create <branch> [--ide <ide-name>]",
@@ -36,6 +37,7 @@ Examples:
 			if ideName != "" {
 				opts.IDEName = ideName
 			}
+			opts.Force = force
 
 			return cmManager.CreateWorkTree(args[0], opts)
 		},
@@ -43,6 +45,8 @@ Examples:
 
 	// Add IDE flag to create command
 	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
+	// Add force flag to create command
+	createCmd.Flags().BoolVarP(&force, "force", "f", false, "Force creation without prompts")
 
 	return createCmd
 }

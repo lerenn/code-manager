@@ -35,16 +35,16 @@ type Workspace interface {
 	// Load handles the complete workspace loading workflow.
 	// It detects workspace files, handles user selection if multiple files are found,
 	// and loads the workspace configuration for display.
-	Load() error
+	Load(force bool) error
 
 	// Validate validates all repositories in a workspace.
 	Validate() error
 
 	// ListWorktrees lists worktrees for workspace mode.
-	ListWorktrees() ([]status.WorktreeInfo, error)
+	ListWorktrees(force bool) ([]status.WorktreeInfo, error)
 
 	// CreateWorktree creates worktrees for all repositories in the workspace.
-	CreateWorktree(branch string, opts ...CreateWorktreeOpts) error
+	CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) error
 
 	// DeleteWorktree deletes worktrees for the workspace with the specified branch.
 	DeleteWorktree(branch string, force bool) error
@@ -59,7 +59,7 @@ type Workspace interface {
 	GetName(config *Config, filename string) string
 
 	// HandleMultipleFiles handles the selection of workspace files when multiple are found.
-	HandleMultipleFiles(workspaceFiles []string) (string, error)
+	HandleMultipleFiles(workspaceFiles []string, force bool) (string, error)
 
 	// ValidateWorkspaceReferences validates that workspace references point to existing worktrees and repositories.
 	ValidateWorkspaceReferences() error
@@ -119,7 +119,7 @@ func (w *realWorkspace) verboseLogf(format string, args ...interface{}) {
 // Load handles the complete workspace loading workflow.
 // It detects workspace files, handles user selection if multiple files are found,
 // and loads the workspace configuration for display.
-func (w *realWorkspace) Load() error {
+func (w *realWorkspace) Load(force bool) error {
 	// If already loaded, just parse and display the configuration
 	if w.OriginalFile != "" {
 		workspaceConfig, err := w.ParseFile(w.OriginalFile)
@@ -157,7 +157,7 @@ func (w *realWorkspace) Load() error {
 		w.OriginalFile = workspaceFiles[0]
 	} else {
 		// If multiple workspace files, handle user selection
-		selectedFile, err := w.HandleMultipleFiles(workspaceFiles)
+		selectedFile, err := w.HandleMultipleFiles(workspaceFiles, force)
 		if err != nil {
 			return err
 		}
@@ -194,12 +194,12 @@ func (w *realWorkspace) Validate() error {
 }
 
 // ListWorktrees lists worktrees for workspace mode.
-func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
+func (w *realWorkspace) ListWorktrees(force bool) ([]status.WorktreeInfo, error) {
 	w.verboseLogf("Listing worktrees for workspace mode")
 
 	// Load workspace configuration (only if not already loaded)
 	if w.OriginalFile == "" {
-		if err := w.Load(); err != nil {
+		if err := w.Load(force); err != nil {
 			return nil, fmt.Errorf("failed to load workspace: %w", err)
 		}
 	}
@@ -247,12 +247,12 @@ func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 }
 
 // CreateWorktree creates worktrees for all repositories in the workspace.
-func (w *realWorkspace) CreateWorktree(branch string, opts ...CreateWorktreeOpts) error {
+func (w *realWorkspace) CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) error {
 	w.verboseLogf("Creating worktrees for branch: %s", branch)
 
 	// 1. Load and validate workspace configuration (only if not already loaded)
 	if w.OriginalFile == "" {
-		if err := w.Load(); err != nil {
+		if err := w.Load(force); err != nil {
 			return fmt.Errorf("failed to load workspace: %w", err)
 		}
 	}
@@ -286,7 +286,7 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 
 	// Load workspace configuration (only if not already loaded)
 	if w.OriginalFile == "" {
-		if err := w.Load(); err != nil {
+		if err := w.Load(force); err != nil {
 			return fmt.Errorf("failed to load workspace: %w", err)
 		}
 	}

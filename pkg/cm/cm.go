@@ -26,7 +26,7 @@ type CM interface {
 	OpenWorktree(worktreeName, ideName string) error
 
 	// ListWorktrees lists worktrees for the current project with mode detection.
-	ListWorktrees() ([]status.WorktreeInfo, ProjectType, error)
+	ListWorktrees(force bool) ([]status.WorktreeInfo, ProjectType, error)
 
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
 	LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error

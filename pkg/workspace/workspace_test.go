@@ -90,7 +90,7 @@ func TestWorkspace_ListWorktrees_Success(t *testing.T) {
 	mockStatus.EXPECT().GetRepository("github.com/example/repo1").Return(repo1, nil).AnyTimes()
 	mockStatus.EXPECT().GetRepository("github.com/example/repo2").Return(repo2, nil).AnyTimes()
 
-	result, err := workspace.ListWorktrees()
+	result, err := workspace.ListWorktrees(false)
 	assert.NoError(t, err)
 	assert.Len(t, result, 2, "Should only return worktrees for current workspace")
 
@@ -145,7 +145,7 @@ func TestWorkspace_Load_SingleFile(t *testing.T) {
 	}`
 	mockFS.EXPECT().ReadFile("project.code-workspace").Return([]byte(workspaceContent), nil)
 
-	err := workspace.Load()
+	err := workspace.Load(false)
 	assert.NoError(t, err)
 	assert.Equal(t, "project.code-workspace", workspace.(*realWorkspace).OriginalFile)
 }
@@ -175,7 +175,7 @@ func TestWorkspace_Load_NoFiles(t *testing.T) {
 	// Mock no workspace files found
 	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
 
-	err := workspace.Load()
+	err := workspace.Load(false)
 	assert.NoError(t, err)
 	assert.Equal(t, "", workspace.(*realWorkspace).OriginalFile)
 }
@@ -214,7 +214,7 @@ func TestWorkspace_Load_AlreadyLoaded(t *testing.T) {
 	}`
 	mockFS.EXPECT().ReadFile("already-loaded.code-workspace").Return([]byte(workspaceContent), nil)
 
-	err := workspace.Load()
+	err := workspace.Load(false)
 	assert.NoError(t, err)
 	assert.Equal(t, "already-loaded.code-workspace", workspace.(*realWorkspace).OriginalFile)
 }

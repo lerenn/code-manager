@@ -34,7 +34,7 @@ func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	worktrees, _, err := cmInstance.ListWorktrees()
+	worktrees, _, err := cmInstance.ListWorktrees(false)
 	return worktrees, err
 }
 
@@ -70,7 +70,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	defer os.Chdir(originalDir)
 
 	// Call ListWorktrees directly
-	worktrees, projectType, err := cmInstance.ListWorktrees()
+	worktrees, projectType, err := cmInstance.ListWorktrees(false)
 	if err != nil {
 		return err.Error(), err
 	}
