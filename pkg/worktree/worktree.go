@@ -249,6 +249,11 @@ func (w *realWorktree) ValidateDeletion(params ValidateDeletionParams) error {
 
 // EnsureBranchExists ensures the specified branch exists, creating it if necessary.
 func (w *realWorktree) EnsureBranchExists(repoPath, branch string) error {
+	// First check for reference conflicts
+	if err := w.git.CheckReferenceConflict(repoPath, branch); err != nil {
+		return err
+	}
+
 	branchExists, err := w.git.BranchExists(repoPath, branch)
 	if err != nil {
 		return fmt.Errorf("failed to check if branch exists: %w", err)
