@@ -220,6 +220,21 @@ func (mr *MockFSMockRecorder) IsNotExist(err any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsNotExist", reflect.TypeOf((*MockFS)(nil).IsNotExist), err)
 }
 
+// IsPathWithinBase mocks base method.
+func (m *MockFS) IsPathWithinBase(basePath, targetPath string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsPathWithinBase", basePath, targetPath)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsPathWithinBase indicates an expected call of IsPathWithinBase.
+func (mr *MockFSMockRecorder) IsPathWithinBase(basePath, targetPath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPathWithinBase", reflect.TypeOf((*MockFS)(nil).IsPathWithinBase), basePath, targetPath)
+}
+
 // MkdirAll mocks base method.
 func (m *MockFS) MkdirAll(path string, perm os.FileMode) error {
 	m.ctrl.T.Helper()

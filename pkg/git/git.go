@@ -566,6 +566,8 @@ func (g *realGit) Clone(params CloneParams) error {
 	args = append(args, params.RepoURL, params.TargetPath)
 
 	cmd := exec.Command("git", args...)
+	// Set working directory to /tmp to avoid working directory issues
+	cmd.Dir = "/tmp"
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone failed: %w (command: git %s, output: %s)",

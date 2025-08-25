@@ -66,6 +66,9 @@ type FS interface {
 
 	// ExpandPath expands ~ to user's home directory.
 	ExpandPath(path string) (string, error)
+
+	// IsPathWithinBase checks if a target path is within the base path.
+	IsPathWithinBase(basePath, targetPath string) (bool, error)
 }
 
 type realFS struct {
@@ -329,4 +332,43 @@ func (f *realFS) ExecuteCommand(command string, args ...string) error {
 
 	// Don't wait for the command to finish, let it run in background
 	return nil
+}
+
+// IsPathWithinBase checks if a target path is within the base path.
+func (f *realFS) IsPathWithinBase(basePath, targetPath string) (bool, error) {
+	// Handle empty paths
+	if basePath == "" && targetPath == "" {
+		return true, nil
+	}
+	if basePath == "" {
+		return false, nil
+	}
+
+	// Normalize path separators - convert backslashes to forward slashes for cross-platform compatibility
+	normalizedBasePath := strings.ReplaceAll(basePath, "\\", "/")
+	normalizedTargetPath := strings.ReplaceAll(targetPath, "\\", "/")
+
+	// Clean the paths
+	cleanBasePath := filepath.Clean(normalizedBasePath)
+	cleanTargetPath := filepath.Clean(normalizedTargetPath)
+
+	// Convert both paths to absolute paths for comparison
+	absBasePath, err := filepath.Abs(cleanBasePath)
+	if err != nil {
+		return false, fmt.Errorf("failed to get absolute path for base path: %w", err)
+	}
+
+	absTargetPath, err := filepath.Abs(cleanTargetPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to get absolute path for target path: %w", err)
+	}
+
+	// Check if target path is within base path by comparing path components
+	relPath, err := filepath.Rel(absBasePath, absTargetPath)
+	if err != nil {
+		return false, err // Return the error if we can't get relative path
+	}
+
+	// If relative path starts with "..", target is outside base path
+	return !strings.HasPrefix(relPath, "..") && relPath != "..", nil
 }
