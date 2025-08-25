@@ -4,6 +4,7 @@ package worktree
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/ide"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ func createCreateCmd() *cobra.Command {
 	// Add flags
 	createCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after creation")
 	createCmd.Flags().BoolVarP(&force, "force", "f", false, "Force creation without prompts")
-	createCmd.Flags().StringVar(&fromIssue, "from-issue", "", 
+	createCmd.Flags().StringVar(&fromIssue, "from-issue", "",
 		"Create worktree from GitHub issue (URL, number, or owner/repo#issue format)")
 
 	return createCmd
@@ -41,7 +42,7 @@ Issue Reference Formats:
 
 Examples:
   cm worktree create feature-branch
-  cm wt create feature-branch --ide vscode
+  cm wt create feature-branch --ide ` + ide.DefaultIDE + `
   cm w create feature-branch --ide cursor
   cm worktree create --from-issue https://github.com/owner/repo/issues/123
   cm worktree create custom-branch --from-issue 456
