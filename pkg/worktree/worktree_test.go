@@ -224,6 +224,7 @@ func TestWorktree_Create_BranchDoesNotExist(t *testing.T) {
 	mockGit.EXPECT().GetRemoteURL(params.RepoPath, "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 	mockGit.EXPECT().GetDefaultBranch("https://github.com/octocat/Hello-World.git").Return("main", nil)
 	mockGit.EXPECT().FetchRemote(params.RepoPath, "origin").Return(nil)
+	mockGit.EXPECT().BranchExists(params.RepoPath, "main").Return(true, nil)
 	mockGit.EXPECT().CreateBranchFrom(git.CreateBranchFromParams{
 		RepoPath:   params.RepoPath,
 		NewBranch:  params.Branch,
@@ -530,6 +531,7 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist(t *testing.T) {
 	mockGit.EXPECT().GetRemoteURL(repoPath, "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 	mockGit.EXPECT().GetDefaultBranch("https://github.com/octocat/Hello-World.git").Return("main", nil)
 	mockGit.EXPECT().FetchRemote(repoPath, "origin").Return(nil)
+	mockGit.EXPECT().BranchExists(repoPath, "main").Return(true, nil)
 	mockGit.EXPECT().CreateBranchFrom(git.CreateBranchFromParams{
 		RepoPath:   repoPath,
 		NewBranch:  branch,
