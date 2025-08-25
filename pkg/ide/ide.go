@@ -7,7 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 )
 
-// DefaultIDE is the default IDE name used when no IDE is specified
+// DefaultIDE is the default IDE name used when no IDE is specified.
 const DefaultIDE = VSCodeName
 
 //go:generate mockgen -source=ide.go -destination=mockide.gen.go -package=ide
