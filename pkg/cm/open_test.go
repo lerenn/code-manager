@@ -47,9 +47,9 @@ func TestCM_OpenWorktree(t *testing.T) {
 	mockFS.EXPECT().Exists("/test/base/path/github.com/octocat/Hello-World/origin/test-branch").Return(true, nil)
 
 	// Mock IDE opening
-	mockIDE.EXPECT().OpenIDE("cursor", "/test/base/path/github.com/octocat/Hello-World/origin/test-branch", false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("vscode", "/test/base/path/github.com/octocat/Hello-World/origin/test-branch", false).Return(nil)
 
-	err := cm.OpenWorktree("test-branch", "cursor")
+	err := cm.OpenWorktree("test-branch", "vscode")
 	assert.NoError(t, err)
 }
 
@@ -85,7 +85,7 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 	// Mock worktree path existence check - worktree not found
 	mockFS.EXPECT().Exists("/test/base/path/github.com/octocat/Hello-World/origin/test-branch").Return(false, nil)
 
-	err := cm.OpenWorktree("test-branch", "cursor")
+	err := cm.OpenWorktree("test-branch", "vscode")
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrWorktreeNotInStatus)
 }

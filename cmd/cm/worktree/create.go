@@ -18,8 +18,8 @@ func createCreateCmd() *cobra.Command {
 
 Examples:
   cm worktree create feature-branch
-  cm wt create feature-branch --ide vscode
-  cm w create feature-branch --ide cursor`,
+  cm wt create feature-branch --ide cursor
+  cm w create feature-branch --ide vscode`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := config.CheckInitialization(); err != nil {

@@ -20,7 +20,12 @@ func TestManager_GetIDE(t *testing.T) {
 		errorType   error
 	}{
 		{
-			name:        "existing IDE",
+			name:        "existing IDE - VS Code",
+			ideName:     VSCodeName,
+			expectError: false,
+		},
+		{
+			name:        "existing IDE - Cursor",
 			ideName:     CursorName,
 			expectError: false,
 		},
@@ -66,14 +71,29 @@ func TestManager_OpenIDE(t *testing.T) {
 		errorType   error
 	}{
 		{
-			name:        "successful IDE opening",
+			name:        "successful IDE opening - VS Code",
+			ideName:     VSCodeName,
+			path:        "/path/to/repo",
+			verbose:     false,
+			expectError: false,
+		},
+		{
+			name:        "successful IDE opening - Cursor",
 			ideName:     CursorName,
 			path:        "/path/to/repo",
 			verbose:     false,
 			expectError: false,
 		},
 		{
-			name:        "IDE not installed",
+			name:        "IDE not installed - VS Code",
+			ideName:     VSCodeName,
+			path:        "/path/to/repo",
+			verbose:     false,
+			expectError: true,
+			errorType:   ErrIDENotInstalled,
+		},
+		{
+			name:        "IDE not installed - Cursor",
 			ideName:     CursorName,
 			path:        "/path/to/repo",
 			verbose:     false,
@@ -81,7 +101,15 @@ func TestManager_OpenIDE(t *testing.T) {
 			errorType:   ErrIDENotInstalled,
 		},
 		{
-			name:        "IDE execution failed",
+			name:        "IDE execution failed - VS Code",
+			ideName:     VSCodeName,
+			path:        "/path/to/repo",
+			verbose:     false,
+			expectError: true,
+			errorType:   ErrIDEExecutionFailed,
+		},
+		{
+			name:        "IDE execution failed - Cursor",
 			ideName:     CursorName,
 			path:        "/path/to/repo",
 			verbose:     false,
@@ -109,12 +137,20 @@ func TestManager_OpenIDE(t *testing.T) {
 
 			// Setup mock expectations based on test case
 			switch tt.name {
-			case "successful IDE opening":
+			case "successful IDE opening - VS Code":
+				mockFS.EXPECT().Which(VSCodeCommand).Return("/usr/local/bin/code", nil)
+				mockFS.EXPECT().ExecuteCommand(VSCodeCommand, "/path/to/repo").Return(nil)
+			case "successful IDE opening - Cursor":
 				mockFS.EXPECT().Which(CursorCommand).Return("/usr/local/bin/cursor", nil)
 				mockFS.EXPECT().ExecuteCommand(CursorCommand, "/path/to/repo").Return(nil)
-			case "IDE not installed":
+			case "IDE not installed - VS Code":
+				mockFS.EXPECT().Which(VSCodeCommand).Return("", errors.New("command not found"))
+			case "IDE not installed - Cursor":
 				mockFS.EXPECT().Which(CursorCommand).Return("", errors.New("command not found"))
-			case "IDE execution failed":
+			case "IDE execution failed - VS Code":
+				mockFS.EXPECT().Which(VSCodeCommand).Return("/usr/local/bin/code", nil)
+				mockFS.EXPECT().ExecuteCommand(VSCodeCommand, "/path/to/repo").Return(errors.New("execution failed"))
+			case "IDE execution failed - Cursor":
 				mockFS.EXPECT().Which(CursorCommand).Return("/usr/local/bin/cursor", nil)
 				mockFS.EXPECT().ExecuteCommand(CursorCommand, "/path/to/repo").Return(errors.New("execution failed"))
 			case "unsupported IDE":
@@ -210,6 +246,93 @@ func TestCursor_OpenRepository(t *testing.T) {
 
 			// Execute test
 			err := cursor.OpenRepository(tt.path)
+
+			// Assertions
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.ErrorIs(t, err, ErrIDEExecutionFailed)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestVSCode_IsInstalled(t *testing.T) {
+	tests := []struct {
+		name            string
+		whichReturn     string
+		whichError      error
+		expectInstalled bool
+	}{
+		{
+			name:            "vscode installed",
+			whichReturn:     "/usr/local/bin/code",
+			whichError:      nil,
+			expectInstalled: true,
+		},
+		{
+			name:            "vscode not installed",
+			whichReturn:     "",
+			whichError:      errors.New("command not found"),
+			expectInstalled: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFS := fs.NewMockFS(ctrl)
+			vscode := NewVSCode(mockFS)
+
+			// Setup mock expectations
+			mockFS.EXPECT().Which(VSCodeCommand).Return(tt.whichReturn, tt.whichError)
+
+			// Execute test
+			installed := vscode.IsInstalled()
+
+			// Assertions
+			assert.Equal(t, tt.expectInstalled, installed)
+		})
+	}
+}
+
+func TestVSCode_OpenRepository(t *testing.T) {
+	tests := []struct {
+		name        string
+		path        string
+		execError   error
+		expectError bool
+	}{
+		{
+			name:        "successful opening",
+			path:        "/path/to/repo",
+			execError:   nil,
+			expectError: false,
+		},
+		{
+			name:        "execution failed",
+			path:        "/path/to/repo",
+			execError:   errors.New("execution failed"),
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFS := fs.NewMockFS(ctrl)
+			vscode := NewVSCode(mockFS)
+
+			// Setup mock expectations
+			mockFS.EXPECT().ExecuteCommand(VSCodeCommand, tt.path).Return(tt.execError)
+
+			// Execute test
+			err := vscode.OpenRepository(tt.path)
 
 			// Assertions
 			if tt.expectError {

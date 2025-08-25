@@ -73,9 +73,9 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
 
 	// Mock IDE opening
-	mockIDE.EXPECT().OpenIDE("cursor", gomock.Any(), false).Return(nil)
+	mockIDE.EXPECT().OpenIDE("vscode", gomock.Any(), false).Return(nil)
 
-	err := cm.LoadWorktree("origin:feature-branch", LoadWorktreeOpts{IDEName: "cursor"})
+	err := cm.LoadWorktree("origin:feature-branch", LoadWorktreeOpts{IDEName: "vscode"})
 	assert.NoError(t, err)
 }
 
