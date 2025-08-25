@@ -1,334 +1,36 @@
-# Cursor Rules for CM Project
+# CM Project Rules
 
-## Testing Conventions
+## Testing
+- **Adapters** (`pkg/fs`): integration tests only, real file system
+- **Business Logic** (`pkg/cm`): unit tests only, mocked dependencies  
+- **E2E Tests** (`test/`): real CM struct + Git operations
+- **Build tags**: `//go:build unit|integration|e2e`
+- **File naming**: `*_test.go` (standard), `*_integration_test.go` (integration), `*_test.go` in `test/` (e2e)
+- **Mocking**: Uber gomock, `//go:generate go run go.uber.org/mock/mockgen@v0.5.2`, commit `*_gen.go`
+- **Assertions**: `testify/assert`, `assert.ErrorIs()` for specific errors (not `assert.Contains()`)
+- **System protection**: NEVER touch `~/.cm/` files, ALWAYS use `os.MkdirTemp()`, use `-c` flag for CLI testing
+- **Mocking strategy**: Mock immediate dependencies only, not transitive ones
 
-### Test Organization
-- **Adapters** (like `pkg/fs`) should have **integration tests only** using real file system operations
-- **Business Logic** (like `pkg/cm`) should have **unit tests only** using mocked dependencies
-- **End-to-End Tests** (in `test/` directory) should test the complete workflow using the CM struct directly with real Git operations
-- Use build tags to organize tests:
-  - `//go:build unit` for unit tests with mocked dependencies
-  - `//go:build integration` for integration tests with real file system
-  - `//go:build e2e` for end-to-end tests with real CM struct and Git operations
+## Function Design
+- **Option structs**: `XXXOpts` for optional params, variadic `...XXXOpts`, check `len(opts) > 0`
+- **Parameter structs**: `XXXParams` for >3 args (excl. context/opts), single struct param
+- **NO proxy functions**: Direct parameter struct acceptance, no wrapper functions
 
-### Test File Naming
-- Standard test files: `*_test.go` (for integration tests in adapters)
-- Unit test files: `*_test.go` with `//go:build unit` tag
-- Integration test files: `*_integration_test.go` with `//go:build integration` tag
-- End-to-end test files: `*_test.go` with `//go:build e2e` tag in `test/` directory
-
-### Mock Generation
-- Use Uber gomock for mocking: `go.uber.org/mock v0.5.2`
-- Generate mocks with: `//go:generate go run go.uber.org/mock/mockgen@v0.5.2`
-- Mock files should be committed to repository as `*_gen.go`
-- Keep mockgen parameters simple
-
-### Test Structure
-- Use `testify/assert` for assertions
-- Use `gomock.NewController(t)` for mock setup
-- Always clean up resources with `defer` statements
-- Test both positive and negative cases
-- Verify error messages and user output
-
-### System File Protection
-- **NEVER impact system status and config files** (`~/.cm/status.yaml`, `~/.cm/config.yaml`) during testing or manual testing
-- **ALWAYS create temporary directories** with all necessary files inside for testing
-- Use `os.MkdirTemp()` to create isolated test environments
-- Create temporary config files pointing to temporary directories
-- **End-to-end tests should use CM struct directly** with temporary config, not CLI commands
-- Never use environment variables that could affect system configuration
-- Always clean up temporary directories in test teardown
-- **For manual testing in Cursor shell**: Always use `-c` flag with CLI commands to specify temporary config files
-- Example pattern for end-to-end tests:
-  ```go
-  // ✅ GOOD: Create temporary test environment
-  tempDir, err := os.MkdirTemp("", "cm-test-*")
-  require.NoError(t, err)
-  defer os.RemoveAll(tempDir)
-  
-  // Create temporary config file
-  configPath := filepath.Join(tempDir, "config.yaml")
-  configData := fmt.Sprintf("base_path: %s\nstatus_file: %s\n", tempDir, filepath.Join(tempDir, "status.yaml"))
-  require.NoError(t, os.WriteFile(configPath, []byte(configData), 0644))
-  
-  // Use CM struct directly with temporary config
-  cmInstance := cm.NewCM(&config.Config{
-      BasePath:   tempDir,
-      StatusFile: filepath.Join(tempDir, "status.yaml"),
-  })
-  err = cmInstance.CreateWorkTree("test-branch", nil)
-  
-  // ❌ BAD: Don't use environment variables that affect system
-  os.Setenv("CM_BASE_PATH", "/some/path")
-  os.Setenv("CM_STATUS_FILE", "/some/path/status.yaml")
-  ```
-- Example pattern for manual testing in Cursor shell:
-  ```bash
-  # ✅ GOOD: Use temporary config for manual testing
-  tempDir=$(mktemp -d)
-  echo "base_path: $tempDir" > "$tempDir/config.yaml"
-  echo "status_file: $tempDir/status.yaml" >> "$tempDir/config.yaml"
-  
-  # Test with temporary config
-  ./cm -c "$tempDir/config.yaml" create test-branch
-  
-  # Clean up
-  rm -rf "$tempDir"
-  
-  # ❌ BAD: Don't test without config flag (affects system files)
-  ./cm create test-branch
-  ```
-
-### Error Testing Best Practices
-- **ALWAYS use `assert.ErrorIs()` for checking specific errors** instead of `assert.Contains(t, err.Error(), "error message")`
-- **NEVER use both `assert.Error(t, err)` and `assert.ErrorIs(t, err, specificError)`** - `assert.ErrorIs()` already checks that the error is not nil
-- Create specific error variables in `*_errors.go` files for each error type
-- Use `errors.New()` or `fmt.Errorf()` with `%w` to wrap errors with context
-- Example:
-  ```go
-  // ✅ GOOD: Use specific errors with assert.ErrorIs()
-  assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
-  
-  // ❌ BAD: Don't use string matching with assert.Contains()
-  assert.Contains(t, err.Error(), "not a valid Git repository: .git directory not found")
-  
-  // ❌ BAD: Don't use redundant error checking
-  assert.Error(t, err)
-  assert.ErrorIs(t, err, ErrGitRepositoryNotFound)
-  ```
-- Define errors in package-specific `errors.go` files:
-  ```go
-  // pkg/cm/errors.go
-  var ErrGitRepositoryNotFound = errors.New("not a valid Git repository: .git directory not found")
-  ```
-
-### What Constitutes an Adapter
-- **Adapters**: Interfaces that abstract external systems (file system, network, databases)
-- Examples: `pkg/fs` (file system operations), future network clients, database clients
-- **Business Logic**: Core application logic that uses adapters
-- Examples: `pkg/cm` (Git repository detection logic)
-
-### Running Tests
-- Unit tests: `go test -tags=unit ./...`
-- Integration tests: `go test -tags=integration ./...`
-- End-to-end tests: `go test -tags=e2e ./test/`
-- All tests: `go test ./...`
-
-### Code Quality
-- Follow Go best practices and conventions
-- Use meaningful variable and function names
-- Add comments for complex logic
-- Handle errors properly with wrapped errors using `fmt.Errorf` with `%w`
-
-### Function Parameter Design with Option Structs and Parameter Structs
-- **ALWAYS use option structs for functions with optional parameters** instead of multiple pointer parameters
-- **Option struct naming**: Use `XXXOpts` where `XXX` is the function name (e.g., `CreateWorkTreeOpts`, `LoadWorktreeOpts`)
-- **Option struct location**: Define option structs in the same file as the function, before the function definition
-- **Option struct fields**: Use non-pointer types for simple fields (string, int, bool) and pointer types for complex structs
-- **Function signature**: Always accept variadic `...XXXOpts` as the last parameter, allowing no arguments for no options
-- **Variadic handling**: Check `len(opts) > 0` before accessing `opts[0]` fields
-- **Default values**: Handle default values within the function when no options are provided or fields are empty
-- **CLI integration**: Create option structs in CLI code and pass them as values (not pointers) to CM methods
-- **Test updates**: Update all tests to use the new variadic option struct signatures
-
-### Function Parameter Design with Parameter Structs for Multiple Arguments
-- **ALWAYS use parameter structs for functions with more than 3 arguments** (excluding `context.Context` and `*Opts` structs)
-- **Parameter struct naming**: Use `XXXParams` where `XXX` is the function name (e.g., `BranchExistsOnRemoteParams`, `AddWorktreeParams`)
-- **Parameter struct location**: Define parameter structs in the same file as the function, before the function definition
-- **Parameter struct fields**: Use descriptive field names that clearly indicate their purpose
-- **Function signature**: Accept a single `XXXParams` struct as the parameter, keeping `context.Context` and `*Opts` as separate arguments
-- **Context and Options**: Keep `context.Context` and `*Opts` structs as separate arguments alongside the `XXXParams` struct
-- **Call site updates**: Update all call sites to use the new parameter struct pattern
-- **Interface updates**: Update interfaces to match the new function signatures
-- **Mock updates**: Regenerate mocks after interface changes
-- **Test updates**: Update all tests to use the new parameter struct signatures
-- **CRITICAL: NO PROXY FUNCTIONS**: NEVER create wrapper functions that just call parameter struct versions. The function should directly accept the parameter struct, not create a proxy that calls another function with the struct.
-
-**Example Pattern for Parameter Structs:**
-```go
-// Parameter struct definition
-type BranchExistsOnRemoteParams struct {
-    RepoPath   string
-    RemoteName string
-    Branch     string
-}
-
-// Function signature with parameter struct
-func (g *Git) BranchExistsOnRemote(params BranchExistsOnRemoteParams) (bool, error) {
-    // Use params.RepoPath, params.RemoteName, params.Branch
-    return nil
-}
-
-// Call site usage
-exists, err := git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
-    RepoPath:   ".",
-    RemoteName: "origin",
-    Branch:     "feature-branch",
-})
-
-// Test usage
-func TestBranchExistsOnRemote(t *testing.T) {
-    exists, err := git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
-        RepoPath:   ".",
-        RemoteName: "origin",
-        Branch:     "feature-branch",
-    })
-    assert.NoError(t, err)
-}
-
-// ❌ BAD: NEVER create proxy functions like this
-func (g *Git) BranchExistsOnRemote(repoPath, remoteName, branch string) (bool, error) {
-    params := BranchExistsOnRemoteParams{
-        RepoPath:   repoPath,
-        RemoteName: remoteName,
-        Branch:     branch,
-    }
-    return g.BranchExistsOnRemoteWithParams(params) // This is wrong!
-}
-
-func (g *Git) BranchExistsOnRemoteWithParams(params BranchExistsOnRemoteParams) (bool, error) {
-    // Implementation here
-}
-```
-
-**Benefits of Parameter Structs:**
-- **Clarity**: Clear parameter names and purpose
-- **Extensibility**: Easy to add new parameters without breaking existing code
-- **Type safety**: Compile-time checking of parameter usage
-- **Documentation**: Parameter structs serve as self-documenting parameter lists
-- **Consistency**: Uniform pattern across all functions with multiple parameters
-
-**Example Pattern:**
-```go
-// Option struct definition
-type CreateWorkTreeOpts struct {
-    IDEName string
-}
-
-// Function signature with variadic option struct
-func (c *CM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error {
-    // Variadic safety check
-    var ideName *string
-    if len(opts) > 0 && opts[0].IDEName != "" {
-        ideName = &opts[0].IDEName
-    }
-    
-    // Use ideName (can be nil)
-    if ideName != nil {
-        // Handle IDE opening
-    }
-    
-    return nil
-}
-
-// CLI usage
-func createCmd() *cobra.Command {
-    return &cobra.Command{
-        RunE: func(_ *cobra.Command, args []string) error {
-            if ideName != "" {
-                opts := cm.CreateWorkTreeOpts{
-                    IDEName: ideName,
-                }
-                return cmManager.CreateWorkTree(args[0], opts)
-            }
-            return cmManager.CreateWorkTree(args[0])
-        },
-    }
-}
-
-// Test usage
-func TestCreateWorkTree(t *testing.T) {
-    err := cm.CreateWorkTree("branch", CreateWorkTreeOpts{IDEName: ideName})
-    assert.NoError(t, err)
-}
-```
-
-**Benefits:**
-- **Extensibility**: Easy to add new optional parameters without breaking existing code
-- **Clarity**: Clear distinction between required and optional parameters
-- **Type safety**: Compile-time checking of option usage
-- **Documentation**: Option structs serve as self-documenting parameter lists
-- **Consistency**: Uniform pattern across all functions with optional parameters
-
-### CLI Architecture
-- **CLI (`cmd/cm/main.go`) should ONLY contain boilerplate code**:
-  - Command definitions and flag parsing
-  - Configuration loading
-  - Basic argument validation (existence, count)
-  - Calling CM methods with parsed arguments
-  - Displaying results
-- **NO business logic in CLI**: All parsing, validation, and processing should be in the CM package
-- **CM methods should be self-contained**: They should handle all internal parsing and validation
-- **CLI should be thin**: Just pass arguments to CM methods and display results
-- Example:
-  ```go
-  // ✅ GOOD: CLI only handles basic parsing and calls CM
-  func createLoadCmd() *cobra.Command {
-      return &cobra.Command{
-          RunE: func(_ *cobra.Command, args []string) error {
-                    cfg := loadConfig()
-      cmManager := cm.NewCM(cfg)
-      return cmManager.LoadWorktree(args[0], ideName) // CM handles all parsing
-          },
-      }
-  }
-  
-  // ❌ BAD: CLI contains business logic
-  func createLoadCmd() *cobra.Command {
-      return &cobra.Command{
-          RunE: func(_ *cobra.Command, args []string) error {
-              // Business logic here - should be in CM
-              parts := strings.SplitN(args[0], ":", 2)
-              // ... more parsing logic
-          },
-      }
-  }
-  ```
+## CLI Architecture  
+- **CLI**: boilerplate only (flags, config, basic validation, CM calls, display)
+- **NO business logic in CLI**: All parsing/validation in CM package
+- **Thin CLI**: Pass args to CM methods, display results
 
 ## Shipping Process
+**ONLY when user says "ship"**: 
+1. `go generate ./...`
+2. `dagger call lint --source-dir=.` (fix errors)
+3. `dagger call unit-tests --source-dir .` (fix errors, STOP if fail)
+4. `dagger call integration-tests --source-dir .` (fix errors, STOP if fail)  
+5. `dagger call end-to-end-tests --source-dir .` (fix errors, STOP if fail)
+6. Create branch (if on main): `feat/description` or `fix/description` format.
+   If not on main, read the actual branch name to determine the prefix (feat, fix, ci, chore, etc).
+7. Commit: conventional format title + full chat summary
+8. Push branch
 
-**CRITICAL**: The shipping process should ONLY be executed when the user explicitly asks to "ship" the code or mentions shipping. Do NOT automatically execute the shipping process after implementing features.
-
-**MANDATORY REQUIREMENT**: ALL tests MUST pass before shipping. If ANY test fails, you MUST fix the failing tests before proceeding with the shipping process. Shipping with failing tests is NOT allowed under any circumstances.
-
-When explicitly asked to "ship" the code or when shipping is mentioned, systematically execute these commands in order:
-
-1. **Generate Code**: Execute `go generate ./...` to ensure all generated files are up to date
-2. **Lint and Fix**: Execute `dagger call lint --source-dir=.` and automatically fix any linting errors that are found
-3. **Unit tests**: Execute `dagger call unit-tests --source-dir .` and automatically fix any errors that are found
-   - **STOP HERE** if unit tests fail - do not proceed until all unit tests pass
-4. **Integration tests**: Execute `dagger call integration-tests --source-dir .` and automatically fix any errors that are found
-   - **STOP HERE** if integration tests fail - do not proceed until all integration tests pass
-5. **End-to-end tests**: Execute `dagger call end-to-end-tests --source-dir .` and automatically fix any errors that are found
-   - **STOP HERE** if end-to-end tests fail - do not proceed until all end-to-end tests pass
-6. **Create Branch**: Create a new branch with a descriptive name based on the first request of the chat. ONLY if you're on main branch so check before hand.
-7. **Commit Changes**: Commit all changes with a descriptive commit message where:
-   - **Title**: Use the first request of the chat as the commit title following conventional commit format
-   - **Description**: Use the complete summary of everything done in the chat as the commit description
-8. **Push Branch**: Push the new branch to the remote repository
-
-**FAILURE HANDLING**: If any step fails and cannot be fixed within a reasonable number of attempts (3 attempts), you MUST inform the user that shipping cannot proceed due to failing tests and ask for guidance on how to proceed.
-
-### Branch Naming Convention
-- Use descriptive names like: `feat/add-new-feature`, `fix/resolve-linting-issues`, `docs/update-readme`
-- Use kebab-case for branch names
-- Include the type of change (feat, fix, docs, refactor, etc.)
-- Base the branch name on the first request of the chat
-
-### Commit Message Format
-- **Title**: Use conventional commit format: `type(scope): description` based on the first request
-- **Description**: Include the complete summary of all changes made throughout the chat
-- Examples:
-  ```
-  feat(cm): implement load command for remote branches
-  
-  - Created feature file for cm load [remote-source:branch-name] command
-  - Implemented LoadWorktree method in CM package with remote parsing
-  - Added remote management functionality (add/fetch/validate)
-  - Refactored CLI to be boilerplate-only, moved business logic to CM
-  - Added comprehensive unit tests for all new functionality
-  - Fixed SSH URL construction for remote addition
-  - Updated list command to display remote names in brackets
-  - Added proper error handling and validation
-  - Updated .cursorrules to enforce CLI architecture patterns
-  ```
+**ALL tests MUST pass before shipping**

@@ -102,6 +102,20 @@ func (mr *MockGitMockRecorder) BranchExistsOnRemote(params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BranchExistsOnRemote", reflect.TypeOf((*MockGit)(nil).BranchExistsOnRemote), params)
 }
 
+// CheckReferenceConflict mocks base method.
+func (m *MockGit) CheckReferenceConflict(repoPath, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckReferenceConflict", repoPath, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckReferenceConflict indicates an expected call of CheckReferenceConflict.
+func (mr *MockGitMockRecorder) CheckReferenceConflict(repoPath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckReferenceConflict", reflect.TypeOf((*MockGit)(nil).CheckReferenceConflict), repoPath, branch)
+}
+
 // Clone mocks base method.
 func (m *MockGit) Clone(params CloneParams) error {
 	m.ctrl.T.Helper()

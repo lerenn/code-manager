@@ -41,6 +41,9 @@ type Git interface {
 	// CreateBranchFrom creates a new branch from a specific branch.
 	CreateBranchFrom(params CreateBranchFromParams) error
 
+	// CheckReferenceConflict checks if creating a branch would conflict with existing references.
+	CheckReferenceConflict(repoPath, branch string) error
+
 	// WorktreeExists checks if a worktree exists for the specified branch.
 	WorktreeExists(repoPath, branch string) (bool, error)
 
@@ -278,6 +281,32 @@ func (g *realGit) CreateBranchFrom(params CreateBranchFromParams) error {
 			err, params.NewBranch, params.FromBranch, string(output))
 	}
 
+	return nil
+}
+
+// CheckReferenceConflict checks if creating a branch would conflict with existing references.
+func (g *realGit) CheckReferenceConflict(repoPath, branch string) error {
+	// Check if any parent reference exists that would conflict
+	parts := strings.Split(branch, "/")
+	for i := 1; i < len(parts); i++ {
+		parentRef := strings.Join(parts[:i], "/")
+
+		// Check if parent reference exists as a branch
+		cmd := exec.Command("git", "show-ref", "--verify", "--quiet", "refs/heads/"+parentRef)
+		cmd.Dir = repoPath
+		if err := cmd.Run(); err == nil {
+			return fmt.Errorf("%w: cannot create branch '%s': reference 'refs/heads/%s' already exists",
+				ErrReferenceConflict, branch, parentRef)
+		}
+
+		// Also check tags
+		cmd = exec.Command("git", "show-ref", "--verify", "--quiet", "refs/tags/"+parentRef)
+		cmd.Dir = repoPath
+		if err := cmd.Run(); err == nil {
+			return fmt.Errorf("%w: cannot create branch '%s': tag 'refs/tags/%s' already exists",
+				ErrReferenceConflict, branch, parentRef)
+		}
+	}
 	return nil
 }
 
@@ -537,6 +566,8 @@ func (g *realGit) Clone(params CloneParams) error {
 	args = append(args, params.RepoURL, params.TargetPath)
 
 	cmd := exec.Command("git", args...)
+	// Set working directory to /tmp to avoid working directory issues
+	cmd.Dir = "/tmp"
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("git clone failed: %w (command: git %s, output: %s)",

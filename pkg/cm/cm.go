@@ -37,6 +37,9 @@ type CM interface {
 	// Clone clones a repository and initializes it in CM.
 	Clone(repoURL string, opts ...CloneOpts) error
 
+	// ListRepositories lists all repositories from the status file with base path validation.
+	ListRepositories() ([]RepositoryInfo, error)
+
 	// SetVerbose enables or disables verbose mode.
 	SetVerbose(verbose bool)
 }

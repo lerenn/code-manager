@@ -51,7 +51,13 @@ func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 
 	c.VerbosePrint("Target path: %s", targetPath)
 
-	// 5. Clone repository
+	// 5. Create parent directories for the target path
+	parentDir := filepath.Dir(targetPath)
+	if err := c.FS.MkdirAll(parentDir, 0755); err != nil {
+		return fmt.Errorf("failed to create parent directories: %w", err)
+	}
+
+	// 6. Clone repository
 	if err := c.Git.Clone(git.CloneParams{
 		RepoURL:    repoURL,
 		TargetPath: targetPath,
@@ -60,7 +66,7 @@ func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 		return fmt.Errorf("failed to clone repository: %w", err)
 	}
 
-	// 6. Initialize repository in CM
+	// 7. Initialize repository in CM
 	if err := c.initializeRepositoryInCM(normalizedURL, targetPath, defaultBranch); err != nil {
 		return fmt.Errorf("failed to initialize repository in CM: %w", err)
 	}

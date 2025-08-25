@@ -17,4 +17,5 @@ var (
 	ErrRemoteAddFailed        = errors.New("failed to add remote")
 	ErrFetchFailed            = errors.New("failed to fetch from remote")
 	ErrBranchNotFoundOnRemote = errors.New("branch not found on remote")
+	ErrReferenceConflict      = errors.New("reference conflict: cannot create branch due to existing reference")
 )

@@ -98,6 +98,7 @@ func TestWorktree_Create_Success(t *testing.T) {
 	mockFS.EXPECT().Exists(params.WorktreePath).Return(false, nil)
 	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(nil, errors.New("not found"))
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockGit.EXPECT().CheckReferenceConflict(params.RepoPath, params.Branch).Return(nil)
 	mockGit.EXPECT().BranchExists(params.RepoPath, params.Branch).Return(true, nil)
 	mockFS.EXPECT().MkdirAll(params.WorktreePath, gomock.Any()).Return(nil)
 	mockGit.EXPECT().CreateWorktree(params.RepoPath, params.WorktreePath, params.Branch).Return(nil)
@@ -220,10 +221,12 @@ func TestWorktree_Create_BranchDoesNotExist(t *testing.T) {
 	mockFS.EXPECT().Exists(params.WorktreePath).Return(false, nil)
 	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(nil, errors.New("not found"))
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockGit.EXPECT().CheckReferenceConflict(params.RepoPath, params.Branch).Return(nil)
 	mockGit.EXPECT().BranchExists(params.RepoPath, params.Branch).Return(false, nil)
 	mockGit.EXPECT().GetRemoteURL(params.RepoPath, "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 	mockGit.EXPECT().GetDefaultBranch("https://github.com/octocat/Hello-World.git").Return("main", nil)
 	mockGit.EXPECT().FetchRemote(params.RepoPath, "origin").Return(nil)
+	mockGit.EXPECT().BranchExists(params.RepoPath, "main").Return(true, nil)
 	mockGit.EXPECT().CreateBranchFrom(git.CreateBranchFromParams{
 		RepoPath:   params.RepoPath,
 		NewBranch:  params.Branch,
@@ -496,6 +499,7 @@ func TestWorktree_EnsureBranchExists_BranchExists(t *testing.T) {
 	branch := "feature-branch"
 
 	// Mock expectations
+	mockGit.EXPECT().CheckReferenceConflict(repoPath, branch).Return(nil)
 	mockGit.EXPECT().BranchExists(repoPath, branch).Return(true, nil)
 
 	err := worktree.EnsureBranchExists(repoPath, branch)
@@ -526,10 +530,12 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist(t *testing.T) {
 	branch := "feature-branch"
 
 	// Mock expectations
+	mockGit.EXPECT().CheckReferenceConflict(repoPath, branch).Return(nil)
 	mockGit.EXPECT().BranchExists(repoPath, branch).Return(false, nil)
 	mockGit.EXPECT().GetRemoteURL(repoPath, "origin").Return("https://github.com/octocat/Hello-World.git", nil)
 	mockGit.EXPECT().GetDefaultBranch("https://github.com/octocat/Hello-World.git").Return("main", nil)
 	mockGit.EXPECT().FetchRemote(repoPath, "origin").Return(nil)
+	mockGit.EXPECT().BranchExists(repoPath, "main").Return(true, nil)
 	mockGit.EXPECT().CreateBranchFrom(git.CreateBranchFromParams{
 		RepoPath:   repoPath,
 		NewBranch:  branch,

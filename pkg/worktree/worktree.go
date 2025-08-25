@@ -249,43 +249,122 @@ func (w *realWorktree) ValidateDeletion(params ValidateDeletionParams) error {
 
 // EnsureBranchExists ensures the specified branch exists, creating it if necessary.
 func (w *realWorktree) EnsureBranchExists(repoPath, branch string) error {
+	// First check for reference conflicts
+	if err := w.git.CheckReferenceConflict(repoPath, branch); err != nil {
+		return err
+	}
+
 	branchExists, err := w.git.BranchExists(repoPath, branch)
 	if err != nil {
 		return fmt.Errorf("failed to check if branch exists: %w", err)
 	}
 
-	if !branchExists {
-		w.verboseLogf("Branch %s does not exist, creating from upstream default branch", branch)
+	if branchExists {
+		return nil
+	}
 
-		// Get the remote URL to determine the default branch
-		remoteURL, err := w.git.GetRemoteURL(repoPath, "origin")
-		if err != nil {
-			return fmt.Errorf("failed to get remote URL: %w", err)
-		}
+	return w.createBranchFromDefault(repoPath, branch)
+}
 
-		// Get the default branch from the remote
-		defaultBranch, err := w.git.GetDefaultBranch(remoteURL)
-		if err != nil {
-			return fmt.Errorf("failed to get default branch: %w", err)
-		}
+// createBranchFromDefault creates a new branch from the default branch.
+func (w *realWorktree) createBranchFromDefault(repoPath, branch string) error {
+	w.verboseLogf("Branch %s does not exist, creating from upstream default branch", branch)
 
-		// Fetch from remote to ensure we have the latest changes
-		w.verboseLogf("Fetching from origin to ensure repository is up to date")
-		if err := w.git.FetchRemote(repoPath, "origin"); err != nil {
-			return fmt.Errorf("failed to fetch from origin: %w", err)
-		}
+	// Fetch from remote to ensure we have the latest changes
+	if err := w.fetchFromOrigin(repoPath); err != nil {
+		return err
+	}
 
-		// Create the new branch from the default branch
-		if err := w.git.CreateBranchFrom(git.CreateBranchFromParams{
-			RepoPath:   repoPath,
-			NewBranch:  branch,
-			FromBranch: defaultBranch,
-		}); err != nil {
-			return fmt.Errorf("failed to create branch %s from %s: %w", branch, defaultBranch, err)
-		}
+	// Get remote URL and default branch
+	remoteURL, err := w.git.GetRemoteURL(repoPath, "origin")
+	if err != nil {
+		return fmt.Errorf("failed to get remote URL: %w", err)
+	}
+
+	remoteDefaultBranch, err := w.git.GetDefaultBranch(remoteURL)
+	if err != nil {
+		return fmt.Errorf("failed to get default branch: %w", err)
+	}
+
+	// Try to create from local branches first
+	if err := w.createBranchFromLocal(repoPath, branch, remoteDefaultBranch); err == nil {
+		return nil
+	}
+
+	// Fall back to remote default branch
+	return w.createBranchFromRemote(repoPath, branch, remoteDefaultBranch)
+}
+
+// fetchFromOrigin fetches from the origin remote.
+func (w *realWorktree) fetchFromOrigin(repoPath string) error {
+	w.verboseLogf("Fetching from origin to ensure repository is up to date")
+	if err := w.git.FetchRemote(repoPath, "origin"); err != nil {
+		return fmt.Errorf("failed to fetch from origin: %w", err)
+	}
+	return nil
+}
+
+// createBranchFromRemote attempts to create a branch from the remote default branch.
+func (w *realWorktree) createBranchFromRemote(repoPath, branch, remoteDefaultBranch string) error {
+	w.verboseLogf("Attempting to create branch %s from remote default branch %s", branch, remoteDefaultBranch)
+
+	err := w.git.CreateBranchFrom(git.CreateBranchFromParams{
+		RepoPath:   repoPath,
+		NewBranch:  branch,
+		FromBranch: "origin/" + remoteDefaultBranch,
+	})
+
+	if err == nil {
+		w.verboseLogf("Successfully created branch %s from remote default branch %s", branch, remoteDefaultBranch)
+		return nil
+	}
+
+	w.verboseLogf("Failed to create from remote default branch, falling back to local branches: %v", err)
+	return err
+}
+
+// createBranchFromLocal creates a branch from a local branch.
+func (w *realWorktree) createBranchFromLocal(repoPath, branch, remoteDefaultBranch string) error {
+	fromBranch, err := w.findLocalDefaultBranch(repoPath, remoteDefaultBranch)
+	if err != nil {
+		return err
+	}
+
+	// Create the new branch from the determined branch
+	if err := w.git.CreateBranchFrom(git.CreateBranchFromParams{
+		RepoPath:   repoPath,
+		NewBranch:  branch,
+		FromBranch: fromBranch,
+	}); err != nil {
+		return fmt.Errorf("failed to create branch %s from %s: %w", branch, fromBranch, err)
 	}
 
 	return nil
+}
+
+// findLocalDefaultBranch finds a suitable local branch to create from.
+func (w *realWorktree) findLocalDefaultBranch(repoPath, remoteDefaultBranch string) (string, error) {
+	// First, try to find a local branch with the same name as the remote's default branch
+	exists, err := w.git.BranchExists(repoPath, remoteDefaultBranch)
+	if err == nil && exists {
+		return remoteDefaultBranch, nil
+	}
+
+	// If no local branch with the same name, try common default branch names
+	possibleDefaultBranches := []string{"main", "master"}
+	for _, possibleBranch := range possibleDefaultBranches {
+		exists, err := w.git.BranchExists(repoPath, possibleBranch)
+		if err != nil {
+			w.verboseLogf("Warning: failed to check if branch %s exists: %v", possibleBranch, err)
+			continue
+		}
+		if exists {
+			return possibleBranch, nil
+		}
+	}
+
+	// If no local branch found, return an error to trigger fallback to remote
+	return "", fmt.Errorf("no suitable local branch found")
 }
 
 // AddToStatus adds the worktree to the status file.
