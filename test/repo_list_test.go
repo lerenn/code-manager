@@ -380,3 +380,93 @@ func TestListWorktreesNoRemoteOrigin(t *testing.T) {
 	// The remote should be the default remote (origin)
 	assert.Equal(t, "origin", worktree.Remote, "Should have origin remote")
 }
+
+// TestRepositoryListCommand tests the repository list command
+func TestRepositoryListCommand(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test repository
+	repoURL := "github.com/lerenn/test-repo"
+	repoPath := filepath.Join(setup.CmPath, repoURL)
+	err := os.MkdirAll(repoPath, 0755)
+	require.NoError(t, err)
+
+	// Initialize git repository
+	cmd := exec.Command("git", "init")
+	cmd.Dir = repoPath
+	err = cmd.Run()
+	require.NoError(t, err)
+
+	// Add repository to status file
+	statusData := &status.Status{
+		Repositories: map[string]status.Repository{
+			repoURL: {
+				Path: repoPath,
+			},
+		},
+	}
+
+	statusBytes, err := yaml.Marshal(statusData)
+	require.NoError(t, err)
+	err = os.WriteFile(setup.StatusPath, statusBytes, 0644)
+	require.NoError(t, err)
+
+	// Test listing repositories
+	repositories, err := listRepositories(t, setup)
+	require.NoError(t, err)
+	assert.Len(t, repositories, 1)
+	assert.Equal(t, repoURL, repositories[0].Name)
+	assert.Equal(t, repoPath, repositories[0].Path)
+	assert.True(t, repositories[0].InBasePath)
+
+	// Test with repository outside base path
+	outsideRepoURL := "github.com/lerenn/outside-repo"
+	outsideRepoPath := filepath.Join(setup.TempDir, "outside", outsideRepoURL)
+	err = os.MkdirAll(outsideRepoPath, 0755)
+	require.NoError(t, err)
+
+	// Initialize git repository
+	cmd = exec.Command("git", "init")
+	cmd.Dir = outsideRepoPath
+	err = cmd.Run()
+	require.NoError(t, err)
+
+	// Update status file to include outside repository
+	statusData.Repositories[outsideRepoURL] = status.Repository{
+		Path: outsideRepoPath,
+	}
+
+	statusBytes, err = yaml.Marshal(statusData)
+	require.NoError(t, err)
+	err = os.WriteFile(setup.StatusPath, statusBytes, 0644)
+	require.NoError(t, err)
+
+	// Test listing repositories with outside repository
+	repositories, err = listRepositories(t, setup)
+	require.NoError(t, err)
+	assert.Len(t, repositories, 2)
+
+	// Find the outside repository
+	var outsideRepo *cm.RepositoryInfo
+	for _, repo := range repositories {
+		if repo.Name == outsideRepoURL {
+			outsideRepo = &repo
+			break
+		}
+	}
+	require.NotNil(t, outsideRepo)
+	assert.False(t, outsideRepo.InBasePath)
+}
+
+// listRepositories lists repositories using the CM instance
+func listRepositories(t *testing.T, setup *TestSetup) ([]cm.RepositoryInfo, error) {
+	t.Helper()
+
+	cmInstance := cm.NewCM(&config.Config{
+		BasePath:   setup.CmPath,
+		StatusFile: setup.StatusPath,
+	})
+
+	return cmInstance.ListRepositories()
+}

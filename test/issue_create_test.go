@@ -416,7 +416,7 @@ func TestCreateFromIssue_WithIDE(t *testing.T) {
 	// but it should parse the issue reference correctly
 	err := createWorktreeFromIssueWithIDE(t, createWorktreeFromIssueWithIDEParams{
 		Setup:    setup,
-		IDEName:  "cursor",
+		IDEName:  "vscode",
 		IssueRef: "https://github.com/octocat/Hello-World/issues/26",
 	})
 	if err != nil {

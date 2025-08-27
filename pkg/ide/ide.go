@@ -7,6 +7,9 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 )
 
+// DefaultIDE is the default IDE name used when no IDE is specified.
+const DefaultIDE = VSCodeName
+
 //go:generate mockgen -source=ide.go -destination=mockide.gen.go -package=ide
 
 // IDE interface defines the methods that all IDE implementations must provide.
@@ -50,6 +53,10 @@ func NewManager(fs fs.FS, logger logger.Logger) *Manager {
 
 // registerIDEs registers all available IDE implementations.
 func (m *Manager) registerIDEs(fs fs.FS) {
+	// Register VS Code IDE (default)
+	vscode := NewVSCode(fs)
+	m.ides[vscode.Name()] = vscode
+
 	// Register Cursor IDE
 	cursor := NewCursor(fs)
 	m.ides[cursor.Name()] = cursor

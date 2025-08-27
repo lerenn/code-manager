@@ -50,6 +50,9 @@ func TestRealCM_Clone_Success(t *testing.T) {
 	// Mock default branch detection
 	mockGit.EXPECT().GetDefaultBranch(repoURL).Return(defaultBranch, nil)
 
+	// Mock directory creation
+	mockFS.EXPECT().MkdirAll("/test/base/path/github.com/octocat/Hello-World/origin", gomock.Any()).Return(nil)
+
 	// Mock clone operation
 	mockGit.EXPECT().Clone(git.CloneParams{
 		RepoURL:    repoURL,
@@ -104,6 +107,9 @@ func TestRealCM_Clone_ShallowSuccess(t *testing.T) {
 
 	// Mock default branch detection
 	mockGit.EXPECT().GetDefaultBranch(repoURL).Return(defaultBranch, nil)
+
+	// Mock directory creation
+	mockFS.EXPECT().MkdirAll("/test/base/path/github.com/octocat/Hello-World/origin", gomock.Any()).Return(nil)
 
 	// Mock clone operation (shallow)
 	mockGit.EXPECT().Clone(git.CloneParams{
@@ -262,6 +268,9 @@ func TestRealCM_Clone_CloneFailure(t *testing.T) {
 	// Mock default branch detection
 	mockGit.EXPECT().GetDefaultBranch(repoURL).Return(defaultBranch, nil)
 
+	// Mock directory creation
+	mockFS.EXPECT().MkdirAll("/test/base/path/github.com/octocat/Hello-World/origin", gomock.Any()).Return(nil)
+
 	// Mock clone operation failure
 	mockGit.EXPECT().Clone(gomock.Any()).Return(assert.AnError)
 
@@ -301,6 +310,9 @@ func TestRealCM_Clone_InitializationFailure(t *testing.T) {
 
 	// Mock default branch detection
 	mockGit.EXPECT().GetDefaultBranch(repoURL).Return(defaultBranch, nil)
+
+	// Mock directory creation
+	mockFS.EXPECT().MkdirAll("/test/base/path/github.com/octocat/Hello-World/origin", gomock.Any()).Return(nil)
 
 	// Mock clone operation success
 	mockGit.EXPECT().Clone(gomock.Any()).Return(nil)
