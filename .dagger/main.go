@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 
 	"code-manager/dagger/internal/dagger"
@@ -106,6 +107,145 @@ func (ci *CodeManager) EndToEndTests(sourceDir *dagger.Directory) *dagger.Contai
 		WithExec([]string{"sh", "-c",
 			"go test -tags=e2e ./test/ -v",
 		})
+}
+
+// BuildAndPushDockerImages builds and pushes Docker images for all supported platforms to GitHub Packages.
+func (ci *CodeManager) BuildAndPushDockerImages(
+	ctx context.Context,
+	sourceDir *dagger.Directory,
+	user *string,
+	token *dagger.Secret,
+) error {
+	// Get the latest tag
+	repo, err := NewGit(ctx, NewGitOptions{
+		SrcDir: sourceDir,
+		User:   user,
+		Token:  token,
+	})
+	if err != nil {
+		return err
+	}
+
+	latestTag, err := repo.GetLastTag(ctx)
+	if err != nil {
+		return err
+	}
+
+	// GitHub Packages registry URL
+	registry := "ghcr.io"
+	imageName := fmt.Sprintf("%s/code-manager", *user)
+	fullImageName := fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
+
+	// Get all platforms
+	platforms := AvailablePlatforms()
+
+	// Build and push for each platform
+	for _, platform := range platforms {
+		runnerInfo := GoRunnersInfo[platform]
+
+		// Build the image for this platform using the existing Runner function
+		image := Runner(sourceDir, runnerInfo)
+
+		// Push the image to GitHub Packages using Dagger's registry operations
+		_, err = image.
+			WithRegistryAuth(registry, *user, token).
+			Publish(ctx, fullImageName)
+
+		if err != nil {
+			return fmt.Errorf("failed to push image for %s: %w", platform, err)
+		}
+	}
+
+	return nil
+}
+
+// CreateGitHubRelease creates a GitHub release with binaries for all supported platforms.
+func (ci *CodeManager) CreateGitHubRelease(
+	ctx context.Context,
+	sourceDir *dagger.Directory,
+	user *string,
+	token *dagger.Secret,
+) error {
+	// Get the latest tag
+	repo, err := NewGit(ctx, NewGitOptions{
+		SrcDir: sourceDir,
+		User:   user,
+		Token:  token,
+	})
+	if err != nil {
+		return err
+	}
+
+	latestTag, err := repo.GetLastTag(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Get release notes from the last commit
+	releaseNotes, err := repo.GetLastCommitTitle(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Create the release first
+	_, err = dag.Container().
+		From("alpine/curl").
+		WithSecretVariable("GITHUB_TOKEN", token).
+		WithExec([]string{"sh", "-c", fmt.Sprintf(
+			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
+				"-H \"Accept: application/vnd.github.v3+json\" "+
+				"https://api.github.com/repos/%s/code-manager/releases "+
+				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
+			*user, latestTag, latestTag, releaseNotes,
+		)}).
+		Sync(ctx)
+
+	if err != nil {
+		return fmt.Errorf("failed to create GitHub release: %w", err)
+	}
+
+	// Build binaries for each platform
+	platforms := AvailablePlatforms()
+
+	for _, platform := range platforms {
+		runnerInfo := GoRunnersInfo[platform]
+
+		// Build binary for this platform
+		binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
+		if runnerInfo.OS == "windows" {
+			binaryName += ".exe"
+		}
+
+		// Build the binary
+		container := dag.Container().
+			From(runnerInfo.BuildBaseImage).
+			WithMountedDirectory("/src", sourceDir).
+			WithWorkdir("/src").
+			WithMountedCache("/root/.cache/go-build", dag.CacheVolume("gobuild")).
+			WithMountedCache("/go/pkg/mod", dag.CacheVolume("gocache")).
+			WithExec([]string{"sh", "-c", fmt.Sprintf(
+				"CGO_ENABLED=0 GOOS=%s GOARCH=%s go build -o %s ./cmd/cm",
+				runnerInfo.OS, runnerInfo.Arch, binaryName,
+			)})
+
+		// Upload the binary asset to the release
+		_, err = container.
+			WithSecretVariable("GITHUB_TOKEN", token).
+			WithExec([]string{"sh", "-c", fmt.Sprintf(
+				"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
+					"-H \"Content-Type: application/octet-stream\" "+
+					"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
+					"--data-binary @%s",
+				*user, binaryName, binaryName,
+			)}).
+			Sync(ctx)
+
+		if err != nil {
+			return fmt.Errorf("failed to upload binary for %s: %w", platform, err)
+		}
+	}
+
+	return nil
 }
 
 func (ci *CodeManager) withGoCodeAndCacheAsWorkDirectory(
