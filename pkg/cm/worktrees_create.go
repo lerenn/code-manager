@@ -169,25 +169,26 @@ func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string, ideName
 
 	// 2. Handle based on project type
 	var createErr error
-	var branchName *string
-	if branch != "" {
-		branchName = &branch
-	}
 
 	switch projectType {
 	case ProjectTypeSingleRepo:
-		createErr = c.createWorkTreeFromIssueForSingleRepo(branchName, issueRef)
+		createErr = c.createWorkTreeFromIssueForSingleRepo(&branch, issueRef)
 	case ProjectTypeWorkspace:
-		createErr = c.createWorkTreeFromIssueForWorkspace(branchName, issueRef)
+		createErr = c.createWorkTreeFromIssueForWorkspace(&branch, issueRef)
 	case ProjectTypeNone:
 		return ErrNoGitRepositoryOrWorkspaceFound
 	default:
 		return fmt.Errorf("unknown project type")
 	}
 
-	// 3. Open IDE if specified and worktree creation was successful
-	if branchName != nil {
-		if err := c.handleIDEOpening(createErr, *branchName, ideName); err != nil {
+	// 3. Check for worktree creation errors first
+	if createErr != nil {
+		return createErr
+	}
+
+	// 4. Open IDE if specified
+	if ideName != nil && *ideName != "" {
+		if err := c.handleIDEOpening(createErr, branch, ideName); err != nil {
 			return err
 		}
 	}

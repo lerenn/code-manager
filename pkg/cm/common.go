@@ -37,6 +37,9 @@ func (c *realCM) detectProjectMode() (ProjectType, error) {
 // handleIDEOpening handles IDE opening if specified and worktree creation was successful.
 func (c *realCM) handleIDEOpening(worktreeErr error, branch string, ideName *string) error {
 	if worktreeErr == nil && ideName != nil && *ideName != "" {
+		if branch == "" {
+			return fmt.Errorf("cannot open IDE: branch name is empty")
+		}
 		if err := c.OpenWorktree(branch, *ideName); err != nil {
 			return err
 		}
