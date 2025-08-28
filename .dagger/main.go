@@ -141,10 +141,10 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 	// Build and push for each platform
 	for _, platform := range platforms {
-		runnerInfo := GoRunnersInfo[platform]
+		runnerInfo := GoImageInfo[platform]
 
 		// Build the image for this platform using the existing Runner function
-		image := Runner(sourceDir, runnerInfo)
+		image := Image(sourceDir, runnerInfo)
 
 		// Push the image to GitHub Packages using Dagger's registry operations
 		_, err = image.
@@ -208,7 +208,7 @@ func (ci *CodeManager) CreateGitHubRelease(
 	platforms := AvailablePlatforms()
 
 	for _, platform := range platforms {
-		runnerInfo := GoRunnersInfo[platform]
+		runnerInfo := GoImageInfo[platform]
 
 		// Build binary for this platform
 		binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
@@ -216,17 +216,8 @@ func (ci *CodeManager) CreateGitHubRelease(
 			binaryName += ".exe"
 		}
 
-		// Build the binary
-		container := dag.Container().
-			From(runnerInfo.BuildBaseImage).
-			WithMountedDirectory("/src", sourceDir).
-			WithWorkdir("/src").
-			WithMountedCache("/root/.cache/go-build", dag.CacheVolume("gobuild")).
-			WithMountedCache("/go/pkg/mod", dag.CacheVolume("gocache")).
-			WithExec([]string{"sh", "-c", fmt.Sprintf(
-				"CGO_ENABLED=0 GOOS=%s GOARCH=%s go build -o %s ./cmd/cm",
-				runnerInfo.OS, runnerInfo.Arch, binaryName,
-			)})
+		// Build the binary using the Runner function
+		container := Image(sourceDir, runnerInfo)
 
 		// Upload the binary asset to the release
 		_, err = container.

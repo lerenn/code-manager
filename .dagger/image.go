@@ -6,8 +6,8 @@ import (
 	"slices"
 )
 
-// RunnerInfo represents a Docker runner.
-type RunnerInfo struct {
+// ImageInfo represents a Docker image.
+type ImageInfo struct {
 	OS              string
 	Arch            string
 	BuildBaseImage  string
@@ -15,8 +15,8 @@ type RunnerInfo struct {
 }
 
 var (
-	// GoRunnersInfo represents the different OS/Arch platform wanted for docker hub in Go service.
-	GoRunnersInfo = map[string]RunnerInfo{
+	// GoImageInfo represents the different OS/Arch platform wanted for binaries.
+	GoImageInfo = map[string]ImageInfo{
 		"linux/386":      {OS: "linux", Arch: "386", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
 		"linux/amd64":    {OS: "linux", Arch: "amd64", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
 		"linux/arm/v6":   {OS: "linux", Arch: "arm/v6", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
@@ -29,13 +29,13 @@ var (
 )
 
 func AvailablePlatforms() []string {
-	return slices.Collect(maps.Keys(GoRunnersInfo))
+	return slices.Collect(maps.Keys(GoImageInfo))
 }
 
-// Runner returns a container running the code-manager
-func Runner(
+// Image returns a container running the code-manager
+func Image(
 	sourceDir *dagger.Directory,
-	runnerInfo RunnerInfo,
+	runnerInfo ImageInfo,
 ) *dagger.Container {
 	return sourceDir.DockerBuild(dagger.DirectoryDockerBuildOpts{
 		BuildArgs: []dagger.BuildArg{
