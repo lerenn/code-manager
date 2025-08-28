@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 
 	"code-manager/dagger/internal/dagger"
 )
@@ -133,7 +134,23 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 	// GitHub Packages registry URL
 	registry := "ghcr.io"
-	imageName := fmt.Sprintf("%s/code-manager", *user)
+	
+	// Handle environment variable resolution
+	actualUser := *user
+	if actualUser == "env:GITHUB_ACTOR" {
+		// Try to get the environment variable directly
+		envContainer := dag.Container().From("alpine").WithExec([]string{"sh", "-c", "echo $GITHUB_ACTOR"})
+		envOutput, err := envContainer.Stdout(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get GITHUB_ACTOR environment variable: %w", err)
+		}
+		actualUser = strings.TrimSpace(envOutput)
+		if actualUser == "" {
+			return fmt.Errorf("GITHUB_ACTOR environment variable is empty")
+		}
+	}
+	
+	imageName := fmt.Sprintf("%s/code-manager", actualUser)
 	fullImageName := fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
 
 	// Get all platforms
@@ -148,7 +165,7 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 		// Push the image to GitHub Packages using Dagger's registry operations
 		_, err = image.
-			WithRegistryAuth(registry, *user, token).
+			WithRegistryAuth(registry, actualUser, token).
 			Publish(ctx, fullImageName)
 
 		if err != nil {
@@ -159,8 +176,8 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	return nil
 }
 
-// CreateGitHubRelease creates a GitHub release with binaries for all supported platforms.
-func (ci *CodeManager) CreateGitHubRelease(
+// CreateGithubRelease creates a GitHub release with binaries for all supported platforms.
+func (ci *CodeManager) CreateGithubRelease(
 	ctx context.Context,
 	sourceDir *dagger.Directory,
 	user *string,
@@ -187,6 +204,21 @@ func (ci *CodeManager) CreateGitHubRelease(
 		return err
 	}
 
+	// Handle environment variable resolution
+	actualUser := *user
+	if actualUser == "env:GITHUB_ACTOR" {
+		// Try to get the environment variable directly
+		envContainer := dag.Container().From("alpine").WithExec([]string{"sh", "-c", "echo $GITHUB_ACTOR"})
+		envOutput, err := envContainer.Stdout(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get GITHUB_ACTOR environment variable: %w", err)
+		}
+		actualUser = strings.TrimSpace(envOutput)
+		if actualUser == "" {
+			return fmt.Errorf("GITHUB_ACTOR environment variable is empty")
+		}
+	}
+
 	// Create the release first
 	_, err = dag.Container().
 		From("alpine/curl").
@@ -196,7 +228,7 @@ func (ci *CodeManager) CreateGitHubRelease(
 				"-H \"Accept: application/vnd.github.v3+json\" "+
 				"https://api.github.com/repos/%s/code-manager/releases "+
 				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			*user, latestTag, latestTag, releaseNotes,
+			actualUser, latestTag, latestTag, releaseNotes,
 		)}).
 		Sync(ctx)
 
@@ -225,9 +257,9 @@ func (ci *CodeManager) CreateGitHubRelease(
 			WithExec([]string{"sh", "-c", fmt.Sprintf(
 				"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
 					"-H \"Content-Type: application/octet-stream\" "+
-					"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
-					"--data-binary @%s",
-				*user, binaryName, binaryName,
+									"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
+				"--data-binary @%s",
+				actualUser, binaryName, binaryName,
 			)}).
 			Sync(ctx)
 
