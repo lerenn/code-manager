@@ -19,13 +19,7 @@ func NewGitHubReleaseManager() *GitHubReleaseManager {
 	return &GitHubReleaseManager{}
 }
 
-// safeCloseResponse safely closes the response body and logs any errors.
-func (gh *GitHubReleaseManager) safeCloseResponse(resp *http.Response) {
-	if closeErr := resp.Body.Close(); closeErr != nil {
-		// Log the error but don't fail the function
-		fmt.Printf("warning: failed to close response body: %v\n", closeErr)
-	}
-}
+
 
 // getReleaseInfo gets the latest tag and release notes from Git.
 func (gh *GitHubReleaseManager) getReleaseInfo(
@@ -230,7 +224,7 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	}
 
 	// Create HTTP request
-	url := fmt.Sprintf("https://uploads.github.com/repos/%s/code-manager/releases/%s/assets?name=%s", 
+	url := fmt.Sprintf("https://uploads.github.com/repos/%s/code-manager/releases/%s/assets?name=%s",
 		actualUser, releaseID, binaryName)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(binaryContent))
 	if err != nil {
@@ -252,14 +246,12 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	// Check for errors
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to upload binary for %s: status %d, body: %s", 
+		return fmt.Errorf("failed to upload binary for %s: status %d, body: %s",
 			platform, resp.StatusCode, string(body))
 	}
 
 	return nil
 }
-
-
 
 // buildBinaryName builds the binary filename for a platform.
 func (gh *GitHubReleaseManager) buildBinaryName(runnerInfo ImageInfo) string {
