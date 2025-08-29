@@ -25,6 +25,11 @@ var (
 		"linux/ppc64le":  {OS: "linux", Arch: "ppc64le", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
 		"linux/riscv64":  {OS: "linux", Arch: "riscv64", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
 		"linux/s390x":    {OS: "linux", Arch: "s390x", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
+		"darwin/amd64":   {OS: "darwin", Arch: "amd64", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
+		"darwin/386":     {OS: "darwin", Arch: "386", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
+		"darwin/arm64":   {OS: "darwin", Arch: "arm64", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
+		"windows/386":    {OS: "windows", Arch: "386", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
+		"windows/amd64":  {OS: "windows", Arch: "amd64", BuildBaseImage: "golang:alpine", TargetBaseImage: "alpine"},
 	}
 )
 

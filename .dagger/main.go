@@ -218,6 +218,41 @@ func (ci *CodeManager) pushAllImages(
 	return nil
 }
 
+// BuildAndReleaseForArchitecture builds a Docker image for a specific architecture,
+// creates a GitHub release if it doesn't exist, and uploads the binary for that architecture.
+func (ci *CodeManager) BuildAndReleaseForArchitecture(
+	ctx context.Context,
+	sourceDir *dagger.Directory,
+	architecture string,
+	user *string,
+	token *dagger.Secret,
+) error {
+	// Validate architecture
+	if _, exists := GoImageInfo[architecture]; !exists {
+		return fmt.Errorf("unsupported architecture: %s", architecture)
+	}
+
+	actualUser := ci.getActualUser(user)
+	
+	latestTag, releaseNotes, err := ci.getReleaseInfo(ctx, sourceDir, actualUser, token)
+	if err != nil {
+		return err
+	}
+
+	// Try to get existing release ID, create if it doesn't exist
+	releaseID, err := ci.getOrCreateRelease(ctx, actualUser, latestTag, releaseNotes, token)
+	if err != nil {
+		return err
+	}
+
+	// Build Docker image for this architecture
+	runnerInfo := GoImageInfo[architecture]
+	container := Image(sourceDir, runnerInfo)
+
+	// Upload binary for this architecture
+	return ci.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
+}
+
 // CreateGithubRelease creates a GitHub release with binaries for all supported platforms.
 func (ci *CodeManager) CreateGithubRelease(
 	ctx context.Context,
@@ -226,7 +261,7 @@ func (ci *CodeManager) CreateGithubRelease(
 	token *dagger.Secret,
 ) error {
 	actualUser := ci.getActualUser(user)
-
+	
 	latestTag, releaseNotes, err := ci.getReleaseInfo(ctx, sourceDir, actualUser, token)
 	if err != nil {
 		return err
@@ -292,6 +327,67 @@ func (ci *CodeManager) createGitHubRelease(
 
 	// Extract the release ID from the response
 	// The response should contain "id": <number>
+	releaseID := ""
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "\"id\":") {
+			parts := strings.Split(strings.TrimSpace(line), ":")
+			if len(parts) >= 2 {
+				releaseID = strings.Trim(strings.TrimSpace(parts[1]), ",\"")
+				break
+			}
+		}
+	}
+
+	if releaseID == "" {
+		return "", fmt.Errorf("failed to extract release ID from response: %s", result)
+	}
+
+	return releaseID, nil
+}
+
+func (ci *CodeManager) getOrCreateRelease(
+	ctx context.Context,
+	actualUser, latestTag, releaseNotes string,
+	token *dagger.Secret,
+) (string, error) {
+	// First, try to get the existing release
+	existingReleaseID, err := ci.getExistingRelease(ctx, actualUser, latestTag, token)
+	if err == nil && existingReleaseID != "" {
+		return existingReleaseID, nil
+	}
+
+	// If release doesn't exist, create it
+	return ci.createGitHubRelease(ctx, actualUser, latestTag, releaseNotes, token)
+}
+
+func (ci *CodeManager) getExistingRelease(
+	ctx context.Context,
+	actualUser, latestTag string,
+	token *dagger.Secret,
+) (string, error) {
+	// Get the release by tag
+	result, err := dag.Container().
+		From("alpine/curl").
+		WithSecretVariable("GITHUB_TOKEN", token).
+		WithExec([]string{"sh", "-c", fmt.Sprintf(
+			"curl -s -H \"Authorization: token $GITHUB_TOKEN\" "+
+				"-H \"Accept: application/vnd.github.v3+json\" "+
+				"https://api.github.com/repos/%s/code-manager/releases/tags/%s",
+			actualUser, latestTag,
+		)}).
+		Stdout(ctx)
+
+	if err != nil {
+		return "", err
+	}
+
+	// Check if the response contains an error (release not found)
+	if strings.Contains(result, "\"message\":\"Not Found\"") {
+		return "", fmt.Errorf("release not found")
+	}
+
+	// Extract the release ID from the response
 	releaseID := ""
 	lines := strings.Split(result, "\n")
 	for _, line := range lines {
