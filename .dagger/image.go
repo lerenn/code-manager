@@ -32,7 +32,7 @@ func AvailablePlatforms() []string {
 	return slices.Collect(maps.Keys(GoImageInfo))
 }
 
-// Image returns a container running the code-manager
+// Image returns a container running the code-manager.
 func Image(
 	sourceDir *dagger.Directory,
 	runnerInfo ImageInfo,
