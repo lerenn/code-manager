@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 
 	"code-manager/dagger/internal/dagger"
 )
@@ -150,21 +151,39 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	// Get all platforms
 	platforms := AvailablePlatforms()
 
-	// Build and push for each platform
+	// Build all images in parallel
+	images := make(map[string]*dagger.Container)
 	for _, platform := range platforms {
 		runnerInfo := GoImageInfo[platform]
+		images[platform] = Image(sourceDir, runnerInfo)
+	}
 
-		// Build the image for this platform using the existing Runner function
-		image := Image(sourceDir, runnerInfo)
+	// Push all images in parallel using goroutines
+	errChan := make(chan error, len(platforms))
+	var wg sync.WaitGroup
 
-		// Push the image to GitHub Packages using Dagger's registry operations
-		_, err = image.
-			WithRegistryAuth(registry, actualUser, token).
-			Publish(ctx, fullImageName)
+	for _, platform := range platforms {
+		wg.Add(1)
+		go func(platform string) {
+			defer wg.Done()
+			
+			_, err := images[platform].
+				WithRegistryAuth(registry, actualUser, token).
+				Publish(ctx, fullImageName)
+			
+			if err != nil {
+				errChan <- fmt.Errorf("failed to push image for %s: %w", platform, err)
+			}
+		}(platform)
+	}
 
-		if err != nil {
-			return fmt.Errorf("failed to push image for %s: %w", platform, err)
-		}
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(errChan)
+
+	// Check for any errors
+	for err := range errChan {
+		return err
 	}
 
 	return nil
@@ -220,38 +239,58 @@ func (ci *CodeManager) CreateGithubRelease(
 		return fmt.Errorf("failed to create GitHub release: %w", err)
 	}
 
-	// Build binaries for each platform
+	// Build binaries for each platform in parallel
 	platforms := AvailablePlatforms()
-
+	
+	// Build all containers in parallel
+	containers := make(map[string]*dagger.Container)
 	for _, platform := range platforms {
 		runnerInfo := GoImageInfo[platform]
+		containers[platform] = Image(sourceDir, runnerInfo)
+	}
 
-		// Build binary for this platform
-		binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
-		if runnerInfo.OS == "windows" {
-			binaryName += ".exe"
-		}
+	// Upload all binaries in parallel using goroutines
+	errChan := make(chan error, len(platforms))
+	var wg sync.WaitGroup
 
-		// Build the binary using the Runner function
-		container := Image(sourceDir, runnerInfo)
+	for _, platform := range platforms {
+		wg.Add(1)
+		go func(platform string) {
+			defer wg.Done()
+			
+			runnerInfo := GoImageInfo[platform]
+			binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
+			if runnerInfo.OS == "windows" {
+				binaryName += ".exe"
+			}
 
-		// Upload the binary asset to the release using a separate curl container
-		_, err = dag.Container().
-			From("alpine/curl").
-			WithSecretVariable("GITHUB_TOKEN", token).
-			WithMountedFile("/binary", container.File("/usr/local/bin/cm")).
-			WithExec([]string{"sh", "-c", fmt.Sprintf(
-				"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-					"-H \"Content-Type: application/octet-stream\" "+
-					"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
-					"--data-binary @/binary",
-				actualUser, binaryName,
-			)}).
-			Sync(ctx)
+			// Upload the binary asset to the release using a separate curl container
+			_, err := dag.Container().
+				From("alpine/curl").
+				WithSecretVariable("GITHUB_TOKEN", token).
+				WithMountedFile("/binary", containers[platform].File("/usr/local/bin/cm")).
+				WithExec([]string{"sh", "-c", fmt.Sprintf(
+					"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
+						"-H \"Content-Type: application/octet-stream\" "+
+						"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
+						"--data-binary @/binary",
+					actualUser, binaryName,
+				)}).
+				Sync(ctx)
 
-		if err != nil {
-			return fmt.Errorf("failed to upload binary for %s: %w", platform, err)
-		}
+			if err != nil {
+				errChan <- fmt.Errorf("failed to upload binary for %s: %w", platform, err)
+			}
+		}(platform)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(errChan)
+
+	// Check for any errors
+	for err := range errChan {
+		return err
 	}
 
 	return nil
