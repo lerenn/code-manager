@@ -121,6 +121,7 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	user *string,
 	token *dagger.Secret,
 ) error {
+<<<<<<< HEAD
 	// Set default user if not provided
 	actualUser := "lerenn"
 	if user != nil {
@@ -130,6 +131,12 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
 		User:   &actualUser,
+=======
+	// Get the latest tag
+	repo, err := NewGit(ctx, NewGitOptions{
+		SrcDir: sourceDir,
+		User:   user,
+>>>>>>> origin/main
 		Token:  token,
 	})
 	if err != nil {
@@ -143,7 +150,11 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 	// GitHub Packages registry URL
 	registry := "ghcr.io"
+<<<<<<< HEAD
 	imageName := fmt.Sprintf("%s/code-manager", actualUser)
+=======
+	imageName := fmt.Sprintf("%s/code-manager", *user)
+>>>>>>> origin/main
 	fullImageName := fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
 
 	// Get all platforms
@@ -158,7 +169,11 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 		// Push the image to GitHub Packages using Dagger's registry operations
 		_, err = image.
+<<<<<<< HEAD
 			WithRegistryAuth(registry, actualUser, token).
+=======
+			WithRegistryAuth(registry, *user, token).
+>>>>>>> origin/main
 			Publish(ctx, fullImageName)
 
 		if err != nil {
