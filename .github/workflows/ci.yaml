@@ -86,7 +86,6 @@ jobs:
             --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
-          GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-and-push-docker-images:
@@ -112,7 +111,6 @@ jobs:
             --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
-          GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   create-github-release:
@@ -137,5 +135,4 @@ jobs:
             --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
-          GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
