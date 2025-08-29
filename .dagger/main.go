@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"strings"
-	"sync"
 
 	"code-manager/dagger/internal/dagger"
 )
@@ -118,30 +116,6 @@ func (ci *CodeManager) EndToEndTests(sourceDir *dagger.Directory) *dagger.Contai
 		})
 }
 
-// BuildAndPushDockerImages builds and pushes Docker images for all supported platforms to GitHub Packages.
-func (ci *CodeManager) BuildAndPushDockerImages(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	user *string,
-	token *dagger.Secret,
-) error {
-	actualUser := ci.getActualUser(user)
-
-	latestTag, err := ci.getLatestTag(ctx, sourceDir, actualUser, token)
-	if err != nil {
-		return err
-	}
-
-	fullImageName := ci.buildImageName(actualUser, latestTag)
-	platforms := AvailablePlatforms()
-
-	// Build all images in parallel
-	images := ci.buildAllImages(sourceDir, platforms)
-
-	// Push all images in parallel
-	return ci.pushAllImages(ctx, images, platforms, fullImageName, actualUser, token)
-}
-
 func (ci *CodeManager) getActualUser(user *string) string {
 	if user != nil {
 		return *user
@@ -149,214 +123,40 @@ func (ci *CodeManager) getActualUser(user *string) string {
 	return defaultUser
 }
 
-func (ci *CodeManager) getLatestTag(
+// BuildAndReleaseForArchitecture builds a Docker image for a specific architecture,
+// creates a GitHub release if it doesn't exist, and uploads the binary for that architecture.
+func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	ctx context.Context,
 	sourceDir *dagger.Directory,
-	actualUser string,
-	token *dagger.Secret,
-) (string, error) {
-	repo, err := NewGit(ctx, NewGitOptions{
-		SrcDir: sourceDir,
-		User:   &actualUser,
-		Token:  token,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return repo.GetLastTag(ctx)
-}
-
-func (ci *CodeManager) buildImageName(actualUser, latestTag string) string {
-	registry := "ghcr.io"
-	imageName := fmt.Sprintf("%s/code-manager", actualUser)
-	return fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
-}
-
-func (ci *CodeManager) buildAllImages(sourceDir *dagger.Directory, platforms []string) map[string]*dagger.Container {
-	images := make(map[string]*dagger.Container)
-	for _, platform := range platforms {
-		runnerInfo := GoImageInfo[platform]
-		images[platform] = Image(sourceDir, runnerInfo)
-	}
-	return images
-}
-
-func (ci *CodeManager) pushAllImages(
-	ctx context.Context,
-	images map[string]*dagger.Container,
-	platforms []string,
-	fullImageName, actualUser string,
-	token *dagger.Secret,
-) error {
-	registry := "ghcr.io"
-	errChan := make(chan error, len(platforms))
-	var wg sync.WaitGroup
-
-	for _, platform := range platforms {
-		wg.Add(1)
-		go func(platform string) {
-			defer wg.Done()
-
-			_, err := images[platform].
-				WithRegistryAuth(registry, actualUser, token).
-				Publish(ctx, fullImageName)
-
-			if err != nil {
-				errChan <- fmt.Errorf("failed to push image for %s: %w", platform, err)
-			}
-		}(platform)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		return err
-	}
-
-	return nil
-}
-
-// CreateGithubRelease creates a GitHub release with binaries for all supported platforms.
-func (ci *CodeManager) CreateGithubRelease(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
+	architecture string,
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Validate architecture
+	if _, exists := GoImageInfo[architecture]; !exists {
+		return fmt.Errorf("unsupported architecture: %s", architecture)
+	}
+
 	actualUser := ci.getActualUser(user)
+	gh := NewGitHubReleaseManager()
 
-	latestTag, releaseNotes, err := ci.getReleaseInfo(ctx, sourceDir, actualUser, token)
+	latestTag, releaseNotes, err := gh.getReleaseInfo(ctx, sourceDir, actualUser, token)
 	if err != nil {
 		return err
 	}
 
-	if err := ci.createGitHubRelease(ctx, actualUser, latestTag, releaseNotes, token); err != nil {
+	// Try to get existing release ID, create if it doesn't exist
+	releaseID, err := gh.getOrCreateRelease(ctx, actualUser, latestTag, releaseNotes, token)
+	if err != nil {
 		return err
 	}
 
-	return ci.uploadAllBinaries(ctx, sourceDir, actualUser, token)
-}
+	// Build Docker image for this architecture
+	runnerInfo := GoImageInfo[architecture]
+	container := Image(sourceDir, runnerInfo)
 
-func (ci *CodeManager) getReleaseInfo(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	actualUser string,
-	token *dagger.Secret,
-) (string, string, error) {
-	repo, err := NewGit(ctx, NewGitOptions{
-		SrcDir: sourceDir,
-		User:   &actualUser,
-		Token:  token,
-	})
-	if err != nil {
-		return "", "", err
-	}
-
-	latestTag, err := repo.GetLastTag(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
-	releaseNotes, err := repo.GetLastCommitTitle(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
-	return latestTag, releaseNotes, nil
-}
-
-func (ci *CodeManager) createGitHubRelease(
-	ctx context.Context,
-	actualUser, latestTag, releaseNotes string,
-	token *dagger.Secret,
-) error {
-	_, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Accept: application/vnd.github.v3+json\" "+
-				"https://api.github.com/repos/%s/code-manager/releases "+
-				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			actualUser, latestTag, latestTag, strings.ReplaceAll(releaseNotes, "\"", "\\\""),
-		)}).
-		Sync(ctx)
-
-	if err != nil {
-		return fmt.Errorf("failed to create GitHub release: %w", err)
-	}
-	return nil
-}
-
-func (ci *CodeManager) uploadAllBinaries(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	actualUser string,
-	token *dagger.Secret,
-) error {
-	platforms := AvailablePlatforms()
-	containers := ci.buildAllImages(sourceDir, platforms)
-
-	errChan := make(chan error, len(platforms))
-	var wg sync.WaitGroup
-
-	for _, platform := range platforms {
-		wg.Add(1)
-		go func(platform string) {
-			defer wg.Done()
-
-			if err := ci.uploadBinary(ctx, containers[platform], platform, actualUser, token); err != nil {
-				errChan <- err
-			}
-		}(platform)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		return err
-	}
-
-	return nil
-}
-
-func (ci *CodeManager) uploadBinary(
-	ctx context.Context,
-	container *dagger.Container,
-	platform, actualUser string,
-	token *dagger.Secret,
-) error {
-	runnerInfo := GoImageInfo[platform]
-	binaryName := ci.buildBinaryName(runnerInfo)
-
-	_, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithMountedFile("/binary", container.File("/usr/local/bin/cm")).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Content-Type: application/octet-stream\" "+
-				"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
-				"--data-binary @/binary",
-			actualUser, binaryName,
-		)}).
-		Sync(ctx)
-
-	if err != nil {
-		return fmt.Errorf("failed to upload binary for %s: %w", platform, err)
-	}
-	return nil
-}
-
-func (ci *CodeManager) buildBinaryName(runnerInfo ImageInfo) string {
-	binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
-	if runnerInfo.OS == "windows" {
-		binaryName += ".exe"
-	}
-	return binaryName
+	// Upload binary for this architecture
+	return gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
 }
 
 func (ci *CodeManager) withGoCodeAndCacheAsWorkDirectory(

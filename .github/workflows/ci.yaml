@@ -88,14 +88,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build-and-push-docker-images:
-    name: Build and push Docker images
+  build-and-release-linux-amd64:
+    name: Build and release for linux/amd64
     needs: ["publish-tag"]
     permissions:
-      contents: read
-      packages: write
+      contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -106,20 +105,21 @@ jobs:
           version: latest
           verb: call
           args: >-
-            build-and-push-docker-images
+            build-and-release-for-architecture
             --source-dir=.
+            --architecture=linux/amd64
             --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  create-github-release:
-    name: Create GitHub release with binaries
+  build-and-release-darwin-arm64:
+    name: Build and release for darwin/arm64
     needs: ["publish-tag"]
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -130,8 +130,34 @@ jobs:
           version: latest
           verb: call
           args: >-
-            create-github-release
+            build-and-release-for-architecture
             --source-dir=.
+            --architecture=darwin/arm64
+            --user=${{ github.actor }}
+            --token=env:GITHUB_TOKEN
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-release-windows-amd64:
+    name: Build and release for windows/amd64
+    needs: ["publish-tag"]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dagger/dagger-for-github@8.0.0
+        with:
+          version: latest
+          verb: call
+          args: >-
+            build-and-release-for-architecture
+            --source-dir=.
+            --architecture=windows/amd64
             --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
