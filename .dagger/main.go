@@ -201,28 +201,7 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	return gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
 }
 
-// CreateGithubRelease creates a GitHub release with binaries for all supported platforms.
-func (ci *CodeManager) CreateGithubRelease(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	user *string,
-	token *dagger.Secret,
-) error {
-	actualUser := ci.getActualUser(user)
-	gh := NewGitHubReleaseManager()
 
-	latestTag, releaseNotes, err := gh.getReleaseInfo(ctx, sourceDir, actualUser, token)
-	if err != nil {
-		return err
-	}
-
-	releaseID, err := gh.createGitHubRelease(ctx, actualUser, latestTag, releaseNotes, token)
-	if err != nil {
-		return err
-	}
-
-	return gh.uploadAllBinaries(ctx, sourceDir, actualUser, releaseID, token)
-}
 
 func (ci *CodeManager) withGoCodeAndCacheAsWorkDirectory(
 	c *dagger.Container,

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 
 	"code-manager/dagger/internal/dagger"
 )
@@ -182,39 +181,7 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	return nil
 }
 
-// uploadAllBinaries uploads binaries for all platforms to a GitHub release.
-func (gh *GitHubReleaseManager) uploadAllBinaries(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	actualUser, releaseID string,
-	token *dagger.Secret,
-) error {
-	platforms := AvailablePlatforms()
-	containers := buildAllImages(sourceDir, platforms)
 
-	errChan := make(chan error, len(platforms))
-	var wg sync.WaitGroup
-
-	for _, platform := range platforms {
-		wg.Add(1)
-		go func(platform string) {
-			defer wg.Done()
-
-			if err := gh.uploadBinary(ctx, containers[platform], platform, actualUser, releaseID, token); err != nil {
-				errChan <- err
-			}
-		}(platform)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		return err
-	}
-
-	return nil
-}
 
 // buildBinaryName builds the binary filename for a platform.
 func (gh *GitHubReleaseManager) buildBinaryName(runnerInfo ImageInfo) string {
