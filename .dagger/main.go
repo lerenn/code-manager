@@ -31,10 +31,15 @@ func (ci *CodeManager) PublishTag(
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Set default user if not provided
+	actualUser := "lerenn"
+	if user != nil {
+		actualUser = *user
+	}
 	// Create Git repo access
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
-		User:   user,
+		User:   &actualUser,
 		Token:  token,
 	})
 	if err != nil {
@@ -116,10 +121,15 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Set default user if not provided
+	actualUser := "lerenn"
+	if user != nil {
+		actualUser = *user
+	}
 	// Get the latest tag
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
-		User:   user,
+		User:   &actualUser,
 		Token:  token,
 	})
 	if err != nil {
@@ -133,7 +143,7 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 	// GitHub Packages registry URL
 	registry := "ghcr.io"
-	imageName := fmt.Sprintf("%s/code-manager", *user)
+	imageName := fmt.Sprintf("%s/code-manager", actualUser)
 	fullImageName := fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
 
 	// Get all platforms
@@ -148,7 +158,7 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 		// Push the image to GitHub Packages using Dagger's registry operations
 		_, err = image.
-			WithRegistryAuth(registry, *user, token).
+			WithRegistryAuth(registry, actualUser, token).
 			Publish(ctx, fullImageName)
 
 		if err != nil {
@@ -159,17 +169,22 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	return nil
 }
 
-// CreateGitHubRelease creates a GitHub release with binaries for all supported platforms.
-func (ci *CodeManager) CreateGitHubRelease(
+// CreateGithubRelease creates a GitHub release with binaries for all supported platforms.
+func (ci *CodeManager) CreateGithubRelease(
 	ctx context.Context,
 	sourceDir *dagger.Directory,
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Set default user if not provided
+	actualUser := "lerenn"
+	if user != nil {
+		actualUser = *user
+	}
 	// Get the latest tag
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
-		User:   user,
+		User:   &actualUser,
 		Token:  token,
 	})
 	if err != nil {
@@ -196,7 +211,7 @@ func (ci *CodeManager) CreateGitHubRelease(
 				"-H \"Accept: application/vnd.github.v3+json\" "+
 				"https://api.github.com/repos/%s/code-manager/releases "+
 				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			*user, latestTag, latestTag, releaseNotes,
+			actualUser, latestTag, latestTag, releaseNotes,
 		)}).
 		Sync(ctx)
 
@@ -227,7 +242,7 @@ func (ci *CodeManager) CreateGitHubRelease(
 					"-H \"Content-Type: application/octet-stream\" "+
 					"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
 					"--data-binary @%s",
-				*user, binaryName, binaryName,
+				actualUser, binaryName, binaryName,
 			)}).
 			Sync(ctx)
 
