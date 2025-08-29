@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"strings"
-	"sync"
 
 	"code-manager/dagger/internal/dagger"
 )
@@ -132,14 +130,14 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 		return err
 	}
 
-	fullImageName := ci.buildImageName(actualUser, latestTag)
+	fullImageName := buildImageName(actualUser, latestTag)
 	platforms := AvailablePlatforms()
 
 	// Build all images in parallel
-	images := ci.buildAllImages(sourceDir, platforms)
+	images := buildAllImages(sourceDir, platforms)
 
 	// Push all images in parallel
-	return ci.pushAllImages(ctx, images, platforms, fullImageName, actualUser, token)
+	return pushAllImages(ctx, images, platforms, fullImageName, actualUser, token)
 }
 
 func (ci *CodeManager) getActualUser(user *string) string {
@@ -167,57 +165,6 @@ func (ci *CodeManager) getLatestTag(
 	return repo.GetLastTag(ctx)
 }
 
-func (ci *CodeManager) buildImageName(actualUser, latestTag string) string {
-	registry := "ghcr.io"
-	imageName := fmt.Sprintf("%s/code-manager", actualUser)
-	return fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
-}
-
-func (ci *CodeManager) buildAllImages(sourceDir *dagger.Directory, platforms []string) map[string]*dagger.Container {
-	images := make(map[string]*dagger.Container)
-	for _, platform := range platforms {
-		runnerInfo := GoImageInfo[platform]
-		images[platform] = Image(sourceDir, runnerInfo)
-	}
-	return images
-}
-
-func (ci *CodeManager) pushAllImages(
-	ctx context.Context,
-	images map[string]*dagger.Container,
-	platforms []string,
-	fullImageName, actualUser string,
-	token *dagger.Secret,
-) error {
-	registry := "ghcr.io"
-	errChan := make(chan error, len(platforms))
-	var wg sync.WaitGroup
-
-	for _, platform := range platforms {
-		wg.Add(1)
-		go func(platform string) {
-			defer wg.Done()
-
-			_, err := images[platform].
-				WithRegistryAuth(registry, actualUser, token).
-				Publish(ctx, fullImageName)
-
-			if err != nil {
-				errChan <- fmt.Errorf("failed to push image for %s: %w", platform, err)
-			}
-		}(platform)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		return err
-	}
-
-	return nil
-}
-
 // BuildAndReleaseForArchitecture builds a Docker image for a specific architecture,
 // creates a GitHub release if it doesn't exist, and uploads the binary for that architecture.
 func (ci *CodeManager) BuildAndReleaseForArchitecture(
@@ -233,14 +180,15 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	}
 
 	actualUser := ci.getActualUser(user)
+	gh := NewGitHubReleaseManager()
 
-	latestTag, releaseNotes, err := ci.getReleaseInfo(ctx, sourceDir, actualUser, token)
+	latestTag, releaseNotes, err := gh.getReleaseInfo(ctx, sourceDir, actualUser, token)
 	if err != nil {
 		return err
 	}
 
 	// Try to get existing release ID, create if it doesn't exist
-	releaseID, err := ci.getOrCreateRelease(ctx, actualUser, latestTag, releaseNotes, token)
+	releaseID, err := gh.getOrCreateRelease(ctx, actualUser, latestTag, releaseNotes, token)
 	if err != nil {
 		return err
 	}
@@ -250,7 +198,7 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	container := Image(sourceDir, runnerInfo)
 
 	// Upload binary for this architecture
-	return ci.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
+	return gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
 }
 
 // CreateGithubRelease creates a GitHub release with binaries for all supported platforms.
@@ -261,219 +209,19 @@ func (ci *CodeManager) CreateGithubRelease(
 	token *dagger.Secret,
 ) error {
 	actualUser := ci.getActualUser(user)
+	gh := NewGitHubReleaseManager()
 
-	latestTag, releaseNotes, err := ci.getReleaseInfo(ctx, sourceDir, actualUser, token)
+	latestTag, releaseNotes, err := gh.getReleaseInfo(ctx, sourceDir, actualUser, token)
 	if err != nil {
 		return err
 	}
 
-	releaseID, err := ci.createGitHubRelease(ctx, actualUser, latestTag, releaseNotes, token)
+	releaseID, err := gh.createGitHubRelease(ctx, actualUser, latestTag, releaseNotes, token)
 	if err != nil {
 		return err
 	}
 
-	return ci.uploadAllBinaries(ctx, sourceDir, actualUser, releaseID, token)
-}
-
-func (ci *CodeManager) getReleaseInfo(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	actualUser string,
-	token *dagger.Secret,
-) (string, string, error) {
-	repo, err := NewGit(ctx, NewGitOptions{
-		SrcDir: sourceDir,
-		User:   &actualUser,
-		Token:  token,
-	})
-	if err != nil {
-		return "", "", err
-	}
-
-	latestTag, err := repo.GetLastTag(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
-	releaseNotes, err := repo.GetLastCommitTitle(ctx)
-	if err != nil {
-		return "", "", err
-	}
-
-	return latestTag, releaseNotes, nil
-}
-
-func (ci *CodeManager) createGitHubRelease(
-	ctx context.Context,
-	actualUser, latestTag, releaseNotes string,
-	token *dagger.Secret,
-) (string, error) {
-	// Create the release and capture the response to get the release ID
-	result, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Accept: application/vnd.github.v3+json\" "+
-				"https://api.github.com/repos/%s/code-manager/releases "+
-				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			actualUser, latestTag, latestTag, strings.ReplaceAll(releaseNotes, "\"", "\\\""),
-		)}).
-		Stdout(ctx)
-
-	if err != nil {
-		return "", fmt.Errorf("failed to create GitHub release: %w", err)
-	}
-
-	// Extract the release ID from the response
-	// The response should contain "id": <number>
-	releaseID := ""
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "\"id\":") {
-			parts := strings.Split(strings.TrimSpace(line), ":")
-			if len(parts) >= 2 {
-				releaseID = strings.Trim(strings.TrimSpace(parts[1]), ",\"")
-				break
-			}
-		}
-	}
-
-	if releaseID == "" {
-		return "", fmt.Errorf("failed to extract release ID from response: %s", result)
-	}
-
-	return releaseID, nil
-}
-
-func (ci *CodeManager) getOrCreateRelease(
-	ctx context.Context,
-	actualUser, latestTag, releaseNotes string,
-	token *dagger.Secret,
-) (string, error) {
-	// First, try to get the existing release
-	existingReleaseID, err := ci.getExistingRelease(ctx, actualUser, latestTag, token)
-	if err == nil && existingReleaseID != "" {
-		return existingReleaseID, nil
-	}
-
-	// If release doesn't exist, create it
-	return ci.createGitHubRelease(ctx, actualUser, latestTag, releaseNotes, token)
-}
-
-func (ci *CodeManager) getExistingRelease(
-	ctx context.Context,
-	actualUser, latestTag string,
-	token *dagger.Secret,
-) (string, error) {
-	// Get the release by tag
-	result, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -s -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Accept: application/vnd.github.v3+json\" "+
-				"https://api.github.com/repos/%s/code-manager/releases/tags/%s",
-			actualUser, latestTag,
-		)}).
-		Stdout(ctx)
-
-	if err != nil {
-		return "", err
-	}
-
-	// Check if the response contains an error (release not found)
-	if strings.Contains(result, "\"message\":\"Not Found\"") {
-		return "", fmt.Errorf("release not found")
-	}
-
-	// Extract the release ID from the response
-	releaseID := ""
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "\"id\":") {
-			parts := strings.Split(strings.TrimSpace(line), ":")
-			if len(parts) >= 2 {
-				releaseID = strings.Trim(strings.TrimSpace(parts[1]), ",\"")
-				break
-			}
-		}
-	}
-
-	if releaseID == "" {
-		return "", fmt.Errorf("failed to extract release ID from response: %s", result)
-	}
-
-	return releaseID, nil
-}
-
-func (ci *CodeManager) uploadAllBinaries(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	actualUser, releaseID string,
-	token *dagger.Secret,
-) error {
-	platforms := AvailablePlatforms()
-	containers := ci.buildAllImages(sourceDir, platforms)
-
-	errChan := make(chan error, len(platforms))
-	var wg sync.WaitGroup
-
-	for _, platform := range platforms {
-		wg.Add(1)
-		go func(platform string) {
-			defer wg.Done()
-
-			if err := ci.uploadBinary(ctx, containers[platform], platform, actualUser, releaseID, token); err != nil {
-				errChan <- err
-			}
-		}(platform)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		return err
-	}
-
-	return nil
-}
-
-func (ci *CodeManager) uploadBinary(
-	ctx context.Context,
-	container *dagger.Container,
-	platform, actualUser, releaseID string,
-	token *dagger.Secret,
-) error {
-	runnerInfo := GoImageInfo[platform]
-	binaryName := ci.buildBinaryName(runnerInfo)
-
-	_, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithMountedFile("/binary", container.File("/usr/local/bin/cm")).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Content-Type: application/octet-stream\" "+
-				"https://uploads.github.com/repos/%s/code-manager/releases/%s/assets?name=%s "+
-				"--data-binary @/binary",
-			actualUser, releaseID, binaryName,
-		)}).
-		Sync(ctx)
-
-	if err != nil {
-		return fmt.Errorf("failed to upload binary for %s: %w", platform, err)
-	}
-	return nil
-}
-
-func (ci *CodeManager) buildBinaryName(runnerInfo ImageInfo) string {
-	binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
-	if runnerInfo.OS == "windows" {
-		binaryName += ".exe"
-	}
-	return binaryName
+	return gh.uploadAllBinaries(ctx, sourceDir, actualUser, releaseID, token)
 }
 
 func (ci *CodeManager) withGoCodeAndCacheAsWorkDirectory(
