@@ -239,7 +239,7 @@ func (ci *CodeManager) CreateGithubRelease(
 		_, err = dag.Container().
 			From("alpine/curl").
 			WithSecretVariable("GITHUB_TOKEN", token).
-			WithMountedFile("/binary", container.File("/usr/local/bin/code-manager")).
+			WithMountedFile("/binary", container.File("/usr/local/bin/cm")).
 			WithExec([]string{"sh", "-c", fmt.Sprintf(
 				"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
 					"-H \"Content-Type: application/octet-stream\" "+
