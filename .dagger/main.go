@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"runtime"
-	"strings"
 
 	"code-manager/dagger/internal/dagger"
 )
@@ -32,10 +31,15 @@ func (ci *CodeManager) PublishTag(
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Set default user if not provided
+	actualUser := "lerenn"
+	if user != nil {
+		actualUser = *user
+	}
 	// Create Git repo access
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
-		User:   user,
+		User:   &actualUser,
 		Token:  token,
 	})
 	if err != nil {
@@ -117,10 +121,15 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Set default user if not provided
+	actualUser := "lerenn"
+	if user != nil {
+		actualUser = *user
+	}
 	// Get the latest tag
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
-		User:   user,
+		User:   &actualUser,
 		Token:  token,
 	})
 	if err != nil {
@@ -134,22 +143,6 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 
 	// GitHub Packages registry URL
 	registry := "ghcr.io"
-	
-	// Handle environment variable resolution
-	actualUser := *user
-	if actualUser == "env:GITHUB_ACTOR" {
-		// Try to get the environment variable directly
-		envContainer := dag.Container().From("alpine").WithExec([]string{"sh", "-c", "echo $GITHUB_ACTOR"})
-		envOutput, err := envContainer.Stdout(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get GITHUB_ACTOR environment variable: %w", err)
-		}
-		actualUser = strings.TrimSpace(envOutput)
-		if actualUser == "" {
-			return fmt.Errorf("GITHUB_ACTOR environment variable is empty")
-		}
-	}
-	
 	imageName := fmt.Sprintf("%s/code-manager", actualUser)
 	fullImageName := fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
 
@@ -183,10 +176,15 @@ func (ci *CodeManager) CreateGithubRelease(
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Set default user if not provided
+	actualUser := "lerenn"
+	if user != nil {
+		actualUser = *user
+	}
 	// Get the latest tag
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
-		User:   user,
+		User:   &actualUser,
 		Token:  token,
 	})
 	if err != nil {
@@ -202,21 +200,6 @@ func (ci *CodeManager) CreateGithubRelease(
 	releaseNotes, err := repo.GetLastCommitTitle(ctx)
 	if err != nil {
 		return err
-	}
-
-	// Handle environment variable resolution
-	actualUser := *user
-	if actualUser == "env:GITHUB_ACTOR" {
-		// Try to get the environment variable directly
-		envContainer := dag.Container().From("alpine").WithExec([]string{"sh", "-c", "echo $GITHUB_ACTOR"})
-		envOutput, err := envContainer.Stdout(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to get GITHUB_ACTOR environment variable: %w", err)
-		}
-		actualUser = strings.TrimSpace(envOutput)
-		if actualUser == "" {
-			return fmt.Errorf("GITHUB_ACTOR environment variable is empty")
-		}
 	}
 
 	// Create the release first
@@ -257,8 +240,8 @@ func (ci *CodeManager) CreateGithubRelease(
 			WithExec([]string{"sh", "-c", fmt.Sprintf(
 				"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
 					"-H \"Content-Type: application/octet-stream\" "+
-									"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
-				"--data-binary @%s",
+					"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
+					"--data-binary @%s",
 				actualUser, binaryName, binaryName,
 			)}).
 			Sync(ctx)

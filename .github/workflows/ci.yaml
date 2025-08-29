@@ -83,7 +83,7 @@ jobs:
           args: >-
             publish-tag
             --source-dir=.
-            --user=env:GITHUB_ACTOR
+            --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -109,7 +109,7 @@ jobs:
           args: >-
             build-and-push-docker-images
             --source-dir=.
-            --user=env:GITHUB_ACTOR
+            --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
           GITHUB_ACTOR: ${{ github.actor }}
@@ -134,7 +134,7 @@ jobs:
           args: >-
             create-github-release
             --source-dir=.
-            --user=env:GITHUB_ACTOR
+            --user=${{ github.actor }}
             --token=env:GITHUB_TOKEN
         env:
           GITHUB_ACTOR: ${{ github.actor }}
