@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	"code-manager/dagger/internal/dagger"
@@ -14,6 +17,14 @@ type GitHubReleaseManager struct{}
 // NewGitHubReleaseManager creates a new GitHub release manager.
 func NewGitHubReleaseManager() *GitHubReleaseManager {
 	return &GitHubReleaseManager{}
+}
+
+// safeCloseResponse safely closes the response body and logs any errors.
+func (gh *GitHubReleaseManager) safeCloseResponse(resp *http.Response) {
+	if closeErr := resp.Body.Close(); closeErr != nil {
+		// Log the error but don't fail the function
+		fmt.Printf("warning: failed to close response body: %v\n", closeErr)
+	}
 }
 
 // getReleaseInfo gets the latest tag and release notes from Git.
@@ -51,42 +62,70 @@ func (gh *GitHubReleaseManager) createGitHubRelease(
 	actualUser, latestTag, releaseNotes string,
 	token *dagger.Secret,
 ) (string, error) {
-	// Create the release and capture the response to get the release ID
-	result, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Accept: application/vnd.github.v3+json\" "+
-				"https://api.github.com/repos/%s/code-manager/releases "+
-				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			actualUser, latestTag, latestTag, gh.escapeJSONString(releaseNotes),
-		)}).
-		Stdout(ctx)
+	// Create the release payload
+	releasePayload := map[string]string{
+		"tag_name": latestTag,
+		"name":     fmt.Sprintf("Release %s", latestTag),
+		"body":     releaseNotes,
+	}
 
+	// Marshal to JSON
+	jsonData, err := json.Marshal(releasePayload)
 	if err != nil {
-		return "", fmt.Errorf("failed to create GitHub release: %w", err)
+		return "", fmt.Errorf("failed to marshal release payload: %w", err)
 	}
 
-	// Extract the release ID from the response
-	// The response should contain "id": <number>
-	releaseID := ""
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "\"id\":") {
-			parts := strings.Split(strings.TrimSpace(line), ":")
-			if len(parts) >= 2 {
-				releaseID = strings.Trim(strings.TrimSpace(parts[1]), ",\"")
-				break
-			}
-		}
+	// Get the token value
+	tokenValue, err := token.Plaintext(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get token: %w", err)
 	}
 
-	if releaseID == "" {
-		return "", fmt.Errorf("failed to extract release ID from response: %s", result)
+	// Create HTTP request
+	url := fmt.Sprintf("https://api.github.com/repos/%s/code-manager/releases", actualUser)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(string(jsonData)))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
-	return releaseID, nil
+	// Set headers
+	req.Header.Set("Authorization", "token "+tokenValue)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Content-Type", "application/json")
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check for errors
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("failed to create release: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response to get release ID
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	releaseID, ok := response["id"]
+	if !ok {
+		return "", fmt.Errorf("response does not contain release ID: %s", string(body))
+	}
+
+	// Convert to string
+	releaseIDStr := fmt.Sprintf("%.0f", releaseID)
+	return releaseIDStr, nil
 }
 
 // getExistingRelease gets an existing release by tag name.
@@ -95,45 +134,61 @@ func (gh *GitHubReleaseManager) getExistingRelease(
 	actualUser, latestTag string,
 	token *dagger.Secret,
 ) (string, error) {
-	// Get the release by tag
-	result, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -s -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Accept: application/vnd.github.v3+json\" "+
-				"https://api.github.com/repos/%s/code-manager/releases/tags/%s",
-			actualUser, latestTag,
-		)}).
-		Stdout(ctx)
-
+	// Get the token value
+	tokenValue, err := token.Plaintext(ctx)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get token: %w", err)
 	}
 
-	// Check if the response contains an error (release not found)
-	if strings.Contains(result, "\"message\":\"Not Found\"") {
+	// Create HTTP request
+	url := fmt.Sprintf("https://api.github.com/repos/%s/code-manager/releases/tags/%s", actualUser, latestTag)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Authorization", "token "+tokenValue)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check for 404 (release not found)
+	if resp.StatusCode == http.StatusNotFound {
 		return "", fmt.Errorf("release not found")
 	}
 
-	// Extract the release ID from the response
-	releaseID := ""
-	lines := strings.Split(result, "\n")
-	for _, line := range lines {
-		if strings.Contains(line, "\"id\":") {
-			parts := strings.Split(strings.TrimSpace(line), ":")
-			if len(parts) >= 2 {
-				releaseID = strings.Trim(strings.TrimSpace(parts[1]), ",\"")
-				break
-			}
-		}
+	// Check for other errors
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to get release: status %d, body: %s", resp.StatusCode, string(body))
 	}
 
-	if releaseID == "" {
-		return "", fmt.Errorf("failed to extract release ID from response: %s", result)
+	// Parse response to get release ID
+	var response map[string]interface{}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return "", fmt.Errorf("failed to parse response: %w", err)
 	}
 
-	return releaseID, nil
+	releaseID, ok := response["id"]
+	if !ok {
+		return "", fmt.Errorf("response does not contain release ID: %s", string(body))
+	}
+
+	// Convert to string
+	releaseIDStr := fmt.Sprintf("%.0f", releaseID)
+	return releaseIDStr, nil
 }
 
 // getOrCreateRelease gets an existing release or creates a new one.
@@ -162,39 +217,49 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	runnerInfo := GoImageInfo[platform]
 	binaryName := gh.buildBinaryName(runnerInfo)
 
-	_, err := dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithMountedFile("/binary", container.File("/usr/local/bin/cm")).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Content-Type: application/octet-stream\" "+
-				"https://uploads.github.com/repos/%s/code-manager/releases/%s/assets?name=%s "+
-				"--data-binary @/binary",
-			actualUser, releaseID, binaryName,
-		)}).
-		Sync(ctx)
-
+	// Get the token value
+	tokenValue, err := token.Plaintext(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to upload binary for %s: %w", platform, err)
+		return fmt.Errorf("failed to get token: %w", err)
 	}
+
+	// Get the binary file content
+	binaryContent, err := container.File("/usr/local/bin/cm").Contents(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read binary file: %w", err)
+	}
+
+	// Create HTTP request
+	url := fmt.Sprintf("https://uploads.github.com/repos/%s/code-manager/releases/%s/assets?name=%s", 
+		actualUser, releaseID, binaryName)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, strings.NewReader(binaryContent))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Authorization", "token "+tokenValue)
+	req.Header.Set("Content-Type", "application/octet-stream")
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check for errors
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to upload binary for %s: status %d, body: %s", 
+			platform, resp.StatusCode, string(body))
+	}
+
 	return nil
 }
 
-// escapeJSONString properly escapes a string for JSON inclusion.
-func (gh *GitHubReleaseManager) escapeJSONString(s string) string {
-	// Replace backslashes first
-	s = strings.ReplaceAll(s, "\\", "\\\\")
-	// Replace double quotes
-	s = strings.ReplaceAll(s, "\"", "\\\"")
-	// Replace newlines
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	// Replace carriage returns
-	s = strings.ReplaceAll(s, "\r", "\\r")
-	// Replace tabs
-	s = strings.ReplaceAll(s, "\t", "\\t")
-	return s
-}
+
 
 // buildBinaryName builds the binary filename for a platform.
 func (gh *GitHubReleaseManager) buildBinaryName(runnerInfo ImageInfo) string {
