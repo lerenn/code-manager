@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"strings"
 
 	"code-manager/dagger/internal/dagger"
 )
@@ -211,7 +212,7 @@ func (ci *CodeManager) CreateGithubRelease(
 				"-H \"Accept: application/vnd.github.v3+json\" "+
 				"https://api.github.com/repos/%s/code-manager/releases "+
 				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			actualUser, latestTag, latestTag, releaseNotes,
+			actualUser, latestTag, latestTag, strings.ReplaceAll(releaseNotes, "\"", "\\\""),
 		)}).
 		Sync(ctx)
 
@@ -234,15 +235,17 @@ func (ci *CodeManager) CreateGithubRelease(
 		// Build the binary using the Runner function
 		container := Image(sourceDir, runnerInfo)
 
-		// Upload the binary asset to the release
-		_, err = container.
+		// Upload the binary asset to the release using a separate curl container
+		_, err = dag.Container().
+			From("alpine/curl").
 			WithSecretVariable("GITHUB_TOKEN", token).
+			WithMountedFile("/binary", container.File(fmt.Sprintf("/usr/local/bin/%s", binaryName))).
 			WithExec([]string{"sh", "-c", fmt.Sprintf(
 				"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
 					"-H \"Content-Type: application/octet-stream\" "+
 					"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
-					"--data-binary @%s",
-				actualUser, binaryName, binaryName,
+					"--data-binary @/binary",
+				actualUser, binaryName,
 			)}).
 			Sync(ctx)
 
