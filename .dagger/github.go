@@ -19,8 +19,6 @@ func NewGitHubReleaseManager() *GitHubReleaseManager {
 	return &GitHubReleaseManager{}
 }
 
-
-
 // getReleaseInfo gets the latest tag and release notes from Git.
 func (gh *GitHubReleaseManager) getReleaseInfo(
 	ctx context.Context,
