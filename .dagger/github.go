@@ -60,7 +60,7 @@ func (gh *GitHubReleaseManager) createGitHubRelease(
 				"-H \"Accept: application/vnd.github.v3+json\" "+
 				"https://api.github.com/repos/%s/code-manager/releases "+
 				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			actualUser, latestTag, latestTag, strings.ReplaceAll(releaseNotes, "\"", "\\\""),
+			actualUser, latestTag, latestTag, gh.escapeJSONString(releaseNotes),
 		)}).
 		Stdout(ctx)
 
@@ -179,6 +179,21 @@ func (gh *GitHubReleaseManager) uploadBinary(
 		return fmt.Errorf("failed to upload binary for %s: %w", platform, err)
 	}
 	return nil
+}
+
+// escapeJSONString properly escapes a string for JSON inclusion.
+func (gh *GitHubReleaseManager) escapeJSONString(s string) string {
+	// Replace backslashes first
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	// Replace double quotes
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	// Replace newlines
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	// Replace carriage returns
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	// Replace tabs
+	s = strings.ReplaceAll(s, "\t", "\\t")
+	return s
 }
 
 // buildBinaryName builds the binary filename for a platform.
