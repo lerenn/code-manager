@@ -181,8 +181,6 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	return nil
 }
 
-
-
 // buildBinaryName builds the binary filename for a platform.
 func (gh *GitHubReleaseManager) buildBinaryName(runnerInfo ImageInfo) string {
 	binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)

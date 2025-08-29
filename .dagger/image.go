@@ -1,10 +1,6 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"sync"
-
 	"code-manager/dagger/internal/dagger"
 	"maps"
 	"slices"
@@ -57,58 +53,4 @@ func Image(
 		Platform:   dagger.Platform(runnerInfo.OS + "/" + runnerInfo.Arch),
 		Dockerfile: "build/container/Dockerfile",
 	})
-}
-
-// buildAllImages builds Docker images for all platforms.
-func buildAllImages(sourceDir *dagger.Directory, platforms []string) map[string]*dagger.Container {
-	images := make(map[string]*dagger.Container)
-	for _, platform := range platforms {
-		runnerInfo := GoImageInfo[platform]
-		images[platform] = Image(sourceDir, runnerInfo)
-	}
-	return images
-}
-
-// buildImageName builds the Docker image name for a user and tag.
-func buildImageName(actualUser, latestTag string) string {
-	registry := "ghcr.io"
-	imageName := fmt.Sprintf("%s/code-manager", actualUser)
-	return fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
-}
-
-// pushAllImages pushes all Docker images to the registry in parallel.
-func pushAllImages(
-	ctx context.Context,
-	images map[string]*dagger.Container,
-	platforms []string,
-	fullImageName, actualUser string,
-	token *dagger.Secret,
-) error {
-	registry := "ghcr.io"
-	errChan := make(chan error, len(platforms))
-	var wg sync.WaitGroup
-
-	for _, platform := range platforms {
-		wg.Add(1)
-		go func(platform string) {
-			defer wg.Done()
-
-			_, err := images[platform].
-				WithRegistryAuth(registry, actualUser, token).
-				Publish(ctx, fullImageName)
-
-			if err != nil {
-				errChan <- fmt.Errorf("failed to push image for %s: %w", platform, err)
-			}
-		}(platform)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		return err
-	}
-
-	return nil
 }

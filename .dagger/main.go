@@ -116,53 +116,11 @@ func (ci *CodeManager) EndToEndTests(sourceDir *dagger.Directory) *dagger.Contai
 		})
 }
 
-// BuildAndPushDockerImages builds and pushes Docker images for all supported platforms to GitHub Packages.
-func (ci *CodeManager) BuildAndPushDockerImages(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	user *string,
-	token *dagger.Secret,
-) error {
-	actualUser := ci.getActualUser(user)
-
-	latestTag, err := ci.getLatestTag(ctx, sourceDir, actualUser, token)
-	if err != nil {
-		return err
-	}
-
-	fullImageName := buildImageName(actualUser, latestTag)
-	platforms := AvailablePlatforms()
-
-	// Build all images in parallel
-	images := buildAllImages(sourceDir, platforms)
-
-	// Push all images in parallel
-	return pushAllImages(ctx, images, platforms, fullImageName, actualUser, token)
-}
-
 func (ci *CodeManager) getActualUser(user *string) string {
 	if user != nil {
 		return *user
 	}
 	return defaultUser
-}
-
-func (ci *CodeManager) getLatestTag(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	actualUser string,
-	token *dagger.Secret,
-) (string, error) {
-	repo, err := NewGit(ctx, NewGitOptions{
-		SrcDir: sourceDir,
-		User:   &actualUser,
-		Token:  token,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return repo.GetLastTag(ctx)
 }
 
 // BuildAndReleaseForArchitecture builds a Docker image for a specific architecture,
@@ -200,8 +158,6 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	// Upload binary for this architecture
 	return gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
 }
-
-
 
 func (ci *CodeManager) withGoCodeAndCacheAsWorkDirectory(
 	c *dagger.Container,
