@@ -126,7 +126,7 @@ func (ci *CodeManager) BuildAndPushDockerImages(
 	token *dagger.Secret,
 ) error {
 	actualUser := ci.getActualUser(user)
-	
+
 	latestTag, err := ci.getLatestTag(ctx, sourceDir, actualUser, token)
 	if err != nil {
 		return err
@@ -226,7 +226,7 @@ func (ci *CodeManager) CreateGithubRelease(
 	token *dagger.Secret,
 ) error {
 	actualUser := ci.getActualUser(user)
-	
+
 	latestTag, releaseNotes, err := ci.getReleaseInfo(ctx, sourceDir, actualUser, token)
 	if err != nil {
 		return err
