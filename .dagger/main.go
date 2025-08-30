@@ -168,18 +168,23 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 		return err
 	}
 
+	// Check if binary for this architecture already exists in the release
+	binaryExists, err := gh.checkBinaryExists(ctx, architecture, actualUser, releaseID, token)
+	if err != nil {
+		return err
+	}
+
+	if binaryExists {
+		fmt.Printf("Binary for architecture %s already exists in release %s, "+
+			"skipping build and upload\n", architecture, latestTag)
+		return nil
+	}
+
 	// Build binary for this architecture
 	container, err := ci.BuildForArchitecture(sourceDir, architecture)
 	if err != nil {
 		return err
 	}
-
-	// Upload binary for this architecture (always do this)
-	err = gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
-	if err != nil {
-		return err
-	}
-
 	// Only push the Docker image if TargetEnabled is true
 	runnerInfo := GoImageInfo[architecture]
 	if runnerInfo.TargetEnabled {
@@ -189,6 +194,12 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 		if err != nil {
 			return fmt.Errorf("failed to push Docker image for %s: %w", architecture, err)
 		}
+	}
+
+	// Upload binary for this architecture
+	err = gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
+	if err != nil {
+		return err
 	}
 
 	return nil
