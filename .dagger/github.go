@@ -229,7 +229,6 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	if runnerInfo.OS == "windows" {
 		binaryPath += ".exe"
 	}
-
 	binaryContent, err := container.File(binaryPath).Contents(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
