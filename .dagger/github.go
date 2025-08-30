@@ -19,8 +19,6 @@ func NewGitHubReleaseManager() *GitHubReleaseManager {
 	return &GitHubReleaseManager{}
 }
 
-
-
 // getReleaseInfo gets the latest tag and release notes from Git.
 func (gh *GitHubReleaseManager) getReleaseInfo(
 	ctx context.Context,
@@ -48,6 +46,13 @@ func (gh *GitHubReleaseManager) getReleaseInfo(
 	}
 
 	return latestTag, releaseNotes, nil
+}
+
+func (gh *GitHubReleaseManager) safeCloseResponse(resp *http.Response) {
+	if closeErr := resp.Body.Close(); closeErr != nil {
+		// Log the error but don't fail the function
+		fmt.Printf("warning: failed to close response body: %v\n", closeErr)
+	}
 }
 
 // createGitHubRelease creates a new GitHub release and returns the release ID.
@@ -93,7 +98,7 @@ func (gh *GitHubReleaseManager) createGitHubRelease(
 	if err != nil {
 		return "", fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer gh.safeCloseResponse(resp)
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
@@ -151,7 +156,7 @@ func (gh *GitHubReleaseManager) getExistingRelease(
 	if err != nil {
 		return "", fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer gh.safeCloseResponse(resp)
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
@@ -241,7 +246,7 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	if err != nil {
 		return fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer gh.safeCloseResponse(resp)
 
 	// Check for errors
 	if resp.StatusCode != http.StatusCreated {
