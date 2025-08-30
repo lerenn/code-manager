@@ -266,3 +266,64 @@ func (gh *GitHubReleaseManager) buildBinaryName(runnerInfo ImageInfo) string {
 	}
 	return binaryName
 }
+
+// checkBinaryExists checks if a binary for the specified architecture already exists in the release.
+func (gh *GitHubReleaseManager) checkBinaryExists(
+	ctx context.Context,
+	architecture, actualUser, releaseID string,
+	token *dagger.Secret,
+) (bool, error) {
+	runnerInfo := GoImageInfo[architecture]
+	binaryName := gh.buildBinaryName(runnerInfo)
+
+	// Get the token value
+	tokenValue, err := token.Plaintext(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to get token: %w", err)
+	}
+
+	// Create HTTP request to list assets
+	url := fmt.Sprintf("https://api.github.com/repos/%s/code-manager/releases/%s/assets", actualUser, releaseID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return false, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set headers
+	req.Header.Set("Authorization", "token "+tokenValue)
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	// Make the request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("failed to make request: %w", err)
+	}
+	defer gh.safeCloseResponse(resp)
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	// Check for errors
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("failed to list assets: status %d, body: %s", resp.StatusCode, string(body))
+	}
+
+	// Parse response to check if binary exists
+	var assets []map[string]interface{}
+	if err := json.Unmarshal(body, &assets); err != nil {
+		return false, fmt.Errorf("failed to parse response: %w", err)
+	}
+
+	// Check if binary with the same name exists
+	for _, asset := range assets {
+		if assetName, ok := asset["name"].(string); ok && assetName == binaryName {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
