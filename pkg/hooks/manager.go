@@ -33,6 +33,7 @@ type HookManagerInterface interface {
 	EnableHook(operation, hookName string) error
 	DisableHook(operation, hookName string) error
 	ListHooks(operation string) ([]Hook, error)
+	HasPostHooks(operation string) bool
 }
 
 // NewHookManager creates a new HookManager instance.
@@ -240,6 +241,15 @@ func (hm *HookManager) ListHooks(operation string) ([]Hook, error) {
 	}
 
 	return hooks, nil
+}
+
+// HasPostHooks checks if there are any post-hooks registered for an operation.
+func (hm *HookManager) HasPostHooks(operation string) bool {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+	
+	hooks, exists := hm.postHooks[operation]
+	return exists && len(hooks) > 0
 }
 
 // Helper methods for sorting and removing hooks.

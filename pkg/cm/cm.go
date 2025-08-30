@@ -221,7 +221,7 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
 		} else {
 			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
-			c.handleIDEOpening(ctx)
+			if c.hookManager.HasPostHooks(operationName) { c.handleIDEOpening(ctx) }
 		}
 	}
 	return resultErr
@@ -297,7 +297,7 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
 		} else {
 			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
-			c.handleIDEOpening(ctx)
+			if c.hookManager.HasPostHooks(operationName) { c.handleIDEOpening(ctx) }
 		}
 	}
 	return worktrees, projectType, resultErr
@@ -345,7 +345,7 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
 		} else {
 			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
-			c.handleIDEOpening(ctx)
+			if c.hookManager.HasPostHooks(operationName) { c.handleIDEOpening(ctx) }
 		}
 	}
 	return repositories, resultErr
