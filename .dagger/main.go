@@ -188,7 +188,7 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 
 	// Only push the Docker image if TargetEnabled is true
 	runnerInfo := GoImageInfo[architecture]
-	if runnerInfo.TargetEnabled {
+	if runnerInfo.ExportImage {
 		// Push the Docker image to GitHub Container Registry with version tag
 		imageName := fmt.Sprintf("ghcr.io/%s/code-manager:%s", actualUser, latestTag)
 
