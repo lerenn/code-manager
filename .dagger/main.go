@@ -186,7 +186,7 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 		return err
 	}
 
-	// Only push the Docker image if TargetEnabled is true
+	// Only push the Docker image if ExportImage is true
 	runnerInfo := GoImageInfo[architecture]
 	if runnerInfo.ExportImage {
 		// Push the Docker image to GitHub Container Registry with version tag

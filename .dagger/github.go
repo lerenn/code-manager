@@ -223,11 +223,8 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	}
 
 	// Get the binary file content
+	// The binary is always named 'cm' regardless of platform when built on Linux
 	binaryPath := "/usr/local/bin/cm"
-	if runnerInfo.OS == "windows" {
-		binaryPath = "/usr/local/bin/cm.exe"
-	}
-
 	binaryContent, err := container.File(binaryPath).Contents(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
