@@ -1,5 +1,6 @@
 # Dockerfile arguments
 ARG BUILDPLATFORM=linux/amd64
+ARG TARGETPLATFORM=linux/amd64
 
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
@@ -22,8 +23,8 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go install ./cmd/*
 
-# Get final base image
-FROM --platform=${TARGETOS}/${TARGETARCH} ${TARGETBASEIMAGE} AS final
+# Get final base image - use platform only if image should be pushed
+FROM --platform=${TARGETPLATFORM} ${TARGETBASEIMAGE} AS final
 
 # Get binary
 COPY --from=build /go/bin/* /usr/local/bin

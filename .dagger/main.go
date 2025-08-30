@@ -22,6 +22,8 @@ import (
 	"code-manager/dagger/internal/dagger"
 )
 
+const defaultUser = "lerenn"
+
 type CodeManager struct{}
 
 // Publish a new release.
@@ -32,7 +34,7 @@ func (ci *CodeManager) PublishTag(
 	token *dagger.Secret,
 ) error {
 	// Set default user if not provided
-	actualUser := "lerenn"
+	actualUser := defaultUser
 	if user != nil {
 		actualUser = *user
 	}
@@ -114,141 +116,90 @@ func (ci *CodeManager) EndToEndTests(sourceDir *dagger.Directory) *dagger.Contai
 		})
 }
 
-// BuildAndPushDockerImages builds and pushes Docker images for all supported platforms to GitHub Packages.
-func (ci *CodeManager) BuildAndPushDockerImages(
-	ctx context.Context,
-	sourceDir *dagger.Directory,
-	user *string,
-	token *dagger.Secret,
-) error {
-	// Set default user if not provided
-	actualUser := "lerenn"
+func (ci *CodeManager) getActualUser(user *string) string {
 	if user != nil {
-		actualUser = *user
+		return *user
 	}
-	// Get the latest tag
-	repo, err := NewGit(ctx, NewGitOptions{
-		SrcDir: sourceDir,
-		User:   &actualUser,
-		Token:  token,
-	})
-	if err != nil {
-		return err
-	}
-
-	latestTag, err := repo.GetLastTag(ctx)
-	if err != nil {
-		return err
-	}
-
-	// GitHub Packages registry URL
-	registry := "ghcr.io"
-	imageName := fmt.Sprintf("%s/code-manager", actualUser)
-	fullImageName := fmt.Sprintf("%s/%s:%s", registry, imageName, latestTag)
-
-	// Get all platforms
-	platforms := AvailablePlatforms()
-
-	// Build and push for each platform
-	for _, platform := range platforms {
-		runnerInfo := GoImageInfo[platform]
-
-		// Build the image for this platform using the existing Runner function
-		image := Image(sourceDir, runnerInfo)
-
-		// Push the image to GitHub Packages using Dagger's registry operations
-		_, err = image.
-			WithRegistryAuth(registry, actualUser, token).
-			Publish(ctx, fullImageName)
-
-		if err != nil {
-			return fmt.Errorf("failed to push image for %s: %w", platform, err)
-		}
-	}
-
-	return nil
+	return defaultUser
 }
 
-// CreateGithubRelease creates a GitHub release with binaries for all supported platforms.
-func (ci *CodeManager) CreateGithubRelease(
+// BuildForArchitecture builds a binary for a specific architecture without releasing it.
+func (ci *CodeManager) BuildForArchitecture(
+	sourceDir *dagger.Directory,
+	architecture string,
+) (*dagger.Container, error) {
+	// Validate architecture
+	if _, exists := GoImageInfo[architecture]; !exists {
+		return nil, fmt.Errorf("unsupported architecture: %s", architecture)
+	}
+
+	// Build Docker image for this architecture
+	runnerInfo := GoImageInfo[architecture]
+	container := Image(sourceDir, runnerInfo)
+
+	return container, nil
+}
+
+// BuildAndReleaseForArchitecture builds a Docker image for a specific architecture,
+// creates a GitHub release if it doesn't exist, and uploads the binary for that architecture.
+func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	ctx context.Context,
 	sourceDir *dagger.Directory,
+	architecture string,
 	user *string,
 	token *dagger.Secret,
 ) error {
-	// Set default user if not provided
-	actualUser := "lerenn"
-	if user != nil {
-		actualUser = *user
+	// Validate architecture
+	if _, exists := GoImageInfo[architecture]; !exists {
+		return fmt.Errorf("unsupported architecture: %s", architecture)
 	}
-	// Get the latest tag
-	repo, err := NewGit(ctx, NewGitOptions{
-		SrcDir: sourceDir,
-		User:   &actualUser,
-		Token:  token,
-	})
+
+	actualUser := ci.getActualUser(user)
+	gh := NewGitHubReleaseManager()
+
+	latestTag, releaseNotes, err := gh.getReleaseInfo(ctx, sourceDir, actualUser, token)
 	if err != nil {
 		return err
 	}
 
-	latestTag, err := repo.GetLastTag(ctx)
+	// Try to get existing release ID, create if it doesn't exist
+	releaseID, err := gh.getOrCreateRelease(ctx, actualUser, latestTag, releaseNotes, token)
 	if err != nil {
 		return err
 	}
 
-	// Get release notes from the last commit
-	releaseNotes, err := repo.GetLastCommitTitle(ctx)
+	// Check if binary for this architecture already exists in the release
+	binaryExists, err := gh.checkBinaryExists(ctx, architecture, actualUser, releaseID, token)
 	if err != nil {
 		return err
 	}
 
-	// Create the release first
-	_, err = dag.Container().
-		From("alpine/curl").
-		WithSecretVariable("GITHUB_TOKEN", token).
-		WithExec([]string{"sh", "-c", fmt.Sprintf(
-			"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-				"-H \"Accept: application/vnd.github.v3+json\" "+
-				"https://api.github.com/repos/%s/code-manager/releases "+
-				"-d '{\"tag_name\":\"%s\",\"name\":\"Release %s\",\"body\":\"%s\"}'",
-			actualUser, latestTag, latestTag, releaseNotes,
-		)}).
-		Sync(ctx)
-
-	if err != nil {
-		return fmt.Errorf("failed to create GitHub release: %w", err)
+	if binaryExists {
+		fmt.Printf("Binary for architecture %s already exists in release %s, "+
+			"skipping build and upload\n", architecture, latestTag)
+		return nil
 	}
 
-	// Build binaries for each platform
-	platforms := AvailablePlatforms()
-
-	for _, platform := range platforms {
-		runnerInfo := GoImageInfo[platform]
-
-		// Build binary for this platform
-		binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
-		if runnerInfo.OS == "windows" {
-			binaryName += ".exe"
-		}
-
-		// Build the binary using the Runner function
-		container := Image(sourceDir, runnerInfo)
-
-		// Upload the binary asset to the release
-		_, err = container.
-			WithSecretVariable("GITHUB_TOKEN", token).
-			WithExec([]string{"sh", "-c", fmt.Sprintf(
-				"curl -X POST -H \"Authorization: token $GITHUB_TOKEN\" "+
-					"-H \"Content-Type: application/octet-stream\" "+
-					"https://uploads.github.com/repos/%s/code-manager/releases/latest/assets?name=%s "+
-					"--data-binary @%s",
-				actualUser, binaryName, binaryName,
-			)}).
-			Sync(ctx)
-
+	// Build binary for this architecture
+	container, err := ci.BuildForArchitecture(sourceDir, architecture)
+	if err != nil {
+		return err
+	}
+	// Only push the Docker image if TargetEnabled is true
+	runnerInfo := GoImageInfo[architecture]
+	if runnerInfo.TargetEnabled {
+		// Push the Docker image to the registry
+		imageName := fmt.Sprintf("code-manager:%s-%s", runnerInfo.OS, runnerInfo.Arch)
+		_, err = container.Publish(ctx, imageName)
 		if err != nil {
-			return fmt.Errorf("failed to upload binary for %s: %w", platform, err)
+			return fmt.Errorf("failed to push Docker image for %s: %w", architecture, err)
 		}
+	}
+
+	// Upload binary for this architecture
+	err = gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
+	if err != nil {
+		return err
 	}
 
 	return nil
