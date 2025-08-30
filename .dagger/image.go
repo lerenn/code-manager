@@ -13,7 +13,7 @@ type ImageInfo struct {
 	Arch            string
 	BuildBaseImage  string
 	TargetBaseImage string
-	TargetEnabled   bool
+	ExportImage     bool
 }
 
 var (
@@ -24,91 +24,91 @@ var (
 			Arch:            "386",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"linux/amd64": {
 			OS:              "linux",
 			Arch:            "amd64",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"linux/arm/v6": {
 			OS:              "linux",
 			Arch:            "arm/v6",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"linux/arm/v7": {
 			OS:              "linux",
 			Arch:            "arm/v7",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"linux/arm64/v8": {
 			OS:              "linux",
 			Arch:            "arm64/v8",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"linux/ppc64le": {
 			OS:              "linux",
 			Arch:            "ppc64le",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"linux/riscv64": {
 			OS:              "linux",
 			Arch:            "riscv64",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"linux/s390x": {
 			OS:              "linux",
 			Arch:            "s390x",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   true,
+			ExportImage:     true,
 		},
 		"darwin/amd64": {
 			OS:              "darwin",
 			Arch:            "amd64",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   false,
+			ExportImage:     false,
 		},
 		"darwin/386": {
 			OS:              "darwin",
 			Arch:            "386",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   false,
+			ExportImage:     false,
 		},
 		"darwin/arm64": {
 			OS:              "darwin",
 			Arch:            "arm64",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
-			TargetEnabled:   false,
+			ExportImage:     false,
 		},
 		"windows/386": {
 			OS:              "windows",
 			Arch:            "386",
 			BuildBaseImage:  "golang:alpine",
-			TargetBaseImage: "mcr.microsoft.com/windows/nanoserver:ltsc2022",
-			TargetEnabled:   true,
+			TargetBaseImage: "alpine",
+			ExportImage:     false,
 		},
 		"windows/amd64": {
 			OS:              "windows",
 			Arch:            "amd64",
 			BuildBaseImage:  "golang:alpine",
-			TargetBaseImage: "mcr.microsoft.com/windows/nanoserver:ltsc2022",
-			TargetEnabled:   true,
+			TargetBaseImage: "alpine",
+			ExportImage:     false,
 		},
 	}
 )
@@ -124,7 +124,7 @@ func Image(
 ) *dagger.Container {
 	// Determine target platform
 	targetPlatform := "linux/amd64" // default local platform
-	if runnerInfo.TargetEnabled {
+	if runnerInfo.ExportImage {
 		targetPlatform = runnerInfo.OS + "/" + runnerInfo.Arch
 	}
 
