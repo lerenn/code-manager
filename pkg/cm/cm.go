@@ -1,6 +1,8 @@
 package cm
+
 import (
 	"fmt"
+
 	basepkg "github.com/lerenn/code-manager/internal/base"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
@@ -14,6 +16,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
+
 // CM interface provides Git repository detection functionality.
 type CM interface {
 	// CreateWorkTree executes the main application logic.
@@ -38,6 +41,7 @@ type CM interface {
 	RegisterHook(operation string, hook hooks.Hook) error
 	UnregisterHook(operation, hookName string) error
 }
+
 // NewCMParams contains parameters for creating a new CM instance.
 type NewCMParams struct {
 	Repository repository.Repository
@@ -51,6 +55,7 @@ type realCM struct {
 	workspace   workspace.Workspace
 	hookManager hooks.HookManagerInterface
 }
+
 // NewCM creates a new CM instance.
 func NewCM(cfg *config.Config) (CM, error) {
 	fsInstance := fs.NewFS()
@@ -108,6 +113,7 @@ func NewCM(cfg *config.Config) (CM, error) {
 	}
 	return cmInstance, nil
 }
+
 // setupHooks configures and registers all hooks for the CM instance.
 func setupHooks(cmInstance *realCM) error {
 	// Register IDE opening hook for operations that create worktrees
@@ -116,6 +122,7 @@ func setupHooks(cmInstance *realCM) error {
 	}
 	return nil
 }
+
 // NewCMWithDependencies creates a new CM instance with custom repository and workspace dependencies.
 // This is primarily used for testing with mocked dependencies.
 func NewCMWithDependencies(params NewCMParams) CM {
@@ -154,6 +161,7 @@ func (c *realCM) SetVerbose(verbose bool) {
 	// Update the IDE manager with the new logger
 	c.ideManager = ide.NewManager(c.FS, c.Logger)
 }
+
 // RegisterHook registers a hook for a specific operation.
 func (c *realCM) RegisterHook(operation string, hook hooks.Hook) error {
 	// This is a simplified implementation - in practice, you'd want to determine
@@ -171,10 +179,12 @@ func (c *realCM) RegisterHook(operation string, hook hooks.Hook) error {
 		return fmt.Errorf("unsupported hook type")
 	}
 }
+
 // UnregisterHook removes a hook by name from a specific operation.
 func (c *realCM) UnregisterHook(operation, hookName string) error {
 	return c.hookManager.RemoveHook(operation, hookName)
 }
+
 // executeWithHooks executes an operation with pre and post hooks.
 func (c *realCM) executeWithHooks(operationName string, params map[string]interface{}, operation func() error) error {
 	ctx := &hooks.HookContext{
@@ -216,6 +226,7 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 	}
 	return resultErr
 }
+
 // handleIDEOpening handles IDE opening if requested by hooks.
 func (c *realCM) handleIDEOpening(ctx *hooks.HookContext) {
 	shouldOpenIDE, exists := ctx.Results["shouldOpenIDE"]
@@ -240,6 +251,7 @@ func (c *realCM) handleIDEOpening(ctx *hooks.HookContext) {
 	}
 	_ = c.ideManager.OpenIDE(ideNameStr, worktreePathStr, c.IsVerbose())
 }
+
 // executeWithHooksAndReturnListWorktrees executes an operation with pre and post hooks
 // that returns worktrees and project type.
 func (c *realCM) executeWithHooksAndReturnListWorktrees(
@@ -290,6 +302,7 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 	}
 	return worktrees, projectType, resultErr
 }
+
 // executeWithHooksAndReturnRepositories executes an operation with pre and post hooks that returns repositories.
 func (c *realCM) executeWithHooksAndReturnRepositories(
 	operationName string,
@@ -337,6 +350,7 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 	}
 	return repositories, resultErr
 }
+
 // detectProjectMode detects the type of project (single repository or workspace).
 func (c *realCM) detectProjectMode() (ProjectType, error) {
 	c.VerbosePrint("Detecting project mode...")
