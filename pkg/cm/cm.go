@@ -197,10 +197,8 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)
-	if c.hookManager != nil {
-		if err := c.hookManager.ExecutePreHooks(operationName, ctx); err != nil {
-			return err
-		}
+	if err := c.executePreHooks(operationName, ctx); err != nil {
+		return err
 	}
 	// Execute operation
 	var resultErr error
@@ -218,16 +216,8 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 		ctx.Results["success"] = true
 	}
 	// Execute post-hooks or error-hooks (if hook manager is available)
-	if c.hookManager != nil {
-		if resultErr != nil {
-			if hookErr := c.hookManager.ExecuteErrorHooks(operationName, ctx); hookErr != nil {
-				return hookErr
-			}
-		} else {
-			if hookErr := c.hookManager.ExecutePostHooks(operationName, ctx); hookErr != nil {
-				return hookErr
-			}
-		}
+	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
+		return hookErr
 	}
 	return resultErr
 }
@@ -247,10 +237,8 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)
-	if c.hookManager != nil {
-		if err := c.hookManager.ExecutePreHooks(operationName, ctx); err != nil {
-			return nil, ProjectTypeNone, err
-		}
+	if err := c.executePreHooks(operationName, ctx); err != nil {
+		return nil, ProjectTypeNone, err
 	}
 	// Execute operation
 	var worktrees []status.WorktreeInfo
@@ -272,16 +260,8 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 		ctx.Results["success"] = true
 	}
 	// Execute post-hooks or error-hooks (if hook manager is available)
-	if c.hookManager != nil {
-		if resultErr != nil {
-			if hookErr := c.hookManager.ExecuteErrorHooks(operationName, ctx); hookErr != nil {
-				return nil, ProjectTypeNone, hookErr
-			}
-		} else {
-			if hookErr := c.hookManager.ExecutePostHooks(operationName, ctx); hookErr != nil {
-				return nil, ProjectTypeNone, hookErr
-			}
-		}
+	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
+		return nil, ProjectTypeNone, hookErr
 	}
 	return worktrees, projectType, resultErr
 }
@@ -300,10 +280,8 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)
-	if c.hookManager != nil {
-		if err := c.hookManager.ExecutePreHooks(operationName, ctx); err != nil {
-			return nil, err
-		}
+	if err := c.executePreHooks(operationName, ctx); err != nil {
+		return nil, err
 	}
 	// Execute operation
 	var repositories []RepositoryInfo
@@ -323,18 +301,30 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 		ctx.Results["success"] = true
 	}
 	// Execute post-hooks or error-hooks (if hook manager is available)
-	if c.hookManager != nil {
-		if resultErr != nil {
-			if hookErr := c.hookManager.ExecuteErrorHooks(operationName, ctx); hookErr != nil {
-				return nil, hookErr
-			}
-		} else {
-			if hookErr := c.hookManager.ExecutePostHooks(operationName, ctx); hookErr != nil {
-				return nil, hookErr
-			}
-		}
+	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
+		return nil, hookErr
 	}
 	return repositories, resultErr
+}
+
+// executeHooks executes pre-hooks, post-hooks, or error-hooks based on the operation result.
+func (c *realCM) executeHooks(operationName string, ctx *hooks.HookContext, resultErr error) error {
+	if c.hookManager == nil {
+		return nil
+	}
+
+	if resultErr != nil {
+		return c.hookManager.ExecuteErrorHooks(operationName, ctx)
+	}
+	return c.hookManager.ExecutePostHooks(operationName, ctx)
+}
+
+// executePreHooks executes pre-hooks if hook manager is available.
+func (c *realCM) executePreHooks(operationName string, ctx *hooks.HookContext) error {
+	if c.hookManager == nil {
+		return nil
+	}
+	return c.hookManager.ExecutePreHooks(operationName, ctx)
 }
 
 // detectProjectMode detects the type of project (single repository or workspace).
