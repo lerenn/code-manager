@@ -8,6 +8,11 @@ import (
 	"slices"
 )
 
+const (
+	windowsOS = "windows"
+	exeExt    = ".exe"
+)
+
 // ImageInfo represents a Docker image.
 type ImageInfo struct {
 	OS              string
@@ -144,8 +149,8 @@ func RuntimeImage(
 
 	// Determine the correct binary path
 	binaryPath := fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch)
-	if runnerInfo.OS == "windows" {
-		binaryPath += ".exe"
+	if runnerInfo.OS == windowsOS {
+		binaryPath += exeExt
 	}
 
 	// Binary is now always available at /go/bin/{GOOS}_{GOARCH}/cm (with .exe for Windows)
