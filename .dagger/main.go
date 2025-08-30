@@ -123,6 +123,23 @@ func (ci *CodeManager) getActualUser(user *string) string {
 	return defaultUser
 }
 
+// BuildForArchitecture builds a binary for a specific architecture without releasing it.
+func (ci *CodeManager) BuildForArchitecture(
+	sourceDir *dagger.Directory,
+	architecture string,
+) (*dagger.Container, error) {
+	// Validate architecture
+	if _, exists := GoImageInfo[architecture]; !exists {
+		return nil, fmt.Errorf("unsupported architecture: %s", architecture)
+	}
+
+	// Build Docker image for this architecture
+	runnerInfo := GoImageInfo[architecture]
+	container := Image(sourceDir, runnerInfo)
+
+	return container, nil
+}
+
 // BuildAndReleaseForArchitecture builds a Docker image for a specific architecture,
 // creates a GitHub release if it doesn't exist, and uploads the binary for that architecture.
 func (ci *CodeManager) BuildAndReleaseForArchitecture(
@@ -151,12 +168,30 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 		return err
 	}
 
-	// Build Docker image for this architecture
-	runnerInfo := GoImageInfo[architecture]
-	container := Image(sourceDir, runnerInfo)
+	// Build binary for this architecture
+	container, err := ci.BuildForArchitecture(sourceDir, architecture)
+	if err != nil {
+		return err
+	}
 
-	// Upload binary for this architecture
-	return gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
+	// Upload binary for this architecture (always do this)
+	err = gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
+	if err != nil {
+		return err
+	}
+
+	// Only push the Docker image if TargetEnabled is true
+	runnerInfo := GoImageInfo[architecture]
+	if runnerInfo.TargetEnabled {
+		// Push the Docker image to the registry
+		imageName := fmt.Sprintf("code-manager:%s-%s", runnerInfo.OS, runnerInfo.Arch)
+		_, err = container.Publish(ctx, imageName)
+		if err != nil {
+			return fmt.Errorf("failed to push Docker image for %s: %w", architecture, err)
+		}
+	}
+
+	return nil
 }
 
 func (ci *CodeManager) withGoCodeAndCacheAsWorkDirectory(
