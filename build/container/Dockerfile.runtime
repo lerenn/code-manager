@@ -1,7 +1,10 @@
 # Dockerfile.runtime - Runtime stage for running the application
-# This Dockerfile expects a build stage with the binary at /go/bin/cm
+# This Dockerfile expects a build stage with the binary at /go/bin/{GOOS}_{GOARCH}/cm
 
-FROM alpine:latest
+# Build argument for the target base image
+ARG TARGETBASEIMAGE=alpine:latest
+
+FROM ${TARGETBASEIMAGE}
 
 # Copy the binary from the build stage
 COPY --from=build /go/bin/cm /usr/local/bin/cm

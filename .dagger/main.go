@@ -135,7 +135,10 @@ func (ci *CodeManager) BuildForArchitecture(
 	}
 
 	// Build binary for this architecture
-	container := BuildImage(sourceDir, runnerInfo)
+	container, err := BuildImage(sourceDir, runnerInfo)
+	if err != nil {
+		return nil, err
+	}
 
 	return container, nil
 }

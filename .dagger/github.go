@@ -223,8 +223,8 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	}
 
 	// Get the binary file content from the build container
-	// The binary is built in /go/bin/cm in the build stage
-	binaryPath := "/go/bin/cm"
+	// The binary is built in /go/bin/{GOOS}_{GOARCH}/cm for cross-compilation
+	binaryPath := fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch)
 	binaryContent, err := container.File(binaryPath).Contents(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
