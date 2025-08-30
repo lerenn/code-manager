@@ -223,23 +223,14 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	}
 
 	// Get the binary file content
-	var binaryContent string
-
+	binaryPath := "/usr/local/bin/cm"
 	if runnerInfo.OS == "windows" {
-		// For Windows containers, the binary will be named cm.exe
-		binaryPath := "/usr/local/bin/cm.exe"
-		var err error
-		binaryContent, err = container.File(binaryPath).Contents(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to read Windows binary file at %s: %w", binaryPath, err)
-		}
-	} else {
-		binaryPath := "/usr/local/bin/cm"
-		var err error
-		binaryContent, err = container.File(binaryPath).Contents(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
-		}
+		binaryPath = "/usr/local/bin/cm.exe"
+	}
+
+	binaryContent, err := container.File(binaryPath).Contents(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
 	}
 
 	// Create HTTP request

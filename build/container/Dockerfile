@@ -26,9 +26,6 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 # Get final base image - use platform only if image should be pushed
 FROM --platform=${TARGETPLATFORM} ${TARGETBASEIMAGE} AS final
 
-# Create directory for binary
-RUN mkdir -p /usr/local/bin
-
 # Get binary - handle Windows vs Linux differently
 COPY --from=build /go/bin/* /usr/local/bin/
 
