@@ -8,7 +8,7 @@ import (
 	basepkg "github.com/lerenn/code-manager/internal/base"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -36,7 +36,7 @@ func TestRealCM_Clone_Success(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
@@ -94,7 +94,7 @@ func TestRealCM_Clone_ShallowSuccess(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
@@ -153,7 +153,7 @@ func TestRealCM_Clone_EmptyURL(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	err := cm.Clone("")
@@ -181,7 +181,7 @@ func TestRealCM_Clone_RepositoryExists(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
@@ -220,7 +220,7 @@ func TestRealCM_Clone_DefaultBranchDetectionFailure(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
@@ -256,7 +256,7 @@ func TestRealCM_Clone_CloneFailure(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
@@ -299,7 +299,7 @@ func TestRealCM_Clone_InitializationFailure(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
@@ -345,7 +345,7 @@ func TestRealCM_NormalizeRepositoryURL_HTTPS(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	// Test HTTPS URL with .git suffix
@@ -379,7 +379,7 @@ func TestRealCM_NormalizeRepositoryURL_SSH(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	// Test SSH URL with .git suffix
@@ -413,7 +413,7 @@ func TestRealCM_NormalizeRepositoryURL_InvalidURL(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	// Test invalid URL
@@ -442,7 +442,7 @@ func TestRealCM_GenerateClonePath(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	normalizedURL := "github.com/octocat/Hello-World"

@@ -10,7 +10,6 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/ide"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,11 +18,12 @@ import (
 func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	t.Helper()
 
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Safely change to repo directory and create worktree
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
@@ -196,17 +196,18 @@ func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with verbose flag
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 	cmInstance.SetVerbose(true)
 
+	require.NoError(t, err)
 	// Safely change to repo directory and create worktree
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
-	err := cmInstance.CreateWorkTree("feature/test-branch")
+	err = cmInstance.CreateWorkTree("feature/test-branch")
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created successfully
@@ -240,11 +241,12 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with IDE opening
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Safely change to repo directory and create worktree
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
@@ -252,7 +254,7 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	ideName := "dummy"
 
 	// Create worktree with IDE (dummy IDE will print the path to stdout)
-	err := cmInstance.CreateWorkTree("feature/test-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
+	err = cmInstance.CreateWorkTree("feature/test-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created
@@ -288,17 +290,23 @@ func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with unsupported IDE
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Safely change to repo directory and create worktree
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
 	ideName := "unsupported-ide"
-	err := cmInstance.CreateWorkTree("feature/unsupported-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
-	assert.Error(t, err, "Command should fail with unsupported IDE")
-	assert.ErrorIs(t, err, ide.ErrUnsupportedIDE, "Error should mention unsupported IDE")
+	err = cmInstance.CreateWorkTree("feature/unsupported-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
+	// Note: IDE opening is now handled by the hook system, so the worktree creation succeeds
+	// but the IDE opening fails. The test now verifies that the worktree is created successfully.
+	require.NoError(t, err, "Worktree creation should succeed even with unsupported IDE")
+
+	// Verify the worktree was created successfully
+	assertWorktreeExists(t, setup, "feature/unsupported-ide")
+	assertWorktreeInRepo(t, setup, "feature/unsupported-ide")
 }

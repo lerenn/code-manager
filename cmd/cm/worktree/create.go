@@ -4,7 +4,7 @@ package worktree
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +42,7 @@ Issue Reference Formats:
 
 Examples:
   cm worktree create feature-branch
-  cm wt create feature-branch --ide ` + ide.DefaultIDE + `
+  cm wt create feature-branch --ide ` + ide_opening.DefaultIDE + `
   cm w create feature-branch --ide cursor
   cm worktree create --from-issue https://github.com/owner/repo/issues/123
   cm worktree create custom-branch --from-issue 456
@@ -72,7 +72,10 @@ func createCreateCmdRunE(ideName *string, force *bool, fromIssue *string) func(*
 		if err != nil {
 			return err
 		}
-		cmManager := cm.NewCM(cfg)
+		cmManager, err := cm.NewCM(cfg)
+		if err != nil {
+			return err
+		}
 		cmManager.SetVerbose(config.Verbose)
 
 		// Determine branch name

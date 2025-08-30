@@ -10,7 +10,7 @@ import (
 	basepkg "github.com/lerenn/code-manager/internal/base"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -38,7 +38,7 @@ func TestRealCM_Init_Success(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	// Create a temporary directory for testing
@@ -112,7 +112,7 @@ func TestRealCM_Init_ResetSuccess(t *testing.T) {
 			Prompt:        mockPrompt,
 			Verbose:       false,
 		}),
-		ideManager: ide.NewManager(mockFS, mockLogger),
+		ideManager: ide_opening.NewManager(mockFS, mockLogger),
 	}
 
 	// Create a temporary directory for testing

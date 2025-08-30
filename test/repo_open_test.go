@@ -9,7 +9,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,11 +23,12 @@ func TestOpenExistingWorktree(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Create a worktree first
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Change to repo directory and create worktree
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
@@ -70,11 +71,12 @@ func TestOpenNonExistentWorktree(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test opening a non-existent worktree
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Change to repo directory
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
@@ -96,11 +98,12 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Create a worktree first
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Change to repo directory and create worktree
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
@@ -114,5 +117,5 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	// Try to open with unsupported IDE
 	err = cmInstance.OpenWorktree("feature/unsupported-ide", "unsupported-ide")
 	assert.Error(t, err, "Opening with unsupported IDE should fail")
-	assert.ErrorIs(t, err, ide.ErrUnsupportedIDE, "Error should mention unsupported IDE")
+	assert.ErrorIs(t, err, ide_opening.ErrUnsupportedIDE, "Error should mention unsupported IDE")
 }

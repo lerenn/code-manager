@@ -27,7 +27,10 @@ Examples:
 			if err != nil {
 				return err
 			}
-			cmManager := cm.NewCM(cfg)
+			cmManager, err := cm.NewCM(cfg)
+			if err != nil {
+				return err
+			}
 			cmManager.SetVerbose(config.Verbose)
 
 			return cmManager.DeleteWorkTree(args[0], force)

@@ -172,7 +172,6 @@ type CM interface {
     SetVerbose(verbose bool)
     
     // New hook management methods
-    HookManager() hooks.HookManagerInterface
     RegisterHook(operation string, hook hooks.Hook) error
     UnregisterHook(operation, hookName string) error
 }
@@ -238,132 +237,249 @@ func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 // Similar wrapper methods for all other operations...
 ```
 
+### Operation Constants
+
+All operation names used in the hook system are centralized in `pkg/cm/consts/operations.go` to ensure consistency and prevent typos:
+
+```go
+// pkg/cm/consts/operations.go
+package consts
+
+// Operation names for the hook system
+const (
+    // Worktree operations
+    CreateWorkTree = "CreateWorkTree"
+    DeleteWorkTree = "DeleteWorkTree"
+    LoadWorktree   = "LoadWorktree"
+    ListWorktrees  = "ListWorktrees"
+    OpenWorktree   = "OpenWorktree"
+
+    // Repository operations
+    CloneRepository = "CloneRepository"
+    ListRepositories = "ListRepositories"
+    Clone = "Clone" // Legacy name for backward compatibility
+
+    // Initialization operations
+    Init = "Init"
+)
+```
+
+This approach provides several benefits:
+- **Consistency**: All operation names are defined in one place
+- **Type Safety**: Prevents typos in operation names
+- **Maintainability**: Easy to update operation names across the codebase
+- **IDE Support**: Better autocomplete and refactoring support
+
 ### Built-in Hooks
 
-#### Logging Hook
+The hook system provides a framework for creating custom hooks. Users can implement their own hooks based on the provided interfaces:
+
+- **PreHook**: Execute before operations, can modify parameters or abort execution
+- **PostHook**: Execute after operations, can process results or handle errors  
+- **ErrorHook**: Execute when operations fail, for error handling and recovery
+- **GlobalHook**: Apply to all operations automatically
+
+Example hook implementations can be created for:
+- Logging and metrics collection
+- Parameter validation
+- User confirmation for destructive operations
+- Performance monitoring
+- Error handling and recovery
+
+### IDE Opening Hook Implementation
+
+The IDE opening functionality has been implemented as a post-hook that validates IDE opening parameters and stores the information for the CM to handle. The hook focuses on validation and information storage, while the CM handles the actual IDE opening:
+
 ```go
-// pkg/hooks/logging.go
+// pkg/hooks/ide_opening/ide_opening.go
 
-type LoggingHook struct {
-    logger logger.Logger
-    level  string
-}
+type IDEOpeningHook struct{}
 
-func (h *LoggingHook) PreExecute(ctx *HookContext) error {
-    h.logger.Info("Starting operation", "operation", ctx.OperationName, "params", ctx.Parameters)
-    return nil
-}
-
-func (h *LoggingHook) PostExecute(ctx *HookContext) error {
-    if ctx.Error != nil {
-        h.logger.Error("Operation failed", "operation", ctx.OperationName, "error", ctx.Error)
-    } else {
-        h.logger.Info("Operation completed", "operation", ctx.OperationName, "results", ctx.Results)
-    }
-    return nil
-}
-```
-
-#### Metrics Hook
-```go
-// pkg/hooks/metrics.go
-
-type MetricsHook struct {
-    metrics MetricsCollector
-}
-
-func (h *MetricsHook) PreExecute(ctx *HookContext) error {
-    h.metrics.IncCounter("cm_operations_started", map[string]string{
-        "operation": ctx.OperationName,
-    })
-    ctx.Metadata["start_time"] = time.Now()
-    return nil
-}
-
-func (h *MetricsHook) PostExecute(ctx *HookContext) error {
-    if startTime, ok := ctx.Metadata["start_time"].(time.Time); ok {
-        duration := time.Since(startTime)
-        h.metrics.RecordHistogram("cm_operation_duration", duration, map[string]string{
-            "operation": ctx.OperationName,
-        })
+// RegisterForOperations registers this hook for the operations that create worktrees.
+func (h *IDEOpeningHook) RegisterForOperations(cmInstance interface {
+    RegisterHook(operation string, hook hooks.Hook) error
+}) error {
+    // Register as post-hook for operations that create worktrees
+    if err := cmInstance.RegisterHook(consts.CreateWorkTree, h); err != nil {
+        return err
     }
     
+    if err := cmInstance.RegisterHook(consts.LoadWorktree, h); err != nil {
+        return err
+    }
+    
+    // Register as post-hook for operations that open worktrees
+    if err := cmInstance.RegisterHook(consts.OpenWorktree, h); err != nil {
+        return err
+    }
+    
+    return nil
+}
+
+func (h *IDEOpeningHook) PostExecute(ctx *hooks.HookContext) error {
+    // Only proceed if operation was successful
     if ctx.Error != nil {
-        h.metrics.IncCounter("cm_operations_failed", map[string]string{
-            "operation": ctx.OperationName,
-        })
-    } else {
-        h.metrics.IncCounter("cm_operations_succeeded", map[string]string{
-            "operation": ctx.OperationName,
-        })
+        return nil
     }
+
+    // Check if IDE name is provided in parameters
+    ideName, hasIDEName := ctx.Parameters["ideName"]
+    if !hasIDEName {
+        return nil
+    }
+
+    // Get worktree path from parameters
+    var worktreePath string
+    if branch, hasBranch := ctx.Parameters["branch"]; hasBranch {
+        if branchStr, ok := branch.(string); ok && branchStr != "" {
+            worktreePath = branchStr
+        }
+    } else if worktreeName, hasWorktreeName := ctx.Parameters["worktreeName"]; hasWorktreeName {
+        if worktreeNameStr, ok := worktreeName.(string); ok && worktreeNameStr != "" {
+            worktreePath = worktreeNameStr
+        }
+    }
+
+    if worktreePath == "" {
+        return fmt.Errorf("cannot open IDE: worktree path is empty")
+    }
+
+    // Store the IDE opening information in the context for the CM to handle
+    ctx.Results["ideName"] = ideNameStr
+    ctx.Results["worktreePath"] = worktreePath
+    ctx.Results["shouldOpenIDE"] = true
+
     return nil
 }
 ```
 
-#### Validation Hook
+This hook automatically registers itself for `CreateWorkTree`, `LoadWorktree`, and `OpenWorktree` operations and replaces the previous direct IDE opening calls in the CM operations. The CM then handles the actual IDE opening after hook execution.
+
+The CM package handles IDE opening after hook execution:
+
 ```go
-// pkg/hooks/validation.go
+// pkg/cm/cm.go
 
-type ValidationHook struct {
-    validators map[string]Validator
-}
-
-func (h *ValidationHook) PreExecute(ctx *HookContext) error {
-    if validator, exists := h.validators[ctx.OperationName]; exists {
-        return validator.Validate(ctx.Parameters)
+// Execute post-hooks or error-hooks (if hook manager is available)
+if c.hookManager != nil {
+    if resultErr != nil {
+        _ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
+    } else {
+        _ = c.hookManager.ExecutePostHooks(operationName, ctx)
+        
+        // Handle IDE opening if requested by hooks
+        if shouldOpenIDE, exists := ctx.Results["shouldOpenIDE"]; exists && shouldOpenIDE == true {
+            if ideName, hasIDE := ctx.Results["ideName"]; hasIDE {
+                if worktreePath, hasPath := ctx.Results["worktreePath"]; hasPath {
+                    if ideNameStr, ok := ideName.(string); ok {
+                        if worktreePathStr, ok := worktreePath.(string); ok {
+                            _ = c.ideManager.OpenIDE(ideNameStr, worktreePathStr, c.IsVerbose())
+                        }
+                    }
+                }
+            }
+        }
     }
-    return nil
 }
 ```
+
+### Package Organization
+
+The codebase has been organized into focused packages for better modularity:
+
+#### IDE Opening Package Organization
+
+The IDE opening functionality has been integrated into a coherent package that combines the hook system with IDE management:
+
+```
+pkg/hooks/ide_opening/
+├── ide_opening.go    # IDE opening hook implementation
+├── ide_opening_test.go
+├── ide.go           # IDE manager and interfaces
+├── vscode.go        # VS Code IDE implementation
+├── cursor.go        # Cursor IDE implementation
+├── dummy.go         # Dummy IDE for testing
+├── errors.go        # IDE-related errors
+└── ide_test.go      # IDE manager tests
+```
+
+#### Branch Package Organization
+
+Branch-related functionality has been moved to its own package:
+
+```
+pkg/branch/
+├── sanitize.go       # Branch name sanitization
+└── sanitize_test.go  # Branch sanitization tests
+```
+
+This organization provides several benefits:
+- **Coherent Integration**: IDE opening hook and IDE management are in the same package
+- **Separation of Concerns**: Hook validates and stores information, CM handles actual IDE opening
+- **Modularity**: Each package can be developed and tested independently
+- **Clear Dependencies**: Explicit imports show which packages are being used
+- **Scalability**: Easy to add new functionality in focused packages
+- **Maintainability**: Package-specific code is isolated and focused
+
+### IDE Opening Hook Coverage
+
+The IDE opening hook is registered for the following operations that support IDE opening:
+
+| Operation | IDE Opening Support | Parameters |
+|-----------|-------------------|------------|
+| `CreateWorkTree` | ✅ Yes | `ideName`, `branch` |
+| `LoadWorktree` | ✅ Yes | `ideName`, `branchArg` |
+| `OpenWorktree` | ✅ Yes | `ideName`, `worktreeName` |
+| `DeleteWorkTree` | ❌ No | No IDE parameters |
+| `ListWorktrees` | ❌ No | No IDE parameters |
+| `Clone` | ❌ No | No IDE parameters |
+| `ListRepositories` | ❌ No | No IDE parameters |
+| `Init` | ❌ No | No IDE parameters |
+
+The hook validates that `ideName` and branch/worktree information are provided and stores the IDE opening information in the hook context for the IDE manager to use.
 
 ### Programmatic Hook Registration
 
-#### Hook Setup in main.go
+#### Hook Setup in CM Creation
 ```go
-// cmd/cm/main.go
+// pkg/cm/cm.go
 
-func setupHooks(cmInstance cm.CM) {
-    hookManager := cmInstance.HookManager()
+func NewCM(cfg *config.Config) (CM, error) {
+    // ... create dependencies ...
     
-    // Register global hooks
-    hookManager.RegisterGlobalHook(&hooks.LoggingHook{
-        Logger: logger.NewLogger(),
-        Level:  "info",
-    })
-    
-    hookManager.RegisterGlobalHook(&hooks.MetricsHook{
-        Metrics: metrics.NewCollector(),
-    })
-    
-    // Register operation-specific hooks
-    hookManager.RegisterPreHook("CreateWorkTree", &hooks.ValidationHook{
-        Validators: map[string]hooks.Validator{
-            "CreateWorkTree": &CreateWorkTreeValidator{},
-        },
-    })
-    
-    hookManager.RegisterPreHook("DeleteWorkTree", &hooks.ConfirmationHook{
-        RequireConfirmation: true,
-    })
-    
-    hookManager.RegisterPreHook("Clone", &hooks.ValidationHook{
-        Validators: map[string]hooks.Validator{
-            "Clone": &CloneValidator{},
-        },
-    })
-    
-    // Add more operation-specific hooks as needed...
+    cmInstance := &realCM{
+        // ... initialize fields ...
+        hookManager: hooks.NewHookManager(),
+    }
+
+    // Setup hooks for the CM instance
+    if err := setupHooks(cmInstance); err != nil {
+        return nil, err
+    }
+
+    return cmInstance, nil
 }
 
-func main() {
-    // ... existing main.go code ...
-    
-    // Initialize CM with hooks
-    cmInstance := cm.NewCM(config)
-    setupHooks(cmInstance)
-    
-    // ... rest of main.go ...
+// setupHooks configures and registers all hooks for the CM instance.
+func setupHooks(cmInstance *realCM) error {
+    // Register IDE opening hook for operations that create worktrees
+    if err := ide_opening.NewIDEOpeningHook().RegisterForOperations(cmInstance); err != nil {
+        return err
+    }
+
+    return nil
+}
+
+// Usage in CLI commands (simplified):
+func createCreateCmdRunE(ideName *string, force *bool, fromIssue *string) func(*cobra.Command, []string) error {
+    return func(_ *cobra.Command, args []string) error {
+        // ... existing code ...
+        
+        cmManager := cm.NewCM(cfg) // Hooks are automatically set up
+        cmManager.SetVerbose(config.Verbose)
+        
+        // ... rest of the function ...
+    }
 }
 ```
 
@@ -378,16 +494,12 @@ func main() {
 4. Add hook execution wrappers to all CM operations
 5. Create basic logging and metrics hooks
 
-### Phase 2: Built-in Hooks
-1. Implement validation hooks for all operations
-2. Add confirmation hooks for destructive operations
-3. Create performance monitoring hooks
-4. Implement error handling and recovery hooks
-
-### Phase 3: Programmatic Setup
-1. Implement hook setup function in main.go
-2. Add hook registration for all operations
-3. Create hook testing utilities
+### Phase 2: Hook Framework ✅ COMPLETED
+1. ✅ Provide hook interfaces and framework
+2. ✅ Implement IDE opening hook to replace direct IDE calls in existing functions
+3. ✅ Implement hook setup function in main.go
+4. ✅ Add hook registration for all operations
+5. ✅ Create hook testing utilities
 
 ## Testing Strategy
 

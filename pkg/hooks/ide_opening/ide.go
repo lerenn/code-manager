@@ -1,4 +1,4 @@
-package ide
+package ide_opening
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 // DefaultIDE is the default IDE name used when no IDE is specified.
 const DefaultIDE = VSCodeName
 
-//go:generate mockgen -source=ide.go -destination=mockide.gen.go -package=ide
+//go:generate mockgen -source=ide.go -destination=mockide.gen.go -package=ide_opening
 
 // IDE interface defines the methods that all IDE implementations must provide.
 type IDE interface {

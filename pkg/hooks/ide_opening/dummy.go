@@ -1,4 +1,4 @@
-package ide
+package ide_opening
 
 import (
 	"fmt"

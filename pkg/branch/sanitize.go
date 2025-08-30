@@ -1,11 +1,36 @@
-package cm
+// Package branch provides branch name sanitization functionality.
+package branch
 
 import (
 	"regexp"
 	"strings"
 )
 
-// sanitizeBranchName sanitizes a branch name according to Git's branch naming rules.
+// ErrBranchNameEmpty is returned when the branch name is empty.
+var ErrBranchNameEmpty = &BranchError{message: "branch name cannot be empty"}
+
+// ErrBranchNameSingleAt is returned when the branch name is just a single @ character.
+var ErrBranchNameSingleAt = &BranchError{message: "branch name cannot be the single character @"}
+
+// ErrBranchNameContainsAtBrace is returned when the branch name contains the sequence @{.
+var ErrBranchNameContainsAtBrace = &BranchError{message: "branch name cannot contain the sequence @{"}
+
+// ErrBranchNameContainsBackslash is returned when the branch name contains a backslash.
+var ErrBranchNameContainsBackslash = &BranchError{message: "branch name cannot contain backslash"}
+
+// ErrBranchNameEmptyAfterSanitization is returned when the branch name becomes empty after sanitization.
+var ErrBranchNameEmptyAfterSanitization = &BranchError{message: "branch name becomes empty after sanitization"}
+
+// BranchError represents an error related to branch operations.
+type BranchError struct {
+	message string
+}
+
+func (e *BranchError) Error() string {
+	return e.message
+}
+
+// SanitizeBranchName sanitizes a branch name according to Git's branch naming rules.
 // Git imposes the following rules on how references are named:
 //   - They can include slash / for hierarchical (directory) grouping, but no slash-separated component
 //     can begin with a dot . or end with the sequence .lock.
@@ -19,7 +44,7 @@ import (
 //   - They cannot be the single character @.
 //   - They cannot contain a \.
 //   - Additional rule for branch names: They cannot start with a dash -.
-func (c *realCM) sanitizeBranchName(branchName string) (string, error) {
+func SanitizeBranchName(branchName string) (string, error) {
 	if branchName == "" {
 		return "", ErrBranchNameEmpty
 	}

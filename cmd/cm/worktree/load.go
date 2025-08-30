@@ -3,7 +3,7 @@ package worktree
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/spf13/cobra"
 )
 
@@ -21,7 +21,7 @@ Examples:
   cm worktree load feature-branch          # Uses origin:feature-branch
   cm wt load origin:feature-branch         # Explicitly specify remote
   cm w load upstream:main                  # Use different remote
-  cm worktree load feature-branch --ide ` + ide.DefaultIDE + ``,
+  cm worktree load feature-branch --ide ` + ide_opening.DefaultIDE + ``,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := config.CheckInitialization(); err != nil {
@@ -32,7 +32,10 @@ Examples:
 			if err != nil {
 				return err
 			}
-			cmManager := cm.NewCM(cfg)
+			cmManager, err := cm.NewCM(cfg)
+			if err != nil {
+				return err
+			}
 			cmManager.SetVerbose(config.Verbose)
 
 			// Prepare options for LoadWorktree
@@ -47,7 +50,7 @@ Examples:
 	}
 
 	// Add IDE flag to load command
-	loadCmd.Flags().StringVarP(&ideName, "ide", "i", ide.DefaultIDE, "Open in specified IDE after loading")
+	loadCmd.Flags().StringVarP(&ideName, "ide", "i", ide_opening.DefaultIDE, "Open in specified IDE after loading")
 
 	return loadCmd
 }

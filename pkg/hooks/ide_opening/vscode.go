@@ -1,5 +1,4 @@
-// Package ide provides interfaces and implementations for interacting with various IDEs.
-package ide
+package ide_opening
 
 import (
 	"fmt"

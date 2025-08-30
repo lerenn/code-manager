@@ -8,7 +8,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +29,7 @@ func TestCM_Run_SingleRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -57,7 +57,7 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
 
@@ -79,12 +79,7 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	mockRepository.EXPECT().Validate().Return(nil)
 	mockRepository.EXPECT().CreateWorktree("test-branch").Return(nil)
 
-	// Mock Git and FS operations for OpenWorktree
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
-	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
-
-	// Mock IDE opening
-	mockIDE.EXPECT().OpenIDE("vscode", gomock.Any(), false).Return(nil)
+	// Note: IDE opening is now handled by the hook system, not tested here
 
 	err := cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: "vscode"})
 	assert.NoError(t, err)

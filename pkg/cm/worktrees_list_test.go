@@ -5,7 +5,7 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/workspace"
@@ -19,7 +19,7 @@ func TestCM_ListWorktrees_NoRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -47,7 +47,7 @@ func TestCM_ListWorktrees_SingleRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{

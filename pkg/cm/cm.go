@@ -8,7 +8,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/hooks"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/repository"
@@ -60,14 +60,14 @@ type NewCMParams struct {
 
 type realCM struct {
 	*basepkg.Base
-	ideManager  ide.ManagerInterface
+	ideManager  ide_opening.ManagerInterface
 	repository  repository.Repository
 	workspace   workspace.Workspace
 	hookManager hooks.HookManagerInterface
 }
 
 // NewCM creates a new CM instance.
-func NewCM(cfg *config.Config) CM {
+func NewCM(cfg *config.Config) (CM, error) {
 	fsInstance := fs.NewFS()
 	gitInstance := git.NewGit()
 	loggerInstance := logger.NewNoopLogger()
@@ -105,7 +105,7 @@ func NewCM(cfg *config.Config) CM {
 		Verbose:       false,
 	})
 
-	return &realCM{
+	cmInstance := &realCM{
 		Base: basepkg.NewBase(basepkg.NewBaseParams{
 			FS:            fsInstance,
 			Git:           gitInstance,
@@ -115,11 +115,28 @@ func NewCM(cfg *config.Config) CM {
 			Prompt:        promptInstance,
 			Verbose:       false,
 		}),
-		ideManager:  ide.NewManager(fsInstance, loggerInstance),
+		ideManager:  ide_opening.NewManager(fsInstance, loggerInstance),
 		repository:  repoInstance,
 		workspace:   workspaceInstance,
 		hookManager: hooks.NewHookManager(),
 	}
+
+	// Setup hooks for the CM instance
+	if err := setupHooks(cmInstance); err != nil {
+		return nil, err
+	}
+
+	return cmInstance, nil
+}
+
+// setupHooks configures and registers all hooks for the CM instance.
+func setupHooks(cmInstance *realCM) error {
+	// Register IDE opening hook for operations that create worktrees
+	if err := ide_opening.NewIDEOpeningHook().RegisterForOperations(cmInstance); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // NewCMWithDependencies creates a new CM instance with custom repository and workspace dependencies.
@@ -140,7 +157,7 @@ func NewCMWithDependencies(params NewCMParams) CM {
 			Prompt:        prompt.NewPrompt(),
 			Verbose:       false,
 		}),
-		ideManager:  ide.NewManager(fsInstance, loggerInstance),
+		ideManager:  ide_opening.NewManager(fsInstance, loggerInstance),
 		repository:  params.Repository,
 		workspace:   params.Workspace,
 		hookManager: hooks.NewHookManager(),
@@ -161,7 +178,7 @@ func (c *realCM) SetVerbose(verbose bool) {
 	c.Base = newBase
 
 	// Update the IDE manager with the new logger
-	c.ideManager = ide.NewManager(c.FS, c.Logger)
+	c.ideManager = ide_opening.NewManager(c.FS, c.Logger)
 }
 
 // RegisterHook registers a hook for a specific operation.
@@ -185,4 +202,226 @@ func (c *realCM) RegisterHook(operation string, hook hooks.Hook) error {
 // UnregisterHook removes a hook by name from a specific operation.
 func (c *realCM) UnregisterHook(operation, hookName string) error {
 	return c.hookManager.RemoveHook(operation, hookName)
+}
+
+// executeWithHooks executes an operation with pre and post hooks.
+func (c *realCM) executeWithHooks(operationName string, params map[string]interface{}, operation func() error) error {
+	ctx := &hooks.HookContext{
+		OperationName: operationName,
+		Parameters:    params,
+		Results:       make(map[string]interface{}),
+		CM:            c,
+		Metadata:      make(map[string]interface{}),
+	}
+
+	// Execute pre-hooks (if hook manager is available)
+	if c.hookManager != nil {
+		if err := c.hookManager.ExecutePreHooks(operationName, ctx); err != nil {
+			return err
+		}
+	}
+
+	// Execute operation
+	var resultErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				resultErr = fmt.Errorf("panic in %s: %v", operationName, r)
+			}
+		}()
+		resultErr = operation()
+	}()
+
+	// Update context with results
+	ctx.Error = resultErr
+	if resultErr == nil {
+		ctx.Results["success"] = true
+	}
+
+	// Execute post-hooks or error-hooks (if hook manager is available)
+	if c.hookManager != nil {
+		if resultErr != nil {
+			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
+		} else {
+			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
+
+			// Handle IDE opening if requested by hooks
+			if shouldOpenIDE, exists := ctx.Results["shouldOpenIDE"]; exists && shouldOpenIDE == true {
+				if ideName, hasIDE := ctx.Results["ideName"]; hasIDE {
+					if worktreePath, hasPath := ctx.Results["worktreePath"]; hasPath {
+						if ideNameStr, ok := ideName.(string); ok {
+							if worktreePathStr, ok := worktreePath.(string); ok {
+								_ = c.ideManager.OpenIDE(ideNameStr, worktreePathStr, c.IsVerbose())
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return resultErr
+}
+
+// executeWithHooksAndReturnListWorktrees executes an operation with pre and post hooks
+// that returns worktrees and project type.
+func (c *realCM) executeWithHooksAndReturnListWorktrees(
+	operationName string,
+	params map[string]interface{},
+	operation func() ([]status.WorktreeInfo, ProjectType, error),
+) ([]status.WorktreeInfo, ProjectType, error) {
+	ctx := &hooks.HookContext{
+		OperationName: operationName,
+		Parameters:    params,
+		Results:       make(map[string]interface{}),
+		CM:            c,
+		Metadata:      make(map[string]interface{}),
+	}
+
+	// Execute pre-hooks (if hook manager is available)
+	if c.hookManager != nil {
+		if err := c.hookManager.ExecutePreHooks(operationName, ctx); err != nil {
+			return nil, ProjectTypeNone, err
+		}
+	}
+
+	// Execute operation
+	var worktrees []status.WorktreeInfo
+	var projectType ProjectType
+	var resultErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				resultErr = fmt.Errorf("panic in %s: %v", operationName, r)
+			}
+		}()
+		worktrees, projectType, resultErr = operation()
+	}()
+
+	// Update context with results
+	ctx.Error = resultErr
+	if resultErr == nil {
+		ctx.Results["worktrees"] = worktrees
+		ctx.Results["projectType"] = projectType
+		ctx.Results["success"] = true
+	}
+
+	// Execute post-hooks or error-hooks (if hook manager is available)
+	if c.hookManager != nil {
+		if resultErr != nil {
+			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
+		} else {
+			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
+
+			// Handle IDE opening if requested by hooks
+			if shouldOpenIDE, exists := ctx.Results["shouldOpenIDE"]; exists && shouldOpenIDE == true {
+				if ideName, hasIDE := ctx.Results["ideName"]; hasIDE {
+					if worktreePath, hasPath := ctx.Results["worktreePath"]; hasPath {
+						if ideNameStr, ok := ideName.(string); ok {
+							if worktreePathStr, ok := worktreePath.(string); ok {
+								_ = c.ideManager.OpenIDE(ideNameStr, worktreePathStr, c.IsVerbose())
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return worktrees, projectType, resultErr
+}
+
+// executeWithHooksAndReturnRepositories executes an operation with pre and post hooks that returns repositories.
+func (c *realCM) executeWithHooksAndReturnRepositories(
+	operationName string,
+	params map[string]interface{},
+	operation func() ([]RepositoryInfo, error),
+) ([]RepositoryInfo, error) {
+	ctx := &hooks.HookContext{
+		OperationName: operationName,
+		Parameters:    params,
+		Results:       make(map[string]interface{}),
+		CM:            c,
+		Metadata:      make(map[string]interface{}),
+	}
+
+	// Execute pre-hooks (if hook manager is available)
+	if c.hookManager != nil {
+		if err := c.hookManager.ExecutePreHooks(operationName, ctx); err != nil {
+			return nil, err
+		}
+	}
+
+	// Execute operation
+	var repositories []RepositoryInfo
+	var resultErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				resultErr = fmt.Errorf("panic in %s: %v", operationName, r)
+			}
+		}()
+		repositories, resultErr = operation()
+	}()
+
+	// Update context with results
+	ctx.Error = resultErr
+	if resultErr == nil {
+		ctx.Results["repositories"] = repositories
+		ctx.Results["success"] = true
+	}
+
+	// Execute post-hooks or error-hooks (if hook manager is available)
+	if c.hookManager != nil {
+		if resultErr != nil {
+			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
+		} else {
+			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
+
+			// Handle IDE opening if requested by hooks
+			if shouldOpenIDE, exists := ctx.Results["shouldOpenIDE"]; exists && shouldOpenIDE == true {
+				if ideName, hasIDE := ctx.Results["ideName"]; hasIDE {
+					if worktreePath, hasPath := ctx.Results["worktreePath"]; hasPath {
+						if ideNameStr, ok := ideName.(string); ok {
+							if worktreePathStr, ok := worktreePath.(string); ok {
+								_ = c.ideManager.OpenIDE(ideNameStr, worktreePathStr, c.IsVerbose())
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return repositories, resultErr
+}
+
+// detectProjectMode detects the type of project (single repository or workspace).
+func (c *realCM) detectProjectMode() (ProjectType, error) {
+	c.VerbosePrint("Detecting project mode...")
+
+	// First, check if we're in a Git repository
+	exists, err := c.repository.IsGitRepository()
+	if err != nil {
+		return ProjectTypeNone, fmt.Errorf("failed to check Git repository: %w", err)
+	}
+
+	if exists {
+		c.VerbosePrint("Single repository mode detected")
+		return ProjectTypeSingleRepo, nil
+	}
+
+	// If not a Git repository, check for workspace files
+	workspaceFiles, err := c.FS.Glob("*.code-workspace")
+	if err != nil {
+		return ProjectTypeNone, fmt.Errorf("failed to detect workspace files: %w", err)
+	}
+
+	if len(workspaceFiles) > 0 {
+		c.VerbosePrint("Workspace mode detected")
+		return ProjectTypeWorkspace, nil
+	}
+
+	c.VerbosePrint("No project mode detected")
+	return ProjectTypeNone, nil
 }

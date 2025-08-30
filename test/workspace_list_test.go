@@ -76,8 +76,9 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cfg)
 
+	require.NoError(t, err)
 	// Initially, no worktrees should exist
 	worktrees, _, err := cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
@@ -176,8 +177,9 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cfg)
 
+	require.NoError(t, err)
 	// Initially, no worktrees should exist
 	worktrees, _, err := cmInstance.ListWorktrees(false)
 	require.NoError(t, err)
