@@ -185,11 +185,16 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	if err != nil {
 		return err
 	}
+
 	// Only push the Docker image if TargetEnabled is true
 	runnerInfo := GoImageInfo[architecture]
 	if runnerInfo.TargetEnabled {
-		// Push the Docker image to the registry
-		imageName := fmt.Sprintf("code-manager:%s-%s", runnerInfo.OS, runnerInfo.Arch)
+		// Push the Docker image to GitHub Container Registry with version tag
+		imageName := fmt.Sprintf("ghcr.io/%s/code-manager:%s", actualUser, latestTag)
+
+		// Push the image to GitHub Container Registry
+		// Note: In GitHub Actions, Docker authentication is handled automatically
+		// when using the GITHUB_TOKEN with appropriate permissions
 		_, err = container.Publish(ctx, imageName)
 		if err != nil {
 			return fmt.Errorf("failed to push Docker image for %s: %w", architecture, err)

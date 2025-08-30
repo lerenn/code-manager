@@ -93,6 +93,7 @@ jobs:
     needs: ["publish-tag"]
     permissions:
       contents: write
+      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.ref == 'refs/heads/main'
@@ -118,6 +119,7 @@ jobs:
     needs: ["publish-tag"]
     permissions:
       contents: write
+      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.ref == 'refs/heads/main'
@@ -143,6 +145,7 @@ jobs:
     needs: ["publish-tag"]
     permissions:
       contents: write
+      packages: write
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.ref == 'refs/heads/main'
