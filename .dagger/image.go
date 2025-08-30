@@ -142,8 +142,17 @@ func RuntimeImage(
 		return nil
 	}
 
+	// Determine the correct binary path
+	binaryPath := fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch)
+	if runnerInfo.OS == "windows" {
+		binaryPath += ".exe"
+	}
+	
+	// For native compilation (same OS/arch), the binary is at /go/bin/cm
+	// For cross-compilation, it's at /go/bin/{GOOS}_{GOARCH}/cm
+	// We'll use the cross-compilation path as the primary path
 	return dag.Container().
 		From(runnerInfo.TargetBaseImage).
-		WithFile("/usr/local/bin/cm", buildContainer.File(fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch))).
+		WithFile("/usr/local/bin/cm", buildContainer.File(binaryPath)).
 		WithEntrypoint([]string{"/usr/local/bin/cm"})
 }
