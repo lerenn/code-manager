@@ -100,14 +100,14 @@ var (
 			OS:              "windows",
 			Arch:            "386",
 			BuildBaseImage:  "golang:alpine",
-			TargetBaseImage: "mcr.microsoft.com/windows/nanoserver:1809",
+			TargetBaseImage: "mcr.microsoft.com/windows/nanoserver:ltsc2022",
 			TargetEnabled:   true,
 		},
 		"windows/amd64": {
 			OS:              "windows",
 			Arch:            "amd64",
 			BuildBaseImage:  "golang:alpine",
-			TargetBaseImage: "mcr.microsoft.com/windows/nanoserver:1809",
+			TargetBaseImage: "mcr.microsoft.com/windows/nanoserver:ltsc2022",
 			TargetEnabled:   true,
 		},
 	}
@@ -138,14 +138,6 @@ func Image(
 			{Name: "TARGETPLATFORM", Value: targetPlatform},
 		},
 		Dockerfile: "build/container/Dockerfile",
-	}
-
-	// Only set platform if the target is enabled
-	if runnerInfo.TargetEnabled {
-		buildOpts.BuildArgs = append(
-			buildOpts.BuildArgs,
-			dagger.BuildArg{Name: "TARGETPLATFORM", Value: runnerInfo.OS + "/" + runnerInfo.Arch},
-		)
 	}
 
 	return sourceDir.DockerBuild(buildOpts)

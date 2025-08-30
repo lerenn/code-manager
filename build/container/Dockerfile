@@ -29,5 +29,5 @@ FROM --platform=${TARGETPLATFORM} ${TARGETBASEIMAGE} AS final
 # Get binary
 COPY --from=build /go/bin/* /usr/local/bin
 
-# Set entrypoint
-ENTRYPOINT ["/usr/local/bin/code-manager"]
+# Set entrypoint - handle Windows vs Linux
+ENTRYPOINT ["/usr/local/bin/cm"]
