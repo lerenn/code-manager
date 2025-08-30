@@ -103,7 +103,7 @@ func AvailablePlatforms() []string {
 	return slices.Collect(maps.Keys(GoImageInfo))
 }
 
-// BuildImage returns a container for building binaries with cross-compilation
+// BuildImage returns a container for building binaries with cross-compilation.
 func BuildImage(
 	sourceDir *dagger.Directory,
 	runnerInfo ImageInfo,
@@ -119,7 +119,7 @@ func BuildImage(
 	return sourceDir.DockerBuild(buildOpts)
 }
 
-// RuntimeImage returns a container for running (only for compatible platforms)
+// RuntimeImage returns a container for running (only for compatible platforms).
 func RuntimeImage(
 	buildContainer *dagger.Container,
 	runnerInfo ImageInfo,
