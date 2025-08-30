@@ -28,10 +28,8 @@ func (h *OpeningHook) RegisterForOperations(cmInstance interface {
 		return err
 	}
 
-	// Register as post-hook for operations that open worktrees
-	if err := cmInstance.RegisterHook(consts.OpenWorktree, h); err != nil {
-		return err
-	}
+	// Note: OpenWorktree operation handles IDE opening directly, not through hooks
+	// to avoid double opening
 
 	return nil
 }
@@ -75,8 +73,8 @@ func (h *OpeningHook) PostExecute(ctx *hooks.HookContext) error {
 		return nil
 	}
 
-	// Get worktree path from parameters
-	worktreePath := h.extractWorktreePath(ctx.Parameters)
+	// Get worktree path from parameters or calculated path
+	worktreePath := h.calculateWorktreePath(ctx)
 	if worktreePath == "" {
 		return fmt.Errorf("cannot open IDE: worktree path is empty")
 	}
@@ -102,6 +100,21 @@ func (h *OpeningHook) extractWorktreePath(params map[string]interface{}) string 
 		}
 	}
 	return ""
+}
+
+// calculateWorktreePath calculates the worktree path for OpenWorktree operation.
+func (h *OpeningHook) calculateWorktreePath(ctx *hooks.HookContext) string {
+	// For OpenWorktree operation, check if worktree path is already calculated in results
+	if ctx.OperationName == consts.OpenWorktree {
+		if worktreePath, exists := ctx.Results["worktreePath"]; exists {
+			if worktreePathStr, ok := worktreePath.(string); ok && worktreePathStr != "" {
+				return worktreePathStr
+			}
+		}
+	}
+	
+	// For other operations, use the existing logic
+	return h.extractWorktreePath(ctx.Parameters)
 }
 
 // OnError is a no-op for OpeningHook.

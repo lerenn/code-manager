@@ -43,6 +43,7 @@ func (c *realCM) OpenWorktree(worktreeName, ideName string) error {
 				return ErrWorktreeNotInStatus
 			}
 
+			// Open the IDE directly since this operation doesn't use hooks for IDE opening
 			return c.ideManager.OpenIDE(ideName, worktreePath, c.IsVerbose())
 		case ProjectTypeWorkspace:
 			// For workspace mode, we need to find the worktree in the workspace

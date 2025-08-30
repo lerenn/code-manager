@@ -127,7 +127,7 @@ func TestOpeningHook_RegisterForOperations(t *testing.T) {
 		t.Errorf("RegisterForOperations should not return error: %v", err)
 	}
 
-	// Check that the hook was registered for all operations
+	// Check that the hook was registered for worktree creation operations
 	if len(mockCM.registeredHooks[consts.CreateWorkTree]) != 1 {
 		t.Error("Hook should be registered for CreateWorkTree")
 	}
@@ -136,8 +136,9 @@ func TestOpeningHook_RegisterForOperations(t *testing.T) {
 		t.Error("Hook should be registered for LoadWorktree")
 	}
 
-	if len(mockCM.registeredHooks[consts.OpenWorktree]) != 1 {
-		t.Error("Hook should be registered for OpenWorktree")
+	// OpenWorktree is not registered to avoid double IDE opening
+	if len(mockCM.registeredHooks[consts.OpenWorktree]) != 0 {
+		t.Error("Hook should not be registered for OpenWorktree to avoid double opening")
 	}
 }
 
