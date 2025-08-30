@@ -1,4 +1,4 @@
-// Package ide provides interfaces and implementations for interacting with various IDEs.
+// Package ide provides IDE opening functionality through hooks.
 package ide
 
 import (

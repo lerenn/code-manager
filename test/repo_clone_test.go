@@ -18,17 +18,18 @@ import (
 func cloneRepository(t *testing.T, setup *TestSetup, repoURL string, recursive bool) error {
 	t.Helper()
 
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Create clone options
 	opts := cm.CloneOpts{
 		Recursive: recursive,
 	}
 
-	err := cmInstance.Clone(repoURL, opts)
+	err = cmInstance.Clone(repoURL, opts)
 	if err != nil {
 		t.Logf("Clone failed for URL %s: %v", repoURL, err)
 	}

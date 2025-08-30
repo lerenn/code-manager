@@ -7,7 +7,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -68,12 +68,7 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(nil)
 
-	// Mock Git and FS operations for OpenWorktree
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
-	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
-
-	// Mock IDE opening
-	mockIDE.EXPECT().OpenIDE("vscode", gomock.Any(), false).Return(nil)
+	// Note: IDE opening is now handled by the hook system, not tested here
 
 	err := cm.LoadWorktree("origin:feature-branch", LoadWorktreeOpts{IDEName: "vscode"})
 	assert.NoError(t, err)

@@ -31,7 +31,10 @@ Examples:
 			if err != nil {
 				return err
 			}
-			cmManager := cm.NewCM(cfg)
+			cmManager, err := cm.NewCM(cfg)
+			if err != nil {
+				return err
+			}
 			cmManager.SetVerbose(config.Verbose)
 
 			worktrees, projectType, err := cmManager.ListWorktrees(force)

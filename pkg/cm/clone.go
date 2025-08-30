@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/status"
 )
@@ -17,62 +18,71 @@ type CloneOpts struct {
 
 // Clone clones a repository and initializes it in CM.
 func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
-	c.VerbosePrint("Starting repository clone: %s", repoURL)
-
 	// Extract and validate options
 	recursive := true // default to true
 	if len(opts) > 0 {
 		recursive = opts[0].Recursive
 	}
 
-	// 1. Validate repository URL
-	normalizedURL, err := c.normalizeRepositoryURL(repoURL)
-	if err != nil {
-		return err
+	// Prepare parameters for hooks
+	params := map[string]interface{}{
+		"repoURL":   repoURL,
+		"recursive": recursive,
 	}
 
-	c.VerbosePrint("Normalized URL: %s", normalizedURL)
+	// Execute with hooks
+	return c.executeWithHooks(consts.Clone, params, func() error {
+		c.VerbosePrint("Starting repository clone: %s", repoURL)
 
-	// 2. Check if repository already exists
-	if err := c.checkRepositoryExists(normalizedURL); err != nil {
-		return err
-	}
+		// 1. Validate repository URL
+		normalizedURL, err := c.normalizeRepositoryURL(repoURL)
+		if err != nil {
+			return err
+		}
 
-	// 3. Detect default branch from remote
-	defaultBranch, err := c.Git.GetDefaultBranch(repoURL)
-	if err != nil {
-		return fmt.Errorf("failed to detect default branch: %w", err)
-	}
+		c.VerbosePrint("Normalized URL: %s", normalizedURL)
 
-	c.VerbosePrint("Detected default branch: %s", defaultBranch)
+		// 2. Check if repository already exists
+		if err := c.checkRepositoryExists(normalizedURL); err != nil {
+			return err
+		}
 
-	// 4. Generate target path
-	targetPath := c.generateClonePath(normalizedURL, defaultBranch)
+		// 3. Detect default branch from remote
+		defaultBranch, err := c.Git.GetDefaultBranch(repoURL)
+		if err != nil {
+			return fmt.Errorf("failed to detect default branch: %w", err)
+		}
 
-	c.VerbosePrint("Target path: %s", targetPath)
+		c.VerbosePrint("Detected default branch: %s", defaultBranch)
 
-	// 5. Create parent directories for the target path
-	parentDir := filepath.Dir(targetPath)
-	if err := c.FS.MkdirAll(parentDir, 0755); err != nil {
-		return fmt.Errorf("failed to create parent directories: %w", err)
-	}
+		// 4. Generate target path
+		targetPath := c.generateClonePath(normalizedURL, defaultBranch)
 
-	// 6. Clone repository
-	if err := c.Git.Clone(git.CloneParams{
-		RepoURL:    repoURL,
-		TargetPath: targetPath,
-		Recursive:  recursive,
-	}); err != nil {
-		return fmt.Errorf("failed to clone repository: %w", err)
-	}
+		c.VerbosePrint("Target path: %s", targetPath)
 
-	// 7. Initialize repository in CM
-	if err := c.initializeRepositoryInCM(normalizedURL, targetPath, defaultBranch); err != nil {
-		return fmt.Errorf("failed to initialize repository in CM: %w", err)
-	}
+		// 5. Create parent directories for the target path
+		parentDir := filepath.Dir(targetPath)
+		if err := c.FS.MkdirAll(parentDir, 0755); err != nil {
+			return fmt.Errorf("failed to create parent directories: %w", err)
+		}
 
-	c.VerbosePrint("Repository cloned and initialized successfully")
-	return nil
+		// 6. Clone repository
+		if err := c.Git.Clone(git.CloneParams{
+			RepoURL:    repoURL,
+			TargetPath: targetPath,
+			Recursive:  recursive,
+		}); err != nil {
+			return fmt.Errorf("failed to clone repository: %w", err)
+		}
+
+		// 7. Initialize repository in CM
+		if err := c.initializeRepositoryInCM(normalizedURL, targetPath, defaultBranch); err != nil {
+			return fmt.Errorf("failed to initialize repository in CM: %w", err)
+		}
+
+		c.VerbosePrint("Repository cloned and initialized successfully")
+		return nil
+	})
 }
 
 // normalizeRepositoryURL normalizes a repository URL to a consistent format.

@@ -12,12 +12,7 @@ var (
 
 	// Repository and branch errors.
 	ErrRepositoryURLEmpty                   = errors.New("repository URL cannot be empty")
-	ErrBranchNameEmpty                      = errors.New("branch name cannot be empty")
 	ErrRepositoryNameEmptyAfterSanitization = errors.New("repository name is empty after sanitization")
-	ErrBranchNameEmptyAfterSanitization     = errors.New("branch name is empty after sanitization")
-	ErrBranchNameSingleAt                   = errors.New("branch name cannot be the single character @")
-	ErrBranchNameContainsAtBrace            = errors.New("branch name cannot contain the sequence @{")
-	ErrBranchNameContainsBackslash          = errors.New("branch name cannot contain backslash")
 
 	// Workspace errors.
 	ErrWorkspaceFileMalformed            = errors.New("invalid .code-workspace file: malformed JSON")

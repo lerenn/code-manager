@@ -22,11 +22,12 @@ func TestCreateWorktreeFromDefaultBranch(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create CM instance with temporary config
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	})
 
+	require.NoError(t, err)
 	// Create a test repository
 	repoPath := filepath.Join(tempDir, "test-repo")
 	require.NoError(t, os.MkdirAll(repoPath, 0755))

@@ -1,31 +1,15 @@
 //go:build unit
 
-package cm
+package branch
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/mock/gomock"
 )
 
-func TestRealCM_sanitizeBranchName(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-
-	cm := NewCM(createTestConfig())
-
-	// Override adapters with mocks
-	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
-
+func TestSanitizeBranchName(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
@@ -120,7 +104,7 @@ func TestRealCM_sanitizeBranchName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := c.sanitizeBranchName(tt.input)
+			result, err := SanitizeBranchName(tt.input)
 			if tt.wantErr {
 				if tt.input == "" {
 					assert.ErrorIs(t, err, ErrBranchNameEmpty)
