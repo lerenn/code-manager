@@ -2,6 +2,7 @@ package main
 
 import (
 	"code-manager/dagger/internal/dagger"
+	"fmt"
 	"maps"
 	"runtime"
 	"slices"
@@ -30,6 +31,12 @@ var (
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
 		},
+		"linux/arm64": {
+			OS:              "linux",
+			Arch:            "arm64",
+			BuildBaseImage:  "golang:alpine",
+			TargetBaseImage: "alpine",
+		},
 		"linux/arm/v6": {
 			OS:              "linux",
 			Arch:            "arm/v6",
@@ -39,12 +46,6 @@ var (
 		"linux/arm/v7": {
 			OS:              "linux",
 			Arch:            "arm/v7",
-			BuildBaseImage:  "golang:alpine",
-			TargetBaseImage: "alpine",
-		},
-		"linux/arm64/v8": {
-			OS:              "linux",
-			Arch:            "arm64/v8",
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
 		},
@@ -66,6 +67,7 @@ var (
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
 		},
+
 		"darwin/amd64": {
 			OS:              "darwin",
 			Arch:            "amd64",
@@ -84,6 +86,7 @@ var (
 			BuildBaseImage:  "golang:alpine",
 			TargetBaseImage: "alpine",
 		},
+
 		"windows/386": {
 			OS:              "windows",
 			Arch:            "386",
@@ -104,19 +107,28 @@ func AvailablePlatforms() []string {
 }
 
 // BuildImage returns a container for building binaries with cross-compilation.
+// It returns an error if the current platform is not supported.
 func BuildImage(
 	sourceDir *dagger.Directory,
 	runnerInfo ImageInfo,
-) *dagger.Container {
+) (*dagger.Container, error) {
+	// Get the build base image for the current platform
+	currentPlatform := runtime.GOOS + "/" + runtime.GOARCH
+	currentRunnerInfo, exists := GoImageInfo[currentPlatform]
+	if !exists {
+		return nil, fmt.Errorf("unsupported build platform: %s", currentPlatform)
+	}
+
 	buildOpts := dagger.DirectoryDockerBuildOpts{
 		BuildArgs: []dagger.BuildArg{
+			{Name: "BUILDBASEIMAGE", Value: currentRunnerInfo.BuildBaseImage},
 			{Name: "TARGETOS", Value: runnerInfo.OS},
 			{Name: "TARGETARCH", Value: runnerInfo.Arch},
 		},
 		Dockerfile: "build/container/Dockerfile.build",
 	}
 
-	return sourceDir.DockerBuild(buildOpts)
+	return sourceDir.DockerBuild(buildOpts), nil
 }
 
 // RuntimeImage returns a container for running (only for compatible platforms).
@@ -132,6 +144,6 @@ func RuntimeImage(
 
 	return dag.Container().
 		From(runnerInfo.TargetBaseImage).
-		WithFile("/usr/local/bin/cm", buildContainer.File("/go/bin/cm")).
+		WithFile("/usr/local/bin/cm", buildContainer.File(fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch))).
 		WithEntrypoint([]string{"/usr/local/bin/cm"})
 }

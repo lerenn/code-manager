@@ -1,10 +1,12 @@
 # Dockerfile.build - Build stage for cross-compilation
-# Dockerfile arguments
+# Build argument for the base image - must be declared before FROM
+ARG BUILDBASEIMAGE=golang:alpine
+
+FROM ${BUILDBASEIMAGE} AS build
+
+# Build arguments for cross-compilation
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
-
-# Building Golang image
-FROM golang:alpine AS build
 
 # Get all remaining code
 RUN mkdir -p /go/src/github.com/lerenn/code-manager

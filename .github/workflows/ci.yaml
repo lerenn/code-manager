@@ -120,6 +120,38 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  build-and-release-linux-arm64:
+    name: Build and release for linux/arm64
+    needs: ["publish-tag"]
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: dagger/dagger-for-github@8.0.0
+        with:
+          version: latest
+          verb: call
+          args: >-
+            build-and-release-for-architecture
+            --source-dir=.
+            --architecture=linux/arm64
+            --user=${{ github.actor }}
+            --token=env:GITHUB_TOKEN
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build-and-release-darwin-arm64:
     name: Build and release for darwin/arm64
     needs: ["publish-tag"]
