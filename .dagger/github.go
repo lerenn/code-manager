@@ -223,9 +223,11 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	}
 
 	// Get the binary file content
-	binaryContent, err := container.File("/usr/local/bin/cm").Contents(ctx)
+	// The binary is always named 'cm' regardless of platform when built on Linux
+	binaryPath := "/usr/local/bin/cm"
+	binaryContent, err := container.File(binaryPath).Contents(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to read binary file: %w", err)
+		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
 	}
 
 	// Create HTTP request
