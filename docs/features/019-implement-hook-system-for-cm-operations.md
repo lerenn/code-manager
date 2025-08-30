@@ -291,9 +291,9 @@ Example hook implementations can be created for:
 The IDE opening functionality has been implemented as a post-hook that validates IDE opening parameters and stores the information for the CM to handle. The hook focuses on validation and information storage, while the CM handles the actual IDE opening:
 
 ```go
-// pkg/hooks/ide_opening/ide_opening.go
+// pkg/hooks/ide/opening.go
 
-type IDEOpeningHook struct{}
+type OpeningHook struct{}
 
 // RegisterForOperations registers this hook for the operations that create worktrees.
 func (h *IDEOpeningHook) RegisterForOperations(cmInstance interface {
@@ -316,7 +316,7 @@ func (h *IDEOpeningHook) RegisterForOperations(cmInstance interface {
     return nil
 }
 
-func (h *IDEOpeningHook) PostExecute(ctx *hooks.HookContext) error {
+func (h *OpeningHook) PostExecute(ctx *hooks.HookContext) error {
     // Only proceed if operation was successful
     if ctx.Error != nil {
         return nil
@@ -392,9 +392,9 @@ The codebase has been organized into focused packages for better modularity:
 The IDE opening functionality has been integrated into a coherent package that combines the hook system with IDE management:
 
 ```
-pkg/hooks/ide_opening/
-├── ide_opening.go    # IDE opening hook implementation
-├── ide_opening_test.go
+pkg/hooks/ide/
+├── opening.go    # IDE opening hook implementation
+├── opening_test.go
 ├── ide.go           # IDE manager and interfaces
 ├── vscode.go        # VS Code IDE implementation
 ├── cursor.go        # Cursor IDE implementation
@@ -463,7 +463,7 @@ func NewCM(cfg *config.Config) (CM, error) {
 // setupHooks configures and registers all hooks for the CM instance.
 func setupHooks(cmInstance *realCM) error {
     // Register IDE opening hook for operations that create worktrees
-    if err := ide_opening.NewIDEOpeningHook().RegisterForOperations(cmInstance); err != nil {
+    if err := ide.NewOpeningHook().RegisterForOperations(cmInstance); err != nil {
         return err
     }
 

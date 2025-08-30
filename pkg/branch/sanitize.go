@@ -7,26 +7,26 @@ import (
 )
 
 // ErrBranchNameEmpty is returned when the branch name is empty.
-var ErrBranchNameEmpty = &BranchError{message: "branch name cannot be empty"}
+var ErrBranchNameEmpty = &Error{message: "branch name cannot be empty"}
 
 // ErrBranchNameSingleAt is returned when the branch name is just a single @ character.
-var ErrBranchNameSingleAt = &BranchError{message: "branch name cannot be the single character @"}
+var ErrBranchNameSingleAt = &Error{message: "branch name cannot be the single character @"}
 
 // ErrBranchNameContainsAtBrace is returned when the branch name contains the sequence @{.
-var ErrBranchNameContainsAtBrace = &BranchError{message: "branch name cannot contain the sequence @{"}
+var ErrBranchNameContainsAtBrace = &Error{message: "branch name cannot contain the sequence @{"}
 
 // ErrBranchNameContainsBackslash is returned when the branch name contains a backslash.
-var ErrBranchNameContainsBackslash = &BranchError{message: "branch name cannot contain backslash"}
+var ErrBranchNameContainsBackslash = &Error{message: "branch name cannot contain backslash"}
 
 // ErrBranchNameEmptyAfterSanitization is returned when the branch name becomes empty after sanitization.
-var ErrBranchNameEmptyAfterSanitization = &BranchError{message: "branch name becomes empty after sanitization"}
+var ErrBranchNameEmptyAfterSanitization = &Error{message: "branch name becomes empty after sanitization"}
 
-// BranchError represents an error related to branch operations.
-type BranchError struct {
+// Error represents an error related to branch operations.
+type Error struct {
 	message string
 }
 
-func (e *BranchError) Error() string {
+func (e *Error) Error() string {
 	return e.message
 }
 

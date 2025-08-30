@@ -6,7 +6,7 @@ import (
 
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ Examples:
   cm worktree open feature-branch
   cm wt open main
   cm w open feature-branch -i cursor
-  cm worktree open main --ide ` + ide_opening.DefaultIDE + ``,
+  cm worktree open main --ide ` + ide.DefaultIDE + ``,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			return openWorktree(args[0], ideName)
@@ -52,7 +52,7 @@ func openWorktree(branchName, ideName string) error {
 	cmManager.SetVerbose(config.Verbose)
 
 	// Determine IDE to use (default to DefaultIDE if not specified)
-	ideToUse := ide_opening.DefaultIDE
+	ideToUse := ide.DefaultIDE
 	if ideName != "" {
 		ideToUse = ideName
 	}

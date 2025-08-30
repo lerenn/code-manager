@@ -9,7 +9,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -117,5 +117,5 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	// Try to open with unsupported IDE
 	err = cmInstance.OpenWorktree("feature/unsupported-ide", "unsupported-ide")
 	assert.Error(t, err, "Opening with unsupported IDE should fail")
-	assert.ErrorIs(t, err, ide_opening.ErrUnsupportedIDE, "Error should mention unsupported IDE")
+	assert.ErrorIs(t, err, ide.ErrUnsupportedIDE, "Error should mention unsupported IDE")
 }

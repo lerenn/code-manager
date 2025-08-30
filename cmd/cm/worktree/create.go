@@ -4,7 +4,7 @@ package worktree
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +42,7 @@ Issue Reference Formats:
 
 Examples:
   cm worktree create feature-branch
-  cm wt create feature-branch --ide ` + ide_opening.DefaultIDE + `
+  cm wt create feature-branch --ide ` + ide.DefaultIDE + `
   cm w create feature-branch --ide cursor
   cm worktree create --from-issue https://github.com/owner/repo/issues/123
   cm worktree create custom-branch --from-issue 456

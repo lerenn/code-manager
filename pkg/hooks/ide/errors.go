@@ -1,5 +1,5 @@
-// Package ide_opening provides IDE opening functionality through hooks.
-package ide_opening
+// Package ide provides IDE opening functionality through hooks.
+package ide
 
 import "errors"
 

@@ -5,7 +5,7 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +18,7 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -51,7 +51,7 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -78,7 +78,7 @@ func TestCM_DeleteWorkTree_VerboseMode(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{

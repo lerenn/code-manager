@@ -8,7 +8,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/hooks"
-	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/repository"
@@ -60,7 +60,7 @@ type NewCMParams struct {
 
 type realCM struct {
 	*basepkg.Base
-	ideManager  ide_opening.ManagerInterface
+	ideManager  ide.ManagerInterface
 	repository  repository.Repository
 	workspace   workspace.Workspace
 	hookManager hooks.HookManagerInterface
@@ -115,7 +115,7 @@ func NewCM(cfg *config.Config) (CM, error) {
 			Prompt:        promptInstance,
 			Verbose:       false,
 		}),
-		ideManager:  ide_opening.NewManager(fsInstance, loggerInstance),
+		ideManager:  ide.NewManager(fsInstance, loggerInstance),
 		repository:  repoInstance,
 		workspace:   workspaceInstance,
 		hookManager: hooks.NewHookManager(),
@@ -132,7 +132,7 @@ func NewCM(cfg *config.Config) (CM, error) {
 // setupHooks configures and registers all hooks for the CM instance.
 func setupHooks(cmInstance *realCM) error {
 	// Register IDE opening hook for operations that create worktrees
-	if err := ide_opening.NewIDEOpeningHook().RegisterForOperations(cmInstance); err != nil {
+	if err := ide.NewOpeningHook().RegisterForOperations(cmInstance); err != nil {
 		return err
 	}
 
@@ -157,7 +157,7 @@ func NewCMWithDependencies(params NewCMParams) CM {
 			Prompt:        prompt.NewPrompt(),
 			Verbose:       false,
 		}),
-		ideManager:  ide_opening.NewManager(fsInstance, loggerInstance),
+		ideManager:  ide.NewManager(fsInstance, loggerInstance),
 		repository:  params.Repository,
 		workspace:   params.Workspace,
 		hookManager: hooks.NewHookManager(),
@@ -178,7 +178,7 @@ func (c *realCM) SetVerbose(verbose bool) {
 	c.Base = newBase
 
 	// Update the IDE manager with the new logger
-	c.ideManager = ide_opening.NewManager(c.FS, c.Logger)
+	c.ideManager = ide.NewManager(c.FS, c.Logger)
 }
 
 // RegisterHook registers a hook for a specific operation.

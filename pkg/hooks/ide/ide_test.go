@@ -1,6 +1,6 @@
 //go:build unit
 
-package ide_opening
+package ide
 
 import (
 	"errors"

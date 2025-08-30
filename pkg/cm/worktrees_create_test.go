@@ -8,7 +8,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -29,7 +29,7 @@ func TestCM_Run_SingleRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -57,7 +57,7 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
 

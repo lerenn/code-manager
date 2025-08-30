@@ -7,7 +7,7 @@
 //
 
 // Package ide_opening is a generated GoMock package.
-package ide_opening
+package ide
 
 import (
 	reflect "reflect"

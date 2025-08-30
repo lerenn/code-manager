@@ -7,7 +7,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/hooks/ide_opening"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -20,7 +20,7 @@ func TestCM_LoadWorktree_Success(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -47,7 +47,7 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 	mockFS := fs.NewMockFS(ctrl)
 	mockGit := git.NewMockGit(ctrl)
 
@@ -80,7 +80,7 @@ func TestCM_LoadWorktree_NewRemote(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -107,7 +107,7 @@ func TestCM_LoadWorktree_SSHProtocol(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -134,7 +134,7 @@ func TestCM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -162,7 +162,7 @@ func TestCM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -190,7 +190,7 @@ func TestCM_LoadWorktree_FetchFailed(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -218,7 +218,7 @@ func TestCM_LoadWorktree_BranchNotFound(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
@@ -246,7 +246,7 @@ func TestCM_LoadWorktree_DefaultRemote(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide_opening.NewMockManagerInterface(ctrl)
+	mockIDE := ide.NewMockManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
