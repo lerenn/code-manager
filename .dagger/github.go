@@ -222,9 +222,9 @@ func (gh *GitHubReleaseManager) uploadBinary(
 		return fmt.Errorf("failed to get token: %w", err)
 	}
 
-	// Get the binary file content
-	// The binary is always named 'cm' regardless of platform when built on Linux
-	binaryPath := "/usr/local/bin/cm"
+	// Get the binary file content from the build container
+	// The binary is built in /go/bin/cm in the build stage
+	binaryPath := "/go/bin/cm"
 	binaryContent, err := container.File(binaryPath).Contents(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
