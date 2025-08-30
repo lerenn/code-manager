@@ -147,10 +147,9 @@ func RuntimeImage(
 	if runnerInfo.OS == "windows" {
 		binaryPath += ".exe"
 	}
-	
-	// For native compilation (same OS/arch), the binary is at /go/bin/cm
-	// For cross-compilation, it's at /go/bin/{GOOS}_{GOARCH}/cm
-	// We'll use the cross-compilation path as the primary path
+
+	// Binary is now always available at /go/bin/{GOOS}_{GOARCH}/cm (with .exe for Windows)
+	// The Dockerfile.build ensures this by copying native builds to the cross-compilation path
 	return dag.Container().
 		From(runnerInfo.TargetBaseImage).
 		WithFile("/usr/local/bin/cm", buildContainer.File(binaryPath)).

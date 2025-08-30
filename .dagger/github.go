@@ -223,22 +223,16 @@ func (gh *GitHubReleaseManager) uploadBinary(
 	}
 
 	// Get the binary file content from the build container
-	// For cross-compilation: binary is at /go/bin/{GOOS}_{GOARCH}/cm (with .exe for Windows)
-	// For native compilation: binary is at /go/bin/cm
+	// Binary is now always available at /go/bin/{GOOS}_{GOARCH}/cm (with .exe for Windows)
+	// The Dockerfile.build ensures this by copying native builds to the cross-compilation path
 	binaryPath := fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch)
 	if runnerInfo.OS == "windows" {
 		binaryPath += ".exe"
 	}
-	
-	// Try cross-compilation path first, then fall back to native path
+
 	binaryContent, err := container.File(binaryPath).Contents(ctx)
 	if err != nil {
-		// Fall back to native compilation path (for same OS/arch builds)
-		nativePath := "/go/bin/cm"
-		binaryContent, err = container.File(nativePath).Contents(ctx)
-		if err != nil {
-			return fmt.Errorf("failed to read binary file at %s or %s: %w", binaryPath, nativePath, err)
-		}
+		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
 	}
 
 	// Create HTTP request
