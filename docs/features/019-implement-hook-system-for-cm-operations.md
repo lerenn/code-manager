@@ -24,7 +24,6 @@ A hook system will provide a clean, extensible architecture that maintains separ
    - Register pre-hooks and post-hooks for each CM operation
    - Support multiple hooks per operation
    - Allow hook ordering and priority
-   - Support global hooks that apply to all operations
    - Support operation-specific hooks
 
 2. **Hook Execution**
@@ -45,7 +44,6 @@ A hook system will provide a clean, extensible architecture that maintains separ
    - **Pre-hooks**: Execute before operation, can modify parameters or abort execution
    - **Post-hooks**: Execute after operation, can process results or handle errors
    - **Error-hooks**: Execute when operations fail, for error handling and recovery
-   - **Global hooks**: Apply to all operations automatically
 
 5. **Hook Management**
    - Add/remove hooks dynamically
@@ -136,7 +134,6 @@ type HookManagerInterface interface {
     RegisterPreHook(operation string, hook PreHook) error
     RegisterPostHook(operation string, hook PostHook) error
     RegisterErrorHook(operation string, hook ErrorHook) error
-    RegisterGlobalHook(hook Hook) error
     
     // Hook execution
     ExecutePreHooks(operation string, ctx *HookContext) error
@@ -277,7 +274,6 @@ The hook system provides a framework for creating custom hooks. Users can implem
 - **PreHook**: Execute before operations, can modify parameters or abort execution
 - **PostHook**: Execute after operations, can process results or handle errors  
 - **ErrorHook**: Execute when operations fail, for error handling and recovery
-- **GlobalHook**: Apply to all operations automatically
 
 Example hook implementations can be created for:
 - Logging and metrics collection

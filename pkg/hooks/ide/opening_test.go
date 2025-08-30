@@ -5,11 +5,28 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/hooks"
+	"go.uber.org/mock/gomock"
 )
 
 // TestOpeningHook_PostExecute_Success tests successful IDE opening validation.
 func TestOpeningHook_PostExecute_Success(t *testing.T) {
 	hook := NewOpeningHook()
+
+	// Create a mock IDE manager for testing
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockIDEManager := NewMockManagerInterface(ctrl)
+
+	// Set up mock expectations
+	mockIDEManager.EXPECT().OpenIDE("vscode", "feature/test", true).Return(nil)
+
+	// Replace the real IDE manager with the mock
+	hook.IDEManager = mockIDEManager
+
+	// Create a mock CM that implements the required interfaces
+	mockCM := &MockCMForPostExecute{
+		verbose: true,
+	}
 
 	ctx := &hooks.HookContext{
 		OperationName: "CreateWorkTree",
@@ -20,24 +37,12 @@ func TestOpeningHook_PostExecute_Success(t *testing.T) {
 		Error:    nil, // Operation succeeded
 		Results:  make(map[string]interface{}),
 		Metadata: make(map[string]interface{}),
+		CM:       mockCM,
 	}
 
 	err := hook.PostExecute(ctx)
 	if err != nil {
 		t.Errorf("PostExecute should not return error: %v", err)
-	}
-
-	// Check that IDE opening information is stored in results
-	if ctx.Results["ideName"] != "vscode" {
-		t.Errorf("Expected IDE name 'vscode' in results, got '%v'", ctx.Results["ideName"])
-	}
-
-	if ctx.Results["worktreePath"] != "feature/test" {
-		t.Errorf("Expected worktree path 'feature/test' in results, got '%v'", ctx.Results["worktreePath"])
-	}
-
-	if ctx.Results["shouldOpenIDE"] != true {
-		t.Error("Expected shouldOpenIDE to be true in results")
 	}
 }
 
@@ -122,7 +127,7 @@ func TestOpeningHook_RegisterForOperations(t *testing.T) {
 		registeredHooks: make(map[string][]hooks.Hook),
 	}
 
-	err := hook.RegisterForOperations(mockCM)
+	err := hook.RegisterForOperations(mockCM.RegisterHook)
 	if err != nil {
 		t.Errorf("RegisterForOperations should not return error: %v", err)
 	}
@@ -136,9 +141,9 @@ func TestOpeningHook_RegisterForOperations(t *testing.T) {
 		t.Error("Hook should be registered for LoadWorktree")
 	}
 
-	// OpenWorktree is not registered to avoid double IDE opening
-	if len(mockCM.registeredHooks[consts.OpenWorktree]) != 0 {
-		t.Error("Hook should not be registered for OpenWorktree to avoid double opening")
+	// OpenWorktree should be registered for uniform IDE opening
+	if len(mockCM.registeredHooks[consts.OpenWorktree]) != 1 {
+		t.Error("Hook should be registered for OpenWorktree for uniform IDE opening")
 	}
 }
 
@@ -153,6 +158,15 @@ func (m *MockCMForRegistration) RegisterHook(operation string, hook hooks.Hook) 
 	}
 	m.registeredHooks[operation] = append(m.registeredHooks[operation], hook)
 	return nil
+}
+
+// MockCMForPostExecute implements the CM interface for testing PostExecute.
+type MockCMForPostExecute struct {
+	verbose bool
+}
+
+func (m *MockCMForPostExecute) IsVerbose() bool {
+	return m.verbose
 }
 
 // MockError implements error interface for testing.

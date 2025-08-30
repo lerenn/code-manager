@@ -4,32 +4,41 @@ import (
 	"fmt"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/hooks"
+	"github.com/lerenn/code-manager/pkg/logger"
 )
 
 // OpeningHook provides IDE opening functionality as a post-hook.
-type OpeningHook struct{}
+type OpeningHook struct {
+	IDEManager ManagerInterface
+}
 
 // NewOpeningHook creates a new OpeningHook instance and registers it for appropriate operations.
 func NewOpeningHook() *OpeningHook {
-	return &OpeningHook{}
+	// Create IDE manager internally since it should be private to this package
+	fsInstance := fs.NewFS()
+	loggerInstance := logger.NewNoopLogger()
+	return &OpeningHook{
+		IDEManager: NewManager(fsInstance, loggerInstance),
+	}
 }
 
 // RegisterForOperations registers this hook for the operations that create worktrees.
-func (h *OpeningHook) RegisterForOperations(cmInstance interface {
-	RegisterHook(operation string, hook hooks.Hook) error
-}) error {
+func (h *OpeningHook) RegisterForOperations(registerHook func(operation string, hook hooks.Hook) error) error {
 	// Register as post-hook for operations that create worktrees
-	if err := cmInstance.RegisterHook(consts.CreateWorkTree, h); err != nil {
+	if err := registerHook(consts.CreateWorkTree, h); err != nil {
 		return err
 	}
 
-	if err := cmInstance.RegisterHook(consts.LoadWorktree, h); err != nil {
+	if err := registerHook(consts.LoadWorktree, h); err != nil {
 		return err
 	}
 
-	// Note: OpenWorktree operation handles IDE opening directly, not through hooks
-	// to avoid double opening
+	// Register for OpenWorktree as well to ensure uniform IDE opening
+	if err := registerHook(consts.OpenWorktree, h); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -79,10 +88,27 @@ func (h *OpeningHook) PostExecute(ctx *hooks.HookContext) error {
 		return fmt.Errorf("cannot open IDE: worktree path is empty")
 	}
 
-	// Store the IDE opening information in the context for the CM to handle
-	ctx.Results["ideName"] = ideNameStr
-	ctx.Results["worktreePath"] = worktreePath
-	ctx.Results["shouldOpenIDE"] = true
+	// Open the IDE directly using the hook's IDE manager
+	cmInstance, ok := ctx.CM.(interface {
+		IsVerbose() bool
+	})
+	if !ok {
+		return fmt.Errorf("CM instance does not support verbose mode")
+	}
+
+	// Try to open the IDE
+	if err := h.IDEManager.OpenIDE(ideNameStr, worktreePath, cmInstance.IsVerbose()); err != nil {
+		// For OpenWorktree operation, IDE opening is required, so fail the operation
+		if ctx.OperationName == consts.OpenWorktree {
+			return err
+		}
+
+		// For other operations, IDE opening is optional, so just log the error
+		if cmInstance.IsVerbose() {
+			fmt.Printf("Warning: Failed to open IDE %s: %v\n", ideNameStr, err)
+		}
+		return nil
+	}
 
 	return nil
 }
@@ -104,15 +130,15 @@ func (h *OpeningHook) extractWorktreePath(params map[string]interface{}) string 
 
 // calculateWorktreePath calculates the worktree path for OpenWorktree operation.
 func (h *OpeningHook) calculateWorktreePath(ctx *hooks.HookContext) string {
-	// For OpenWorktree operation, check if worktree path is already calculated in results
+	// For OpenWorktree operation, use the worktreePath from parameters
 	if ctx.OperationName == consts.OpenWorktree {
-		if worktreePath, exists := ctx.Results["worktreePath"]; exists {
+		if worktreePath, hasWorktreePath := ctx.Parameters["worktreePath"]; hasWorktreePath {
 			if worktreePathStr, ok := worktreePath.(string); ok && worktreePathStr != "" {
 				return worktreePathStr
 			}
 		}
 	}
-	
+
 	// For other operations, use the existing logic
 	return h.extractWorktreePath(ctx.Parameters)
 }

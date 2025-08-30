@@ -44,13 +44,13 @@ type CM interface {
 
 // NewCMParams contains parameters for creating a new CM instance.
 type NewCMParams struct {
-	Repository repository.Repository
-	Workspace  workspace.Workspace
-	Config     *config.Config
+	Repository  repository.Repository
+	Workspace   workspace.Workspace
+	Config      *config.Config
+	HookManager hooks.HookManagerInterface // Optional: for testing with mocked hooks
 }
 type realCM struct {
 	*basepkg.Base
-	ideManager  ide.ManagerInterface
 	repository  repository.Repository
 	workspace   workspace.Workspace
 	hookManager hooks.HookManagerInterface
@@ -102,22 +102,21 @@ func NewCM(cfg *config.Config) (CM, error) {
 			Prompt:        promptInstance,
 			Verbose:       false,
 		}),
-		ideManager:  ide.NewManager(fsInstance, loggerInstance),
 		repository:  repoInstance,
 		workspace:   workspaceInstance,
 		hookManager: hooks.NewHookManager(),
 	}
 	// Setup hooks for the CM instance
-	if err := setupHooks(cmInstance); err != nil {
+	if err := cmInstance.setupHooks(); err != nil {
 		return nil, err
 	}
 	return cmInstance, nil
 }
 
 // setupHooks configures and registers all hooks for the CM instance.
-func setupHooks(cmInstance *realCM) error {
-	// Register IDE opening hook for operations that create worktrees
-	if err := ide.NewOpeningHook().RegisterForOperations(cmInstance); err != nil {
+func (c *realCM) setupHooks() error {
+	// Register IDE opening hook
+	if err := ide.NewOpeningHook().RegisterForOperations(c.RegisterHook); err != nil {
 		return err
 	}
 	return nil
@@ -130,6 +129,14 @@ func NewCMWithDependencies(params NewCMParams) CM {
 	gitInstance := git.NewGit()
 	loggerInstance := logger.NewNoopLogger()
 	statusInstance := status.NewManager(fsInstance, params.Config)
+	// Use provided hook manager or create a new one
+	var hookManager hooks.HookManagerInterface
+	if params.HookManager != nil {
+		hookManager = params.HookManager
+	} else {
+		hookManager = hooks.NewHookManager()
+	}
+
 	return &realCM{
 		Base: basepkg.NewBase(basepkg.NewBaseParams{
 			FS:            fsInstance,
@@ -140,10 +147,9 @@ func NewCMWithDependencies(params NewCMParams) CM {
 			Prompt:        prompt.NewPrompt(),
 			Verbose:       false,
 		}),
-		ideManager:  ide.NewManager(fsInstance, loggerInstance),
 		repository:  params.Repository,
 		workspace:   params.Workspace,
-		hookManager: hooks.NewHookManager(),
+		hookManager: hookManager,
 	}
 }
 func (c *realCM) SetVerbose(verbose bool) {
@@ -158,8 +164,6 @@ func (c *realCM) SetVerbose(verbose bool) {
 		Verbose:       verbose,
 	})
 	c.Base = newBase
-	// Update the IDE manager with the new logger
-	c.ideManager = ide.NewManager(c.FS, c.Logger)
 }
 
 // RegisterHook registers a hook for a specific operation.
@@ -167,12 +171,10 @@ func (c *realCM) RegisterHook(operation string, hook hooks.Hook) error {
 	// This is a simplified implementation - in practice, you'd want to determine
 	// the hook type and register it appropriately.
 	switch h := hook.(type) {
-	case hooks.GlobalHook:
-		return c.hookManager.RegisterGlobalHook(h)
-	case hooks.PreHook:
-		return c.hookManager.RegisterPreHook(operation, h)
 	case hooks.PostHook:
 		return c.hookManager.RegisterPostHook(operation, h)
+	case hooks.PreHook:
+		return c.hookManager.RegisterPreHook(operation, h)
 	case hooks.ErrorHook:
 		return c.hookManager.RegisterErrorHook(operation, h)
 	default:
@@ -218,38 +220,16 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 	// Execute post-hooks or error-hooks (if hook manager is available)
 	if c.hookManager != nil {
 		if resultErr != nil {
-			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
+			if hookErr := c.hookManager.ExecuteErrorHooks(operationName, ctx); hookErr != nil {
+				return hookErr
+			}
 		} else {
-			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
-			if c.hookManager.HasPostHooks(operationName) { c.handleIDEOpening(ctx) }
+			if hookErr := c.hookManager.ExecutePostHooks(operationName, ctx); hookErr != nil {
+				return hookErr
+			}
 		}
 	}
 	return resultErr
-}
-
-// handleIDEOpening handles IDE opening if requested by hooks.
-func (c *realCM) handleIDEOpening(ctx *hooks.HookContext) {
-	shouldOpenIDE, exists := ctx.Results["shouldOpenIDE"]
-	if !exists || shouldOpenIDE != true {
-		return
-	}
-	ideName, hasIDE := ctx.Results["ideName"]
-	if !hasIDE {
-		return
-	}
-	worktreePath, hasPath := ctx.Results["worktreePath"]
-	if !hasPath {
-		return
-	}
-	ideNameStr, ok := ideName.(string)
-	if !ok {
-		return
-	}
-	worktreePathStr, ok := worktreePath.(string)
-	if !ok {
-		return
-	}
-	_ = c.ideManager.OpenIDE(ideNameStr, worktreePathStr, c.IsVerbose())
 }
 
 // executeWithHooksAndReturnListWorktrees executes an operation with pre and post hooks
@@ -294,10 +274,13 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 	// Execute post-hooks or error-hooks (if hook manager is available)
 	if c.hookManager != nil {
 		if resultErr != nil {
-			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
+			if hookErr := c.hookManager.ExecuteErrorHooks(operationName, ctx); hookErr != nil {
+				return nil, ProjectTypeNone, hookErr
+			}
 		} else {
-			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
-			if c.hookManager.HasPostHooks(operationName) { c.handleIDEOpening(ctx) }
+			if hookErr := c.hookManager.ExecutePostHooks(operationName, ctx); hookErr != nil {
+				return nil, ProjectTypeNone, hookErr
+			}
 		}
 	}
 	return worktrees, projectType, resultErr
@@ -342,10 +325,13 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 	// Execute post-hooks or error-hooks (if hook manager is available)
 	if c.hookManager != nil {
 		if resultErr != nil {
-			_ = c.hookManager.ExecuteErrorHooks(operationName, ctx)
+			if hookErr := c.hookManager.ExecuteErrorHooks(operationName, ctx); hookErr != nil {
+				return nil, hookErr
+			}
 		} else {
-			_ = c.hookManager.ExecutePostHooks(operationName, ctx)
-			if c.hookManager.HasPostHooks(operationName) { c.handleIDEOpening(ctx) }
+			if hookErr := c.hookManager.ExecutePostHooks(operationName, ctx); hookErr != nil {
+				return nil, hookErr
+			}
 		}
 	}
 	return repositories, resultErr

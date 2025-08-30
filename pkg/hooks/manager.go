@@ -6,13 +6,14 @@ import (
 	"sync"
 )
 
+//go:generate mockgen -source=manager.go -destination=mockmanager.gen.go -package=hooks
+
 // HookManager manages hook registration and execution.
 type HookManager struct {
-	preHooks    map[string][]PreHook
-	postHooks   map[string][]PostHook
-	errorHooks  map[string][]ErrorHook
-	globalHooks []GlobalHook
-	mu          sync.RWMutex
+	preHooks   map[string][]PreHook
+	postHooks  map[string][]PostHook
+	errorHooks map[string][]ErrorHook
+	mu         sync.RWMutex
 }
 
 // HookManagerInterface defines the interface for hook management.
@@ -21,7 +22,6 @@ type HookManagerInterface interface {
 	RegisterPreHook(operation string, hook PreHook) error
 	RegisterPostHook(operation string, hook PostHook) error
 	RegisterErrorHook(operation string, hook ErrorHook) error
-	RegisterGlobalHook(hook GlobalHook) error
 
 	// Hook execution.
 	ExecutePreHooks(operation string, ctx *HookContext) error
@@ -33,16 +33,14 @@ type HookManagerInterface interface {
 	EnableHook(operation, hookName string) error
 	DisableHook(operation, hookName string) error
 	ListHooks(operation string) ([]Hook, error)
-	HasPostHooks(operation string) bool
 }
 
 // NewHookManager creates a new HookManager instance.
 func NewHookManager() HookManagerInterface {
 	return &HookManager{
-		preHooks:    make(map[string][]PreHook),
-		postHooks:   make(map[string][]PostHook),
-		errorHooks:  make(map[string][]ErrorHook),
-		globalHooks: make([]GlobalHook, 0),
+		preHooks:   make(map[string][]PreHook),
+		postHooks:  make(map[string][]PostHook),
+		errorHooks: make(map[string][]ErrorHook),
 	}
 }
 
@@ -100,31 +98,10 @@ func (hm *HookManager) RegisterErrorHook(operation string, hook ErrorHook) error
 	return nil
 }
 
-// RegisterGlobalHook registers a global hook that applies to all operations.
-func (hm *HookManager) RegisterGlobalHook(hook GlobalHook) error {
-	hm.mu.Lock()
-	defer hm.mu.Unlock()
-
-	if hook == nil {
-		return fmt.Errorf("hook cannot be nil")
-	}
-
-	hm.globalHooks = append(hm.globalHooks, hook)
-	hm.sortGlobalHooksByPriority()
-	return nil
-}
-
 // ExecutePreHooks executes all pre-hooks for a specific operation.
 func (hm *HookManager) ExecutePreHooks(operation string, ctx *HookContext) error {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
-
-	// Execute global pre-hooks first.
-	for _, hook := range hm.globalHooks {
-		if err := hook.PreExecute(ctx); err != nil {
-			return fmt.Errorf("global pre-hook %s failed: %w", hook.Name(), err)
-		}
-	}
 
 	// Execute operation-specific pre-hooks.
 	for _, hook := range hm.preHooks[operation] {
@@ -141,17 +118,10 @@ func (hm *HookManager) ExecutePostHooks(operation string, ctx *HookContext) erro
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
 
-	// Execute operation-specific post-hooks first.
+	// Execute operation-specific post-hooks.
 	for _, hook := range hm.postHooks[operation] {
 		if err := hook.PostExecute(ctx); err != nil {
 			return fmt.Errorf("post-hook %s failed: %w", hook.Name(), err)
-		}
-	}
-
-	// Execute global post-hooks last.
-	for _, hook := range hm.globalHooks {
-		if err := hook.PostExecute(ctx); err != nil {
-			return fmt.Errorf("global post-hook %s failed: %w", hook.Name(), err)
 		}
 	}
 
@@ -163,17 +133,10 @@ func (hm *HookManager) ExecuteErrorHooks(operation string, ctx *HookContext) err
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
 
-	// Execute operation-specific error-hooks first.
+	// Execute operation-specific error-hooks.
 	for _, hook := range hm.errorHooks[operation] {
 		if err := hook.OnError(ctx); err != nil {
 			return fmt.Errorf("error-hook %s failed: %w", hook.Name(), err)
-		}
-	}
-
-	// Execute global error-hooks last.
-	for _, hook := range hm.globalHooks {
-		if err := hook.OnError(ctx); err != nil {
-			return fmt.Errorf("global error-hook %s failed: %w", hook.Name(), err)
 		}
 	}
 
@@ -199,9 +162,6 @@ func (hm *HookManager) RemoveHook(operation, hookName string) error {
 	if hooks, exists := hm.errorHooks[operation]; exists {
 		hm.errorHooks[operation] = hm.removeErrorHookByName(hooks, hookName)
 	}
-
-	// Remove from global hooks.
-	hm.globalHooks = hm.removeGlobalHookByName(hookName)
 
 	return nil
 }
@@ -243,15 +203,6 @@ func (hm *HookManager) ListHooks(operation string) ([]Hook, error) {
 	return hooks, nil
 }
 
-// HasPostHooks checks if there are any post-hooks registered for an operation.
-func (hm *HookManager) HasPostHooks(operation string) bool {
-	hm.mu.RLock()
-	defer hm.mu.RUnlock()
-	
-	hooks, exists := hm.postHooks[operation]
-	return exists && len(hooks) > 0
-}
-
 // Helper methods for sorting and removing hooks.
 func (hm *HookManager) sortHooksByPriority(operation, hookType string) {
 	switch hookType {
@@ -268,12 +219,6 @@ func (hm *HookManager) sortHooksByPriority(operation, hookType string) {
 			return hm.errorHooks[operation][i].Priority() < hm.errorHooks[operation][j].Priority()
 		})
 	}
-}
-
-func (hm *HookManager) sortGlobalHooksByPriority() {
-	sort.Slice(hm.globalHooks, func(i, j int) bool {
-		return hm.globalHooks[i].Priority() < hm.globalHooks[j].Priority()
-	})
 }
 
 func (hm *HookManager) removePreHookByName(hooks []PreHook, name string) []PreHook {
@@ -299,16 +244,6 @@ func (hm *HookManager) removePostHookByName(hooks []PostHook, name string) []Pos
 func (hm *HookManager) removeErrorHookByName(hooks []ErrorHook, name string) []ErrorHook {
 	var result []ErrorHook
 	for _, hook := range hooks {
-		if hook.Name() != name {
-			result = append(result, hook)
-		}
-	}
-	return result
-}
-
-func (hm *HookManager) removeGlobalHookByName(name string) []GlobalHook {
-	var result []GlobalHook
-	for _, hook := range hm.globalHooks {
 		if hook.Name() != name {
 			result = append(result, hook)
 		}

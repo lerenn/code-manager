@@ -41,11 +41,3 @@ type ErrorHook interface {
 	Hook
 	OnError(ctx *HookContext) error
 }
-
-// GlobalHook applies to all operations.
-type GlobalHook interface {
-	Hook
-	PreExecute(ctx *HookContext) error
-	PostExecute(ctx *HookContext) error
-	OnError(ctx *HookContext) error
-}

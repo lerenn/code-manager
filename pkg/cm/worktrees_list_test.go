@@ -5,7 +5,8 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/hooks/ide"
+	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/workspace"
@@ -19,18 +20,19 @@ func TestCM_ListWorktrees_NoRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
-		Repository: mockRepository,
-		Workspace:  mockWorkspace,
-		Config:     createTestConfig(),
+		Repository:  mockRepository,
+		HookManager: mockHookManager,
+		Workspace:   mockWorkspace,
+		Config:      createTestConfig(),
 	})
 
-	// Override IDE manager with mock
-	c := cm.(*realCM)
-	c.ideManager = mockIDE
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecuteErrorHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
 
 	// Mock repository detection to return false (no repository)
 	mockRepository.EXPECT().IsGitRepository().Return(false, nil).AnyTimes()
@@ -47,18 +49,19 @@ func TestCM_ListWorktrees_SingleRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
-		Repository: mockRepository,
-		Workspace:  mockWorkspace,
-		Config:     createTestConfig(),
+		Repository:  mockRepository,
+		HookManager: mockHookManager,
+		Workspace:   mockWorkspace,
+		Config:      createTestConfig(),
 	})
 
-	// Override IDE manager with mock
-	c := cm.(*realCM)
-	c.ideManager = mockIDE
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
 
 	// Mock repository detection and list worktrees
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
