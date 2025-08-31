@@ -20,4 +20,15 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go install ./cmd/*
 
-# The binary is now available at /go/bin/cm
+# Ensure the binary is available at the expected cross-compilation path
+# For cross-compilation: binary is already at /go/bin/${TARGETOS}_${TARGETARCH}/cm (with .exe for Windows)
+# For native builds: binary is at /go/bin/cm or /go/bin/cm.exe (Windows), so we copy it to /go/bin/${TARGETOS}_${TARGETARCH}/cm
+RUN if [ -f /go/bin/cm ]; then \
+        mkdir -p /go/bin/${TARGETOS}_${TARGETARCH} && \
+        cp /go/bin/cm /go/bin/${TARGETOS}_${TARGETARCH}/cm; \
+    elif [ -f /go/bin/cm.exe ]; then \
+        mkdir -p /go/bin/${TARGETOS}_${TARGETARCH} && \
+        cp /go/bin/cm.exe /go/bin/${TARGETOS}_${TARGETARCH}/cm.exe; \
+    fi
+
+# The binary is now always available at /go/bin/${TARGETOS}_${TARGETARCH}/cm (with .exe for Windows)

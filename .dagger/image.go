@@ -8,6 +8,11 @@ import (
 	"slices"
 )
 
+const (
+	windowsOS = "windows"
+	exeExt    = ".exe"
+)
+
 // ImageInfo represents a Docker image.
 type ImageInfo struct {
 	OS              string
@@ -142,8 +147,16 @@ func RuntimeImage(
 		return nil
 	}
 
+	// Determine the correct binary path
+	binaryPath := fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch)
+	if runnerInfo.OS == windowsOS {
+		binaryPath += exeExt
+	}
+
+	// Binary is now always available at /go/bin/{GOOS}_{GOARCH}/cm (with .exe for Windows)
+	// The Dockerfile.build ensures this by copying native builds to the cross-compilation path
 	return dag.Container().
 		From(runnerInfo.TargetBaseImage).
-		WithFile("/usr/local/bin/cm", buildContainer.File(fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch))).
+		WithFile("/usr/local/bin/cm", buildContainer.File(binaryPath)).
 		WithEntrypoint([]string{"/usr/local/bin/cm"})
 }
