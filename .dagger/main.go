@@ -129,13 +129,16 @@ func (ci *CodeManager) BuildForArchitecture(
 	architecture string,
 ) (*dagger.Container, error) {
 	// Validate architecture
-	if _, exists := GoImageInfo[architecture]; !exists {
+	runnerInfo, exists := GoImageInfo[architecture]
+	if !exists {
 		return nil, fmt.Errorf("unsupported architecture: %s", architecture)
 	}
 
-	// Build Docker image for this architecture
-	runnerInfo := GoImageInfo[architecture]
-	container := Image(sourceDir, runnerInfo)
+	// Build binary for this architecture
+	container, err := BuildImage(sourceDir, runnerInfo)
+	if err != nil {
+		return nil, err
+	}
 
 	return container, nil
 }
@@ -181,30 +184,30 @@ func (ci *CodeManager) BuildAndReleaseForArchitecture(
 	}
 
 	// Build binary for this architecture
-	container, err := ci.BuildForArchitecture(sourceDir, architecture)
+	buildContainer, err := ci.BuildForArchitecture(sourceDir, architecture)
 	if err != nil {
 		return err
 	}
 
-	// Only push the Docker image if ExportImage is true
+	// Upload binary for this architecture
+	err = gh.uploadBinary(ctx, buildContainer, architecture, actualUser, releaseID, token)
+	if err != nil {
+		return err
+	}
+
+	// Create and push runtime image (only for Linux platforms)
 	runnerInfo := GoImageInfo[architecture]
-	if runnerInfo.ExportImage {
+	if runtimeContainer := RuntimeImage(buildContainer, runnerInfo); runtimeContainer != nil {
 		// Push the Docker image to GitHub Container Registry with version tag
 		imageName := fmt.Sprintf("ghcr.io/%s/code-manager:%s", actualUser, latestTag)
 
 		// Push the image to GitHub Container Registry
 		// Note: In GitHub Actions, Docker authentication is handled automatically
 		// when using the GITHUB_TOKEN with appropriate permissions
-		_, err = container.Publish(ctx, imageName)
+		_, err = runtimeContainer.Publish(ctx, imageName)
 		if err != nil {
 			return fmt.Errorf("failed to push Docker image for %s: %w", architecture, err)
 		}
-	}
-
-	// Upload binary for this architecture
-	err = gh.uploadBinary(ctx, container, architecture, actualUser, releaseID, token)
-	if err != nil {
-		return err
 	}
 
 	return nil

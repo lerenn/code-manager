@@ -222,9 +222,13 @@ func (gh *GitHubReleaseManager) uploadBinary(
 		return fmt.Errorf("failed to get token: %w", err)
 	}
 
-	// Get the binary file content
-	// The binary is always named 'cm' regardless of platform when built on Linux
-	binaryPath := "/usr/local/bin/cm"
+	// Get the binary file content from the build container
+	// Binary is now always available at /go/bin/{GOOS}_{GOARCH}/cm (with .exe for Windows)
+	// The Dockerfile.build ensures this by copying native builds to the cross-compilation path
+	binaryPath := fmt.Sprintf("/go/bin/%s_%s/cm", runnerInfo.OS, runnerInfo.Arch)
+	if runnerInfo.OS == windowsOS {
+		binaryPath += exeExt
+	}
 	binaryContent, err := container.File(binaryPath).Contents(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read binary file at %s: %w", binaryPath, err)
@@ -263,8 +267,8 @@ func (gh *GitHubReleaseManager) uploadBinary(
 // buildBinaryName builds the binary filename for a platform.
 func (gh *GitHubReleaseManager) buildBinaryName(runnerInfo ImageInfo) string {
 	binaryName := fmt.Sprintf("code-manager-%s-%s", runnerInfo.OS, runnerInfo.Arch)
-	if runnerInfo.OS == "windows" {
-		binaryName += ".exe"
+	if runnerInfo.OS == windowsOS {
+		binaryName += exeExt
 	}
 	return binaryName
 }
