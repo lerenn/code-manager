@@ -1,4 +1,3 @@
-// Package ide provides interfaces and implementations for interacting with various IDEs.
 package ide
 
 import (

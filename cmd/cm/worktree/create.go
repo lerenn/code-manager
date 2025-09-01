@@ -4,7 +4,7 @@ package worktree
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/spf13/cobra"
 )
 
@@ -72,7 +72,10 @@ func createCreateCmdRunE(ideName *string, force *bool, fromIssue *string) func(*
 		if err != nil {
 			return err
 		}
-		cmManager := cm.NewCM(cfg)
+		cmManager, err := cm.NewCM(cfg)
+		if err != nil {
+			return err
+		}
 		cmManager.SetVerbose(config.Verbose)
 
 		// Determine branch name

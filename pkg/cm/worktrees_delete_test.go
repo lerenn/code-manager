@@ -5,7 +5,8 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
@@ -18,18 +19,19 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
-		Repository: mockRepository,
-		Workspace:  mockWorkspace,
-		Config:     createTestConfig(),
+		Repository:  mockRepository,
+		HookManager: mockHookManager,
+		Workspace:   mockWorkspace,
+		Config:      createTestConfig(),
 	})
 
-	// Override IDE manager with mock
-	c := cm.(*realCM)
-	c.ideManager = mockIDE
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 
 	// Mock repository detection and worktree deletion
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
@@ -51,18 +53,19 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
-		Repository: mockRepository,
-		Workspace:  mockWorkspace,
-		Config:     createTestConfig(),
+		Repository:  mockRepository,
+		HookManager: mockHookManager,
+		Workspace:   mockWorkspace,
+		Config:      createTestConfig(),
 	})
 
-	// Override IDE manager with mock
-	c := cm.(*realCM)
-	c.ideManager = mockIDE
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 
 	// Mock no repository found
 	mockRepository.EXPECT().IsGitRepository().Return(false, nil)
@@ -78,21 +81,22 @@ func TestCM_DeleteWorkTree_VerboseMode(t *testing.T) {
 
 	mockRepository := repository.NewMockRepository(ctrl)
 	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDE := ide.NewMockManagerInterface(ctrl)
+	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
 	cm := NewCMWithDependencies(NewCMParams{
-		Repository: mockRepository,
-		Workspace:  mockWorkspace,
-		Config:     createTestConfig(),
+		Repository:  mockRepository,
+		HookManager: mockHookManager,
+		Workspace:   mockWorkspace,
+		Config:      createTestConfig(),
 	})
-
-	// Override IDE manager with mock
-	c := cm.(*realCM)
-	c.ideManager = mockIDE
 
 	// Enable verbose mode
 	cm.SetVerbose(true)
+
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 
 	// Mock repository detection and worktree deletion
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()

@@ -3,6 +3,8 @@ package cm
 import (
 	"fmt"
 	"strings"
+
+	"github.com/lerenn/code-manager/pkg/cm/consts"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -12,46 +14,48 @@ type LoadWorktreeOpts struct {
 
 // LoadWorktree loads a branch from a remote source and creates a worktree.
 func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error {
-	c.VerbosePrint("Starting branch loading: %s", branchArg)
-
-	// 1. Parse the branch argument to extract remote and branch name
-	remoteSource, branchName, err := c.parseBranchArg(branchArg)
-	if err != nil {
-		return err
+	// Prepare parameters for hooks
+	params := map[string]interface{}{
+		"branchArg": branchArg,
 	}
-
-	c.VerbosePrint("Parsed: remote=%s, branch=%s", remoteSource, branchName)
-
-	// 2. Detect project mode (repository or workspace)
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		c.VerbosePrint("Error: %v", err)
-		return fmt.Errorf("failed to detect project mode: %w", err)
-	}
-
-	// 3. Handle based on project type
-	var loadErr error
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		loadErr = c.loadWorktreeForSingleRepo(remoteSource, branchName)
-	case ProjectTypeWorkspace:
-		return ErrWorkspaceModeNotSupported
-	case ProjectTypeNone:
-		return ErrNoGitRepositoryOrWorkspaceFound
-	default:
-		return fmt.Errorf("unknown project type")
-	}
-
-	// 4. Open IDE if specified and branch loading was successful
-	var ideName *string
 	if len(opts) > 0 && opts[0].IDEName != "" {
-		ideName = &opts[0].IDEName
-	}
-	if err := c.handleIDEOpening(loadErr, branchName, ideName); err != nil {
-		return err
+		params["ideName"] = opts[0].IDEName
 	}
 
-	return loadErr
+	// Execute with hooks
+	return c.executeWithHooks(consts.LoadWorktree, params, func() error {
+		c.VerbosePrint("Starting branch loading: %s", branchArg)
+
+		// 1. Parse the branch argument to extract remote and branch name
+		remoteSource, branchName, err := c.parseBranchArg(branchArg)
+		if err != nil {
+			return err
+		}
+
+		c.VerbosePrint("Parsed: remote=%s, branch=%s", remoteSource, branchName)
+
+		// 2. Detect project mode (repository or workspace)
+		projectType, err := c.detectProjectMode()
+		if err != nil {
+			c.VerbosePrint("Error: %v", err)
+			return fmt.Errorf("failed to detect project mode: %w", err)
+		}
+
+		// 3. Handle based on project type
+		var loadErr error
+		switch projectType {
+		case ProjectTypeSingleRepo:
+			loadErr = c.loadWorktreeForSingleRepo(remoteSource, branchName)
+		case ProjectTypeWorkspace:
+			return ErrWorkspaceModeNotSupported
+		case ProjectTypeNone:
+			return ErrNoGitRepositoryOrWorkspaceFound
+		default:
+			return fmt.Errorf("unknown project type")
+		}
+
+		return loadErr
+	})
 }
 
 // loadWorktreeForSingleRepo loads a worktree for single repository mode.

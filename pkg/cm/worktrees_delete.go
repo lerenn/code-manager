@@ -4,29 +4,39 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/workspace"
 )
 
 // DeleteWorkTree deletes a worktree for the specified branch.
 func (c *realCM) DeleteWorkTree(branch string, force bool) error {
-	c.VerbosePrint("Deleting worktree for branch: %s (force: %t)", branch, force)
-
-	// Detect project mode
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		return fmt.Errorf("failed to detect project mode: %w", err)
+	// Prepare parameters for hooks
+	params := map[string]interface{}{
+		"branch": branch,
+		"force":  force,
 	}
 
-	switch projectType {
-	case ProjectTypeSingleRepo:
-		return c.handleRepositoryDeleteMode(branch, force)
-	case ProjectTypeWorkspace:
-		return c.handleWorkspaceDeleteMode(branch, force)
-	case ProjectTypeNone:
-		return ErrNoGitRepositoryOrWorkspaceFound
-	default:
-		return fmt.Errorf("unknown project type")
-	}
+	// Execute with hooks
+	return c.executeWithHooks(consts.DeleteWorkTree, params, func() error {
+		c.VerbosePrint("Deleting worktree for branch: %s (force: %t)", branch, force)
+
+		// Detect project mode
+		projectType, err := c.detectProjectMode()
+		if err != nil {
+			return fmt.Errorf("failed to detect project mode: %w", err)
+		}
+
+		switch projectType {
+		case ProjectTypeSingleRepo:
+			return c.handleRepositoryDeleteMode(branch, force)
+		case ProjectTypeWorkspace:
+			return c.handleWorkspaceDeleteMode(branch, force)
+		case ProjectTypeNone:
+			return ErrNoGitRepositoryOrWorkspaceFound
+		default:
+			return fmt.Errorf("unknown project type")
+		}
+	})
 }
 
 // handleRepositoryDeleteMode handles repository mode: validation and worktree deletion.

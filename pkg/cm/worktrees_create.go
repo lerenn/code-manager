@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	branchpkg "github.com/lerenn/code-manager/pkg/branch"
+	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/forge"
 	"github.com/lerenn/code-manager/pkg/issue"
 	repo "github.com/lerenn/code-manager/pkg/repository"
@@ -23,13 +25,26 @@ func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 	// Extract and validate options
 	issueRef, ideName, force := c.extractCreateWorkTreeOptions(opts)
 
-	// Handle issue-based worktree creation
-	if issueRef != "" {
-		return c.createWorkTreeFromIssue(branch, issueRef, ideName)
+	// Prepare parameters for hooks
+	params := map[string]interface{}{
+		"branch":   branch,
+		"issueRef": issueRef,
+		"force":    force,
+	}
+	if ideName != nil {
+		params["ideName"] = *ideName
 	}
 
-	// Handle regular worktree creation
-	return c.createRegularWorkTree(branch, force, ideName)
+	// Execute with hooks
+	return c.executeWithHooks(consts.CreateWorkTree, params, func() error {
+		// Handle issue-based worktree creation
+		if issueRef != "" {
+			return c.createWorkTreeFromIssue(branch, issueRef)
+		}
+
+		// Handle regular worktree creation
+		return c.createRegularWorkTree(branch, force)
+	})
 }
 
 // extractCreateWorkTreeOptions extracts options from the variadic parameter.
@@ -52,9 +67,9 @@ func (c *realCM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string
 }
 
 // createRegularWorkTree handles regular worktree creation (non-issue based).
-func (c *realCM) createRegularWorkTree(branch string, force bool, ideName *string) error {
+func (c *realCM) createRegularWorkTree(branch string, force bool) error {
 	// Sanitize branch name first
-	sanitizedBranch, err := c.sanitizeBranchName(branch)
+	sanitizedBranch, err := branchpkg.SanitizeBranchName(branch)
 	if err != nil {
 		return err
 	}
@@ -67,14 +82,7 @@ func (c *realCM) createRegularWorkTree(branch string, force bool, ideName *strin
 	c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
 
 	// Detect project mode and handle accordingly
-	worktreeErr := c.handleProjectMode(sanitizedBranch, force)
-
-	// Open IDE if specified and worktree creation was successful
-	if err := c.handleIDEOpening(worktreeErr, sanitizedBranch, ideName); err != nil {
-		return err
-	}
-
-	return worktreeErr
+	return c.handleProjectMode(sanitizedBranch, force)
 }
 
 // handleProjectMode detects project mode and handles worktree creation accordingly.
@@ -157,7 +165,7 @@ func (c *realCM) handleWorkspaceMode(branch string, force bool) error {
 }
 
 // createWorkTreeFromIssue creates a worktree from a forge issue.
-func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string, ideName *string) error {
+func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string) error {
 	c.VerbosePrint("Starting worktree creation from issue: %s", issueRef)
 
 	// 1. Detect project mode (repository or workspace)
@@ -186,14 +194,7 @@ func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string, ideName
 		return createErr
 	}
 
-	// 4. Open IDE if specified
-	if ideName != nil && *ideName != "" {
-		if err := c.handleIDEOpening(createErr, branch, ideName); err != nil {
-			return err
-		}
-	}
-
-	return createErr
+	return nil
 }
 
 // createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.

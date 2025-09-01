@@ -6,7 +6,7 @@ import (
 
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,10 @@ func openWorktree(branchName, ideName string) error {
 	if err != nil {
 		return err
 	}
-	cmManager := cm.NewCM(cfg)
+	cmManager, err := cm.NewCM(cfg)
+	if err != nil {
+		return err
+	}
 	cmManager.SetVerbose(config.Verbose)
 
 	// Determine IDE to use (default to DefaultIDE if not specified)

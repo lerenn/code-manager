@@ -16,11 +16,12 @@ import (
 func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 	t.Helper()
 
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Safely change to repo directory and load worktree
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()

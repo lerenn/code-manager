@@ -53,10 +53,11 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 	}
 
 	// Create a worktree manually with issue information to simulate the behavior
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
+	require.NoError(t, err)
 
 	// Change to repo directory
 	originalDir, err := os.Getwd()
@@ -215,10 +216,11 @@ func TestCreateFromIssue_NoIssueInfo(t *testing.T) {
 	addGitHubRemote(t, setup.RepoPath)
 
 	// Create a worktree without issue information
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
+	require.NoError(t, err)
 
 	// Change to repo directory
 	originalDir, err := os.Getwd()
@@ -431,10 +433,11 @@ func TestCreateFromIssue_WithIDE(t *testing.T) {
 // Helper functions
 
 func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) error {
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
+	require.NoError(t, err)
 
 	// Change to repo directory and create worktree from issue
 	originalDir, err := os.Getwd()
@@ -447,10 +450,11 @@ func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) er
 }
 
 func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIssueWithBranchParams) error {
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   params.Setup.CmPath,
 		StatusFile: params.Setup.StatusPath,
 	})
+	require.NoError(t, err)
 
 	// Change to repo directory and create worktree from issue
 	originalDir, err := os.Getwd()
@@ -463,10 +467,11 @@ func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIs
 }
 
 func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssueWithIDEParams) error {
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   params.Setup.CmPath,
 		StatusFile: params.Setup.StatusPath,
 	})
+	require.NoError(t, err)
 
 	// Change to repo directory and create worktree from issue
 	originalDir, err := os.Getwd()

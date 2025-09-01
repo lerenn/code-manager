@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/config"
 )
 
@@ -17,49 +18,60 @@ type InitOpts struct {
 
 // Init initializes CM configuration.
 func (c *realCM) Init(opts InitOpts) error {
-	c.VerbosePrint("Starting CM initialization")
+	// Prepare parameters for hooks
+	params := map[string]interface{}{
+		"reset":          opts.Reset,
+		"force":          opts.Force,
+		"basePath":       opts.BasePath,
+		"nonInteractive": opts.NonInteractive,
+	}
 
-	// Handle reset flag
-	if opts.Reset {
-		if err := c.handleReset(opts.Force); err != nil {
+	// Execute with hooks
+	return c.executeWithHooks(consts.Init, params, func() error {
+		c.VerbosePrint("Starting CM initialization")
+
+		// Handle reset flag
+		if opts.Reset {
+			if err := c.handleReset(opts.Force); err != nil {
+				return err
+			}
+		}
+
+		// Get and validate base path
+		expandedBasePath, err := c.getAndValidateBasePath(opts.BasePath, opts.NonInteractive)
+		if err != nil {
 			return err
 		}
-	}
 
-	// Get and validate base path
-	expandedBasePath, err := c.getAndValidateBasePath(opts.BasePath, opts.NonInteractive)
-	if err != nil {
-		return err
-	}
-
-	// Create base path directory if it doesn't exist
-	if err := c.FS.CreateDirectory(expandedBasePath, 0755); err != nil {
-		return fmt.Errorf("failed to create base path directory: %w", err)
-	}
-
-	// Update and save configuration
-	if err := c.updateConfiguration(expandedBasePath); err != nil {
-		return err
-	}
-
-	// Ensure status exists (create initial on first run). If reset, it was recreated earlier.
-	exists, err := c.FS.Exists(c.Config.StatusFile)
-	if err != nil {
-		return fmt.Errorf("failed to check status existence: %w", err)
-	}
-	if !exists {
-		if err := c.StatusManager.CreateInitialStatus(); err != nil {
-			return fmt.Errorf("failed to create initial status: %w", err)
+		// Create base path directory if it doesn't exist
+		if err := c.FS.CreateDirectory(expandedBasePath, 0755); err != nil {
+			return fmt.Errorf("failed to create base path directory: %w", err)
 		}
-	}
 
-	c.VerbosePrint("CM initialization completed successfully")
-	fmt.Printf("CM initialized successfully!\n")
-	fmt.Printf("Base path: %s\n", expandedBasePath)
-	fmt.Printf("Configuration: %s\n", c.getConfigPath())
-	fmt.Printf("Status file: %s\n", c.Config.StatusFile)
+		// Update and save configuration
+		if err := c.updateConfiguration(expandedBasePath); err != nil {
+			return err
+		}
 
-	return nil
+		// Ensure status exists (create initial on first run). If reset, it was recreated earlier.
+		exists, err := c.FS.Exists(c.Config.StatusFile)
+		if err != nil {
+			return fmt.Errorf("failed to check status existence: %w", err)
+		}
+		if !exists {
+			if err := c.StatusManager.CreateInitialStatus(); err != nil {
+				return fmt.Errorf("failed to create initial status: %w", err)
+			}
+		}
+
+		c.VerbosePrint("CM initialization completed successfully")
+		fmt.Printf("CM initialized successfully!\n")
+		fmt.Printf("Base path: %s\n", expandedBasePath)
+		fmt.Printf("Configuration: %s\n", c.getConfigPath())
+		fmt.Printf("Status file: %s\n", c.Config.StatusFile)
+
+		return nil
+	})
 }
 
 // getAndValidateBasePath gets and validates the base path.

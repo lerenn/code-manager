@@ -78,8 +78,9 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cfg)
 
+	require.NoError(t, err)
 	// Create worktrees first
 	branchName := "feature/test-branch"
 	err = cmInstance.CreateWorkTree(branchName)
@@ -179,8 +180,9 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cfg)
 
+	require.NoError(t, err)
 	// Create worktrees first
 	branchName := "feature/test-branch"
 	err = cmInstance.CreateWorkTree(branchName)

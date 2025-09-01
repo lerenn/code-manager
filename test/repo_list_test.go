@@ -22,11 +22,12 @@ import (
 func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error) {
 	t.Helper()
 
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Change to repo directory and list worktrees
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
@@ -52,11 +53,12 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	}
 
 	// Create CM instance with the test configuration
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	// Set verbose mode if requested
 	if isVerbose {
 		cmInstance.SetVerbose(true)
@@ -463,10 +465,11 @@ func TestRepositoryListCommand(t *testing.T) {
 func listRepositories(t *testing.T, setup *TestSetup) ([]cm.RepositoryInfo, error) {
 	t.Helper()
 
-	cmInstance := cm.NewCM(&config.Config{
+	cmInstance, err := cm.NewCM(&config.Config{
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
 
+	require.NoError(t, err)
 	return cmInstance.ListRepositories()
 }
