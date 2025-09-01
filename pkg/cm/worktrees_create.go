@@ -39,11 +39,11 @@ func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 	return c.executeWithHooks(consts.CreateWorkTree, params, func() error {
 		// Handle issue-based worktree creation
 		if issueRef != "" {
-			return c.createWorkTreeFromIssue(branch, issueRef, ideName)
+			return c.createWorkTreeFromIssue(branch, issueRef)
 		}
 
 		// Handle regular worktree creation
-		return c.createRegularWorkTree(branch, force, ideName)
+		return c.createRegularWorkTree(branch, force)
 	})
 }
 
@@ -67,7 +67,7 @@ func (c *realCM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string
 }
 
 // createRegularWorkTree handles regular worktree creation (non-issue based).
-func (c *realCM) createRegularWorkTree(branch string, force bool, _ *string) error {
+func (c *realCM) createRegularWorkTree(branch string, force bool) error {
 	// Sanitize branch name first
 	sanitizedBranch, err := branchpkg.SanitizeBranchName(branch)
 	if err != nil {
@@ -165,7 +165,7 @@ func (c *realCM) handleWorkspaceMode(branch string, force bool) error {
 }
 
 // createWorkTreeFromIssue creates a worktree from a forge issue.
-func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string, _ *string) error {
+func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string) error {
 	c.VerbosePrint("Starting worktree creation from issue: %s", issueRef)
 
 	// 1. Detect project mode (repository or workspace)
