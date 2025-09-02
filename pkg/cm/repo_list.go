@@ -21,29 +21,29 @@ func (c *realCM) ListRepositories() ([]RepositoryInfo, error) {
 
 	// Execute with hooks
 	return c.executeWithHooksAndReturnRepositories(consts.ListRepositories, params, func() ([]RepositoryInfo, error) {
-		if c.Logger != nil {
-			c.Logger.Logf("Loading repositories from status file")
+		if c.logger != nil {
+			c.logger.Logf("Loading repositories from status file")
 		}
 
 		// Get all repositories from status manager
-		repositories, err := c.StatusManager.ListRepositories()
+		repositories, err := c.statusManager.ListRepositories()
 		if err != nil {
 			return nil, fmt.Errorf("failed to load repositories from status file: %w", err)
 		}
 
-		if c.Logger != nil {
-			c.Logger.Logf("Validating base path for repositories")
+		if c.logger != nil {
+			c.logger.Logf("Validating base path for repositories")
 		}
 
 		// Convert to RepositoryInfo slice with base path validation
 		var repoInfos []RepositoryInfo
 		for repoName, repo := range repositories {
 			// Check if repository path is within configured base path
-			inBasePath, err := c.FS.IsPathWithinBase(c.Config.BasePath, repo.Path)
+			inBasePath, err := c.fs.IsPathWithinBase(c.config.BasePath, repo.Path)
 			if err != nil {
 				// Log warning but continue processing other repositories
-				if c.Logger != nil {
-					c.Logger.Logf("Failed to validate base path for repository %s: %v", repoName, err)
+				if c.logger != nil {
+					c.logger.Logf("Failed to validate base path for repository %s: %v", repoName, err)
 				}
 				// Default to false if validation fails
 				inBasePath = false
@@ -62,8 +62,8 @@ func (c *realCM) ListRepositories() ([]RepositoryInfo, error) {
 			return repoInfos[i].Name < repoInfos[j].Name
 		})
 
-		if c.Logger != nil {
-			c.Logger.Logf("Formatting repository list")
+		if c.logger != nil {
+			c.logger.Logf("Formatting repository list")
 		}
 
 		return repoInfos, nil

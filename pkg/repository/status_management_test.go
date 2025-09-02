@@ -23,7 +23,7 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -34,7 +34,6 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock repository name extraction
@@ -83,7 +82,7 @@ func TestRepository_ListWorktrees_RepositoryNotFound(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -94,7 +93,6 @@ func TestRepository_ListWorktrees_RepositoryNotFound(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock repository name extraction
@@ -116,7 +114,7 @@ func TestRepository_AddWorktreeToStatus_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -127,7 +125,6 @@ func TestRepository_AddWorktreeToStatus_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
@@ -151,7 +148,7 @@ func TestRepository_RemoveWorktreeFromStatus_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -162,7 +159,6 @@ func TestRepository_RemoveWorktreeFromStatus_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	mockWorktree.EXPECT().RemoveFromStatus("github.com/octocat/Hello-World", "test-branch").Return(nil)
@@ -179,7 +175,7 @@ func TestRepository_AutoAddRepositoryToStatus_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -190,7 +186,6 @@ func TestRepository_AutoAddRepositoryToStatus_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	mockFS.EXPECT().Exists("/test/path/.git").Return(true, nil)
@@ -209,7 +204,7 @@ func TestRepository_AutoAddRepositoryToStatus_NoGitDir(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -220,7 +215,6 @@ func TestRepository_AutoAddRepositoryToStatus_NoGitDir(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	mockFS.EXPECT().Exists("/test/path/.git").Return(false, nil)

@@ -30,24 +30,22 @@ type Folder struct {
 	Path string `json:"path"`
 }
 
-// Workspace interface provides workspace management operations.
+// Workspace interface provides workspace management capabilities.
 type Workspace interface {
 	// Load handles the complete workspace loading workflow.
-	// It detects workspace files, handles user selection if multiple files are found,
-	// and loads the workspace configuration for display.
 	Load(force bool) error
-
-	// Validate validates all repositories in a workspace.
-	Validate() error
-
-	// ListWorktrees lists worktrees for workspace mode.
-	ListWorktrees(force bool) ([]status.WorktreeInfo, error)
 
 	// CreateWorktree creates worktrees for all repositories in the workspace.
 	CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) (string, error)
 
-	// DeleteWorktree deletes worktrees for the workspace with the specified branch.
+	// DeleteWorktree deletes a worktree for the workspace with the specified branch.
 	DeleteWorktree(branch string, force bool) error
+
+	// ListWorktrees lists worktrees for workspace mode.
+	ListWorktrees(force bool) ([]status.WorktreeInfo, error)
+
+	// Validate validates all repositories in a workspace.
+	Validate() error
 
 	// DetectWorkspaceFiles checks if the current directory contains workspace files.
 	DetectWorkspaceFiles() ([]string, error)
@@ -63,6 +61,12 @@ type Workspace interface {
 
 	// ValidateWorkspaceReferences validates that workspace references point to existing worktrees and repositories.
 	ValidateWorkspaceReferences() error
+
+	// SetVerbose enables or disables verbose mode.
+	SetVerbose(verbose bool)
+
+	// SetLogger sets the logger for this workspace instance.
+	SetLogger(logger logger.Logger)
 }
 
 // realWorkspace represents a workspace and provides methods for workspace operations.
@@ -72,9 +76,8 @@ type realWorkspace struct {
 	config        *config.Config
 	statusManager status.Manager
 	logger        logger.Logger
-	prompt        prompt.Prompt
+	prompt        prompt.Prompter
 	worktree      worktree.Worktree
-	verbose       bool
 	OriginalFile  string
 }
 
@@ -85,9 +88,8 @@ type NewWorkspaceParams struct {
 	Config        *config.Config
 	StatusManager status.Manager
 	Logger        logger.Logger
-	Prompt        prompt.Prompt
+	Prompt        prompt.Prompter
 	Worktree      worktree.Worktree
-	Verbose       bool
 }
 
 // NewWorkspace creates a new Workspace instance.
@@ -100,8 +102,23 @@ func NewWorkspace(params NewWorkspaceParams) Workspace {
 		logger:        params.Logger,
 		prompt:        params.Prompt,
 		worktree:      params.Worktree,
-		verbose:       params.Verbose,
 	}
+}
+
+// VerbosePrint logs a formatted message only if verbose logging is enabled.
+func (w *realWorkspace) VerbosePrint(msg string, args ...interface{}) {
+	w.logger.Logf(fmt.Sprintf(msg, args...))
+}
+
+// SetVerbose enables or disables verbose mode.
+func (w *realWorkspace) SetVerbose(verbose bool) {
+	// This method is no longer needed as VerbosePrint is now directly accessible.
+	// Keeping it for now to avoid breaking existing calls, but it will be removed in a future edit.
+}
+
+// SetLogger sets the logger for this workspace instance.
+func (w *realWorkspace) SetLogger(logger logger.Logger) {
+	w.logger = logger
 }
 
 // CreateWorktreeOpts contains optional parameters for worktree creation.
@@ -109,11 +126,16 @@ type CreateWorktreeOpts struct {
 	IDEName string
 }
 
-// verboseLogf prints a message if verbose mode is enabled.
-func (w *realWorkspace) verboseLogf(format string, args ...interface{}) {
-	if w.verbose {
-		fmt.Printf(format+"\n", args...)
-	}
+// LoadWorktreeOpts contains optional parameters for LoadWorktree.
+type LoadWorktreeOpts struct {
+	IDEName string
+}
+
+// WorktreeInfo represents information about a worktree.
+type WorktreeInfo struct {
+	Path   string
+	Branch string
+	Status string
 }
 
 // Load handles the complete workspace loading workflow.
@@ -127,15 +149,15 @@ func (w *realWorkspace) Load(force bool) error {
 			return fmt.Errorf("failed to parse workspace file: %w", err)
 		}
 
-		w.verboseLogf("Workspace mode detected")
+		w.VerbosePrint("Workspace mode detected")
 
 		workspaceName := w.GetName(workspaceConfig, w.OriginalFile)
-		w.verboseLogf("Found workspace: %s", workspaceName)
+		w.VerbosePrint("Found workspace: %s", workspaceName)
 
-		w.verboseLogf("Workspace configuration:")
-		w.verboseLogf("  Folders: %d", len(workspaceConfig.Folders))
+		w.VerbosePrint("Workspace configuration:")
+		w.VerbosePrint("  Folders: %d", len(workspaceConfig.Folders))
 		for _, folder := range workspaceConfig.Folders {
-			w.verboseLogf("    - %s: %s", folder.Name, folder.Path)
+			w.VerbosePrint("    - %s: %s", folder.Name, folder.Path)
 		}
 
 		return nil
@@ -170,15 +192,15 @@ func (w *realWorkspace) Load(force bool) error {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
 	}
 
-	w.verboseLogf("Workspace mode detected")
+	w.VerbosePrint("Workspace mode detected")
 
 	workspaceName := w.GetName(workspaceConfig, w.OriginalFile)
-	w.verboseLogf("Found workspace: %s", workspaceName)
+	w.VerbosePrint("Found workspace: %s", workspaceName)
 
-	w.verboseLogf("Workspace configuration:")
-	w.verboseLogf("  Folders: %d", len(workspaceConfig.Folders))
+	w.VerbosePrint("Workspace configuration:")
+	w.VerbosePrint("  Folders: %d", len(workspaceConfig.Folders))
 	for _, folder := range workspaceConfig.Folders {
-		w.verboseLogf("    - %s: %s", folder.Name, folder.Path)
+		w.VerbosePrint("    - %s: %s", folder.Name, folder.Path)
 	}
 
 	return nil
@@ -186,7 +208,7 @@ func (w *realWorkspace) Load(force bool) error {
 
 // Validate validates all repositories in a workspace.
 func (w *realWorkspace) Validate() error {
-	w.verboseLogf("Validating workspace: %s", w.OriginalFile)
+	w.VerbosePrint("Validating workspace: %s", w.OriginalFile)
 
 	// Use the new workspace validation logic that ensures repositories are in status
 	// and have default branch worktrees
@@ -195,7 +217,7 @@ func (w *realWorkspace) Validate() error {
 
 // ListWorktrees lists worktrees for workspace mode.
 func (w *realWorkspace) ListWorktrees(force bool) ([]status.WorktreeInfo, error) {
-	w.verboseLogf("Listing worktrees for workspace mode")
+	w.VerbosePrint("Listing worktrees for workspace mode")
 
 	// Load workspace configuration (only if not already loaded)
 	if w.OriginalFile == "" {
@@ -248,7 +270,7 @@ func (w *realWorkspace) ListWorktrees(force bool) ([]status.WorktreeInfo, error)
 
 // CreateWorktree creates worktrees for all repositories in the workspace.
 func (w *realWorkspace) CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) (string, error) {
-	w.verboseLogf("Creating worktrees for branch: %s", branch)
+	w.VerbosePrint("Creating worktrees for branch: %s", branch)
 
 	// 1. Load and validate workspace configuration (only if not already loaded)
 	if w.OriginalFile == "" {
@@ -283,13 +305,13 @@ func (w *realWorkspace) CreateWorktree(branch string, force bool, opts ...Create
 		fmt.Sprintf("workspace-%s", branch),
 	)
 
-	w.verboseLogf("Workspace worktree creation completed successfully")
+	w.VerbosePrint("Workspace worktree creation completed successfully")
 	return worktreePath, nil
 }
 
 // DeleteWorktree deletes worktrees for the workspace with the specified branch.
 func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
-	w.verboseLogf("Deleting worktrees for branch: %s", branch)
+	w.VerbosePrint("Deleting worktrees for branch: %s", branch)
 
 	// Load workspace configuration (only if not already loaded)
 	if w.OriginalFile == "" {
@@ -334,7 +356,7 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 		if !force {
 			return fmt.Errorf("failed to remove worktree workspace file: %w", err)
 		}
-		w.verboseLogf("Warning: failed to remove worktree workspace file: %v", err)
+		w.VerbosePrint("Warning: failed to remove worktree workspace file: %v", err)
 	}
 
 	// Remove worktree entries from status file
@@ -342,6 +364,6 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 		return err
 	}
 
-	w.verboseLogf("Workspace worktree deletion completed successfully")
+	w.VerbosePrint("Workspace worktree deletion completed successfully")
 	return nil
 }

@@ -73,7 +73,7 @@ func (r *realRepository) validateGitRepository() error {
 
 // getRepositoryURL gets the repository URL from remote origin URL with fallback to local path.
 func (r *realRepository) getRepositoryURL(currentDir string) (string, error) {
-	repoURL, err := r.Git.GetRepositoryName(currentDir)
+	repoURL, err := r.git.GetRepositoryName(currentDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to get repository URL: %w", err)
 	}
@@ -83,7 +83,7 @@ func (r *realRepository) getRepositoryURL(currentDir string) (string, error) {
 
 // validateWorktreeNotExists checks if worktree already exists in status file.
 func (r *realRepository) validateWorktreeNotExists(repoURL, branch string) error {
-	existingWorktree, err := r.StatusManager.GetWorktree(repoURL, branch)
+	existingWorktree, err := r.statusManager.GetWorktree(repoURL, branch)
 	if err == nil && existingWorktree != nil {
 		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeExists, repoURL, branch)
 	}
@@ -92,7 +92,7 @@ func (r *realRepository) validateWorktreeNotExists(repoURL, branch string) error
 
 // validateRepositoryState validates that the repository is in a clean state.
 func (r *realRepository) validateRepositoryState(currentDir string) error {
-	isClean, err := r.Git.IsClean(currentDir)
+	isClean, err := r.git.IsClean(currentDir)
 	if err != nil {
 		return fmt.Errorf("failed to check repository state: %w", err)
 	}
@@ -104,23 +104,10 @@ func (r *realRepository) validateRepositoryState(currentDir string) error {
 
 // ValidateWorktreeExists validates that a worktree exists in the status file.
 func (r *realRepository) ValidateWorktreeExists(repoURL, branch string) error {
-	existingWorktree, err := r.StatusManager.GetWorktree(repoURL, branch)
+	existingWorktree, err := r.statusManager.GetWorktree(repoURL, branch)
 	if err != nil || existingWorktree == nil {
 		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotInStatus, repoURL, branch)
 	}
-	return nil
-}
-
-// ValidateGitStatus validates that git status works in the repository.
-func (r *realRepository) ValidateGitStatus() error {
-	// Execute git status to ensure repository is working
-	r.VerbosePrint("Executing git status in: %s", ".")
-	_, err := r.Git.Status(".")
-	if err != nil {
-		r.VerbosePrint("Error: %v", err)
-		return fmt.Errorf("%w: %w", ErrGitRepositoryInvalid, err)
-	}
-
 	return nil
 }
 
@@ -129,7 +116,7 @@ func (r *realRepository) ValidateOriginRemote() error {
 	r.VerbosePrint("Validating origin remote")
 
 	// Check if origin remote exists
-	exists, err := r.Git.RemoteExists(".", "origin")
+	exists, err := r.git.RemoteExists(".", "origin")
 	if err != nil {
 		return fmt.Errorf("failed to check origin remote: %w", err)
 	}
@@ -138,7 +125,7 @@ func (r *realRepository) ValidateOriginRemote() error {
 	}
 
 	// Get origin remote URL
-	originURL, err := r.Git.GetRemoteURL(".", "origin")
+	originURL, err := r.git.GetRemoteURL(".", "origin")
 	if err != nil {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}

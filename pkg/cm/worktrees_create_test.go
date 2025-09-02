@@ -73,8 +73,8 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 
 	// Override dependencies with mocks
 	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
+	c.fs = mockFS
+	c.git = mockGit
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
@@ -88,37 +88,5 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	// Note: IDE opening is now handled by the hook system, not tested here
 
 	err := cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: "vscode"})
-	assert.NoError(t, err)
-}
-
-func TestCM_Run_VerboseMode(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRepository := repository.NewMockRepository(ctrl)
-	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
-
-	// Create CM with mocked dependencies
-	cm := NewCMWithDependencies(NewCMParams{
-		Repository:  mockRepository,
-		HookManager: mockHookManager,
-		Workspace:   mockWorkspace,
-		Config:      createTestConfig(),
-	})
-
-	// Enable verbose mode
-	cm.SetVerbose(true)
-
-	// Mock hook execution
-	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
-
-	// Mock repository detection and worktree creation
-	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().Validate().Return(nil)
-	mockRepository.EXPECT().CreateWorktree("test-branch").Return("/test/base/path/test-repo/origin/test-branch", nil)
-
-	err := cm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
 }

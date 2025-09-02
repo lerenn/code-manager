@@ -96,13 +96,13 @@ func (h *OpeningHook) PostExecute(ctx *hooks.HookContext) error {
 	}
 
 	// Open the IDE
-	if err := h.IDEManager.OpenIDE(ideNameStr, worktreePathStr, true); err != nil {
+	if err := h.IDEManager.OpenIDE(ideNameStr, worktreePathStr); err != nil {
 		// For OpenWorktree operations, IDE opening failure should fail the operation
 		// For CreateWorkTree and LoadWorktree operations, IDE opening failure should not prevent success
 		if ctx.OperationName == consts.OpenWorktree {
 			return fmt.Errorf("failed to open IDE %s: %w", ideNameStr, err)
 		}
-		
+
 		// IDE opening failed, but this should not prevent the worktree creation from succeeding
 		// Log the error but don't fail the operation
 		// TODO: Consider adding proper logging here when logger is available

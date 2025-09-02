@@ -22,7 +22,7 @@ func TestRepository_HandleRemoteManagement_Origin(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -31,7 +31,6 @@ func TestRepository_HandleRemoteManagement_Origin(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	err := repo.HandleRemoteManagement("origin")
@@ -46,7 +45,7 @@ func TestRepository_HandleRemoteManagement_ExistingRemote(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -55,7 +54,6 @@ func TestRepository_HandleRemoteManagement_ExistingRemote(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "upstream").Return(true, nil)
@@ -73,7 +71,7 @@ func TestRepository_HandleRemoteManagement_NewRemote(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -82,7 +80,6 @@ func TestRepository_HandleRemoteManagement_NewRemote(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "upstream").Return(false, nil)
@@ -102,7 +99,7 @@ func TestRepository_ExtractHostFromURL_HTTPS(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -111,7 +108,6 @@ func TestRepository_ExtractHostFromURL_HTTPS(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	host := repo.ExtractHostFromURL("https://github.com/octocat/Hello-World.git")
@@ -126,7 +122,7 @@ func TestRepository_ExtractHostFromURL_SSH(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -135,7 +131,6 @@ func TestRepository_ExtractHostFromURL_SSH(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	host := repo.ExtractHostFromURL("git@github.com:lerenn/example.git")
@@ -150,7 +145,7 @@ func TestRepository_ExtractHostFromURL_Invalid(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -159,7 +154,6 @@ func TestRepository_ExtractHostFromURL_Invalid(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	host := repo.ExtractHostFromURL("invalid-url")
@@ -174,7 +168,7 @@ func TestRepository_DetermineProtocol_HTTPS(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -183,7 +177,6 @@ func TestRepository_DetermineProtocol_HTTPS(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	protocol := repo.DetermineProtocol("https://github.com/octocat/Hello-World.git")
@@ -198,7 +191,7 @@ func TestRepository_DetermineProtocol_SSH(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -207,7 +200,6 @@ func TestRepository_DetermineProtocol_SSH(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	protocol := repo.DetermineProtocol("git@github.com:lerenn/example.git")
@@ -222,7 +214,7 @@ func TestRepository_ExtractRepoNameFromFullPath_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -231,7 +223,6 @@ func TestRepository_ExtractRepoNameFromFullPath_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	repoName := repo.ExtractRepoNameFromFullPath("github.com/octocat/Hello-World")
@@ -246,7 +237,7 @@ func TestRepository_ExtractRepoNameFromFullPath_SinglePart(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -255,7 +246,6 @@ func TestRepository_ExtractRepoNameFromFullPath_SinglePart(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	repoName := repo.ExtractRepoNameFromFullPath("example")
@@ -270,7 +260,7 @@ func TestRepository_ConstructRemoteURL_HTTPS(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -279,7 +269,6 @@ func TestRepository_ConstructRemoteURL_HTTPS(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	remoteURL, err := repo.ConstructRemoteURL("https://github.com/octocat/Hello-World.git", "upstream", "github.com/octocat/Hello-World")
@@ -295,7 +284,7 @@ func TestRepository_ConstructRemoteURL_SSH(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -304,7 +293,6 @@ func TestRepository_ConstructRemoteURL_SSH(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	remoteURL, err := repo.ConstructRemoteURL("git@github.com:lerenn/example.git", "upstream", "github.com/octocat/Hello-World")
@@ -320,7 +308,7 @@ func TestRepository_ConstructRemoteURL_InvalidHost(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -329,7 +317,6 @@ func TestRepository_ConstructRemoteURL_InvalidHost(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	remoteURL, err := repo.ConstructRemoteURL("invalid-url", "upstream", "github.com/octocat/Hello-World")

@@ -28,14 +28,14 @@ func (c *realCM) OpenWorktree(worktreeName, ideName string) error {
 		case ProjectTypeSingleRepo:
 			// For single repository, worktreeName is the branch name
 			// Get repository URL from local .git directory
-			repoURL, err := c.Git.GetRepositoryName(".")
+			repoURL, err := c.git.GetRepositoryName(".")
 			if err != nil {
 				return fmt.Errorf("failed to get repository URL: %w", err)
 			}
 
 			// Check if the worktree exists
 			worktreePath := c.BuildWorktreePath(repoURL, "origin", worktreeName)
-			exists, err := c.FS.Exists(worktreePath)
+			exists, err := c.fs.Exists(worktreePath)
 			if err != nil {
 				return fmt.Errorf("failed to check if worktree exists: %w", err)
 			}

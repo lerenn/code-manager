@@ -12,6 +12,7 @@ package repository
 import (
 	reflect "reflect"
 
+	logger "github.com/lerenn/code-manager/pkg/logger"
 	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -40,20 +41,6 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
-// AddNewRemote mocks base method.
-func (m *MockRepository) AddNewRemote(remoteSource string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddNewRemote", remoteSource)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddNewRemote indicates an expected call of AddNewRemote.
-func (mr *MockRepositoryMockRecorder) AddNewRemote(remoteSource any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddNewRemote", reflect.TypeOf((*MockRepository)(nil).AddNewRemote), remoteSource)
-}
-
 // AddWorktreeToStatus mocks base method.
 func (m *MockRepository) AddWorktreeToStatus(params StatusParams) error {
 	m.ctrl.T.Helper()
@@ -80,30 +67,6 @@ func (m *MockRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 func (mr *MockRepositoryMockRecorder) AutoAddRepositoryToStatus(repoURL, repoPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AutoAddRepositoryToStatus", reflect.TypeOf((*MockRepository)(nil).AutoAddRepositoryToStatus), repoURL, repoPath)
-}
-
-// CleanupOnWorktreeCreationFailure mocks base method.
-func (m *MockRepository) CleanupOnWorktreeCreationFailure(repoURL, branch, worktreePath string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "CleanupOnWorktreeCreationFailure", repoURL, branch, worktreePath)
-}
-
-// CleanupOnWorktreeCreationFailure indicates an expected call of CleanupOnWorktreeCreationFailure.
-func (mr *MockRepositoryMockRecorder) CleanupOnWorktreeCreationFailure(repoURL, branch, worktreePath any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanupOnWorktreeCreationFailure", reflect.TypeOf((*MockRepository)(nil).CleanupOnWorktreeCreationFailure), repoURL, branch, worktreePath)
-}
-
-// CleanupWorktreeDirectory mocks base method.
-func (m *MockRepository) CleanupWorktreeDirectory(worktreePath string) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "CleanupWorktreeDirectory", worktreePath)
-}
-
-// CleanupWorktreeDirectory indicates an expected call of CleanupWorktreeDirectory.
-func (mr *MockRepositoryMockRecorder) CleanupWorktreeDirectory(worktreePath any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanupWorktreeDirectory", reflect.TypeOf((*MockRepository)(nil).CleanupWorktreeDirectory), worktreePath)
 }
 
 // ConstructRemoteURL mocks base method.
@@ -156,17 +119,17 @@ func (mr *MockRepositoryMockRecorder) DeleteWorktree(branch, force any) *gomock.
 }
 
 // DetermineProtocol mocks base method.
-func (m *MockRepository) DetermineProtocol(originURL string) string {
+func (m *MockRepository) DetermineProtocol(url string) string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DetermineProtocol", originURL)
+	ret := m.ctrl.Call(m, "DetermineProtocol", url)
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
 // DetermineProtocol indicates an expected call of DetermineProtocol.
-func (mr *MockRepositoryMockRecorder) DetermineProtocol(originURL any) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) DetermineProtocol(url any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetermineProtocol", reflect.TypeOf((*MockRepository)(nil).DetermineProtocol), originURL)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetermineProtocol", reflect.TypeOf((*MockRepository)(nil).DetermineProtocol), url)
 }
 
 // ExtractHostFromURL mocks base method.
@@ -197,60 +160,18 @@ func (mr *MockRepositoryMockRecorder) ExtractRepoNameFromFullPath(fullPath any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExtractRepoNameFromFullPath", reflect.TypeOf((*MockRepository)(nil).ExtractRepoNameFromFullPath), fullPath)
 }
 
-// HandleExistingRemote mocks base method.
-func (m *MockRepository) HandleExistingRemote(remoteSource string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleExistingRemote", remoteSource)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// HandleExistingRemote indicates an expected call of HandleExistingRemote.
-func (mr *MockRepositoryMockRecorder) HandleExistingRemote(remoteSource any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleExistingRemote", reflect.TypeOf((*MockRepository)(nil).HandleExistingRemote), remoteSource)
-}
-
 // HandleRemoteManagement mocks base method.
-func (m *MockRepository) HandleRemoteManagement(remoteSource string) error {
+func (m *MockRepository) HandleRemoteManagement(repoURL string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleRemoteManagement", remoteSource)
+	ret := m.ctrl.Call(m, "HandleRemoteManagement", repoURL)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // HandleRemoteManagement indicates an expected call of HandleRemoteManagement.
-func (mr *MockRepositoryMockRecorder) HandleRemoteManagement(remoteSource any) *gomock.Call {
+func (mr *MockRepositoryMockRecorder) HandleRemoteManagement(repoURL any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRemoteManagement", reflect.TypeOf((*MockRepository)(nil).HandleRemoteManagement), remoteSource)
-}
-
-// HandleRepositoryNotFoundError mocks base method.
-func (m *MockRepository) HandleRepositoryNotFoundError(params StatusParams) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleRepositoryNotFoundError", params)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// HandleRepositoryNotFoundError indicates an expected call of HandleRepositoryNotFoundError.
-func (mr *MockRepositoryMockRecorder) HandleRepositoryNotFoundError(params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRepositoryNotFoundError", reflect.TypeOf((*MockRepository)(nil).HandleRepositoryNotFoundError), params)
-}
-
-// HandleStatusAddError mocks base method.
-func (m *MockRepository) HandleStatusAddError(err error, params StatusParams) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleStatusAddError", err, params)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// HandleStatusAddError indicates an expected call of HandleStatusAddError.
-func (mr *MockRepositoryMockRecorder) HandleStatusAddError(err, params any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleStatusAddError", reflect.TypeOf((*MockRepository)(nil).HandleStatusAddError), err, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleRemoteManagement", reflect.TypeOf((*MockRepository)(nil).HandleRemoteManagement), repoURL)
 }
 
 // IsGitRepository mocks base method.
@@ -313,21 +234,6 @@ func (mr *MockRepositoryMockRecorder) LoadWorktree(remoteSource, branchName any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadWorktree", reflect.TypeOf((*MockRepository)(nil).LoadWorktree), remoteSource, branchName)
 }
 
-// ParseConfirmationInput mocks base method.
-func (m *MockRepository) ParseConfirmationInput(input string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ParseConfirmationInput", input)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ParseConfirmationInput indicates an expected call of ParseConfirmationInput.
-func (mr *MockRepositoryMockRecorder) ParseConfirmationInput(input any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseConfirmationInput", reflect.TypeOf((*MockRepository)(nil).ParseConfirmationInput), input)
-}
-
 // RemoveWorktreeFromStatus mocks base method.
 func (m *MockRepository) RemoveWorktreeFromStatus(repoURL, branch string) error {
 	m.ctrl.T.Helper()
@@ -342,6 +248,18 @@ func (mr *MockRepositoryMockRecorder) RemoveWorktreeFromStatus(repoURL, branch a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktreeFromStatus", reflect.TypeOf((*MockRepository)(nil).RemoveWorktreeFromStatus), repoURL, branch)
 }
 
+// SetLogger mocks base method.
+func (m *MockRepository) SetLogger(arg0 logger.Logger) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLogger", arg0)
+}
+
+// SetLogger indicates an expected call of SetLogger.
+func (mr *MockRepositoryMockRecorder) SetLogger(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockRepository)(nil).SetLogger), arg0)
+}
+
 // Validate mocks base method.
 func (m *MockRepository) Validate() error {
 	m.ctrl.T.Helper()
@@ -354,6 +272,20 @@ func (m *MockRepository) Validate() error {
 func (mr *MockRepositoryMockRecorder) Validate() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Validate", reflect.TypeOf((*MockRepository)(nil).Validate))
+}
+
+// ValidateGitConfiguration mocks base method.
+func (m *MockRepository) ValidateGitConfiguration(workDir string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateGitConfiguration", workDir)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateGitConfiguration indicates an expected call of ValidateGitConfiguration.
+func (mr *MockRepositoryMockRecorder) ValidateGitConfiguration(workDir any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateGitConfiguration", reflect.TypeOf((*MockRepository)(nil).ValidateGitConfiguration), workDir)
 }
 
 // ValidateGitStatus mocks base method.

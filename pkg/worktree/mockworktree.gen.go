@@ -12,6 +12,7 @@ package worktree
 import (
 	reflect "reflect"
 
+	logger "github.com/lerenn/code-manager/pkg/logger"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -165,6 +166,18 @@ func (m *MockWorktree) RemoveFromStatus(repoURL, branch string) error {
 func (mr *MockWorktreeMockRecorder) RemoveFromStatus(repoURL, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFromStatus", reflect.TypeOf((*MockWorktree)(nil).RemoveFromStatus), repoURL, branch)
+}
+
+// SetLogger mocks base method.
+func (m *MockWorktree) SetLogger(arg0 logger.Logger) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLogger", arg0)
+}
+
+// SetLogger indicates an expected call of SetLogger.
+func (mr *MockWorktreeMockRecorder) SetLogger(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockWorktree)(nil).SetLogger), arg0)
 }
 
 // ValidateCreation mocks base method.

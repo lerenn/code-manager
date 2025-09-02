@@ -30,7 +30,7 @@ func TestOpeningHook_PostExecute_Success(t *testing.T) {
 	}
 
 	// Mock IDE opening success
-	mockIDEManager.EXPECT().OpenIDE("cursor", "/path/to/worktree", true).Return(nil)
+	mockIDEManager.EXPECT().OpenIDE("cursor", "/path/to/worktree").Return(nil)
 
 	err := hook.PostExecute(ctx)
 	assert.NoError(t, err)

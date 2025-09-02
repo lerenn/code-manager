@@ -23,7 +23,7 @@ func TestNewWorkspace(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -34,7 +34,6 @@ func TestNewWorkspace(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	assert.NotNil(t, workspace)
@@ -48,7 +47,7 @@ func TestWorkspace_ListWorktrees_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -59,7 +58,6 @@ func TestWorkspace_ListWorktrees_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 	workspace.(*realWorkspace).OriginalFile = "/test/path/workspace.code-workspace"
 
@@ -116,7 +114,7 @@ func TestWorkspace_Load_SingleFile(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -127,7 +125,6 @@ func TestWorkspace_Load_SingleFile(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock single workspace file found
@@ -158,7 +155,7 @@ func TestWorkspace_Load_NoFiles(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -169,7 +166,6 @@ func TestWorkspace_Load_NoFiles(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock no workspace files found
@@ -188,7 +184,7 @@ func TestWorkspace_Load_AlreadyLoaded(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -199,7 +195,6 @@ func TestWorkspace_Load_AlreadyLoaded(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 	workspace.(*realWorkspace).OriginalFile = "already-loaded.code-workspace"
 

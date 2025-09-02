@@ -5,8 +5,6 @@ package cm
 import (
 	"testing"
 
-	basepkg "github.com/lerenn/code-manager/internal/base"
-	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -22,18 +20,7 @@ func TestListRepositories(t *testing.T) {
 	mockFS := fs.NewMockFS(ctrl)
 	mockLogger := logger.NewMockLogger(ctrl)
 
-	cfg := &config.Config{
-		BasePath: "/test/base/path",
-	}
-
-	cm := &realCM{
-		Base: &basepkg.Base{
-			FS:            mockFS,
-			Config:        cfg,
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-		},
-	}
+	cm := &realCM{}
 
 	t.Run("successful listing with repositories in base path", func(t *testing.T) {
 		repositories := map[string]status.Repository{
@@ -139,13 +126,7 @@ func TestListRepositories(t *testing.T) {
 	})
 
 	t.Run("without logger", func(t *testing.T) {
-		cmNoLogger := &realCM{
-			Base: &basepkg.Base{
-				FS:            mockFS,
-				Config:        cfg,
-				StatusManager: mockStatus,
-			},
-		}
+		cmNoLogger := &realCM{}
 
 		repositories := map[string]status.Repository{
 			"github.com/lerenn/example": {

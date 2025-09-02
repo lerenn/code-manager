@@ -48,7 +48,7 @@ func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 		}
 
 		// 3. Detect default branch from remote
-		defaultBranch, err := c.Git.GetDefaultBranch(repoURL)
+		defaultBranch, err := c.git.GetDefaultBranch(repoURL)
 		if err != nil {
 			return fmt.Errorf("failed to detect default branch: %w", err)
 		}
@@ -62,12 +62,12 @@ func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 
 		// 5. Create parent directories for the target path
 		parentDir := filepath.Dir(targetPath)
-		if err := c.FS.MkdirAll(parentDir, 0755); err != nil {
+		if err := c.fs.MkdirAll(parentDir, 0755); err != nil {
 			return fmt.Errorf("failed to create parent directories: %w", err)
 		}
 
 		// 6. Clone repository
-		if err := c.Git.Clone(git.CloneParams{
+		if err := c.git.Clone(git.CloneParams{
 			RepoURL:    repoURL,
 			TargetPath: targetPath,
 			Recursive:  recursive,
@@ -124,7 +124,7 @@ func (c *realCM) normalizeRepositoryURL(repoURL string) (string, error) {
 
 // checkRepositoryExists checks if a repository already exists in the status file.
 func (c *realCM) checkRepositoryExists(normalizedURL string) error {
-	repos, err := c.StatusManager.ListRepositories()
+	repos, err := c.statusManager.ListRepositories()
 	if err != nil {
 		return fmt.Errorf("failed to list repositories: %w", err)
 	}
@@ -140,7 +140,7 @@ func (c *realCM) checkRepositoryExists(normalizedURL string) error {
 func (c *realCM) generateClonePath(normalizedURL, defaultBranch string) string {
 	// Use the new path structure: $base_path/<repo_url>/<remote_name>/<default_branch>
 	remoteName := "origin" // Default remote name
-	return filepath.Join(c.Config.BasePath, normalizedURL, remoteName, defaultBranch)
+	return filepath.Join(c.config.BasePath, normalizedURL, remoteName, defaultBranch)
 }
 
 // initializeRepositoryInCM initializes a cloned repository in CM.
@@ -152,7 +152,7 @@ func (c *realCM) initializeRepositoryInCM(normalizedURL, targetPath, defaultBran
 		},
 	}
 
-	err := c.StatusManager.AddRepository(normalizedURL, status.AddRepositoryParams{
+	err := c.statusManager.AddRepository(normalizedURL, status.AddRepositoryParams{
 		Path:    targetPath,
 		Remotes: remotes,
 	})

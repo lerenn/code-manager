@@ -23,7 +23,7 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -34,7 +34,6 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock repository validation
@@ -64,7 +63,7 @@ func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -75,7 +74,6 @@ func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock workspace files found
@@ -94,7 +92,7 @@ func TestRepository_IsWorkspaceFile_NotFound(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -105,7 +103,6 @@ func TestRepository_IsWorkspaceFile_NotFound(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock no workspace files found
@@ -124,7 +121,7 @@ func TestRepository_IsGitRepository_Directory(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -133,7 +130,6 @@ func TestRepository_IsGitRepository_Directory(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock .git exists and is a directory (regular repository)
@@ -153,7 +149,7 @@ func TestRepository_IsGitRepository_File(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -162,7 +158,6 @@ func TestRepository_IsGitRepository_File(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock .git exists but is not a directory (worktree case)
@@ -184,7 +179,7 @@ func TestRepository_IsGitRepository_InvalidFile(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -193,7 +188,6 @@ func TestRepository_IsGitRepository_InvalidFile(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock .git exists but is not a directory
@@ -215,7 +209,7 @@ func TestRepository_IsGitRepository_NotExists(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -224,7 +218,6 @@ func TestRepository_IsGitRepository_NotExists(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock .git does not exist
@@ -243,7 +236,7 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -254,7 +247,6 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock repository validation
@@ -283,7 +275,7 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
@@ -294,7 +286,6 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)

@@ -5,15 +5,26 @@ package cm
 import (
 	"testing"
 
-	basepkg "github.com/lerenn/code-manager/internal/base"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
+	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+// createMockRepository creates a mock repository for testing
+func createMockRepository(mockFS fs.FS, mockGit git.Git, mockStatus status.Manager, mockLogger logger.Logger, mockPrompt prompt.Prompter) repository.Repository {
+	return repository.NewMockRepository(nil) // We'll use the real mocks from the test
+}
+
+// createMockWorkspace creates a mock workspace for testing
+func createMockWorkspace(mockFS fs.FS, mockGit git.Git, mockStatus status.Manager, mockLogger logger.Logger, mockPrompt prompt.Prompter) workspace.Workspace {
+	return workspace.NewMockWorkspace(nil) // We'll use the real mocks from the test
+}
 
 func TestRealCM_Clone_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -23,19 +34,13 @@ func TestRealCM_Clone_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
 	normalizedURL := "github.com/octocat/Hello-World"
@@ -80,19 +85,13 @@ func TestRealCM_Clone_ShallowSuccess(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
 	normalizedURL := "github.com/octocat/Hello-World"
@@ -138,19 +137,13 @@ func TestRealCM_Clone_EmptyURL(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	err := cm.Clone("")
 	assert.Error(t, err)
@@ -165,19 +158,13 @@ func TestRealCM_Clone_RepositoryExists(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
 	normalizedURL := "github.com/octocat/Hello-World"
@@ -203,19 +190,13 @@ func TestRealCM_Clone_DefaultBranchDetectionFailure(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
 
@@ -238,19 +219,13 @@ func TestRealCM_Clone_CloneFailure(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
 	defaultBranch := "main"
@@ -280,19 +255,13 @@ func TestRealCM_Clone_InitializationFailure(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	repoURL := "https://github.com/octocat/Hello-World.git"
 	defaultBranch := "main"
@@ -316,7 +285,6 @@ func TestRealCM_Clone_InitializationFailure(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to initialize repository in CM")
 }
-
 func TestRealCM_NormalizeRepositoryURL_HTTPS(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -325,27 +293,21 @@ func TestRealCM_NormalizeRepositoryURL_HTTPS(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	// Test HTTPS URL with .git suffix
-	result, err := cm.normalizeRepositoryURL("https://github.com/octocat/Hello-World.git")
+	result, err := cm.(*realCM).normalizeRepositoryURL("https://github.com/octocat/Hello-World.git")
 	assert.NoError(t, err)
 	assert.Equal(t, "github.com/octocat/Hello-World", result)
 
 	// Test HTTPS URL without .git suffix
-	result, err = cm.normalizeRepositoryURL("https://github.com/octocat/Hello-World")
+	result, err = cm.(*realCM).normalizeRepositoryURL("https://github.com/octocat/Hello-World")
 	assert.NoError(t, err)
 	assert.Equal(t, "github.com/octocat/Hello-World", result)
 }
@@ -358,27 +320,21 @@ func TestRealCM_NormalizeRepositoryURL_SSH(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	// Test SSH URL with .git suffix
-	result, err := cm.normalizeRepositoryURL("git@github.com:octocat/Hello-World.git")
+	result, err := cm.(*realCM).normalizeRepositoryURL("git@github.com:octocat/Hello-World.git")
 	assert.NoError(t, err)
 	assert.Equal(t, "github.com/octocat/Hello-World", result)
 
 	// Test SSH URL without .git suffix
-	result, err = cm.normalizeRepositoryURL("git@github.com:octocat/Hello-World")
+	result, err = cm.(*realCM).normalizeRepositoryURL("git@github.com:octocat/Hello-World")
 	assert.NoError(t, err)
 	assert.Equal(t, "github.com/octocat/Hello-World", result)
 }
@@ -391,22 +347,16 @@ func TestRealCM_NormalizeRepositoryURL_InvalidURL(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	// Test invalid URL
-	_, err := cm.normalizeRepositoryURL("not-a-valid-url")
+	_, err := cm.(*realCM).normalizeRepositoryURL("not-a-valid-url")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported repository URL format")
 }
@@ -419,24 +369,18 @@ func TestRealCM_GenerateClonePath(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
-	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
-	}
+	cm := NewCMWithDependencies(NewCMParams{
+		Repository: createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Workspace:  createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		Config:     createTestConfig(),
+	})
 
 	normalizedURL := "github.com/octocat/Hello-World"
 	defaultBranch := "main"
 
-	result := cm.generateClonePath(normalizedURL, defaultBranch)
+	result := cm.(*realCM).generateClonePath(normalizedURL, defaultBranch)
 	expected := "/test/base/path/github.com/octocat/Hello-World/origin/main"
 	assert.Equal(t, expected, result)
 }

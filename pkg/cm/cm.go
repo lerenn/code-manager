@@ -3,7 +3,6 @@ package cm
 import (
 	"fmt"
 
-	basepkg "github.com/lerenn/code-manager/internal/base"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
@@ -35,8 +34,8 @@ type CM interface {
 	Clone(repoURL string, opts ...CloneOpts) error
 	// ListRepositories lists all repositories from the status file with base path validation.
 	ListRepositories() ([]RepositoryInfo, error)
-	// SetVerbose enables or disables verbose mode.
-	SetVerbose(verbose bool)
+	// SetLogger sets the logger for this CM instance.
+	SetLogger(logger logger.Logger)
 	// Hook management methods
 	RegisterHook(operation string, hook hooks.Hook) error
 	UnregisterHook(operation, hookName string) error
@@ -49,11 +48,17 @@ type NewCMParams struct {
 	Config      *config.Config
 	HookManager hooks.HookManagerInterface // Optional: for testing with mocked hooks
 }
+
 type realCM struct {
-	*basepkg.Base
-	repository  repository.Repository
-	workspace   workspace.Workspace
-	hookManager hooks.HookManagerInterface
+	fs            fs.FS
+	git           git.Git
+	config        *config.Config
+	statusManager status.Manager
+	logger        logger.Logger
+	prompt        prompt.Prompter
+	repository    repository.Repository
+	workspace     workspace.Workspace
+	hookManager   hooks.HookManagerInterface
 }
 
 // NewCM creates a new CM instance.
@@ -69,7 +74,6 @@ func NewCM(cfg *config.Config) (CM, error) {
 		Logger:        loggerInstance,
 		Prompt:        promptInstance,
 		BasePath:      cfg.BasePath,
-		Verbose:       false,
 	})
 	// Create repository and workspace instances
 	repoInstance := repository.NewRepository(repository.NewRepositoryParams{
@@ -80,7 +84,6 @@ func NewCM(cfg *config.Config) (CM, error) {
 		Logger:        loggerInstance,
 		Prompt:        promptInstance,
 		Worktree:      worktreeInstance,
-		Verbose:       false,
 	})
 	workspaceInstance := workspace.NewWorkspace(workspace.NewWorkspaceParams{
 		FS:            fsInstance,
@@ -90,27 +93,39 @@ func NewCM(cfg *config.Config) (CM, error) {
 		Logger:        loggerInstance,
 		Prompt:        promptInstance,
 		Worktree:      worktreeInstance,
-		Verbose:       false,
 	})
 	cmInstance := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            fsInstance,
-			Git:           gitInstance,
-			Config:        cfg,
-			StatusManager: status.NewManager(fsInstance, cfg),
-			Logger:        loggerInstance,
-			Prompt:        promptInstance,
-			Verbose:       false,
-		}),
-		repository:  repoInstance,
-		workspace:   workspaceInstance,
-		hookManager: hooks.NewHookManager(),
-	}
-	// Setup hooks for the CM instance
-	if err := cmInstance.setupHooks(); err != nil {
-		return nil, err
+		fs:            fsInstance,
+		git:           gitInstance,
+		config:        cfg,
+		statusManager: status.NewManager(fsInstance, cfg),
+		logger:        loggerInstance,
+		prompt:        promptInstance,
+		repository:    repoInstance,
+		workspace:     workspaceInstance,
+		hookManager:   hooks.NewHookManager(),
 	}
 	return cmInstance, nil
+}
+
+// VerbosePrint logs a formatted message using the current logger.
+func (c *realCM) VerbosePrint(msg string, args ...interface{}) {
+	c.logger.Logf(fmt.Sprintf(msg, args...))
+}
+
+// SetLogger sets the logger for this CM instance.
+func (c *realCM) SetLogger(logger logger.Logger) {
+	c.logger = logger
+	// Propagate logger setting to components
+	c.repository.SetLogger(logger)
+	c.workspace.SetLogger(logger)
+}
+
+// BuildWorktreePath constructs a worktree path from repository URL, remote name, and branch.
+func (c *realCM) BuildWorktreePath(repoURL, remoteName, branch string) string {
+	// For now, construct the path manually since we don't have direct access to the worktree
+	// This should be refactored to use the worktree component properly
+	return fmt.Sprintf("%s/worktrees/%s/%s", c.config.BasePath, repoURL, branch)
 }
 
 // setupHooks configures and registers all hooks for the CM instance.
@@ -138,32 +153,16 @@ func NewCMWithDependencies(params NewCMParams) CM {
 	}
 
 	return &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            fsInstance,
-			Git:           gitInstance,
-			Config:        params.Config,
-			StatusManager: statusInstance,
-			Logger:        loggerInstance,
-			Prompt:        prompt.NewPrompt(),
-			Verbose:       false,
-		}),
-		repository:  params.Repository,
-		workspace:   params.Workspace,
-		hookManager: hookManager,
+		fs:            fsInstance,
+		git:           gitInstance,
+		config:        params.Config,
+		statusManager: statusInstance,
+		logger:        loggerInstance,
+		prompt:        prompt.NewPrompt(),
+		repository:    params.Repository,
+		workspace:     params.Workspace,
+		hookManager:   hookManager,
 	}
-}
-func (c *realCM) SetVerbose(verbose bool) {
-	// Create a new Base with the updated verbose setting
-	newBase := basepkg.NewBase(basepkg.NewBaseParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		Verbose:       verbose,
-	})
-	c.Base = newBase
 }
 
 // RegisterHook registers a hook for a specific operation.
@@ -340,7 +339,7 @@ func (c *realCM) detectProjectMode() (ProjectType, error) {
 		return ProjectTypeSingleRepo, nil
 	}
 	// If not a Git repository, check for workspace files
-	workspaceFiles, err := c.FS.Glob("*.code-workspace")
+	workspaceFiles, err := c.fs.Glob("*.code-workspace")
 	if err != nil {
 		return ProjectTypeNone, fmt.Errorf("failed to detect workspace files: %w", err)
 	}

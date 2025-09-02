@@ -3,6 +3,7 @@ package worktree
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -31,14 +32,16 @@ Examples:
 			if err != nil {
 				return err
 			}
-			cmManager.SetVerbose(config.Verbose)
+			if config.Verbose {
+				cmManager.SetLogger(logger.NewVerboseLogger())
+			}
 
 			return cmManager.DeleteWorkTree(args[0], force)
 		},
 	}
 
 	// Add force flag
-	deleteCmd.Flags().BoolVar(&force, "force", false, "Skip confirmation prompts")
+	deleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Skip confirmation prompts")
 
 	return deleteCmd
 }

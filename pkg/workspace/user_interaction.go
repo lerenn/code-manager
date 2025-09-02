@@ -8,12 +8,12 @@ import (
 
 // HandleMultipleFiles handles the selection of workspace files when multiple are found.
 func (w *realWorkspace) HandleMultipleFiles(workspaceFiles []string, force bool) (string, error) {
-	w.verboseLogf("Multiple workspace files found: %d", len(workspaceFiles))
+	w.VerbosePrint("Multiple workspace files found: %d", len(workspaceFiles))
 
 	// If force is true, automatically select the first workspace file
 	if force {
 		selectedFile := workspaceFiles[0]
-		w.verboseLogf("Force mode: automatically selected workspace file: %s", selectedFile)
+		w.VerbosePrint("Force mode: automatically selected workspace file: %s", selectedFile)
 		return selectedFile, nil
 	}
 
@@ -39,7 +39,7 @@ func (w *realWorkspace) HandleMultipleFiles(workspaceFiles []string, force bool)
 		return w.HandleMultipleFiles(workspaceFiles, force)
 	}
 
-	w.verboseLogf("Selected workspace file: %s", selectedFile)
+	w.VerbosePrint("Selected workspace file: %s", selectedFile)
 	return selectedFile, nil
 }
 

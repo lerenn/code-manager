@@ -121,15 +121,15 @@ func (mr *MockManagerInterfaceMockRecorder) GetIDE(name any) *gomock.Call {
 }
 
 // OpenIDE mocks base method.
-func (m *MockManagerInterface) OpenIDE(name, path string, verbose bool) error {
+func (m *MockManagerInterface) OpenIDE(name, path string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OpenIDE", name, path, verbose)
+	ret := m.ctrl.Call(m, "OpenIDE", name, path)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // OpenIDE indicates an expected call of OpenIDE.
-func (mr *MockManagerInterfaceMockRecorder) OpenIDE(name, path, verbose any) *gomock.Call {
+func (mr *MockManagerInterfaceMockRecorder) OpenIDE(name, path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenIDE", reflect.TypeOf((*MockManagerInterface)(nil).OpenIDE), name, path, verbose)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenIDE", reflect.TypeOf((*MockManagerInterface)(nil).OpenIDE), name, path)
 }

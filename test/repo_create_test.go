@@ -201,7 +201,6 @@ func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
-	cmInstance.SetVerbose(true)
 
 	require.NoError(t, err)
 	// Safely change to repo directory and create worktree

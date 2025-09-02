@@ -63,8 +63,8 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 
 	// Override dependencies with mocks
 	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
+	c.fs = mockFS
+	c.git = mockGit
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)

@@ -35,8 +35,8 @@ func (w *realWorkspace) getWorkspaceWorktrees(branch string) ([]WorktreeWithRepo
 		return nil, err
 	}
 
-	w.verboseLogf("Looking for worktrees with workspace path: %s", workspacePath)
-	w.verboseLogf("Workspace repositories: %v", workspace.Repositories)
+	w.VerbosePrint("Looking for worktrees with workspace path: %s", workspacePath)
+	w.VerbosePrint("Workspace repositories: %v", workspace.Repositories)
 
 	// Get worktrees for each repository in the workspace that match the branch
 	var workspaceWorktrees []WorktreeWithRepo
@@ -56,7 +56,7 @@ func (w *realWorkspace) getWorkspaceWorktrees(branch string) ([]WorktreeWithRepo
 					RepoURL:      repoURL,
 					RepoPath:     repo.Path,
 				})
-				w.verboseLogf("✓ Found matching worktree: %s:%s for repository %s", worktree.Remote, worktree.Branch, repoURL)
+				w.VerbosePrint("✓ Found matching worktree: %s:%s for repository %s", worktree.Remote, worktree.Branch, repoURL)
 			}
 		}
 	}
@@ -67,7 +67,7 @@ func (w *realWorkspace) getWorkspaceWorktrees(branch string) ([]WorktreeWithRepo
 // deleteWorktreeRepositories deletes worktrees for all repositories.
 func (w *realWorkspace) deleteWorktreeRepositories(workspaceWorktrees []WorktreeWithRepo, force bool) error {
 	for i, worktreeWithRepo := range workspaceWorktrees {
-		w.verboseLogf("Deleting worktree %d/%d: %s:%s for repository %s", i+1, len(workspaceWorktrees),
+		w.VerbosePrint("Deleting worktree %d/%d: %s:%s for repository %s", i+1, len(workspaceWorktrees),
 			worktreeWithRepo.Remote, worktreeWithRepo.Branch, worktreeWithRepo.RepoURL)
 
 		// Get worktree path using worktree package
@@ -87,11 +87,11 @@ func (w *realWorkspace) deleteWorktreeRepositories(workspaceWorktrees []Worktree
 				return fmt.Errorf("failed to delete worktree for %s:%s: %w",
 					worktreeWithRepo.Remote, worktreeWithRepo.Branch, err)
 			}
-			w.verboseLogf("Warning: failed to delete worktree for %s:%s: %v",
+			w.VerbosePrint("Warning: failed to delete worktree for %s:%s: %v",
 				worktreeWithRepo.Remote, worktreeWithRepo.Branch, err)
 		}
 
-		w.verboseLogf("✓ Worktree deleted successfully for %s:%s", worktreeWithRepo.Remote, worktreeWithRepo.Branch)
+		w.VerbosePrint("✓ Worktree deleted successfully for %s:%s", worktreeWithRepo.Remote, worktreeWithRepo.Branch)
 	}
 
 	return nil
@@ -104,7 +104,7 @@ func (w *realWorkspace) removeWorktreeStatusEntries(workspaceWorktrees []Worktre
 			if !force {
 				return fmt.Errorf("failed to remove worktree from status file: %w", err)
 			}
-			w.verboseLogf("Warning: failed to remove worktree from status file: %v", err)
+			w.VerbosePrint("Warning: failed to remove worktree from status file: %v", err)
 		}
 	}
 

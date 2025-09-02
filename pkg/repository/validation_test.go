@@ -32,7 +32,7 @@ func TestRepository_Validate_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -41,7 +41,6 @@ func TestRepository_Validate_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock repository validation
@@ -62,7 +61,7 @@ func TestRepository_Validate_NoGitDir(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -71,7 +70,6 @@ func TestRepository_Validate_NoGitDir(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock repository validation - .git not found
@@ -89,7 +87,7 @@ func TestRepository_Validate_GitStatusError(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -98,7 +96,6 @@ func TestRepository_Validate_GitStatusError(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock repository validation - .git exists but git status fails
@@ -119,7 +116,7 @@ func TestRepository_Validate_NotClean(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -128,7 +125,6 @@ func TestRepository_Validate_NotClean(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock repository validation - .git exists but repository is not clean
@@ -148,7 +144,7 @@ func TestRepository_ValidateRepository_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -157,7 +153,6 @@ func TestRepository_ValidateRepository_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock repository validation
@@ -180,7 +175,7 @@ func TestRepository_ValidateRepository_WorktreeExists(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -189,7 +184,6 @@ func TestRepository_ValidateRepository_WorktreeExists(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock repository validation
@@ -212,7 +206,7 @@ func TestRepository_ValidateRepository_NotClean(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -221,7 +215,6 @@ func TestRepository_ValidateRepository_NotClean(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock repository validation
@@ -245,7 +238,7 @@ func TestRepository_ValidateWorktreeExists_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -254,7 +247,6 @@ func TestRepository_ValidateWorktreeExists_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(&status.WorktreeInfo{}, nil)
@@ -271,7 +263,7 @@ func TestRepository_ValidateWorktreeExists_NotFound(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -280,7 +272,6 @@ func TestRepository_ValidateWorktreeExists_NotFound(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound)
@@ -298,7 +289,7 @@ func TestRepository_ValidateGitStatus_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -307,7 +298,6 @@ func TestRepository_ValidateGitStatus_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockGit.EXPECT().Status(".").Return("On branch main", nil)
@@ -324,7 +314,7 @@ func TestRepository_ValidateGitStatus_Error(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -333,7 +323,6 @@ func TestRepository_ValidateGitStatus_Error(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockGit.EXPECT().Status(".").Return("", fmt.Errorf("git error"))
@@ -351,7 +340,7 @@ func TestRepository_ValidateOriginRemote_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -360,7 +349,6 @@ func TestRepository_ValidateOriginRemote_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)
@@ -378,7 +366,7 @@ func TestRepository_ValidateOriginRemote_NotFound(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -387,7 +375,6 @@ func TestRepository_ValidateOriginRemote_NotFound(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(false, nil)
@@ -405,7 +392,7 @@ func TestRepository_ValidateOriginRemote_InvalidURL(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
@@ -414,7 +401,6 @@ func TestRepository_ValidateOriginRemote_InvalidURL(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "origin").Return(true, nil)

@@ -61,7 +61,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	require.NoError(t, err)
 	// Set verbose mode if requested
 	if isVerbose {
-		cmInstance.SetVerbose(true)
+
 	}
 
 	// Change to repo directory and list worktrees

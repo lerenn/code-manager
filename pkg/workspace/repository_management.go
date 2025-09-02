@@ -9,7 +9,7 @@ import (
 
 // addRepositoryToStatus adds a repository to the status file with its remotes.
 func (w *realWorkspace) addRepositoryToStatus(repoURL, repoPath string) error {
-	w.verboseLogf("Adding repository %s to status file", repoURL)
+	w.VerbosePrint("Adding repository %s to status file", repoURL)
 
 	// Get repository remotes
 	remotes, err := w.getRepositoryRemotes(repoPath)
@@ -23,11 +23,11 @@ func (w *realWorkspace) addRepositoryToStatus(repoURL, repoPath string) error {
 		// Get default branch for this remote
 		defaultBranch, err := w.git.GetDefaultBranch(remoteURL)
 		if err != nil {
-			w.verboseLogf("Warning: failed to get default branch for remote %s: %v", remoteName, err)
+			w.VerbosePrint("Warning: failed to get default branch for remote %s: %v", remoteName, err)
 			// Use a fallback default branch - try to detect from local repository
 			localDefaultBranch, localErr := w.git.GetCurrentBranch(repoPath)
 			if localErr != nil {
-				w.verboseLogf("Warning: failed to get local default branch: %v", localErr)
+				w.VerbosePrint("Warning: failed to get local default branch: %v", localErr)
 				// Use hardcoded fallback
 				defaultBranch = "main"
 			} else {
@@ -53,7 +53,7 @@ func (w *realWorkspace) addRepositoryToStatus(repoURL, repoPath string) error {
 
 // getRepositoryRemotes gets all remotes for a repository.
 func (w *realWorkspace) getRepositoryRemotes(repoPath string) (map[string]string, error) {
-	w.verboseLogf("Getting remotes for repository: %s", repoPath)
+	w.VerbosePrint("Getting remotes for repository: %s", repoPath)
 
 	// For now, we'll use a simplified approach that just gets the origin remote
 	// In a real implementation, we would need to add a method to the Git interface
@@ -96,7 +96,7 @@ func (w *realWorkspace) getDefaultRemote(repoURL string) string {
 
 // ensureRepositoryHasDefaultBranchWorktree ensures a repository has a worktree for its default branch.
 func (w *realWorkspace) ensureRepositoryHasDefaultBranchWorktree(repoURL string, repo *status.Repository) error {
-	w.verboseLogf("Ensuring repository %s has default branch worktree", repoURL)
+	w.VerbosePrint("Ensuring repository %s has default branch worktree", repoURL)
 
 	// Find the default remote (usually "origin")
 	defaultRemote := "origin"
@@ -121,7 +121,7 @@ func (w *realWorkspace) ensureRepositoryHasDefaultBranchWorktree(repoURL string,
 	// Check if worktree already exists for default branch
 	worktreeKey := fmt.Sprintf("%s:%s", defaultRemote, defaultBranch)
 	if _, exists := repo.Worktrees[worktreeKey]; exists {
-		w.verboseLogf("Worktree %s already exists for repository %s", worktreeKey, repoURL)
+		w.VerbosePrint("Worktree %s already exists for repository %s", worktreeKey, repoURL)
 		return nil
 	}
 
@@ -129,15 +129,15 @@ func (w *realWorkspace) ensureRepositoryHasDefaultBranchWorktree(repoURL string,
 	// This is important for test environments where worktrees might already exist
 	worktreeExists, err := w.worktree.Exists(repo.Path, defaultBranch)
 	if err != nil {
-		w.verboseLogf("Warning: failed to check if worktree exists for branch %s: %v", defaultBranch, err)
+		w.VerbosePrint("Warning: failed to check if worktree exists for branch %s: %v", defaultBranch, err)
 		// Continue with creation attempt
 	} else if worktreeExists {
-		w.verboseLogf("Worktree already exists for branch %s in repository %s, skipping creation", defaultBranch, repoURL)
+		w.VerbosePrint("Worktree already exists for branch %s in repository %s, skipping creation", defaultBranch, repoURL)
 		return nil
 	}
 
 	// Create worktree for default branch
-	w.verboseLogf("Creating worktree %s for repository %s", worktreeKey, repoURL)
+	w.VerbosePrint("Creating worktree %s for repository %s", worktreeKey, repoURL)
 	if err := w.createDefaultBranchWorktree(repoURL, defaultRemote, defaultBranch, repo.Path); err != nil {
 		return fmt.Errorf("failed to create default branch worktree for repository %s: %w", repoURL, err)
 	}

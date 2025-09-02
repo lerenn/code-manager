@@ -12,6 +12,7 @@ package workspace
 import (
 	reflect "reflect"
 
+	logger "github.com/lerenn/code-manager/pkg/logger"
 	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -160,6 +161,30 @@ func (m *MockWorkspace) ParseFile(filename string) (*Config, error) {
 func (mr *MockWorkspaceMockRecorder) ParseFile(filename any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ParseFile", reflect.TypeOf((*MockWorkspace)(nil).ParseFile), filename)
+}
+
+// SetLogger mocks base method.
+func (m *MockWorkspace) SetLogger(arg0 logger.Logger) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLogger", arg0)
+}
+
+// SetLogger indicates an expected call of SetLogger.
+func (mr *MockWorkspaceMockRecorder) SetLogger(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockWorkspace)(nil).SetLogger), arg0)
+}
+
+// SetVerbose mocks base method.
+func (m *MockWorkspace) SetVerbose(verbose bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetVerbose", verbose)
+}
+
+// SetVerbose indicates an expected call of SetVerbose.
+func (mr *MockWorkspaceMockRecorder) SetVerbose(verbose any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetVerbose", reflect.TypeOf((*MockWorkspace)(nil).SetVerbose), verbose)
 }
 
 // Validate mocks base method.

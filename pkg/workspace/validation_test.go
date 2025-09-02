@@ -23,7 +23,7 @@ func TestWorkspace_ValidateWorkspaceReferences_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -34,7 +34,6 @@ func TestWorkspace_ValidateWorkspaceReferences_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 	workspace.(*realWorkspace).OriginalFile = "test.code-workspace"
 
@@ -98,7 +97,7 @@ func TestWorkspace_ValidateWorkspaceReferences_RepositoryNotFound(t *testing.T) 
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -109,7 +108,6 @@ func TestWorkspace_ValidateWorkspaceReferences_RepositoryNotFound(t *testing.T) 
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 	workspace.(*realWorkspace).OriginalFile = "test.code-workspace"
 
@@ -138,7 +136,7 @@ func TestWorkspace_ValidateWorkspaceReferences_NoGitDirectory(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -149,7 +147,6 @@ func TestWorkspace_ValidateWorkspaceReferences_NoGitDirectory(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 	workspace.(*realWorkspace).OriginalFile = "test.code-workspace"
 

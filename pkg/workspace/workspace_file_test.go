@@ -24,7 +24,7 @@ func TestWorkspace_DetectWorkspaceFiles_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -33,7 +33,6 @@ func TestWorkspace_DetectWorkspaceFiles_Success(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock workspace file detection
@@ -52,7 +51,7 @@ func TestWorkspace_DetectWorkspaceFiles_NoFiles(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -63,7 +62,6 @@ func TestWorkspace_DetectWorkspaceFiles_NoFiles(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock workspace file detection - no files found
@@ -82,7 +80,7 @@ func TestWorkspace_DetectWorkspaceFiles_Error(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -93,7 +91,6 @@ func TestWorkspace_DetectWorkspaceFiles_Error(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock workspace file detection error
@@ -113,7 +110,7 @@ func TestWorkspace_ParseFile_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	mockWorktree := worktree.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
@@ -124,7 +121,6 @@ func TestWorkspace_ParseFile_Success(t *testing.T) {
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		Worktree:      mockWorktree,
-		Verbose:       true,
 	})
 
 	// Mock workspace file content
@@ -161,7 +157,7 @@ func TestWorkspace_ParseFile_EmptyFolders(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -170,7 +166,6 @@ func TestWorkspace_ParseFile_EmptyFolders(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	// Mock workspace file with empty folders
@@ -193,7 +188,7 @@ func TestWorkspace_GetName_FromConfig(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -202,7 +197,6 @@ func TestWorkspace_GetName_FromConfig(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	config := &Config{
@@ -224,7 +218,7 @@ func TestWorkspace_GetName_FromFilename(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
@@ -233,7 +227,6 @@ func TestWorkspace_GetName_FromFilename(t *testing.T) {
 		StatusManager: mockStatus,
 		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Verbose:       true,
 	})
 
 	config := &Config{

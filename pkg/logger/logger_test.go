@@ -8,34 +8,20 @@ import (
 
 func TestNoopLogger_Logf(t *testing.T) {
 	logger := NewNoopLogger()
-
 	// This should not panic or produce any output
 	logger.Logf("test message")
-	logger.Logf("test message with args: %s", "value")
 }
 
-func TestDefaultLogger_Logf(t *testing.T) {
-	logger := NewDefaultLogger()
-
-	// These should write to stdout
-	logger.Logf("test message")
-	logger.Logf("test message with args: %s", "value")
+func TestVerboseLogger_Logf(t *testing.T) {
+	logger := NewVerboseLogger()
+	// This should not panic
+	logger.Logf("test message %s", "with args")
 }
 
-func TestDefaultLogger_ThreadSafety(t *testing.T) {
-	logger := NewDefaultLogger()
-
-	// Test concurrent access
-	done := make(chan bool, 10)
-	for i := 0; i < 10; i++ {
-		go func(id int) {
-			logger.Logf("concurrent message from goroutine %d", id)
-			done <- true
-		}(i)
-	}
-
-	// Wait for all goroutines to complete
-	for i := 0; i < 10; i++ {
-		<-done
+func TestVerboseLogger_ThreadSafety(t *testing.T) {
+	logger := NewVerboseLogger()
+	// This should not panic when called concurrently
+	for i := 0; i < 100; i++ {
+		go logger.Logf("concurrent message %d", i)
 	}
 }

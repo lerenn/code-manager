@@ -14,7 +14,7 @@ import (
 
 // createWorktreesForWorkspace creates worktrees for all repositories in the workspace.
 func (w *realWorkspace) createWorktreesForWorkspace(branch string, opts *CreateWorktreeOpts) error {
-	w.verboseLogf("Creating worktrees for all repositories in workspace")
+	w.VerbosePrint("Creating worktrees for all repositories in workspace")
 
 	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
@@ -60,7 +60,7 @@ func (w *realWorkspace) createWorktreesForWorkspace(branch string, opts *CreateW
 	); err != nil {
 		// Cleanup workspace file on failure
 		if cleanupErr := w.fs.RemoveAll(worktreeWorkspacePath); cleanupErr != nil {
-			w.verboseLogf("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
+			w.VerbosePrint("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
 		}
 		return err
 	}
@@ -77,7 +77,7 @@ func (w *realWorkspace) createWorktreeDirectories(
 	_ *CreateWorktreeOpts,
 ) error {
 	for i, folder := range workspaceConfig.Folders {
-		w.verboseLogf("Creating worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
+		w.VerbosePrint("Creating worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
 
 		if err := w.createSingleWorktree(createSingleWorktreeParams{
 			Folder:                folder,
@@ -89,7 +89,7 @@ func (w *realWorkspace) createWorktreeDirectories(
 			return err
 		}
 
-		w.verboseLogf("✓ Worktree created successfully for %s", folder.Path)
+		w.VerbosePrint("✓ Worktree created successfully for %s", folder.Path)
 	}
 
 	return nil
@@ -129,7 +129,7 @@ func (w *realWorkspace) createSingleWorktree(params createSingleWorktreeParams) 
 	if err != nil {
 		// Cleanup workspace file on failure
 		if cleanupErr := w.fs.RemoveAll(params.WorktreeWorkspacePath); cleanupErr != nil {
-			w.verboseLogf("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
+			w.VerbosePrint("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
 		}
 		return err
 	}
@@ -141,7 +141,7 @@ func (w *realWorkspace) createSingleWorktree(params createSingleWorktreeParams) 
 	); err != nil {
 		// Clean up worktree on status failure
 		if cleanupErr := w.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
-			w.verboseLogf("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
+			w.VerbosePrint("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
 		}
 		return err
 	}
@@ -212,7 +212,7 @@ func (w *realWorkspace) autoAddRepositoryToStatus(repoURL, repoPath string) erro
 		// Get the actual default branch from the remote repository
 		defaultBranch, err := w.git.GetDefaultBranch(originURL)
 		if err != nil {
-			w.verboseLogf("Warning: failed to get default branch from remote, using 'main' as fallback: %v", err)
+			w.VerbosePrint("Warning: failed to get default branch from remote, using 'main' as fallback: %v", err)
 			defaultBranch = "main" // Fallback to main if we can't determine the actual default branch
 		}
 
@@ -234,7 +234,7 @@ func (w *realWorkspace) autoAddRepositoryToStatus(repoURL, repoPath string) erro
 
 // createDefaultBranchWorktree creates a worktree for the default branch of a repository.
 func (w *realWorkspace) createDefaultBranchWorktree(repoURL, remoteName, branch, repoPath string) error {
-	w.verboseLogf("Creating default branch worktree: %s:%s for repository %s", remoteName, branch, repoURL)
+	w.VerbosePrint("Creating default branch worktree: %s:%s for repository %s", remoteName, branch, repoURL)
 
 	// Generate worktree path using worktree package
 	worktreePath := w.worktree.BuildPath(repoURL, remoteName, branch)
@@ -258,7 +258,7 @@ func (w *realWorkspace) createDefaultBranchWorktree(repoURL, remoteName, branch,
 	if err := w.addWorktreeToStatus(repoURL, branch, worktreePath, remoteName, "", repoPath); err != nil {
 		// Clean up worktree on status failure
 		if cleanupErr := w.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
-			w.verboseLogf("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
+			w.VerbosePrint("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
 		}
 		return err
 	}

@@ -12,7 +12,7 @@ import (
 
 // DetectWorkspaceFiles checks if the current directory contains workspace files.
 func (w *realWorkspace) DetectWorkspaceFiles() ([]string, error) {
-	w.verboseLogf("Checking for .code-workspace files...")
+	w.VerbosePrint("Checking for .code-workspace files...")
 
 	// Check for workspace files
 	workspaceFiles, err := w.fs.Glob("*.code-workspace")
@@ -21,17 +21,17 @@ func (w *realWorkspace) DetectWorkspaceFiles() ([]string, error) {
 	}
 
 	if len(workspaceFiles) == 0 {
-		w.verboseLogf("No .code-workspace files found")
+		w.VerbosePrint("No .code-workspace files found")
 		return nil, nil
 	}
 
-	w.verboseLogf("Found %d workspace file(s)", len(workspaceFiles))
+	w.VerbosePrint("Found %d workspace file(s)", len(workspaceFiles))
 	return workspaceFiles, nil
 }
 
 // ParseFile parses a workspace configuration file.
 func (w *realWorkspace) ParseFile(filename string) (*Config, error) {
-	w.verboseLogf("Parsing workspace configuration...")
+	w.VerbosePrint("Parsing workspace configuration...")
 
 	// Read workspace file
 	content, err := w.fs.ReadFile(filename)
@@ -109,7 +109,7 @@ type createWorktreeWorkspaceFileParams struct {
 
 // createWorktreeWorkspaceFile creates the worktree-specific workspace file.
 func (w *realWorkspace) createWorktreeWorkspaceFile(params createWorktreeWorkspaceFileParams) error {
-	w.verboseLogf("Creating worktree-specific workspace file")
+	w.VerbosePrint("Creating worktree-specific workspace file")
 
 	// Ensure workspaces directory exists
 	workspacesDir := filepath.Dir(params.WorktreeWorkspacePath)
@@ -155,7 +155,7 @@ func (w *realWorkspace) createWorktreeWorkspaceFile(params createWorktreeWorkspa
 		return fmt.Errorf("failed to write worktree workspace file: %w", err)
 	}
 
-	w.verboseLogf("Worktree workspace file created: %s", params.WorktreeWorkspacePath)
+	w.VerbosePrint("Worktree workspace file created: %s", params.WorktreeWorkspacePath)
 	return nil
 }
 

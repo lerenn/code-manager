@@ -5,6 +5,7 @@ import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/hooks/ide"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -76,7 +77,9 @@ func createCreateCmdRunE(ideName *string, force *bool, fromIssue *string) func(*
 		if err != nil {
 			return err
 		}
-		cmManager.SetVerbose(config.Verbose)
+		if config.Verbose {
+			cmManager.SetLogger(logger.NewVerboseLogger())
+		}
 
 		// Determine branch name
 		var branchName string

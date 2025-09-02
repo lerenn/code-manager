@@ -87,7 +87,7 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	}
 
 	// Check if it's a Git repository
-	exists, err := r.FS.Exists(filepath.Join(absPath, ".git"))
+	exists, err := r.fs.Exists(filepath.Join(absPath, ".git"))
 	if err != nil {
 		return fmt.Errorf("failed to check .git existence: %w", err)
 	}
@@ -99,7 +99,7 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	remotes := make(map[string]status.Remote)
 
 	// Check for origin remote
-	originURL, err := r.Git.GetRemoteURL(absPath, "origin")
+	originURL, err := r.git.GetRemoteURL(absPath, "origin")
 	if err == nil && originURL != "" {
 		remotes["origin"] = status.Remote{
 			DefaultBranch: "main", // Default to main, could be enhanced to detect actual default branch
@@ -107,7 +107,7 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	}
 
 	// Add the repository to status
-	if err := r.StatusManager.AddRepository(repoURL, status.AddRepositoryParams{
+	if err := r.statusManager.AddRepository(repoURL, status.AddRepositoryParams{
 		Path:    absPath,
 		Remotes: remotes,
 	}); err != nil {
@@ -125,16 +125,16 @@ func (r *realRepository) RemoveWorktreeFromStatus(repoURL, branch string) error 
 // CleanupWorktreeDirectory cleans up the worktree directory.
 func (r *realRepository) CleanupWorktreeDirectory(worktreePath string) {
 	if cleanupErr := r.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
-		r.Logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
+		r.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
 	}
 }
 
 // CleanupOnWorktreeCreationFailure cleans up on worktree creation failure.
 func (r *realRepository) CleanupOnWorktreeCreationFailure(repoURL, branch, worktreePath string) {
-	if cleanupErr := r.StatusManager.RemoveWorktree(repoURL, branch); cleanupErr != nil {
-		r.Logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
+	if cleanupErr := r.statusManager.RemoveWorktree(repoURL, branch); cleanupErr != nil {
+		r.logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
 	}
 	if cleanupErr := r.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
-		r.Logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
+		r.logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
 	}
 }

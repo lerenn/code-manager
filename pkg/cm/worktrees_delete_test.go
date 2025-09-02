@@ -74,34 +74,3 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)
 }
-
-func TestCM_DeleteWorkTree_VerboseMode(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockRepository := repository.NewMockRepository(ctrl)
-	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
-
-	// Create CM with mocked dependencies
-	cm := NewCMWithDependencies(NewCMParams{
-		Repository:  mockRepository,
-		HookManager: mockHookManager,
-		Workspace:   mockWorkspace,
-		Config:      createTestConfig(),
-	})
-
-	// Enable verbose mode
-	cm.SetVerbose(true)
-
-	// Mock hook execution
-	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-
-	// Mock repository detection and worktree deletion
-	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().DeleteWorktree("test-branch", true).Return(nil)
-
-	err := cm.DeleteWorkTree("test-branch", true)
-	assert.NoError(t, err)
-}

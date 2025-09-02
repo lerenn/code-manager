@@ -34,8 +34,8 @@ func TestCM_OpenWorktree(t *testing.T) {
 
 	// Override dependencies with mocks
 	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
+	c.fs = mockFS
+	c.git = mockGit
 	c.repository = mockRepository
 
 	// Mock repository detection
@@ -77,8 +77,8 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 
 	// Override dependencies with mocks
 	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
+	c.fs = mockFS
+	c.git = mockGit
 	c.repository = mockRepository
 
 	// Mock repository detection
@@ -121,7 +121,7 @@ func TestOpenWorktree_CountsIDEOpenings(t *testing.T) {
 	mockRepo.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 
 	// Set up IDE manager expectations - expect exactly one call
-	mockIDEManager.EXPECT().OpenIDE("vscode", gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	mockIDEManager.EXPECT().OpenIDE("vscode", gomock.Any()).Return(nil).Times(1)
 
 	// Create a mock hook manager for testing
 	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
@@ -148,8 +148,8 @@ func TestOpenWorktree_CountsIDEOpenings(t *testing.T) {
 
 	// Override dependencies with mocks
 	c := cmInstance.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
+	c.fs = mockFS
+	c.git = mockGit
 	c.repository = mockRepo
 
 	// Execute OpenWorktree

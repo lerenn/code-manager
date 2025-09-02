@@ -88,7 +88,7 @@ func (c *realCM) createRegularWorkTree(branch string, force bool) (string, error
 
 	// Log if branch name was sanitized
 	if sanitizedBranch != branch {
-		c.Logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
+		c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
 	}
 
 	c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
@@ -222,7 +222,7 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 	c.VerbosePrint("Creating worktree from issue for single repository mode")
 
 	// Create forge manager
-	forgeManager := forge.NewManager(c.Logger)
+	forgeManager := forge.NewManager(c.logger)
 
 	// Get the appropriate forge for the repository
 	selectedForge, err := forgeManager.GetForgeForRepository(".")
@@ -244,25 +244,23 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 
 	// Create worktree instance
 	worktreeInstance := worktree.NewWorktree(worktree.NewWorktreeParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		BasePath:      c.Config.BasePath,
-		Verbose:       c.IsVerbose(),
+		FS:            c.fs,
+		Git:           c.git,
+		StatusManager: c.statusManager,
+		Logger:        c.logger,
+		Prompt:        c.prompt,
+		BasePath:      c.config.BasePath,
 	})
 
 	// Create worktree using existing logic
 	repoInstance := repo.NewRepository(repo.NewRepositoryParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
+		FS:            c.fs,
+		Git:           c.git,
+		Config:        c.config,
+		StatusManager: c.statusManager,
+		Logger:        c.logger,
+		Prompt:        c.prompt,
 		Worktree:      worktreeInstance,
-		Verbose:       c.IsVerbose(),
 	})
 	worktreePath, err := repoInstance.CreateWorktree(*branchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo})
 	if err != nil {
@@ -276,7 +274,7 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 	c.VerbosePrint("Creating worktree from issue for workspace mode")
 
 	// Create forge manager
-	forgeManager := forge.NewManager(c.Logger)
+	forgeManager := forge.NewManager(c.logger)
 
 	// Get the appropriate forge for the repository
 	selectedForge, err := forgeManager.GetForgeForRepository(".")
@@ -298,25 +296,23 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 
 	// Create worktree instance for workspace
 	worktreeInstance := worktree.NewWorktree(worktree.NewWorktreeParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
-		BasePath:      c.Config.BasePath,
-		Verbose:       c.IsVerbose(),
+		FS:            c.fs,
+		Git:           c.git,
+		StatusManager: c.statusManager,
+		Logger:        c.logger,
+		Prompt:        c.prompt,
+		BasePath:      c.config.BasePath,
 	})
 
 	// Create workspace instance
 	workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
-		FS:            c.FS,
-		Git:           c.Git,
-		Config:        c.Config,
-		StatusManager: c.StatusManager,
-		Logger:        c.Logger,
-		Prompt:        c.Prompt,
+		FS:            c.fs,
+		Git:           c.git,
+		Config:        c.config,
+		StatusManager: c.statusManager,
+		Logger:        c.logger,
+		Prompt:        c.prompt,
 		Worktree:      worktreeInstance,
-		Verbose:       c.IsVerbose(),
 	})
 	worktreePath, err := workspace.CreateWorktree(*branchName, false)
 	if err != nil {

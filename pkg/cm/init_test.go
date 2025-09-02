@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	basepkg "github.com/lerenn/code-manager/internal/base"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 
@@ -26,18 +25,17 @@ func TestRealCM_Init_Success(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
+		repository:    createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		workspace:     createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		config:        createTestConfig(),
+		fs:            mockFS,
+		git:           mockGit,
+		statusManager: mockStatus,
+		logger:        mockLogger,
+		prompt:        mockPrompt,
 	}
 
 	// Create a temporary directory for testing
@@ -63,17 +61,16 @@ func TestRealCM_Init_InvalidBasePath(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
+		repository:    createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		workspace:     createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		config:        createTestConfig(),
+		fs:            mockFS,
+		git:           mockGit,
+		statusManager: mockStatus,
+		logger:        mockLogger,
+		prompt:        mockPrompt,
 	}
 
 	// Mock path expansion failure
@@ -98,18 +95,17 @@ func TestRealCM_Init_ResetSuccess(t *testing.T) {
 	mockGit := git.NewMockGit(ctrl)
 	mockStatus := status.NewMockManager(ctrl)
 	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockPrompt := prompt.NewMockPrompter(ctrl)
 
 	cm := &realCM{
-		Base: basepkg.NewBase(basepkg.NewBaseParams{
-			FS:            mockFS,
-			Git:           mockGit,
-			Config:        createTestConfig(),
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-			Prompt:        mockPrompt,
-			Verbose:       false,
-		}),
+		repository:    createMockRepository(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		workspace:     createMockWorkspace(mockFS, mockGit, mockStatus, mockLogger, mockPrompt),
+		config:        createTestConfig(),
+		fs:            mockFS,
+		git:           mockGit,
+		statusManager: mockStatus,
+		logger:        mockLogger,
+		prompt:        mockPrompt,
 	}
 
 	// Create a temporary directory for testing

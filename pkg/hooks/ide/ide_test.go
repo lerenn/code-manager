@@ -119,7 +119,7 @@ func TestManager_OpenIDE(t *testing.T) {
 				mockFS.EXPECT().ExecuteCommand(gomock.Any(), tt.path).Return(nil)
 			}
 
-			err := manager.OpenIDE(tt.ideName, tt.path, tt.verbose)
+			err := manager.OpenIDE(tt.ideName, tt.path)
 
 			if tt.expectError {
 				assert.Error(t, err)

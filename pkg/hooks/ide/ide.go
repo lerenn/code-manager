@@ -29,7 +29,7 @@ type ManagerInterface interface {
 	// GetIDE returns the IDE implementation for the given name
 	GetIDE(name string) (IDE, error)
 	// OpenIDE opens the specified IDE with the given path
-	OpenIDE(name, path string, verbose bool) error
+	OpenIDE(name, path string) error
 }
 
 // Manager manages IDE implementations and provides a unified interface.
@@ -76,7 +76,7 @@ func (m *Manager) GetIDE(name string) (IDE, error) {
 }
 
 // OpenIDE opens the specified IDE with the given path.
-func (m *Manager) OpenIDE(name, path string, verbose bool) error {
+func (m *Manager) OpenIDE(name, path string) error {
 	ide, err := m.GetIDE(name)
 	if err != nil {
 		return err
@@ -87,10 +87,8 @@ func (m *Manager) OpenIDE(name, path string, verbose bool) error {
 		return fmt.Errorf("%w: %s", ErrIDENotInstalled, name)
 	}
 
-	// Log the path being opened if verbose is enabled
-	if verbose {
-		m.logger.Logf("Opening %s with %s at path: %s", name, name, path)
-	}
+	// Log the path being opened
+	m.logger.Logf("Opening %s with %s at path: %s", name, name, path)
 
 	// Open the repository in the IDE
 	if err := ide.OpenRepository(path); err != nil {
@@ -98,10 +96,8 @@ func (m *Manager) OpenIDE(name, path string, verbose bool) error {
 		return fmt.Errorf("%w: %s", err, name)
 	}
 
-	// Log success if verbose is enabled
-	if verbose {
-		m.logger.Logf("Successfully opened %s with %s", path, name)
-	}
+	// Log success
+	m.logger.Logf("Successfully opened %s with %s", path, name)
 
 	return nil
 }

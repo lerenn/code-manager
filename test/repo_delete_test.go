@@ -128,7 +128,6 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
-	cmInstance.SetVerbose(true)
 
 	require.NoError(t, err)
 	// Change to repo directory and delete worktree
@@ -205,7 +204,6 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 		BasePath:   setup.CmPath,
 		StatusFile: setup.StatusPath,
 	})
-	cmInstance.SetVerbose(true)
 
 	require.NoError(t, err)
 	// Change to repo directory and delete worktree

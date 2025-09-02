@@ -79,7 +79,6 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cfg)
-	cmInstance.SetVerbose(true)
 
 	require.NoError(t, err)
 	// Create worktrees

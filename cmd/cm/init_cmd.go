@@ -7,6 +7,7 @@ import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	pkgconfig "github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -51,7 +52,9 @@ Flags:
 			if err != nil {
 				return err
 			}
-			cmManager.SetVerbose(config.Verbose)
+			if config.Verbose {
+				cmManager.SetLogger(logger.NewVerboseLogger())
+			}
 
 			opts := cm.InitOpts{
 				Force:    force,
