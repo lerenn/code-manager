@@ -16,6 +16,11 @@ import (
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
+// Function providers for dependency injection
+type RepositoryProvider func(path string) repository.Repository
+type WorkspaceProvider func(name string) workspace.Workspace
+type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
+
 // CM interface provides Git repository detection functionality.
 type CM interface {
 	// CreateWorkTree executes the main application logic.
