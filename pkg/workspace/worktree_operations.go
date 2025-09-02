@@ -209,8 +209,15 @@ func (w *realWorkspace) autoAddRepositoryToStatus(repoURL, repoPath string) erro
 	// Check for origin remote
 	originURL, err := w.git.GetRemoteURL(absPath, "origin")
 	if err == nil && originURL != "" {
+		// Get the actual default branch from the remote repository
+		defaultBranch, err := w.git.GetDefaultBranch(originURL)
+		if err != nil {
+			w.verboseLogf("Warning: failed to get default branch from remote, using 'main' as fallback: %v", err)
+			defaultBranch = "main" // Fallback to main if we can't determine the actual default branch
+		}
+
 		remotes["origin"] = status.Remote{
-			DefaultBranch: "main", // Default to main, could be enhanced to detect actual default branch
+			DefaultBranch: defaultBranch,
 		}
 	}
 
