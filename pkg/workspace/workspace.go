@@ -44,7 +44,7 @@ type Workspace interface {
 	ListWorktrees(force bool) ([]status.WorktreeInfo, error)
 
 	// CreateWorktree creates worktrees for all repositories in the workspace.
-	CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) error
+	CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) (string, error)
 
 	// DeleteWorktree deletes worktrees for the workspace with the specified branch.
 	DeleteWorktree(branch string, force bool) error
@@ -247,24 +247,24 @@ func (w *realWorkspace) ListWorktrees(force bool) ([]status.WorktreeInfo, error)
 }
 
 // CreateWorktree creates worktrees for all repositories in the workspace.
-func (w *realWorkspace) CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) error {
+func (w *realWorkspace) CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) (string, error) {
 	w.verboseLogf("Creating worktrees for branch: %s", branch)
 
 	// 1. Load and validate workspace configuration (only if not already loaded)
 	if w.OriginalFile == "" {
 		if err := w.Load(force); err != nil {
-			return fmt.Errorf("failed to load workspace: %w", err)
+			return "", fmt.Errorf("failed to load workspace: %w", err)
 		}
 	}
 
 	// 2. Validate all repositories in workspace
 	if err := w.Validate(); err != nil {
-		return fmt.Errorf("failed to validate workspace: %w", err)
+		return "", fmt.Errorf("failed to validate workspace: %w", err)
 	}
 
 	// 3. Pre-validate worktree creation for all repositories
 	if err := w.validateWorkspaceForWorktreeCreation(branch); err != nil {
-		return fmt.Errorf("failed to validate workspace for worktree creation: %w", err)
+		return "", fmt.Errorf("failed to validate workspace for worktree creation: %w", err)
 	}
 
 	// 4. Create worktrees for all repositories
@@ -273,11 +273,18 @@ func (w *realWorkspace) CreateWorktree(branch string, force bool, opts ...Create
 		workspaceOpts = &opts[0]
 	}
 	if err := w.createWorktreesForWorkspace(branch, workspaceOpts); err != nil {
-		return fmt.Errorf("failed to create worktrees: %w", err)
+		return "", fmt.Errorf("failed to create worktrees: %w", err)
 	}
 
+	// 5. Calculate and return the worktree path
+	worktreePath := filepath.Join(
+		w.config.BasePath,
+		"workspaces",
+		fmt.Sprintf("workspace-%s", branch),
+	)
+
 	w.verboseLogf("Workspace worktree creation completed successfully")
-	return nil
+	return worktreePath, nil
 }
 
 // DeleteWorktree deletes worktrees for the workspace with the specified branch.

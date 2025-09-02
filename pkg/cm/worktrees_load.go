@@ -38,14 +38,14 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 		projectType, err := c.detectProjectMode()
 		if err != nil {
 			c.VerbosePrint("Error: %v", err)
-			return fmt.Errorf("failed to detect project mode: %w", err)
+			return fmt.Errorf("failed to detect project type: %w", err)
 		}
 
 		// 3. Handle based on project type
-		var loadErr error
+		var worktreePath string
 		switch projectType {
 		case ProjectTypeSingleRepo:
-			loadErr = c.loadWorktreeForSingleRepo(remoteSource, branchName)
+			worktreePath, err = c.loadWorktreeForSingleRepo(remoteSource, branchName)
 		case ProjectTypeWorkspace:
 			return ErrWorkspaceModeNotSupported
 		case ProjectTypeNone:
@@ -54,15 +54,27 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 			return fmt.Errorf("unknown project type")
 		}
 
-		return loadErr
+		if err != nil {
+			return err
+		}
+
+		// Set worktreePath in params for the IDE opening hook
+		params["worktreePath"] = worktreePath
+
+		return nil
 	})
 }
 
 // loadWorktreeForSingleRepo loads a worktree for single repository mode.
-func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) error {
+func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) (string, error) {
 	c.VerbosePrint("Loading worktree for single repository mode")
 
-	return c.repository.LoadWorktree(remoteSource, branchName)
+	worktreePath, err := c.repository.LoadWorktree(remoteSource, branchName)
+	if err != nil {
+		return "", err
+	}
+
+	return worktreePath, nil
 }
 
 // parseBranchArg parses the remote:branch argument format.

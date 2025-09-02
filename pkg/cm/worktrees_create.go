@@ -37,13 +37,25 @@ func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 
 	// Execute with hooks
 	return c.executeWithHooks(consts.CreateWorkTree, params, func() error {
+		var worktreePath string
+		var err error
+
 		// Handle issue-based worktree creation
 		if issueRef != "" {
-			return c.createWorkTreeFromIssue(branch, issueRef)
+			worktreePath, err = c.createWorkTreeFromIssue(branch, issueRef)
+		} else {
+			// Handle regular worktree creation
+			worktreePath, err = c.createRegularWorkTree(branch, force)
 		}
 
-		// Handle regular worktree creation
-		return c.createRegularWorkTree(branch, force)
+		if err != nil {
+			return err
+		}
+
+		// Set worktreePath in params for the IDE opening hook
+		params["worktreePath"] = worktreePath
+
+		return nil
 	})
 }
 
@@ -67,11 +79,11 @@ func (c *realCM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string
 }
 
 // createRegularWorkTree handles regular worktree creation (non-issue based).
-func (c *realCM) createRegularWorkTree(branch string, force bool) error {
+func (c *realCM) createRegularWorkTree(branch string, force bool) (string, error) {
 	// Sanitize branch name first
 	sanitizedBranch, err := branchpkg.SanitizeBranchName(branch)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Log if branch name was sanitized
@@ -82,15 +94,20 @@ func (c *realCM) createRegularWorkTree(branch string, force bool) error {
 	c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
 
 	// Detect project mode and handle accordingly
-	return c.handleProjectMode(sanitizedBranch, force)
+	worktreePath, err := c.handleProjectMode(sanitizedBranch, force)
+	if err != nil {
+		return "", err
+	}
+
+	return worktreePath, nil
 }
 
 // handleProjectMode detects project mode and handles worktree creation accordingly.
-func (c *realCM) handleProjectMode(sanitizedBranch string, force bool) error {
+func (c *realCM) handleProjectMode(sanitizedBranch string, force bool) (string, error) {
 	projectType, err := c.detectProjectMode()
 	if err != nil {
 		c.VerbosePrint("Error: %v", err)
-		return err
+		return "", err
 	}
 
 	switch projectType {
@@ -99,29 +116,30 @@ func (c *realCM) handleProjectMode(sanitizedBranch string, force bool) error {
 	case ProjectTypeWorkspace:
 		return c.handleWorkspaceMode(sanitizedBranch, force)
 	case ProjectTypeNone:
-		return ErrNoGitRepositoryOrWorkspaceFound
+		return "", ErrNoGitRepositoryOrWorkspaceFound
 	default:
-		return fmt.Errorf("unknown project type")
+		return "", fmt.Errorf("unknown project type")
 	}
 }
 
 // handleRepositoryMode handles repository mode: validation and worktree creation.
-func (c *realCM) handleRepositoryMode(branch string) error {
+func (c *realCM) handleRepositoryMode(branch string) (string, error) {
 	c.VerbosePrint("Handling repository mode")
 
 	// 1. Validate repository
 	if err := c.repository.Validate(); err != nil {
-		return c.translateRepositoryError(err)
+		return "", c.translateRepositoryError(err)
 	}
 
 	// 2. Create worktree for single repository
-	if err := c.repository.CreateWorktree(branch); err != nil {
-		return c.translateRepositoryError(err)
+	worktreePath, err := c.repository.CreateWorktree(branch)
+	if err != nil {
+		return "", c.translateRepositoryError(err)
 	}
 
 	c.VerbosePrint("CM execution completed successfully")
 
-	return nil
+	return worktreePath, nil
 }
 
 // translateRepositoryError translates repository package errors to CM package errors.
@@ -152,53 +170,55 @@ func (c *realCM) translateRepositoryError(err error) error {
 }
 
 // handleWorkspaceMode handles workspace mode: validation and worktree creation.
-func (c *realCM) handleWorkspaceMode(branch string, force bool) error {
+func (c *realCM) handleWorkspaceMode(branch string, force bool) (string, error) {
 	c.VerbosePrint("Handling workspace mode")
 
 	// Create worktree for workspace
-	if err := c.workspace.CreateWorktree(branch, force); err != nil {
-		return err
+	worktreePath, err := c.workspace.CreateWorktree(branch, force)
+	if err != nil {
+		return "", err
 	}
 
 	c.VerbosePrint("Workspace worktree creation completed successfully")
-	return nil
+	return worktreePath, nil
 }
 
 // createWorkTreeFromIssue creates a worktree from a forge issue.
-func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string) error {
+func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string) (string, error) {
 	c.VerbosePrint("Starting worktree creation from issue: %s", issueRef)
 
 	// 1. Detect project mode (repository or workspace)
 	projectType, err := c.detectProjectMode()
 	if err != nil {
 		c.VerbosePrint("Error: %v", err)
-		return fmt.Errorf("failed to detect project mode: %w", err)
+		return "", fmt.Errorf("failed to detect project mode: %w", err)
 	}
 
 	// 2. Handle based on project type
 	var createErr error
+	var worktreePath string
 
 	switch projectType {
 	case ProjectTypeSingleRepo:
-		createErr = c.createWorkTreeFromIssueForSingleRepo(&branch, issueRef)
+		worktreePath, createErr = c.createWorkTreeFromIssueForSingleRepo(&branch, issueRef)
 	case ProjectTypeWorkspace:
-		createErr = c.createWorkTreeFromIssueForWorkspace(&branch, issueRef)
+		worktreePath, createErr = c.createWorkTreeFromIssueForWorkspace(&branch, issueRef)
 	case ProjectTypeNone:
-		return ErrNoGitRepositoryOrWorkspaceFound
+		return "", ErrNoGitRepositoryOrWorkspaceFound
 	default:
-		return fmt.Errorf("unknown project type")
+		return "", fmt.Errorf("unknown project type")
 	}
 
 	// 3. Check for worktree creation errors first
 	if createErr != nil {
-		return createErr
+		return "", createErr
 	}
 
-	return nil
+	return worktreePath, nil
 }
 
 // createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.
-func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueRef string) error {
+func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueRef string) (string, error) {
 	c.VerbosePrint("Creating worktree from issue for single repository mode")
 
 	// Create forge manager
@@ -207,13 +227,13 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 	// Get the appropriate forge for the repository
 	selectedForge, err := forgeManager.GetForgeForRepository(".")
 	if err != nil {
-		return fmt.Errorf("failed to get forge for repository: %w", err)
+		return "", fmt.Errorf("failed to get forge for repository: %w", err)
 	}
 
 	// Get issue information
 	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
 	if err != nil {
-		return c.translateIssueError(err)
+		return "", c.translateIssueError(err)
 	}
 
 	// Generate branch name if not provided
@@ -244,11 +264,15 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 		Worktree:      worktreeInstance,
 		Verbose:       c.IsVerbose(),
 	})
-	return repoInstance.CreateWorktree(*branchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo})
+	worktreePath, err := repoInstance.CreateWorktree(*branchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo})
+	if err != nil {
+		return "", err
+	}
+	return worktreePath, nil
 }
 
 // createWorkTreeFromIssueForWorkspace creates worktrees from issue for workspace.
-func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string) error {
+func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRef string) (string, error) {
 	c.VerbosePrint("Creating worktree from issue for workspace mode")
 
 	// Create forge manager
@@ -257,13 +281,13 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 	// Get the appropriate forge for the repository
 	selectedForge, err := forgeManager.GetForgeForRepository(".")
 	if err != nil {
-		return fmt.Errorf("failed to get forge for repository: %w", err)
+		return "", fmt.Errorf("failed to get forge for repository: %w", err)
 	}
 
 	// Get issue information
 	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
 	if err != nil {
-		return c.translateIssueError(err)
+		return "", c.translateIssueError(err)
 	}
 
 	// Generate branch name if not provided
@@ -294,7 +318,11 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 		Worktree:      worktreeInstance,
 		Verbose:       c.IsVerbose(),
 	})
-	return workspace.CreateWorktree(*branchName, false)
+	worktreePath, err := workspace.CreateWorktree(*branchName, false)
+	if err != nil {
+		return "", err
+	}
+	return worktreePath, nil
 }
 
 // translateIssueError translates issue-related errors to preserve the original error types.

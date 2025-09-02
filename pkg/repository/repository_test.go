@@ -51,8 +51,9 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
-	err := repo.CreateWorktree("test-branch")
+	worktreePath, err := repo.CreateWorktree("test-branch")
 	assert.NoError(t, err)
+	assert.NotEmpty(t, worktreePath)
 }
 
 func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
@@ -322,6 +323,7 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
-	err := repo.LoadWorktree("origin", "feature-branch")
+	worktreePath, err := repo.LoadWorktree("origin", "feature-branch")
 	assert.NoError(t, err)
+	assert.NotEmpty(t, worktreePath)
 }
