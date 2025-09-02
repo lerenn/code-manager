@@ -151,11 +151,12 @@ func createTestGitRepo(t *testing.T, repoPath string) {
 	// Add a remote origin with a real public repository URL to avoid authentication issues
 	// Use different repositories for Hello-World and Spoon-Knife to simulate real workspace scenario
 	var remoteURL string
-	if dirName == "Hello-World" {
+	switch dirName {
+	case "Hello-World":
 		remoteURL = "https://github.com/octocat/Hello-World.git"
-	} else if dirName == "Spoon-Knife" {
+	case "Spoon-Knife":
 		remoteURL = "https://github.com/octocat/Spoon-Knife.git"
-	} else {
+	default:
 		// Default fallback for other test scenarios
 		remoteURL = "https://github.com/octocat/Hello-World.git"
 	}
@@ -414,4 +415,64 @@ func getGitWorktreeList(t *testing.T, repoPath string) string {
 	output, err := cmd.Output()
 	require.NoError(t, err)
 	return string(output)
+}
+
+// getCurrentCommit gets the current commit hash of the repository
+func getCurrentCommit(t *testing.T, repoPath string) (string, error) {
+	t.Helper()
+
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// getPreviousCommit gets the previous commit hash on the current branch
+func getPreviousCommit(t *testing.T, repoPath string) (string, error) {
+	t.Helper()
+
+	cmd := exec.Command("git", "rev-parse", "HEAD~1")
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// createDummyCommit creates a dummy commit for testing purposes
+func createDummyCommit(t *testing.T, repoPath string) error {
+	t.Helper()
+
+	// Set up Git environment variables for all commands
+	gitEnv := append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+
+	// Create a dummy file
+	dummyFile := filepath.Join(repoPath, "dummy-test-file.txt")
+	err := os.WriteFile(dummyFile, []byte("This is a dummy file for testing"), 0644)
+	if err != nil {
+		return err
+	}
+
+	// Add the file
+	cmd := exec.Command("git", "add", "dummy-test-file.txt")
+	cmd.Dir = repoPath
+	cmd.Env = gitEnv
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	// Commit the file
+	cmd = exec.Command("git", "commit", "-m", "Add dummy file for testing")
+	cmd.Dir = repoPath
+	cmd.Env = gitEnv
+	return cmd.Run()
 }
