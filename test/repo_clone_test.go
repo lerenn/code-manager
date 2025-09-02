@@ -10,7 +10,6 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -157,7 +156,7 @@ func TestCloneRepositoryAlreadyExists(t *testing.T) {
 	// Try to clone the same repository again
 	err = cloneRepository(t, setup, repoURL, true)
 	require.Error(t, err, "Second clone should fail")
-	assert.ErrorIs(t, err, status.ErrRepositoryAlreadyExists, "Error should indicate repository already exists")
+	assert.ErrorIs(t, err, cm.ErrRepositoryExists, "Error should indicate repository already exists")
 
 	// Verify only one repository entry exists
 	status := readStatusFile(t, setup.StatusPath)

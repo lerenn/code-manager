@@ -19,7 +19,7 @@ var (
 	ErrBranchNotFoundOnRemote = errors.New("branch not found on remote")
 	ErrReferenceConflict      = errors.New("reference conflict: cannot create branch due to existing reference")
 
-	// Specific reference conflict error types for testing
+	// Specific reference conflict error types for testing.
 	ErrBranchParentExists = errors.New("cannot create branch: reference already exists")
 	ErrTagParentExists    = errors.New("cannot create branch: tag already exists")
 

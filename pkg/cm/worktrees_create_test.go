@@ -39,12 +39,12 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
 			return mockWorkspace
 		},
-		HookManager: mockHookManager,
-		Config:      createTestConfig(),
-		FS:          mockFS,
-		Git:         mockGit,
-		Status:      mockStatus,
-		Prompt:      mockPrompt,
+		Hooks:  mockHookManager,
+		Config: createTestConfig(),
+		FS:     mockFS,
+		Git:    mockGit,
+		Status: mockStatus,
+		Prompt: mockPrompt,
 	})
 	assert.NoError(t, err)
 
@@ -81,12 +81,12 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
 			return mockWorkspace
 		},
-		HookManager: mockHookManager,
-		Config:      createTestConfig(),
-		FS:          mockFS,
-		Git:         mockGit,
-		Status:      mockStatus,
-		Prompt:      mockPrompt,
+		Hooks:  mockHookManager,
+		Config: createTestConfig(),
+		FS:     mockFS,
+		Git:    mockGit,
+		Status: mockStatus,
+		Prompt: mockPrompt,
 	})
 	assert.NoError(t, err)
 

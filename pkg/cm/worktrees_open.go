@@ -33,17 +33,18 @@ func (c *realCM) OpenWorktree(worktreeName, ideName string) error {
 				return fmt.Errorf("failed to get repository URL: %w", err)
 			}
 
-			// Check if the worktree exists
-			worktreePath := c.BuildWorktreePath(repoURL, "origin", worktreeName)
-			exists, err := c.fs.Exists(worktreePath)
+			// Check if the worktree exists in the status file
+			worktreeInfo, err := c.statusManager.GetWorktree(repoURL, worktreeName)
 			if err != nil {
-				return fmt.Errorf("failed to check if worktree exists: %w", err)
-			}
-			if !exists {
 				return ErrWorktreeNotInStatus
 			}
 
+			// Build the worktree path using the remote from status
+			worktreePath := c.BuildWorktreePath(repoURL, worktreeInfo.Remote, worktreeName)
+
 			// Store the worktree path in parameters for the hook to access
+			// Note: This modifies the params map that was passed to executeWithHooks
+			// The hook context will have access to this updated parameter
 			params["worktreePath"] = worktreePath
 			return nil
 		case ProjectTypeWorkspace:

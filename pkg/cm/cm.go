@@ -7,6 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/hooks"
+	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/repository"
@@ -51,7 +52,7 @@ type NewCMParams struct {
 	RepositoryProvider RepositoryProvider
 	WorkspaceProvider  WorkspaceProvider
 	Config             config.Config
-	HookManager        hooks.HookManagerInterface
+	Hooks              hooks.HookManagerInterface
 	Status             status.Manager
 	FS                 fs.FS
 	Git                git.Git
@@ -119,7 +120,7 @@ func NewCM(params NewCMParams) (CM, error) {
 	)
 
 	// Use provided hook manager or create a new one
-	hookManager := createHookManager(params.HookManager)
+	hookManager := createHookManager(params.Hooks)
 	cmInstance := &realCM{
 		fs:            fsInstance,
 		git:           gitInstance,
@@ -139,7 +140,14 @@ func createHookManager(providedHookManager hooks.HookManagerInterface) hooks.Hoo
 	if providedHookManager != nil {
 		return providedHookManager
 	}
-	return hooks.NewHookManager()
+
+	// Use default hooks manager which includes IDE opening hooks
+	defaultHookManager, err := defaulthooks.NewDefaultHooksManager()
+	if err != nil {
+		// Fallback to basic hook manager if default hooks fail to initialize
+		return hooks.NewHookManager()
+	}
+	return defaultHookManager
 }
 
 // createRepositoryInstance creates a repository instance using the provided provider.

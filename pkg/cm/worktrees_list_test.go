@@ -28,7 +28,7 @@ func TestCM_ListWorktrees_NoRepository(t *testing.T) {
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		Config:             createTestConfig(),
 	})
 	assert.NoError(t, err)
@@ -58,7 +58,7 @@ func TestCM_ListWorktrees_SingleRepository(t *testing.T) {
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		Config:             createTestConfig(),
 	})
 	assert.NoError(t, err)

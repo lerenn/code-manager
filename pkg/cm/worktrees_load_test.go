@@ -35,7 +35,7 @@ func TestCM_LoadWorktree_Success(t *testing.T) {
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		Config:             createTestConfig(),
 		FS:                 mockFS,
 		Git:                mockGit,
@@ -69,7 +69,7 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,
@@ -105,7 +105,7 @@ func TestCM_LoadWorktree_NewRemote(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,
@@ -140,7 +140,7 @@ func TestCM_LoadWorktree_SSHProtocol(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,
@@ -175,7 +175,7 @@ func TestCM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,
@@ -211,7 +211,7 @@ func TestCM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,
@@ -247,7 +247,7 @@ func TestCM_LoadWorktree_FetchFailed(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,
@@ -283,7 +283,7 @@ func TestCM_LoadWorktree_BranchNotFound(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,
@@ -319,7 +319,7 @@ func TestCM_LoadWorktree_DefaultRemote(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCM(NewCMParams{
 		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		HookManager:        mockHookManager,
+		Hooks:              mockHookManager,
 		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
 		Config:             createTestConfig(),
 		FS:                 mockFS,

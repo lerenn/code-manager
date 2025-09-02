@@ -47,7 +47,7 @@ func (w *realWorkspace) ParseFile(filename string) (Config, error) {
 	}
 
 	// Validate folders array
-	if config.Folders == nil || len(config.Folders) == 0 {
+	if len(config.Folders) == 0 {
 		return Config{}, ErrNoRepositoriesFound
 	}
 

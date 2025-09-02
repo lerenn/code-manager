@@ -40,7 +40,7 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
 			return mockWorkspace
 		},
-		HookManager: mockHookManager,
+		Hooks: mockHookManager,
 		Config: config.Config{
 			BasePath:   "/test/base/path",
 			StatusFile: "/test/status.yaml",
@@ -90,7 +90,7 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
 			return mockWorkspace
 		},
-		HookManager: mockHookManager,
+		Hooks: mockHookManager,
 		Config: config.Config{
 			BasePath:   "/test/base/path",
 			StatusFile: "/test/status.yaml",

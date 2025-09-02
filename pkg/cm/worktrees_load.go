@@ -94,7 +94,7 @@ func (c *realCM) parseBranchArg(arg string) (remoteSource, branchName string, er
 			return "", "", fmt.Errorf("branch name cannot be empty")
 		}
 		if strings.Contains(branchName, ":") {
-			return "", "", fmt.Errorf("branch name contains invalid character ':'")
+			return "", "", ErrBranchNameContainsColon
 		}
 		return "", branchName, nil // empty remoteSource defaults to origin
 	}
@@ -111,7 +111,7 @@ func (c *realCM) parseBranchArg(arg string) (remoteSource, branchName string, er
 			return "", "", fmt.Errorf("branch name cannot be empty")
 		}
 		if strings.Contains(branchName, ":") {
-			return "", "", fmt.Errorf("branch name contains invalid character ':'")
+			return "", "", ErrBranchNameContainsColon
 		}
 
 		return remoteSource, branchName, nil
