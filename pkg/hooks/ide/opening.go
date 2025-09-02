@@ -71,76 +71,45 @@ func (h *OpeningHook) PostExecute(ctx *hooks.HookContext) error {
 		return nil //nolint:nilerr
 	}
 
-	// Check if IDE name is provided in parameters
+	// Get worktree path from parameters
+	worktreePath, hasWorktreePath := ctx.Parameters["worktreePath"]
+	if !hasWorktreePath {
+		return fmt.Errorf("cannot open IDE: worktreePath parameter is required")
+	}
+
+	worktreePathStr, ok := worktreePath.(string)
+	if !ok || worktreePathStr == "" {
+		return fmt.Errorf("cannot open IDE: worktreePath must be a non-empty string")
+	}
+
+	// Get IDE name from parameters
 	ideName, hasIDEName := ctx.Parameters["ideName"]
 	if !hasIDEName {
+		// No IDE specified, nothing to do
 		return nil
 	}
 
 	ideNameStr, ok := ideName.(string)
 	if !ok || ideNameStr == "" {
+		// Invalid IDE name, nothing to do
 		return nil
 	}
 
-	// Get worktree path from parameters or calculated path
-	worktreePath := h.calculateWorktreePath(ctx)
-	if worktreePath == "" {
-		return fmt.Errorf("cannot open IDE: worktree path is empty")
-	}
-
-	// Open the IDE directly using the hook's IDE manager
-	cmInstance, ok := ctx.CM.(interface {
-		IsVerbose() bool
-	})
-	if !ok {
-		return fmt.Errorf("CM instance does not support verbose mode")
-	}
-
-	// Try to open the IDE
-	if err := h.IDEManager.OpenIDE(ideNameStr, worktreePath, cmInstance.IsVerbose()); err != nil {
-		// For OpenWorktree operation, IDE opening is required, so fail the operation
+	// Open the IDE
+	if err := h.IDEManager.OpenIDE(ideNameStr, worktreePathStr, true); err != nil {
+		// For OpenWorktree operations, IDE opening failure should fail the operation
+		// For CreateWorkTree and LoadWorktree operations, IDE opening failure should not prevent success
 		if ctx.OperationName == consts.OpenWorktree {
-			return err
+			return fmt.Errorf("failed to open IDE %s: %w", ideNameStr, err)
 		}
-
-		// For other operations, IDE opening is optional, so just log the error
-		if cmInstance.IsVerbose() {
-			fmt.Printf("Warning: Failed to open IDE %s: %v\n", ideNameStr, err)
-		}
+		
+		// IDE opening failed, but this should not prevent the worktree creation from succeeding
+		// Log the error but don't fail the operation
+		// TODO: Consider adding proper logging here when logger is available
 		return nil
 	}
 
 	return nil
-}
-
-// extractWorktreePath extracts the worktree path from parameters.
-func (h *OpeningHook) extractWorktreePath(params map[string]interface{}) string {
-	if branch, hasBranch := params["branch"]; hasBranch {
-		if branchStr, ok := branch.(string); ok && branchStr != "" {
-			return branchStr
-		}
-	}
-	if worktreeName, hasWorktreeName := params["worktreeName"]; hasWorktreeName {
-		if worktreeNameStr, ok := worktreeName.(string); ok && worktreeNameStr != "" {
-			return worktreeNameStr
-		}
-	}
-	return ""
-}
-
-// calculateWorktreePath calculates the worktree path for OpenWorktree operation.
-func (h *OpeningHook) calculateWorktreePath(ctx *hooks.HookContext) string {
-	// For OpenWorktree operation, use the worktreePath from parameters
-	if ctx.OperationName == consts.OpenWorktree {
-		if worktreePath, hasWorktreePath := ctx.Parameters["worktreePath"]; hasWorktreePath {
-			if worktreePathStr, ok := worktreePath.(string); ok && worktreePathStr != "" {
-				return worktreePathStr
-			}
-		}
-	}
-
-	// For other operations, use the existing logic
-	return h.extractWorktreePath(ctx.Parameters)
 }
 
 // OnError is a no-op for OpeningHook.

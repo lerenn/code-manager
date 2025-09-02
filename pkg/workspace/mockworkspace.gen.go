@@ -41,15 +41,16 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 }
 
 // CreateWorktree mocks base method.
-func (m *MockWorkspace) CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) error {
+func (m *MockWorkspace) CreateWorktree(branch string, force bool, opts ...CreateWorktreeOpts) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{branch, force}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CreateWorktree", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateWorktree indicates an expected call of CreateWorktree.

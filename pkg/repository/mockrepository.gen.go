@@ -122,15 +122,16 @@ func (mr *MockRepositoryMockRecorder) ConstructRemoteURL(originURL, remoteSource
 }
 
 // CreateWorktree mocks base method.
-func (m *MockRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) error {
+func (m *MockRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{branch}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "CreateWorktree", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // CreateWorktree indicates an expected call of CreateWorktree.
@@ -298,11 +299,12 @@ func (mr *MockRepositoryMockRecorder) ListWorktrees() *gomock.Call {
 }
 
 // LoadWorktree mocks base method.
-func (m *MockRepository) LoadWorktree(remoteSource, branchName string) error {
+func (m *MockRepository) LoadWorktree(remoteSource, branchName string) (string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "LoadWorktree", remoteSource, branchName)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // LoadWorktree indicates an expected call of LoadWorktree.

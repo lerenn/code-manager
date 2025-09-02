@@ -37,7 +37,7 @@ func TestCM_LoadWorktree_Success(t *testing.T) {
 
 	// Mock repository detection and worktree loading
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(nil)
+	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return("/test/base/path/test-repo/origin/feature-branch", nil)
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.NoError(t, err)
@@ -72,7 +72,7 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 
 	// Mock repository detection and worktree loading
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(nil)
+	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return("/test/base/path/test-repo/origin/feature-branch", nil)
 
 	// Note: IDE opening is now handled by the hook system, not tested here
 
@@ -102,7 +102,7 @@ func TestCM_LoadWorktree_NewRemote(t *testing.T) {
 
 	// Mock repository detection and worktree loading with new remote
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("otheruser", "feature-branch").Return(nil)
+	mockRepository.EXPECT().LoadWorktree("otheruser", "feature-branch").Return("/test/base/path/test-repo/otheruser/feature-branch", nil)
 
 	err := cm.LoadWorktree("otheruser:feature-branch")
 	assert.NoError(t, err)
@@ -130,7 +130,7 @@ func TestCM_LoadWorktree_SSHProtocol(t *testing.T) {
 
 	// Mock repository detection and worktree loading with SSH protocol
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("otheruser", "feature-branch").Return(nil)
+	mockRepository.EXPECT().LoadWorktree("otheruser", "feature-branch").Return("/test/base/path/test-repo/otheruser/feature-branch", nil)
 
 	err := cm.LoadWorktree("otheruser:feature-branch")
 	assert.NoError(t, err)
@@ -158,7 +158,7 @@ func TestCM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 
 	// Mock repository detection and worktree loading to return an error
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(ErrOriginRemoteNotFound)
+	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return("", ErrOriginRemoteNotFound)
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
@@ -187,7 +187,7 @@ func TestCM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 
 	// Mock repository detection and worktree loading to return an error
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(ErrOriginRemoteInvalidURL)
+	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return("", ErrOriginRemoteInvalidURL)
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
@@ -216,7 +216,7 @@ func TestCM_LoadWorktree_FetchFailed(t *testing.T) {
 
 	// Mock repository detection and worktree loading to return an error
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(git.ErrFetchFailed)
+	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return("", git.ErrFetchFailed)
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
@@ -245,7 +245,7 @@ func TestCM_LoadWorktree_BranchNotFound(t *testing.T) {
 
 	// Mock repository detection and worktree loading to return an error
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return(git.ErrBranchNotFoundOnRemote)
+	mockRepository.EXPECT().LoadWorktree("origin", "feature-branch").Return("", git.ErrBranchNotFoundOnRemote)
 
 	err := cm.LoadWorktree("origin:feature-branch")
 	assert.Error(t, err)
@@ -274,7 +274,7 @@ func TestCM_LoadWorktree_DefaultRemote(t *testing.T) {
 
 	// Mock repository detection and worktree loading with default remote (origin)
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-	mockRepository.EXPECT().LoadWorktree("", "feature-branch").Return(nil)
+	mockRepository.EXPECT().LoadWorktree("", "feature-branch").Return("/test/base/path/test-repo/origin/feature-branch", nil)
 
 	err := cm.LoadWorktree("feature-branch")
 	assert.NoError(t, err)
