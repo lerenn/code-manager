@@ -77,7 +77,7 @@ func (r *realRepository) getRepositoryURL(currentDir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get repository URL: %w", err)
 	}
-	r.VerbosePrint("Repository URL: %s", repoURL)
+	r.logger.Logf("Repository URL: %s", repoURL)
 	return repoURL, nil
 }
 
@@ -113,7 +113,7 @@ func (r *realRepository) ValidateWorktreeExists(repoURL, branch string) error {
 
 // ValidateOriginRemote validates that the origin remote exists and is a valid Git hosting service URL.
 func (r *realRepository) ValidateOriginRemote() error {
-	r.VerbosePrint("Validating origin remote")
+	r.logger.Logf("Validating origin remote")
 
 	// Check if origin remote exists
 	exists, err := r.git.RemoteExists(".", "origin")

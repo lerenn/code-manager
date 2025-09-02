@@ -13,7 +13,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
-//go:generate mockgen -source=worktree.go -destination=mockworktree.gen.go -package=worktree
+//go:generate mockgen -source=worktree.go -destination=mocks/worktree.gen.go -package=mocks
 
 // Worktree interface provides worktree management capabilities.
 type Worktree interface {
@@ -138,7 +138,12 @@ func (w *realWorktree) BuildPath(repoURL, remoteName, branch string) string {
 
 // Create creates a new worktree with proper validation and cleanup.
 func (w *realWorktree) Create(params CreateParams) error {
-	w.VerbosePrint("Creating worktree for %s:%s at %s", params.Remote, params.Branch, params.WorktreePath)
+	// Create logger if not already created
+	if w.logger == nil {
+		w.logger = logger.NewNoopLogger()
+	}
+
+	w.logger.Logf("Creating worktree for %s:%s at %s", params.Remote, params.Branch, params.WorktreePath)
 
 	// Validate creation
 	if err := w.ValidateCreation(ValidateCreationParams{
@@ -164,18 +169,18 @@ func (w *realWorktree) Create(params CreateParams) error {
 	if err := w.git.CreateWorktree(params.RepoPath, params.WorktreePath, params.Branch); err != nil {
 		// Clean up directory on failure
 		if cleanupErr := w.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
-			w.VerbosePrint("Warning: failed to clean up worktree directory: %v", cleanupErr)
+			w.logger.Logf("Warning: failed to clean up worktree directory: %v", cleanupErr)
 		}
 		return fmt.Errorf("failed to create Git worktree: %w", err)
 	}
 
-	w.VerbosePrint("✓ Worktree created successfully for %s:%s", params.Remote, params.Branch)
+	w.logger.Logf("✓ Worktree created successfully for %s:%s", params.Remote, params.Branch)
 	return nil
 }
 
 // Delete deletes a worktree with proper cleanup and confirmation.
 func (w *realWorktree) Delete(params DeleteParams) error {
-	w.VerbosePrint("Deleting worktree for %s at %s", params.Branch, params.WorktreePath)
+	w.logger.Logf("Deleting worktree for %s at %s", params.Branch, params.WorktreePath)
 
 	// Validate deletion
 	if err := w.ValidateDeletion(ValidateDeletionParams{
@@ -207,7 +212,7 @@ func (w *realWorktree) Delete(params DeleteParams) error {
 		return fmt.Errorf("failed to remove worktree from status: %w", err)
 	}
 
-	w.VerbosePrint("✓ Worktree deleted successfully for %s", params.Branch)
+	w.logger.Logf("✓ Worktree deleted successfully for %s", params.Branch)
 	return nil
 }
 
@@ -268,10 +273,10 @@ func (w *realWorktree) EnsureBranchExists(repoPath, branch string) error {
 
 // createBranchFromRemote creates a branch from remote or falls back to local default branch.
 func (w *realWorktree) createBranchFromRemote(repoPath, branch string) error {
-	w.VerbosePrint("Branch %s does not exist locally, checking remote", branch)
+	w.logger.Logf("Branch %s does not exist locally, checking remote", branch)
 
 	// Fetch from remote to ensure we have the latest changes and remote branch information
-	w.VerbosePrint("Fetching from origin to ensure repository is up to date")
+	w.logger.Logf("Fetching from origin to ensure repository is up to date")
 	if err := w.git.FetchRemote(repoPath, "origin"); err != nil {
 		return fmt.Errorf("failed to fetch from origin: %w", err)
 	}
@@ -295,7 +300,7 @@ func (w *realWorktree) createBranchFromRemote(repoPath, branch string) error {
 
 // createLocalTrackingBranch creates a local tracking branch from the remote branch.
 func (w *realWorktree) createLocalTrackingBranch(repoPath, branch string) error {
-	w.VerbosePrint("Branch %s exists on remote, creating local tracking branch", branch)
+	w.logger.Logf("Branch %s exists on remote, creating local tracking branch", branch)
 	if err := w.git.CreateBranchFrom(git.CreateBranchFromParams{
 		RepoPath:   repoPath,
 		NewBranch:  branch,
@@ -308,23 +313,23 @@ func (w *realWorktree) createLocalTrackingBranch(repoPath, branch string) error 
 
 // createBranchFromDefaultBranch creates a new branch from the origin's default branch.
 func (w *realWorktree) createBranchFromDefaultBranch(repoPath, branch string) error {
-	w.VerbosePrint("Branch %s does not exist on remote, creating from origin's default branch", branch)
+	w.logger.Logf("Branch %s does not exist on remote, creating from origin's default branch", branch)
 
 	// Get the origin remote URL to determine the actual default branch
 	originURL, err := w.git.GetRemoteURL(repoPath, "origin")
 	if err != nil {
-		w.VerbosePrint("Warning: failed to get origin remote URL, falling back to local default branch: %v", err)
+		w.logger.Logf("Warning: failed to get origin remote URL, falling back to local default branch: %v", err)
 		return w.createBranchFromLocalDefaultBranch(repoPath, branch)
 	}
 
 	// Get the actual default branch from the remote repository
 	remoteDefaultBranch, err := w.git.GetDefaultBranch(originURL)
 	if err != nil {
-		w.VerbosePrint("Warning: failed to get default branch from remote, falling back to local default branch: %v", err)
+		w.logger.Logf("Warning: failed to get default branch from remote, falling back to local default branch: %v", err)
 		return w.createBranchFromLocalDefaultBranch(repoPath, branch)
 	}
 
-	w.VerbosePrint("Remote default branch is: %s", remoteDefaultBranch)
+	w.logger.Logf("Remote default branch is: %s", remoteDefaultBranch)
 
 	// Create the new branch from origin/default_branch (which should be up-to-date after fetch)
 	originDefaultBranch := "origin/" + remoteDefaultBranch
@@ -341,7 +346,7 @@ func (w *realWorktree) createBranchFromDefaultBranch(repoPath, branch string) er
 
 // createBranchFromLocalDefaultBranch creates a new branch from the local default branch.
 func (w *realWorktree) createBranchFromLocalDefaultBranch(repoPath, branch string) error {
-	w.VerbosePrint("Creating branch %s from local default branch", branch)
+	w.logger.Logf("Creating branch %s from local default branch", branch)
 
 	// Get the current branch (which should be the default branch)
 	currentBranch, err := w.git.GetCurrentBranch(repoPath)
@@ -349,7 +354,7 @@ func (w *realWorktree) createBranchFromLocalDefaultBranch(repoPath, branch strin
 		return fmt.Errorf("failed to get current branch: %w", err)
 	}
 
-	w.VerbosePrint("Local default branch is: %s", currentBranch)
+	w.logger.Logf("Local default branch is: %s", currentBranch)
 
 	// Create the new branch from the local default branch
 	if err := w.git.CreateBranchFrom(git.CreateBranchFromParams{
@@ -439,9 +444,4 @@ func (w *realWorktree) promptForConfirmation(branch, worktreePath string) error 
 	}
 
 	return nil
-}
-
-// VerbosePrint logs a formatted message only in verbose mode.
-func (w *realWorktree) VerbosePrint(msg string, args ...interface{}) {
-	w.logger.Logf(fmt.Sprintf(msg, args...))
 }

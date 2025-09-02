@@ -14,7 +14,7 @@ import (
 
 // createWorktreesForWorkspace creates worktrees for all repositories in the workspace.
 func (w *realWorkspace) createWorktreesForWorkspace(branch string, opts *CreateWorktreeOpts) error {
-	w.VerbosePrint("Creating worktrees for all repositories in workspace")
+	w.logger.Logf("Creating worktrees for all repositories in workspace")
 
 	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
@@ -60,7 +60,7 @@ func (w *realWorkspace) createWorktreesForWorkspace(branch string, opts *CreateW
 	); err != nil {
 		// Cleanup workspace file on failure
 		if cleanupErr := w.fs.RemoveAll(worktreeWorkspacePath); cleanupErr != nil {
-			w.VerbosePrint("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
+			w.logger.Logf("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
 		}
 		return err
 	}
@@ -70,14 +70,14 @@ func (w *realWorkspace) createWorktreesForWorkspace(branch string, opts *CreateW
 
 // createWorktreeDirectories creates worktree directories and executes Git worktree commands.
 func (w *realWorkspace) createWorktreeDirectories(
-	workspaceConfig *Config,
+	workspaceConfig Config,
 	workspaceDir string,
 	branch string,
 	worktreeWorkspacePath string,
 	_ *CreateWorktreeOpts,
 ) error {
 	for i, folder := range workspaceConfig.Folders {
-		w.VerbosePrint("Creating worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
+		w.logger.Logf("Creating worktree %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
 
 		if err := w.createSingleWorktree(createSingleWorktreeParams{
 			Folder:                folder,
@@ -89,7 +89,7 @@ func (w *realWorkspace) createWorktreeDirectories(
 			return err
 		}
 
-		w.VerbosePrint("✓ Worktree created successfully for %s", folder.Path)
+		w.logger.Logf("✓ Worktree created successfully for %s", folder.Path)
 	}
 
 	return nil
@@ -113,10 +113,21 @@ func (w *realWorkspace) createSingleWorktree(params createSingleWorktreeParams) 
 	}
 
 	defaultRemote := w.getDefaultRemote(repoURL)
-	worktreePath := w.worktree.BuildPath(repoURL, defaultRemote, params.Branch)
+
+	// Create worktree instance using provider
+	worktreeInstance := w.worktreeProvider(worktree.NewWorktreeParams{
+		FS:            w.fs,
+		Git:           w.git,
+		StatusManager: w.statusManager,
+		Logger:        w.logger,
+		Prompt:        w.prompt,
+		BasePath:      w.config.BasePath,
+	})
+
+	worktreePath := worktreeInstance.BuildPath(repoURL, defaultRemote, params.Branch)
 
 	// Create worktree using the worktree package
-	err = w.worktree.Create(worktree.CreateParams{
+	err = worktreeInstance.Create(worktree.CreateParams{
 		RepoURL:      repoURL,
 		Branch:       params.Branch,
 		WorktreePath: worktreePath,
@@ -129,7 +140,7 @@ func (w *realWorkspace) createSingleWorktree(params createSingleWorktreeParams) 
 	if err != nil {
 		// Cleanup workspace file on failure
 		if cleanupErr := w.fs.RemoveAll(params.WorktreeWorkspacePath); cleanupErr != nil {
-			w.VerbosePrint("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
+			w.logger.Logf("Warning: failed to clean up worktree workspace file: %v", cleanupErr)
 		}
 		return err
 	}
@@ -140,8 +151,8 @@ func (w *realWorkspace) createSingleWorktree(params createSingleWorktreeParams) 
 		params.WorktreeWorkspacePath, params.Folder.Path,
 	); err != nil {
 		// Clean up worktree on status failure
-		if cleanupErr := w.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
-			w.VerbosePrint("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
+		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
+			w.logger.Logf("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
 		}
 		return err
 	}
@@ -163,7 +174,17 @@ func (w *realWorkspace) addWorktreeToStatus(
 		IssueInfo:     nil,
 	}
 
-	err := w.worktree.AddToStatus(addParams)
+	// Create worktree instance using provider
+	worktreeInstance := w.worktreeProvider(worktree.NewWorktreeParams{
+		FS:            w.fs,
+		Git:           w.git,
+		StatusManager: w.statusManager,
+		Logger:        w.logger,
+		Prompt:        w.prompt,
+		BasePath:      w.config.BasePath,
+	})
+
+	err := worktreeInstance.AddToStatus(addParams)
 	if err == nil {
 		return nil
 	}
@@ -179,7 +200,7 @@ func (w *realWorkspace) addWorktreeToStatus(
 	}
 
 	// Try adding the worktree again
-	if err := w.worktree.AddToStatus(addParams); err != nil {
+	if err := worktreeInstance.AddToStatus(addParams); err != nil {
 		return fmt.Errorf("failed to add worktree to status: %w", err)
 	}
 
@@ -212,7 +233,7 @@ func (w *realWorkspace) autoAddRepositoryToStatus(repoURL, repoPath string) erro
 		// Get the actual default branch from the remote repository
 		defaultBranch, err := w.git.GetDefaultBranch(originURL)
 		if err != nil {
-			w.VerbosePrint("Warning: failed to get default branch from remote, using 'main' as fallback: %v", err)
+			w.logger.Logf("Warning: failed to get default branch from remote, using 'main' as fallback: %v", err)
 			defaultBranch = "main" // Fallback to main if we can't determine the actual default branch
 		}
 
@@ -234,13 +255,23 @@ func (w *realWorkspace) autoAddRepositoryToStatus(repoURL, repoPath string) erro
 
 // createDefaultBranchWorktree creates a worktree for the default branch of a repository.
 func (w *realWorkspace) createDefaultBranchWorktree(repoURL, remoteName, branch, repoPath string) error {
-	w.VerbosePrint("Creating default branch worktree: %s:%s for repository %s", remoteName, branch, repoURL)
+	w.logger.Logf("Creating default branch worktree: %s:%s for repository %s", remoteName, branch, repoURL)
+
+	// Create worktree instance using provider
+	worktreeInstance := w.worktreeProvider(worktree.NewWorktreeParams{
+		FS:            w.fs,
+		Git:           w.git,
+		StatusManager: w.statusManager,
+		Logger:        w.logger,
+		Prompt:        w.prompt,
+		BasePath:      w.config.BasePath,
+	})
 
 	// Generate worktree path using worktree package
-	worktreePath := w.worktree.BuildPath(repoURL, remoteName, branch)
+	worktreePath := worktreeInstance.BuildPath(repoURL, remoteName, branch)
 
 	// Create worktree using the worktree package
-	err := w.worktree.Create(worktree.CreateParams{
+	err := worktreeInstance.Create(worktree.CreateParams{
 		RepoURL:      repoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
@@ -257,8 +288,8 @@ func (w *realWorkspace) createDefaultBranchWorktree(repoURL, remoteName, branch,
 	// Add to status file with auto-repository handling
 	if err := w.addWorktreeToStatus(repoURL, branch, worktreePath, remoteName, "", repoPath); err != nil {
 		// Clean up worktree on status failure
-		if cleanupErr := w.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
-			w.VerbosePrint("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
+		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
+			w.logger.Logf("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
 		}
 		return err
 	}

@@ -10,7 +10,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/issue"
 	repo "github.com/lerenn/code-manager/pkg/repository"
 	ws "github.com/lerenn/code-manager/pkg/workspace"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // CreateWorkTreeOpts contains optional parameters for CreateWorkTree.
@@ -242,16 +241,6 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 		branchName = &generatedBranchName
 	}
 
-	// Create worktree instance
-	worktreeInstance := worktree.NewWorktree(worktree.NewWorktreeParams{
-		FS:            c.fs,
-		Git:           c.git,
-		StatusManager: c.statusManager,
-		Logger:        c.logger,
-		Prompt:        c.prompt,
-		BasePath:      c.config.BasePath,
-	})
-
 	// Create worktree using existing logic
 	repoInstance := repo.NewRepository(repo.NewRepositoryParams{
 		FS:            c.fs,
@@ -260,7 +249,6 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(branchName *string, issueR
 		StatusManager: c.statusManager,
 		Logger:        c.logger,
 		Prompt:        c.prompt,
-		Worktree:      worktreeInstance,
 	})
 	worktreePath, err := repoInstance.CreateWorktree(*branchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo})
 	if err != nil {
@@ -294,16 +282,6 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 		branchName = &generatedBranchName
 	}
 
-	// Create worktree instance for workspace
-	worktreeInstance := worktree.NewWorktree(worktree.NewWorktreeParams{
-		FS:            c.fs,
-		Git:           c.git,
-		StatusManager: c.statusManager,
-		Logger:        c.logger,
-		Prompt:        c.prompt,
-		BasePath:      c.config.BasePath,
-	})
-
 	// Create workspace instance
 	workspace := ws.NewWorkspace(ws.NewWorkspaceParams{
 		FS:            c.fs,
@@ -312,7 +290,6 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(branchName *string, issueRe
 		StatusManager: c.statusManager,
 		Logger:        c.logger,
 		Prompt:        c.prompt,
-		Worktree:      worktreeInstance,
 	})
 	worktreePath, err := workspace.CreateWorktree(*branchName, false)
 	if err != nil {

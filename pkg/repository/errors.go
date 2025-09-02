@@ -8,6 +8,7 @@ var (
 	// Git repository errors.
 	ErrGitRepositoryNotFound = errors.New("not a valid Git repository: .git directory not found")
 	ErrGitRepositoryInvalid  = errors.New("git repository is in an invalid state")
+	ErrNotAGitRepository     = errors.New("not a Git repository: .git directory not found")
 
 	// Worktree errors.
 	ErrWorktreeExists      = errors.New("worktree already exists")

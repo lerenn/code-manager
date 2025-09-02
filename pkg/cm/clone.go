@@ -50,7 +50,7 @@ func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 		// 3. Detect default branch from remote
 		defaultBranch, err := c.git.GetDefaultBranch(repoURL)
 		if err != nil {
-			return fmt.Errorf("failed to detect default branch: %w", err)
+			return fmt.Errorf("%w: %w", ErrFailedToDetectDefaultBranch, err)
 		}
 
 		c.VerbosePrint("Detected default branch: %s", defaultBranch)
@@ -72,12 +72,12 @@ func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 			TargetPath: targetPath,
 			Recursive:  recursive,
 		}); err != nil {
-			return fmt.Errorf("failed to clone repository: %w", err)
+			return fmt.Errorf("%w: %w", ErrFailedToCloneRepository, err)
 		}
 
 		// 7. Initialize repository in CM
 		if err := c.initializeRepositoryInCM(normalizedURL, targetPath, defaultBranch); err != nil {
-			return fmt.Errorf("failed to initialize repository in CM: %w", err)
+			return fmt.Errorf("%w: %w", ErrFailedToInitializeRepository, err)
 		}
 
 		c.VerbosePrint("Repository cloned and initialized successfully")
@@ -119,7 +119,8 @@ func (c *realCM) normalizeRepositoryURL(repoURL string) (string, error) {
 		return host + "/" + path, nil
 	}
 
-	return "", fmt.Errorf("unsupported repository URL format: %s", repoURL)
+	// If we get here, the URL format is not supported
+	return "", fmt.Errorf("%w: %s", ErrUnsupportedRepositoryURLFormat, repoURL)
 }
 
 // checkRepositoryExists checks if a repository already exists in the status file.

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -42,9 +42,12 @@ func TestManager_GetIDE(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockFS := fs.NewMockFS(ctrl)
-			mockLogger := logger.NewNoopLogger()
-			manager := NewManager(mockFS, mockLogger)
+			mockFS := fsmocks.NewMockFS(ctrl)
+
+			manager := NewManager(NewManagerParams{
+				FS:     mockFS,
+				Logger: logger.NewNoopLogger(),
+			})
 
 			ide, err := manager.GetIDE(tt.ideName)
 
@@ -107,9 +110,12 @@ func TestManager_OpenIDE(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockFS := fs.NewMockFS(ctrl)
-			mockLogger := logger.NewNoopLogger()
-			manager := NewManager(mockFS, mockLogger)
+			mockFS := fsmocks.NewMockFS(ctrl)
+
+			manager := NewManager(NewManagerParams{
+				FS:     mockFS,
+				Logger: logger.NewNoopLogger(),
+			})
 
 			// Mock IDE installation check
 			if tt.expectError && tt.errorType == ErrIDENotInstalled {
@@ -157,7 +163,7 @@ func TestVSCode_IsInstalled(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockFS := fs.NewMockFS(ctrl)
+			mockFS := fsmocks.NewMockFS(ctrl)
 			mockFS.EXPECT().Which(VSCodeCommand).Return(tt.whichReturns, tt.whichError)
 
 			vscode := NewVSCode(mockFS)
@@ -191,7 +197,7 @@ func TestVSCode_OpenRepository(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockFS := fs.NewMockFS(ctrl)
+			mockFS := fsmocks.NewMockFS(ctrl)
 
 			if tt.expectError {
 				mockFS.EXPECT().ExecuteCommand(VSCodeCommand, tt.path).Return(errors.New("command failed"))
@@ -238,7 +244,7 @@ func TestCursor_IsInstalled(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockFS := fs.NewMockFS(ctrl)
+			mockFS := fsmocks.NewMockFS(ctrl)
 			mockFS.EXPECT().Which(CursorCommand).Return(tt.whichReturns, tt.whichError)
 
 			cursor := NewCursor(mockFS)
@@ -272,7 +278,7 @@ func TestCursor_OpenRepository(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			mockFS := fs.NewMockFS(ctrl)
+			mockFS := fsmocks.NewMockFS(ctrl)
 
 			if tt.expectError {
 				mockFS.EXPECT().ExecuteCommand(CursorCommand, tt.path).Return(errors.New("command failed"))
@@ -297,7 +303,7 @@ func TestDummy_IsInstalled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
 	dummy := NewDummy(mockFS)
 
 	// Dummy IDE should always be installed
@@ -309,7 +315,7 @@ func TestDummy_OpenRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
 	dummy := NewDummy(mockFS)
 
 	// Dummy IDE should always succeed

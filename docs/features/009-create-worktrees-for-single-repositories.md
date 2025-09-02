@@ -18,7 +18,7 @@ The Code Manager (cm) needs to provide the core worktree creation functionality 
 7. **Git State Validation**: Ensure nothing prevents worktree creation (clean state)
 8. **Error Recovery**: Handle failures during worktree creation and provide cleanup
 9. **User Feedback**: Provide clear feedback about worktree creation progress and results
-10. **Configuration Integration**: Use existing configuration for base paths and status file location
+10. *Configuration Integration**: Use existing configuration for base paths and status file location
 
 ### Non-Functional Requirements
 1. **Performance**: Worktree creation should complete within reasonable time (< 5 seconds)

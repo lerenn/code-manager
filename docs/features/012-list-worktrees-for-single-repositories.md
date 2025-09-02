@@ -16,7 +16,7 @@ The Code Manager (cm) needs to provide visibility into existing worktrees for th
 5. **Repository Filtering**: Only show worktrees for the current repository
 6. **Error Handling**: Handle various error conditions gracefully
 7. **User Feedback**: Provide clear feedback about the listing operation
-8. **Configuration Integration**: Use existing configuration for status file location
+8. *Configuration Integration**: Use existing configuration for status file location
 
 ### Non-Functional Requirements
 1. **Performance**: Listing should complete quickly (< 100ms)

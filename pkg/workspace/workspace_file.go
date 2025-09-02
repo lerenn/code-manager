@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // DetectWorkspaceFiles checks if the current directory contains workspace files.
 func (w *realWorkspace) DetectWorkspaceFiles() ([]string, error) {
-	w.VerbosePrint("Checking for .code-workspace files...")
+	w.logger.Logf("Checking for .code-workspace files...")
 
 	// Check for workspace files
 	workspaceFiles, err := w.fs.Glob("*.code-workspace")
@@ -21,33 +22,33 @@ func (w *realWorkspace) DetectWorkspaceFiles() ([]string, error) {
 	}
 
 	if len(workspaceFiles) == 0 {
-		w.VerbosePrint("No .code-workspace files found")
+		w.logger.Logf("No .code-workspace files found")
 		return nil, nil
 	}
 
-	w.VerbosePrint("Found %d workspace file(s)", len(workspaceFiles))
+	w.logger.Logf("Found %d workspace file(s)", len(workspaceFiles))
 	return workspaceFiles, nil
 }
 
 // ParseFile parses a workspace configuration file.
-func (w *realWorkspace) ParseFile(filename string) (*Config, error) {
-	w.VerbosePrint("Parsing workspace configuration...")
+func (w *realWorkspace) ParseFile(filename string) (Config, error) {
+	w.logger.Logf("Parsing workspace configuration...")
 
 	// Read workspace file
 	content, err := w.fs.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrWorkspaceFileNotFound, err)
+		return Config{}, fmt.Errorf("%w: %w", ErrWorkspaceFileNotFound, err)
 	}
 
 	// Parse JSON
 	var config Config
 	if err := json.Unmarshal(content, &config); err != nil {
-		return nil, ErrInvalidWorkspaceFile
+		return Config{}, ErrInvalidWorkspaceFile
 	}
 
 	// Validate folders array
-	if config.Folders == nil {
-		return nil, ErrNoRepositoriesFound
+	if config.Folders == nil || len(config.Folders) == 0 {
+		return Config{}, ErrNoRepositoriesFound
 	}
 
 	// Filter out null values and validate structure
@@ -60,7 +61,7 @@ func (w *realWorkspace) ParseFile(filename string) (*Config, error) {
 
 		// Validate path field
 		if folder.Path == "" {
-			return nil, fmt.Errorf("workspace folder must contain path field")
+			return Config{}, fmt.Errorf("workspace folder must contain path field")
 		}
 
 		// Validate name field if present
@@ -72,15 +73,15 @@ func (w *realWorkspace) ParseFile(filename string) (*Config, error) {
 
 	// Check if we have any valid folders after filtering
 	if len(validFolders) == 0 {
-		return nil, ErrNoRepositoriesFound
+		return Config{}, ErrNoRepositoriesFound
 	}
 
 	config.Folders = validFolders
-	return &config, nil
+	return config, nil
 }
 
 // GetName extracts the workspace name from configuration or filename.
-func (w *realWorkspace) GetName(config *Config, filename string) string {
+func (w *realWorkspace) GetName(config Config, filename string) string {
 	// First try to get name from workspace configuration
 	if config.Name != "" {
 		return config.Name
@@ -101,7 +102,7 @@ func (w *realWorkspace) getWorkspacePath() (string, error) {
 
 // createWorktreeWorkspaceFileParams contains parameters for creating a worktree workspace file.
 type createWorktreeWorkspaceFileParams struct {
-	WorkspaceConfig       *Config
+	WorkspaceConfig       Config
 	WorkspaceName         string
 	Branch                string
 	WorktreeWorkspacePath string
@@ -109,7 +110,7 @@ type createWorktreeWorkspaceFileParams struct {
 
 // createWorktreeWorkspaceFile creates the worktree-specific workspace file.
 func (w *realWorkspace) createWorktreeWorkspaceFile(params createWorktreeWorkspaceFileParams) error {
-	w.VerbosePrint("Creating worktree-specific workspace file")
+	w.logger.Logf("Creating worktree-specific workspace file")
 
 	// Ensure workspaces directory exists
 	workspacesDir := filepath.Dir(params.WorktreeWorkspacePath)
@@ -138,9 +139,19 @@ func (w *realWorkspace) createWorktreeWorkspaceFile(params createWorktreeWorkspa
 			return fmt.Errorf("failed to get repository URL for %s: %w", folder.Path, err)
 		}
 
+		// Create worktree instance using provider
+		worktreeInstance := w.worktreeProvider(worktree.NewWorktreeParams{
+			FS:            w.fs,
+			Git:           w.git,
+			StatusManager: w.statusManager,
+			Logger:        w.logger,
+			Prompt:        w.prompt,
+			BasePath:      w.config.BasePath,
+		})
+
 		worktreeConfig.Folders[i] = Folder{
 			Name: folder.Name,
-			Path: w.worktree.BuildPath(repoURL, "origin", params.Branch),
+			Path: worktreeInstance.BuildPath(repoURL, "origin", params.Branch),
 		}
 	}
 
@@ -155,12 +166,12 @@ func (w *realWorkspace) createWorktreeWorkspaceFile(params createWorktreeWorkspa
 		return fmt.Errorf("failed to write worktree workspace file: %w", err)
 	}
 
-	w.VerbosePrint("Worktree workspace file created: %s", params.WorktreeWorkspacePath)
+	w.logger.Logf("Worktree workspace file created: %s", params.WorktreeWorkspacePath)
 	return nil
 }
 
 // ensureWorkspaceInStatus ensures the workspace is added to the status file.
-func (w *realWorkspace) ensureWorkspaceInStatus(workspaceConfig *Config, workspaceDir string) error {
+func (w *realWorkspace) ensureWorkspaceInStatus(workspaceConfig Config, workspaceDir string) error {
 	// Get workspace path
 	workspacePath, err := filepath.Abs(w.OriginalFile)
 	if err != nil {

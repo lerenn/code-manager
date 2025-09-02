@@ -10,7 +10,7 @@ import (
 func createDeleteCmd() *cobra.Command {
 	var force bool
 	deleteCmd := &cobra.Command{
-		Use:   "delete <branch> [--force]",
+		Use:   "delete <branch> [--force/-f]",
 		Short: "Delete a worktree for the specified branch",
 		Long: `Delete a worktree for the specified branch.
 
@@ -28,7 +28,9 @@ Examples:
 			if err != nil {
 				return err
 			}
-			cmManager, err := cm.NewCM(cfg)
+			cmManager, err := cm.NewCM(cm.NewCMParams{
+				Config: cfg,
+			})
 			if err != nil {
 				return err
 			}

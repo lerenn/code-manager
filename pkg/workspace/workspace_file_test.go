@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
+	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/prompt"
-	"github.com/lerenn/code-manager/pkg/status"
+	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/lerenn/code-manager/pkg/worktree"
+	worktreemocks "github.com/lerenn/code-manager/pkg/worktree/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -20,18 +21,18 @@ func TestWorkspace_DetectWorkspaceFiles_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
 	})
 
@@ -47,21 +48,23 @@ func TestWorkspace_DetectWorkspaceFiles_NoFiles(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock workspace file detection - no files found
@@ -76,21 +79,23 @@ func TestWorkspace_DetectWorkspaceFiles_Error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock workspace file detection error
@@ -106,21 +111,23 @@ func TestWorkspace_ParseFile_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock workspace file content
@@ -153,18 +160,18 @@ func TestWorkspace_ParseFile_EmptyFolders(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
 	})
 
@@ -177,29 +184,29 @@ func TestWorkspace_ParseFile_EmptyFolders(t *testing.T) {
 
 	config, err := workspace.ParseFile("test.code-workspace")
 	assert.ErrorIs(t, err, ErrNoRepositoriesFound)
-	assert.Nil(t, config)
+	assert.Equal(t, Config{}, config)
 }
 
 func TestWorkspace_GetName_FromConfig(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
 	})
 
-	config := &Config{
+	config := Config{
 		Name: "Test Workspace",
 		Folders: []Folder{
 			{Path: "./frontend"},
@@ -214,22 +221,22 @@ func TestWorkspace_GetName_FromFilename(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
 	})
 
-	config := &Config{
+	config := Config{
 		Folders: []Folder{
 			{Path: "./frontend"},
 		},

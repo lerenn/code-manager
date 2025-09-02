@@ -14,26 +14,26 @@ import (
 func TestConfig_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		config  *Config
+		config  Config
 		wantErr bool
 	}{
 		{
 			name: "valid config",
-			config: &Config{
+			config: Config{
 				BasePath: filepath.Join(t.TempDir(), "test", "path"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid config without worktrees_dir",
-			config: &Config{
+			config: Config{
 				BasePath: filepath.Join(t.TempDir(), "test", "path"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "empty base path",
-			config: &Config{
+			config: Config{
 				BasePath: "",
 			},
 			wantErr: true,
@@ -88,7 +88,7 @@ func TestRealManager_LoadConfig_FileNotFound(t *testing.T) {
 	manager := NewManager()
 	config, err := manager.LoadConfig("/nonexistent/path/config.yaml")
 
-	assert.Nil(t, config)
+	assert.Equal(t, Config{}, config)
 	assert.ErrorIs(t, err, ErrConfigNotInitialized)
 }
 
@@ -106,7 +106,7 @@ invalid: yaml: structure: here`
 	manager := NewManager()
 	config, err := manager.LoadConfig(configPath)
 
-	assert.Nil(t, config)
+	assert.Equal(t, Config{}, config)
 	assert.ErrorIs(t, err, ErrConfigFileParse)
 }
 

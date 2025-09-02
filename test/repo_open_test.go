@@ -23,9 +23,11 @@ func TestOpenExistingWorktree(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Create a worktree first
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
@@ -71,9 +73,11 @@ func TestOpenNonExistentWorktree(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test opening a non-existent worktree
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
@@ -98,9 +102,11 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Create a worktree first
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)

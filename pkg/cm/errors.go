@@ -36,12 +36,14 @@ var (
 	ErrWorktreeValidationFailed = errors.New("worktree validation failed")
 
 	// Load branch errors.
-	ErrInvalidArgumentFormat   = errors.New("invalid argument format")
-	ErrEmptyRemoteSource       = errors.New("empty remote source")
-	ErrEmptyBranchName         = errors.New("empty branch name")
-	ErrBranchNameContainsColon = errors.New("branch name contains invalid character ':'")
-	ErrOriginRemoteNotFound    = errors.New("origin remote not found or invalid")
-	ErrOriginRemoteInvalidURL  = errors.New("origin remote URL is not a valid Git hosting service URL")
+	ErrInvalidArgumentFormat    = errors.New("invalid argument format")
+	ErrEmptyRemoteSource        = errors.New("empty remote source")
+	ErrEmptyBranchName          = errors.New("empty branch name")
+	ErrBranchNameContainsColon  = errors.New("branch name contains invalid character ':'")
+	ErrArgumentEmpty            = errors.New("argument cannot be empty")
+	ErrOriginRemoteNotFound     = errors.New("origin remote not found or invalid")
+	ErrOriginRemoteInvalidURL   = errors.New("origin remote URL is not a valid Git hosting service URL")
+	ErrFailedToLoadRepositories = errors.New("failed to load repositories from status file")
 
 	// Initialization errors.
 	ErrAlreadyInitialized     = errors.New("CM is already initialized")
@@ -53,5 +55,11 @@ var (
 	ErrWorkspaceModeNotSupported       = errors.New("workspace mode not yet supported for load command")
 
 	// Clone errors.
-	ErrRepositoryExists = errors.New("repository already exists")
+	ErrRepositoryExists               = errors.New("repository already exists")
+	ErrUnsupportedRepositoryURLFormat = errors.New("unsupported repository URL format")
+
+	// Clone operation errors.
+	ErrFailedToDetectDefaultBranch  = errors.New("failed to detect default branch")
+	ErrFailedToCloneRepository      = errors.New("failed to clone repository")
+	ErrFailedToInitializeRepository = errors.New("failed to initialize repository in CM")
 )

@@ -211,4 +211,4 @@ The multiple workspace handling integrates seamlessly with the main detection fl
 2. **Workspace Preview**: Show workspace contents before selection
 3. **Default Selection**: Remember user's previous choice for similar scenarios
 4. **Batch Operations**: Support for processing multiple workspaces
-5. **Configuration**: Allow users to configure selection preferences
+5. *Configuration**: Allow users to configure selection preferences

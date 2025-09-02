@@ -5,12 +5,13 @@ package repository
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/prompt"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
+	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
+	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/lerenn/code-manager/pkg/worktree"
+	worktreemocks "github.com/lerenn/code-manager/pkg/worktree/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -19,21 +20,23 @@ func TestRepository_ListWorktrees_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock repository name extraction
@@ -78,21 +81,23 @@ func TestRepository_ListWorktrees_RepositoryNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock repository name extraction
@@ -110,21 +115,23 @@ func TestRepository_AddWorktreeToStatus_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
@@ -144,21 +151,23 @@ func TestRepository_RemoveWorktreeFromStatus_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	mockWorktree.EXPECT().RemoveFromStatus("github.com/octocat/Hello-World", "test-branch").Return(nil)
@@ -171,21 +180,23 @@ func TestRepository_AutoAddRepositoryToStatus_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	mockFS.EXPECT().Exists("/test/path/.git").Return(true, nil)
@@ -200,26 +211,28 @@ func TestRepository_AutoAddRepositoryToStatus_NoGitDir(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	mockFS.EXPECT().Exists("/test/path/.git").Return(false, nil)
 
 	err := repo.AutoAddRepositoryToStatus("github.com/octocat/Hello-World", "/test/path")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "not a Git repository")
+	assert.ErrorIs(t, err, ErrNotAGitRepository)
 }

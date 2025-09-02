@@ -98,7 +98,7 @@ func (c *realCM) getAndValidateBasePath(flagBasePath string, nonInteractive bool
 
 // updateConfiguration updates and saves the configuration.
 func (c *realCM) updateConfiguration(expandedBasePath string) error {
-	newConfig := &config.Config{
+	newConfig := config.Config{
 		BasePath:   expandedBasePath,
 		StatusFile: c.config.StatusFile, // Keep existing status file path
 	}

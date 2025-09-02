@@ -4,11 +4,13 @@ package workspace
 import (
 	"fmt"
 	"path/filepath"
+
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // ValidateWorkspaceReferences validates that workspace references point to existing worktrees and repositories.
 func (w *realWorkspace) ValidateWorkspaceReferences() error {
-	w.VerbosePrint("Validating workspace references")
+	w.logger.Logf("Validating workspace references")
 
 	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
@@ -33,12 +35,12 @@ func (w *realWorkspace) validateRepositoryPath(folder Folder, resolvedPath strin
 	// Check repository path exists
 	exists, err := w.fs.Exists(resolvedPath)
 	if err != nil {
-		w.VerbosePrint("Error: %v", err)
+		w.logger.Logf("Error: %v", err)
 		return fmt.Errorf("repository not found in workspace: %s - %w", folder.Path, err)
 	}
 
 	if !exists {
-		w.VerbosePrint("Error: repository path does not exist")
+		w.logger.Logf("Error: repository path does not exist")
 		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, folder.Path)
 	}
 
@@ -51,20 +53,20 @@ func (w *realWorkspace) validateRepositoryGit(folder Folder, resolvedPath string
 	gitPath := filepath.Join(resolvedPath, ".git")
 	exists, err := w.fs.Exists(gitPath)
 	if err != nil {
-		w.VerbosePrint("Error: %v", err)
+		w.logger.Logf("Error: %v", err)
 		return fmt.Errorf("%w: %s - %w", ErrRepositoryNotFound, folder.Path, err)
 	}
 
 	if !exists {
-		w.VerbosePrint("Error: .git directory not found in repository")
+		w.logger.Logf("Error: .git directory not found in repository")
 		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, folder.Path)
 	}
 
 	// Execute git status to ensure repository is working
-	w.VerbosePrint("Executing git status in: %s", resolvedPath)
+	w.logger.Logf("Executing git status in: %s", resolvedPath)
 	_, err = w.git.Status(resolvedPath)
 	if err != nil {
-		w.VerbosePrint("Error: %v", err)
+		w.logger.Logf("Error: %v", err)
 		return fmt.Errorf("%w: %s - %w", ErrRepositoryNotFound, folder.Path, err)
 	}
 
@@ -73,7 +75,7 @@ func (w *realWorkspace) validateRepositoryGit(folder Folder, resolvedPath string
 
 // validateWorkspaceRepositoryReference validates a single repository reference in a workspace.
 func (w *realWorkspace) validateWorkspaceRepositoryReference(folder Folder, workspaceDir string) error {
-	w.VerbosePrint("Validating workspace repository reference: %s", folder.Path)
+	w.logger.Logf("Validating workspace repository reference: %s", folder.Path)
 
 	// Resolve relative path from workspace file location
 	resolvedPath := filepath.Join(workspaceDir, folder.Path)
@@ -97,7 +99,7 @@ func (w *realWorkspace) validateWorkspaceRepositoryReference(folder Folder, work
 	repo, err := w.statusManager.GetRepository(repoURL)
 	if err != nil {
 		// Repository not in status, we need to add it
-		w.VerbosePrint("Repository %s not found in status, will add it", repoURL)
+		w.logger.Logf("Repository %s not found in status, will add it", repoURL)
 		if err := w.addRepositoryToStatus(repoURL, resolvedPath); err != nil {
 			return fmt.Errorf("failed to add repository %s to status: %w", repoURL, err)
 		}
@@ -117,7 +119,7 @@ func (w *realWorkspace) validateWorkspaceRepositoryReference(folder Folder, work
 
 // validateWorkspaceForWorktreeCreation validates workspace state before worktree creation.
 func (w *realWorkspace) validateWorkspaceForWorktreeCreation(branch string) error {
-	w.VerbosePrint("Validating workspace for worktree creation")
+	w.logger.Logf("Validating workspace for worktree creation")
 
 	workspaceConfig, err := w.ParseFile(w.OriginalFile)
 	if err != nil {
@@ -128,7 +130,7 @@ func (w *realWorkspace) validateWorkspaceForWorktreeCreation(branch string) erro
 	workspaceDir := filepath.Dir(w.OriginalFile)
 
 	for i, folder := range workspaceConfig.Folders {
-		w.VerbosePrint("Validating repository %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
+		w.logger.Logf("Validating repository %d/%d: %s", i+1, len(workspaceConfig.Folders), folder.Path)
 
 		// Resolve relative path from workspace file location
 		resolvedPath := filepath.Join(workspaceDir, folder.Path)
@@ -152,11 +154,19 @@ func (w *realWorkspace) validateWorkspaceForWorktreeCreation(branch string) erro
 		}
 
 		if !exists {
-			w.VerbosePrint("Branch %s does not exist in %s, will create from current branch", branch, folder.Path)
+			w.logger.Logf("Branch %s does not exist in %s, will create from current branch", branch, folder.Path)
 		}
 
 		// Validate directory creation permissions using worktree package
-		worktreePath := w.worktree.BuildPath(repoURL, "origin", branch)
+		worktreeInstance := w.worktreeProvider(worktree.NewWorktreeParams{
+			FS:            w.fs,
+			Git:           w.git,
+			StatusManager: w.statusManager,
+			Logger:        w.logger,
+			Prompt:        w.prompt,
+			BasePath:      w.config.BasePath,
+		})
+		worktreePath := worktreeInstance.BuildPath(repoURL, "origin", branch)
 
 		// Check if worktree directory already exists
 		exists, err = w.fs.Exists(worktreePath)

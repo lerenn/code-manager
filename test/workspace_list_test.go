@@ -28,7 +28,7 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
-	testConfig := &config.Config{
+	testConfig := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
@@ -72,11 +72,13 @@ func TestListWorktrees_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.Chdir(workspaceDir))
 
 	// Create CM instance
-	cfg := &config.Config{
+	cfg := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance, err := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: cfg,
+	})
 
 	require.NoError(t, err)
 	// Initially, no worktrees should exist
@@ -133,7 +135,7 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
-	testConfig := &config.Config{
+	testConfig := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
@@ -173,11 +175,13 @@ func TestListWorktrees_WorkspaceMode_Empty(t *testing.T) {
 	require.NoError(t, os.Chdir(workspaceDir))
 
 	// Create CM instance
-	cfg := &config.Config{
+	cfg := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance, err := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: cfg,
+	})
 
 	require.NoError(t, err)
 	// Initially, no worktrees should exist

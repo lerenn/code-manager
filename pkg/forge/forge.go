@@ -7,7 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 )
 
-//go:generate mockgen -source=forge.go -destination=mockforge.gen.go -package=forge
+//go:generate mockgen -source=forge.go -destination=mocks/forge.gen.go -package=mocks
 
 // Forge interface defines the methods that all forge implementations must provide.
 type Forge interface {

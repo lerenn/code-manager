@@ -21,7 +21,7 @@ func TestCheckInitialization(t *testing.T) {
 
 	// Should return configuration error when config file doesn't exist
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to load configuration")
+	assert.ErrorIs(t, err, ErrFailedToLoadConfig)
 }
 
 func TestLoadConfig(t *testing.T) {

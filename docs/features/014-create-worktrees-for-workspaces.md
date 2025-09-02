@@ -18,7 +18,7 @@ The Code Manager (cm) currently supports worktree creation for single repositori
 7. **Git State Validation**: Ensure nothing prevents worktree creation in any repository (clean state)
 8. **Error Recovery**: Handle failures during worktree creation and provide cleanup for all affected repositories
 9. **User Feedback**: Provide clear feedback about worktree creation progress and results for each repository
-10. **Configuration Integration**: Use existing configuration for base paths and status file location
+10. *Configuration Integration**: Use existing configuration for base paths and status file location
 11. **Atomic Operations**: Ensure workspace-wide operations are atomic where possible
 12. **Complete Rollback Handling**: Stop on first failure and rollback all successful worktree creations
 

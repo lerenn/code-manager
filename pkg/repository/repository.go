@@ -21,7 +21,10 @@ import (
 // DefaultRemote is the default remote name used for Git operations.
 const DefaultRemote = "origin"
 
-//go:generate mockgen -source=repository.go -destination=mockrepository.gen.go -package=repository
+//go:generate mockgen -source=repository.go -destination=mocks/repository.gen.go -package=mocks
+
+// WorktreeProvider is a function type that creates worktree instances.
+type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
 
 // Repository interface provides repository management capabilities.
 type Repository interface {
@@ -91,42 +94,47 @@ type Repository interface {
 
 // realRepository represents a single Git repository and provides methods for repository operations.
 type realRepository struct {
-	fs            fs.FS
-	git           git.Git
-	config        *config.Config
-	statusManager status.Manager
-	logger        logger.Logger
-	prompt        prompt.Prompter
-	worktree      worktree.Worktree
+	fs               fs.FS
+	git              git.Git
+	config           config.Config
+	statusManager    status.Manager
+	logger           logger.Logger
+	prompt           prompt.Prompter
+	worktreeProvider WorktreeProvider
 }
 
 // NewRepositoryParams contains parameters for creating a new Repository instance.
 type NewRepositoryParams struct {
-	FS            fs.FS
-	Git           git.Git
-	Config        *config.Config
-	StatusManager status.Manager
-	Logger        logger.Logger
-	Prompt        prompt.Prompter
-	Worktree      worktree.Worktree
+	FS               fs.FS
+	Git              git.Git
+	Config           config.Config
+	StatusManager    status.Manager
+	Logger           logger.Logger
+	Prompt           prompt.Prompter
+	WorktreeProvider WorktreeProvider
 }
 
 // NewRepository creates a new Repository instance.
 func NewRepository(params NewRepositoryParams) Repository {
+	l := params.Logger
+	if l == nil {
+		l = logger.NewNoopLogger()
+	}
+
 	return &realRepository{
-		fs:            params.FS,
-		git:           params.Git,
-		config:        params.Config,
-		statusManager: params.StatusManager,
-		logger:        params.Logger,
-		prompt:        params.Prompt,
-		worktree:      params.Worktree,
+		fs:               params.FS,
+		git:              params.Git,
+		config:           params.Config,
+		statusManager:    params.StatusManager,
+		logger:           l,
+		prompt:           params.Prompt,
+		worktreeProvider: params.WorktreeProvider,
 	}
 }
 
 // Validate validates that the current directory is a working Git repository.
 func (r *realRepository) Validate() error {
-	r.VerbosePrint("Validating repository: %s", ".")
+	r.logger.Logf("Validating repository: %s", ".")
 
 	// Check if we're in a Git repository
 	exists, err := r.IsGitRepository()
@@ -162,7 +170,7 @@ type LoadWorktreeOpts struct {
 
 // CreateWorktree creates a worktree for the repository with the specified branch.
 func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error) {
-	r.VerbosePrint("Creating worktree for single repository with branch: %s", branch)
+	r.logger.Logf("Creating worktree for single repository with branch: %s", branch)
 
 	// Validate repository
 	validationResult, err := r.ValidateRepository(ValidationParams{Branch: branch})
@@ -170,12 +178,22 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 		return "", err
 	}
 
+	// Create worktree instance using provider
+	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
+		FS:            r.fs,
+		Git:           r.git,
+		StatusManager: r.statusManager,
+		Logger:        r.logger,
+		Prompt:        r.prompt,
+		BasePath:      r.config.BasePath,
+	})
+
 	// Build worktree path
-	worktreePath := r.worktree.BuildPath(validationResult.RepoURL, "origin", branch)
-	r.VerbosePrint("Worktree path: %s", worktreePath)
+	worktreePath := worktreeInstance.BuildPath(validationResult.RepoURL, "origin", branch)
+	r.logger.Logf("Worktree path: %s", worktreePath)
 
 	// Validate creation
-	if err := r.worktree.ValidateCreation(worktree.ValidateCreationParams{
+	if err := worktreeInstance.ValidateCreation(worktree.ValidateCreationParams{
 		RepoURL:      validationResult.RepoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
@@ -197,7 +215,7 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 	}
 
 	// Create the worktree
-	if err := r.worktree.Create(worktree.CreateParams{
+	if err := worktreeInstance.Create(worktree.CreateParams{
 		RepoURL:      validationResult.RepoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
@@ -210,8 +228,27 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 	}
 
 	// Add to status file with auto-repository handling
+	if err := r.addWorktreeToStatusAndHandleCleanup(
+		worktreeInstance, validationResult.RepoURL, branch, worktreePath, issueInfo,
+	); err != nil {
+		return "", err
+	}
+
+	r.logger.Logf("Successfully created worktree for branch %s at %s", branch, worktreePath)
+
+	return worktreePath, nil
+}
+
+// addWorktreeToStatusAndHandleCleanup adds the worktree to status and handles cleanup on failure.
+func (r *realRepository) addWorktreeToStatusAndHandleCleanup(
+	worktreeInstance worktree.Worktree,
+	repoURL string,
+	branch string,
+	worktreePath string,
+	issueInfo *issue.Info,
+) error {
 	if err := r.AddWorktreeToStatus(StatusParams{
-		RepoURL:       validationResult.RepoURL,
+		RepoURL:       repoURL,
 		Branch:        branch,
 		WorktreePath:  worktreePath,
 		WorkspacePath: "",
@@ -219,20 +256,17 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 		IssueInfo:     issueInfo,
 	}); err != nil {
 		// Clean up worktree on status failure
-		if cleanupErr := r.worktree.CleanupDirectory(worktreePath); cleanupErr != nil {
+		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
 			r.logger.Logf("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
 		}
-		return "", err
+		return err
 	}
-
-	r.VerbosePrint("Successfully created worktree for branch %s at %s", branch, worktreePath)
-
-	return worktreePath, nil
+	return nil
 }
 
 // ListWorktrees lists all worktrees for the current repository.
 func (r *realRepository) ListWorktrees() ([]status.WorktreeInfo, error) {
-	r.VerbosePrint("Listing worktrees for single repository mode")
+	r.logger.Logf("Listing worktrees for single repository mode")
 
 	// Note: Repository validation is already done in mode detection, so we skip it here
 	// to avoid duplicate validation calls
@@ -243,7 +277,7 @@ func (r *realRepository) ListWorktrees() ([]status.WorktreeInfo, error) {
 		return nil, fmt.Errorf("failed to get repository name: %w", err)
 	}
 
-	r.VerbosePrint("Repository name: %s", repoName)
+	r.logger.Logf("Repository name: %s", repoName)
 
 	// 2. Get repository from status file
 	repo, err := r.statusManager.GetRepository(repoName)
@@ -262,14 +296,14 @@ func (r *realRepository) ListWorktrees() ([]status.WorktreeInfo, error) {
 		worktrees = append(worktrees, worktree)
 	}
 
-	r.VerbosePrint("Found %d worktrees for current repository", len(worktrees))
+	r.logger.Logf("Found %d worktrees for current repository", len(worktrees))
 
 	return worktrees, nil
 }
 
 // IsGitRepository checks if the current directory is a Git repository (including worktrees).
 func (r *realRepository) IsGitRepository() (bool, error) {
-	r.VerbosePrint("Checking if current directory is a Git repository...")
+	r.logger.Logf("Checking if current directory is a Git repository...")
 
 	// Check if .git exists
 	exists, err := r.fs.Exists(".git")
@@ -278,7 +312,7 @@ func (r *realRepository) IsGitRepository() (bool, error) {
 	}
 
 	if !exists {
-		r.VerbosePrint("No .git found")
+		r.logger.Logf("No .git found")
 		return false, nil
 	}
 
@@ -289,33 +323,33 @@ func (r *realRepository) IsGitRepository() (bool, error) {
 	}
 
 	if isDir {
-		r.VerbosePrint("Git repository detected (.git directory)")
+		r.logger.Logf("Git repository detected (.git directory)")
 		return true, nil
 	}
 
 	// If .git is not a directory, it must be a file (worktree)
 	// Validate that it's actually a Git worktree file by checking for 'gitdir:' prefix
-	r.VerbosePrint("Checking if .git file is a valid worktree file...")
+	r.logger.Logf("Checking if .git file is a valid worktree file...")
 
 	content, err := r.fs.ReadFile(".git")
 	if err != nil {
-		r.VerbosePrint("Failed to read .git file: %v", err)
+		r.logger.Logf("Failed to read .git file: %v", err)
 		return false, nil
 	}
 
 	contentStr := strings.TrimSpace(string(content))
 	if !strings.HasPrefix(contentStr, "gitdir:") {
-		r.VerbosePrint(".git file exists but is not a valid worktree file (missing 'gitdir:' prefix)")
+		r.logger.Logf(".git file exists but is not a valid worktree file (missing 'gitdir:' prefix)")
 		return false, nil
 	}
 
-	r.VerbosePrint("Git worktree detected (.git file)")
+	r.logger.Logf("Git worktree detected (.git file)")
 	return true, nil
 }
 
 // IsWorkspaceFile checks if the current directory contains workspace files.
 func (r *realRepository) IsWorkspaceFile() (bool, error) {
-	r.VerbosePrint("Checking for workspace files...")
+	r.logger.Logf("Checking for workspace files...")
 
 	// Check for .code-workspace files
 	workspaceFiles, err := r.fs.Glob("*.code-workspace")
@@ -324,17 +358,17 @@ func (r *realRepository) IsWorkspaceFile() (bool, error) {
 	}
 
 	if len(workspaceFiles) > 0 {
-		r.VerbosePrint("Workspace files found: %v", workspaceFiles)
+		r.logger.Logf("Workspace files found: %v", workspaceFiles)
 		return true, nil
 	}
 
-	r.VerbosePrint("No workspace files found")
+	r.logger.Logf("No workspace files found")
 	return false, nil
 }
 
 // DeleteWorktree deletes a worktree for the repository with the specified branch.
 func (r *realRepository) DeleteWorktree(branch string, force bool) error {
-	r.VerbosePrint("Deleting worktree for single repository with branch: %s", branch)
+	r.logger.Logf("Deleting worktree for single repository with branch: %s", branch)
 
 	// Validate repository
 	validationResult, err := r.ValidateRepository(ValidationParams{})
@@ -353,7 +387,7 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 		return fmt.Errorf("failed to get worktree path: %w", err)
 	}
 
-	r.VerbosePrint("Worktree path: %s", worktreePath)
+	r.logger.Logf("Worktree path: %s", worktreePath)
 
 	// Get current directory
 	currentDir, err := filepath.Abs(".")
@@ -361,8 +395,18 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
 
+	// Create worktree instance using provider
+	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
+		FS:            r.fs,
+		Git:           r.git,
+		StatusManager: r.statusManager,
+		Logger:        r.logger,
+		Prompt:        r.prompt,
+		BasePath:      r.config.BasePath,
+	})
+
 	// Delete the worktree
-	if err := r.worktree.Delete(worktree.DeleteParams{
+	if err := worktreeInstance.Delete(worktree.DeleteParams{
 		RepoURL:      validationResult.RepoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
@@ -372,14 +416,14 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 		return err
 	}
 
-	r.VerbosePrint("Successfully deleted worktree for branch %s", branch)
+	r.logger.Logf("Successfully deleted worktree for branch %s", branch)
 
 	return nil
 }
 
 // LoadWorktree loads a branch from a remote source and creates a worktree.
 func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, error) {
-	r.VerbosePrint("Loading branch: remote=%s, branch=%s", remoteSource, branchName)
+	r.logger.Logf("Loading branch: remote=%s, branch=%s", remoteSource, branchName)
 
 	// 1. Validate current directory is a Git repository
 	gitExists, err := r.IsGitRepository()
@@ -406,13 +450,13 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 	}
 
 	// 5. Fetch from the remote
-	r.VerbosePrint("Fetching from remote '%s'", remoteSource)
+	r.logger.Logf("Fetching from remote '%s'", remoteSource)
 	if err := r.git.FetchRemote(".", remoteSource); err != nil {
 		return "", fmt.Errorf("%w: %w", git.ErrFetchFailed, err)
 	}
 
 	// 6. Validate branch exists on remote
-	r.VerbosePrint("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource)
+	r.logger.Logf("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource)
 	exists, err := r.git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
 		RepoPath:   ".",
 		RemoteName: remoteSource,
@@ -431,7 +475,7 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 	}
 
 	// 7. Create worktree for the branch (using existing worktree creation logic directly)
-	r.VerbosePrint("Creating worktree for branch '%s'", branchName)
+	r.logger.Logf("Creating worktree for branch '%s'", branchName)
 	worktreePath, err := r.CreateWorktree(branchName)
 	return worktreePath, err
 }
@@ -460,7 +504,7 @@ func (r *realRepository) ValidateGitConfiguration(workDir string) error {
 	// Check if Git is available and functional by running a simple command
 	_, err := r.git.GetCurrentBranch(workDir)
 	if err != nil {
-		return fmt.Errorf("Git configuration validation failed: %w", err)
+		return fmt.Errorf("git configuration validation failed: %w", err)
 	}
 	return nil
 }
@@ -479,9 +523,4 @@ func (r *realRepository) ValidateGitStatus() error {
 	}
 
 	return nil
-}
-
-// VerbosePrint logs a formatted message only in verbose mode.
-func (r *realRepository) VerbosePrint(msg string, args ...interface{}) {
-	r.logger.Logf(fmt.Sprintf(msg, args...))
 }

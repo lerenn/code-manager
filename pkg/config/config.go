@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:generate mockgen -source=config.go -destination=mockconfig.gen.go -package=config
+//go:generate mockgen -source=config.go -destination=mocks/config.gen.go -package=mocks
 
 // Config represents the application configuration.
 type Config struct {
@@ -21,13 +21,13 @@ type Config struct {
 
 // Manager interface provides configuration management functionality.
 type Manager interface {
-	LoadConfig(configPath string) (*Config, error)
-	LoadConfigStrict(configPath string) (*Config, error)
-	DefaultConfig() *Config
-	SaveConfig(config *Config, configPath string) error
+	LoadConfig(configPath string) (Config, error)
+	LoadConfigStrict(configPath string) (Config, error)
+	DefaultConfig() Config
+	SaveConfig(config Config, configPath string) error
 	CreateConfigDirectory(configPath string) error
 	ValidateBasePath(basePath string) error
-	EnsureConfigFile(configPath string) (*Config, bool, error)
+	EnsureConfigFile(configPath string) (Config, bool, error)
 }
 
 type realManager struct {
@@ -40,44 +40,44 @@ func NewManager() Manager {
 }
 
 // LoadConfig loads configuration from the specified file path.
-func (c *realManager) LoadConfig(configPath string) (*Config, error) {
+func (c *realManager) LoadConfig(configPath string) (Config, error) {
 	// Check if config file exists
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, fmt.Errorf("%w: %s", ErrConfigNotInitialized, configPath)
+		return Config{}, fmt.Errorf("%w: %s", ErrConfigNotInitialized, configPath)
 	}
 
 	// Read config file
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return Config{}, fmt.Errorf("failed to read config file: %w", err)
 	}
 
 	// Parse YAML
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrConfigFileParse, err)
+		return Config{}, fmt.Errorf("%w: %w", ErrConfigFileParse, err)
 	}
 
 	// Expand tildes in configuration paths
 	if err := config.expandTildes(); err != nil {
-		return nil, fmt.Errorf("failed to expand tildes in configuration: %w", err)
+		return Config{}, fmt.Errorf("failed to expand tildes in configuration: %w", err)
 	}
 
 	// Validate configuration
 	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid configuration: %w", err)
+		return Config{}, fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	return &config, nil
+	return config, nil
 }
 
 // LoadConfigStrict loads configuration and returns an error if the file is missing.
-func (c *realManager) LoadConfigStrict(configPath string) (*Config, error) {
+func (c *realManager) LoadConfigStrict(configPath string) (Config, error) {
 	return c.LoadConfig(configPath)
 }
 
 // DefaultConfig returns the default configuration.
-func (c *realManager) DefaultConfig() *Config {
+func (c *realManager) DefaultConfig() Config {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		// Fallback to current directory if home directory cannot be determined
@@ -87,14 +87,14 @@ func (c *realManager) DefaultConfig() *Config {
 	basePath := filepath.Join(homeDir, "Code")
 	statusFile := filepath.Join(homeDir, ".cm", "status.yaml")
 
-	return &Config{
+	return Config{
 		BasePath:   basePath,
 		StatusFile: statusFile,
 	}
 }
 
 // SaveConfig saves configuration to the specified file path.
-func (c *realManager) SaveConfig(config *Config, configPath string) error {
+func (c *realManager) SaveConfig(config Config, configPath string) error {
 	// Create config directory if it doesn't exist
 	if err := c.CreateConfigDirectory(configPath); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
@@ -170,7 +170,7 @@ func (c *realManager) validateDirectoryWritable(path string) error {
 }
 
 // validateDirectoryAccessibility checks if a directory path is accessible and can be created.
-func (c *Config) validateDirectoryAccessibility(path, pathName string) error {
+func (c Config) validateDirectoryAccessibility(path, pathName string) error {
 	dir := filepath.Dir(path)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		// Try to create the parent directory to validate permissions
@@ -189,7 +189,7 @@ func (c *Config) validateDirectoryAccessibility(path, pathName string) error {
 }
 
 // Validate validates the configuration values.
-func (c *Config) Validate() error {
+func (c Config) Validate() error {
 	if c.BasePath == "" {
 		return ErrBasePathEmpty
 	}
@@ -225,7 +225,7 @@ func (c *Config) expandTildes() error {
 }
 
 // LoadConfigWithFallback loads configuration from file with fallback to default.
-func LoadConfigWithFallback(configPath string) (*Config, error) {
+func LoadConfigWithFallback(configPath string) (Config, error) {
 	manager := NewManager()
 
 	// Try to load from file first
@@ -239,28 +239,28 @@ func LoadConfigWithFallback(configPath string) (*Config, error) {
 
 // EnsureConfigFile ensures the config file exists at path, creating it from embedded defaults if missing.
 // Returns the loaded config and a boolean indicating whether the file already existed.
-func (c *realManager) EnsureConfigFile(configPath string) (*Config, bool, error) {
+func (c *realManager) EnsureConfigFile(configPath string) (Config, bool, error) {
 	if _, err := os.Stat(configPath); err == nil {
 		cfg, err := c.LoadConfig(configPath)
 		if err != nil {
-			return nil, true, err
+			return Config{}, true, err
 		}
 		return cfg, true, nil
 	} else if !os.IsNotExist(err) {
-		return nil, false, fmt.Errorf("failed to stat config file: %w", err)
+		return Config{}, false, fmt.Errorf("failed to stat config file: %w", err)
 	}
 
 	if err := c.CreateConfigDirectory(configPath); err != nil {
-		return nil, false, fmt.Errorf("failed to create config directory: %w", err)
+		return Config{}, false, fmt.Errorf("failed to create config directory: %w", err)
 	}
 
 	if err := os.WriteFile(configPath, configs.DefaultConfigYAML, 0644); err != nil {
-		return nil, false, fmt.Errorf("failed to write default config: %w", err)
+		return Config{}, false, fmt.Errorf("failed to write default config: %w", err)
 	}
 
 	cfg, err := c.LoadConfig(configPath)
 	if err != nil {
-		return nil, false, err
+		return Config{}, false, err
 	}
 	return cfg, false, nil
 }

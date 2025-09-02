@@ -6,8 +6,6 @@ import (
 	"sync"
 )
 
-//go:generate mockgen -source=logger.go -destination=mocklogger.gen.go -package=logger
-
 // Logger interface provides logging capabilities.
 type Logger interface {
 	// Logf logs a formatted message.

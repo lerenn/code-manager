@@ -5,12 +5,13 @@ package repository
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/prompt"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
+	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
+	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/lerenn/code-manager/pkg/worktree"
+	worktreemocks "github.com/lerenn/code-manager/pkg/worktree/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -19,21 +20,22 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
 		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock repository validation
@@ -59,21 +61,23 @@ func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock workspace files found
@@ -88,21 +92,23 @@ func TestRepository_IsWorkspaceFile_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock no workspace files found
@@ -117,19 +123,19 @@ func TestRepository_IsGitRepository_Directory(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	// Mock .git exists and is a directory (regular repository)
@@ -145,19 +151,19 @@ func TestRepository_IsGitRepository_File(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	// Mock .git exists but is not a directory (worktree case)
@@ -175,19 +181,19 @@ func TestRepository_IsGitRepository_InvalidFile(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	// Mock .git exists but is not a directory
@@ -205,19 +211,19 @@ func TestRepository_IsGitRepository_NotExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	// Mock .git does not exist
@@ -232,21 +238,23 @@ func TestRepository_DeleteWorktree_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock repository validation
@@ -271,21 +279,23 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+
+		Prompt: mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 
 	// Mock Git repository validation (called by LoadWorktree and CreateWorktree)

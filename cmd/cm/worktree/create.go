@@ -73,7 +73,9 @@ func createCreateCmdRunE(ideName *string, force *bool, fromIssue *string) func(*
 		if err != nil {
 			return err
 		}
-		cmManager, err := cm.NewCM(cfg)
+		cmManager, err := cm.NewCM(cm.NewCMParams{
+			Config: cfg,
+		})
 		if err != nil {
 			return err
 		}

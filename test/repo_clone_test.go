@@ -10,6 +10,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,9 +19,11 @@ import (
 func cloneRepository(t *testing.T, setup *TestSetup, repoURL string, recursive bool) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
@@ -154,7 +157,7 @@ func TestCloneRepositoryAlreadyExists(t *testing.T) {
 	// Try to clone the same repository again
 	err = cloneRepository(t, setup, repoURL, true)
 	require.Error(t, err, "Second clone should fail")
-	assert.Contains(t, err.Error(), "repository already exists", "Error should indicate repository already exists")
+	assert.ErrorIs(t, err, status.ErrRepositoryAlreadyExists, "Error should indicate repository already exists")
 
 	// Verify only one repository entry exists
 	status := readStatusFile(t, setup.StatusPath)
@@ -169,7 +172,7 @@ func TestCloneRepositoryInvalidURL(t *testing.T) {
 	// Try to clone with an invalid URL
 	err := cloneRepository(t, setup, "not-a-valid-url", true)
 	require.Error(t, err, "Clone should fail with invalid URL")
-	assert.Contains(t, err.Error(), "unsupported repository URL format", "Error should indicate invalid URL format")
+	assert.ErrorIs(t, err, cm.ErrUnsupportedRepositoryURLFormat, "Error should indicate invalid URL format")
 }
 
 // TestCloneRepositoryEmptyURL tests cloning with an empty URL
@@ -180,7 +183,7 @@ func TestCloneRepositoryEmptyURL(t *testing.T) {
 	// Try to clone with an empty URL
 	err := cloneRepository(t, setup, "", true)
 	require.Error(t, err, "Clone should fail with empty URL")
-	assert.Contains(t, err.Error(), "repository URL cannot be empty", "Error should indicate empty URL")
+	assert.ErrorIs(t, err, cm.ErrRepositoryURLEmpty, "Error should indicate empty URL")
 }
 
 // TestCloneRepositoryHTTPSURL tests cloning with HTTPS URL format

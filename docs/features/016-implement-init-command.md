@@ -12,7 +12,7 @@ Currently, CM uses hardcoded default paths for configuration and data storage. U
 1. **First-Time Detection**: Detect when CM is being used for the first time (status.yaml has `initialized: false`)
 2. **Interactive Configuration**: Provide interactive prompts for base path selection
 3. **Non-Interactive Mode**: Support `--default` flag for automatic setup with default values
-4. **Configuration Creation**: Create config.yaml with user-selected paths
+4. *Configuration Creation**: Create config.yaml with user-selected paths
 5. **Directory Structure**: Create necessary directories (base_path, worktrees_dir)
 6. **Status Initialization**: Initialize status.yaml with `initialized: true`
 7. **Path Validation**: Validate user-provided paths for accessibility and permissions
@@ -41,7 +41,7 @@ type Config struct {
 }
 
 // New method for computing worktrees directory
-func (c *Config) GetWorktreesDir() string {
+func (c Config) GetWorktreesDir() string {
     return filepath.Join(c.BasePath, "worktrees")
 }
 ```
@@ -120,7 +120,7 @@ type InitOpts struct {
 
 #### Config Package Extension
 **New Interface Methods**:
-- `SaveConfig(config *Config, configPath string) error`: Save configuration to file
+- `SaveConfig(config Config, configPath string) error`: Save configuration to file
 - `CreateConfigDirectory(configPath string) error`: Create config directory structure
 - `ValidateBasePath(basePath string) error`: Validate base path accessibility
 - `GetWorktreesDir() string`: Compute worktrees directory path
@@ -286,7 +286,7 @@ pkg/
 #### Unit Tests (Business Logic)
 - **CM Package**: Mock Status, Config, and FS adapters for init operations
 - **Status Package**: Mock FS adapter for status file operations
-- **Config Package**: Mock FS adapter for config file operations
+- *Config Package**: Mock FS adapter for config file operations
 - **Mock Regeneration**: Update interface definitions and regenerate mocks in same implementation phase
 
 #### Integration Tests (Adapters)
@@ -301,7 +301,7 @@ pkg/
 5. **Re-Initialization Prevention**: Test prevention of duplicate initialization
 6. **Path Validation**: Test invalid path handling
 7. **Permission Errors**: Test insufficient permissions handling
-8. **Configuration Update**: Test config file update with new base_path
+8. *Configuration Update**: Test config file update with new base_path
 9. **Status Initialization**: Test status file creation and flag setting
 10. **Directory Creation**: Test directory structure creation
 11. **Error Recovery**: Test various error conditions and recovery
@@ -315,7 +315,7 @@ pkg/
 - **Invalid Path**: Provide helpful suggestions for valid paths
 - **Permission Denied**: Explain permission requirements and solutions
 - **File System Errors**: Handle disk space, corruption, and access issues
-- **Configuration Errors**: Validate and handle malformed configuration
+- *Configuration Errors**: Validate and handle malformed configuration
 - **Reset Errors**: Handle errors during configuration reset
 - **Path Expansion Errors**: Return specific error type with helpful message suggesting absolute paths if home directory not found
 
@@ -354,7 +354,7 @@ pkg/
 1. **First-Time Setup**: New users can successfully initialize CM with interactive prompts
 2. **Default Values**: Users can initialize with default values using `--default` flag
 3. **Reset Functionality**: Users can reset configuration with `--reset` flag and confirmation
-4. **Configuration Creation**: Config files are created with correct paths and permissions
+4. *Configuration Creation**: Config files are created with correct paths and permissions
 5. **Directory Structure**: Base path directory is created with proper permissions (worktrees created when needed)
 6. **Status Initialization**: Status file is created with `initialized: true`
 7. **Path Validation**: Invalid paths are detected and rejected with helpful messages
@@ -386,7 +386,7 @@ pkg/
 2. **Interactive Prompts**: Should we provide suggestions for common code directory locations (e.g., `~/Code`, `~/Projects`, `~/Development`)?
    - **Answer**: Provide examples in prompt, user types their choice or uses default if empty
 
-3. **Configuration Location**: Should the config file always be at `~/.cm/config.yaml` or should users be able to choose a different location?
+3. *Configuration Location**: Should the config file always be at `~/.cm/config.yaml` or should users be able to choose a different location?
    - **Answer**: Fixed at `~/.cm/config.yaml`
 
 4. **Worktrees Directory**: You mentioned worktrees_dir should be fixed to `$base_path/worktrees`. Should this be completely non-configurable or should we allow users to override it if needed?
@@ -410,7 +410,7 @@ pkg/
 10. **Path Expansion**: Should `~` expansion be integrated into existing FS methods?
     - **Answer**: Yes, create helper function and integrate into existing methods
 
-11. **Config File Handling**: Should init update existing config files or only create new ones?
+11. *Config File Handling**: Should init update existing config files or only create new ones?
     - **Answer**: Update existing config files with new base_path
 
 12. **Directory Creation**: Should init create the base_path directory if it doesn't exist?

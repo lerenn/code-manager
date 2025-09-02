@@ -24,9 +24,11 @@ type deleteWorktreeParams struct {
 func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   params.Setup.CmPath,
-		StatusFile: params.Setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   params.Setup.CmPath,
+			StatusFile: params.Setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
@@ -124,9 +126,11 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Delete the worktree with verbose mode
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
@@ -200,9 +204,11 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Delete worktree using CM instance with force flag and verbose mode
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)

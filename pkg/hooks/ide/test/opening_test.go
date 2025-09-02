@@ -1,22 +1,26 @@
-package ide
+//go:build unit
+
+package test
 
 import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/hooks"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
+	"github.com/lerenn/code-manager/pkg/hooks/ide/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
 // TestOpeningHook_PostExecute_Success tests successful IDE opening validation.
 func TestOpeningHook_PostExecute_Success(t *testing.T) {
-	hook := NewOpeningHook()
+	hook := ide.NewOpeningHook()
 
 	// Create a mock IDE manager
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockIDEManager := NewMockManagerInterface(ctrl)
+	mockIDEManager := mocks.NewMockManagerInterface(ctrl)
 	hook.IDEManager = mockIDEManager
 
 	// Test successful IDE opening
@@ -37,7 +41,7 @@ func TestOpeningHook_PostExecute_Success(t *testing.T) {
 }
 
 func TestOpeningHook_PostExecute_MissingWorktreePath(t *testing.T) {
-	hook := NewOpeningHook()
+	hook := ide.NewOpeningHook()
 
 	// Test missing worktreePath parameter
 	ctx := &hooks.HookContext{
@@ -51,11 +55,11 @@ func TestOpeningHook_PostExecute_MissingWorktreePath(t *testing.T) {
 
 	err := hook.PostExecute(ctx)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "worktreePath parameter is required")
+	assert.ErrorIs(t, err, ide.ErrWorktreePathRequired)
 }
 
 func TestOpeningHook_PostExecute_EmptyWorktreePath(t *testing.T) {
-	hook := NewOpeningHook()
+	hook := ide.NewOpeningHook()
 
 	// Test empty worktreePath parameter
 	ctx := &hooks.HookContext{
@@ -69,7 +73,7 @@ func TestOpeningHook_PostExecute_EmptyWorktreePath(t *testing.T) {
 
 	err := hook.PostExecute(ctx)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "worktreePath must be a non-empty string")
+	assert.ErrorIs(t, err, ide.ErrWorktreePathEmpty)
 }
 
 // simpleCM is a minimal interface implementation for testing.

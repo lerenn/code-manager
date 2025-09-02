@@ -79,9 +79,9 @@ func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) (str
 
 // parseBranchArg parses the remote:branch argument format.
 func (c *realCM) parseBranchArg(arg string) (remoteSource, branchName string, err error) {
-	// Check for edge cases
+	// Validate branch argument
 	if arg == "" {
-		return "", "", fmt.Errorf("argument cannot be empty")
+		return "", "", ErrArgumentEmpty
 	}
 
 	// Split on first colon

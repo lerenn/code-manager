@@ -7,8 +7,8 @@ import (
 )
 
 // createTestConfig creates a test configuration.
-func createTestConfig() *config.Config {
-	return &config.Config{
+func createTestConfig() config.Config {
+	return config.Config{
 		BasePath:   "/test/base/path",
 		StatusFile: "/test/status.yaml",
 	}

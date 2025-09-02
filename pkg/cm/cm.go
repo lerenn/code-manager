@@ -7,7 +7,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/hooks"
-	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/repository"
@@ -16,10 +15,11 @@ import (
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
-// Function providers for dependency injection
-type RepositoryProvider func(path string) repository.Repository
-type WorkspaceProvider func(name string) workspace.Workspace
-type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
+// RepositoryProvider is a function type that creates repository instances.
+type RepositoryProvider func(params repository.NewRepositoryParams) repository.Repository
+
+// WorkspaceProvider is a function type that creates workspace instances.
+type WorkspaceProvider func(params workspace.NewWorkspaceParams) workspace.Workspace
 
 // CM interface provides Git repository detection functionality.
 type CM interface {
@@ -48,16 +48,21 @@ type CM interface {
 
 // NewCMParams contains parameters for creating a new CM instance.
 type NewCMParams struct {
-	Repository  repository.Repository
-	Workspace   workspace.Workspace
-	Config      *config.Config
-	HookManager hooks.HookManagerInterface // Optional: for testing with mocked hooks
+	RepositoryProvider RepositoryProvider
+	WorkspaceProvider  WorkspaceProvider
+	Config             config.Config
+	HookManager        hooks.HookManagerInterface
+	Status             status.Manager
+	FS                 fs.FS
+	Git                git.Git
+	Logger             logger.Logger
+	Prompt             prompt.Prompter
 }
 
 type realCM struct {
 	fs            fs.FS
 	git           git.Git
-	config        *config.Config
+	config        config.Config
 	statusManager status.Manager
 	logger        logger.Logger
 	prompt        prompt.Prompter
@@ -67,50 +72,116 @@ type realCM struct {
 }
 
 // NewCM creates a new CM instance.
-func NewCM(cfg *config.Config) (CM, error) {
-	fsInstance := fs.NewFS()
-	gitInstance := git.NewGit()
-	loggerInstance := logger.NewNoopLogger()
-	promptInstance := prompt.NewPrompt()
-	worktreeInstance := worktree.NewWorktree(worktree.NewWorktreeParams{
-		FS:            fsInstance,
-		Git:           gitInstance,
-		StatusManager: status.NewManager(fsInstance, cfg),
-		Logger:        loggerInstance,
-		Prompt:        promptInstance,
-		BasePath:      cfg.BasePath,
-	})
-	// Create repository and workspace instances
-	repoInstance := repository.NewRepository(repository.NewRepositoryParams{
-		FS:            fsInstance,
-		Git:           gitInstance,
-		Config:        cfg,
-		StatusManager: status.NewManager(fsInstance, cfg),
-		Logger:        loggerInstance,
-		Prompt:        promptInstance,
-		Worktree:      worktreeInstance,
-	})
-	workspaceInstance := workspace.NewWorkspace(workspace.NewWorkspaceParams{
-		FS:            fsInstance,
-		Git:           gitInstance,
-		Config:        cfg,
-		StatusManager: status.NewManager(fsInstance, cfg),
-		Logger:        loggerInstance,
-		Prompt:        promptInstance,
-		Worktree:      worktreeInstance,
-	})
+func NewCM(params NewCMParams) (CM, error) {
+	fsInstance := params.FS
+	if fsInstance == nil {
+		fsInstance = fs.NewFS()
+	}
+
+	gitInstance := params.Git
+	if gitInstance == nil {
+		gitInstance = git.NewGit()
+	}
+
+	loggerInstance := params.Logger
+	if loggerInstance == nil {
+		loggerInstance = logger.NewNoopLogger()
+	}
+
+	promptInstance := params.Prompt
+	if promptInstance == nil {
+		promptInstance = prompt.NewPrompt()
+	}
+
+	statusInstance := params.Status
+	if statusInstance == nil {
+		statusInstance = status.NewManager(fsInstance, params.Config)
+	}
+
+	repoProvider := params.RepositoryProvider
+	if repoProvider == nil {
+		repoProvider = repository.NewRepository
+	}
+
+	workspaceProvider := params.WorkspaceProvider
+	if workspaceProvider == nil {
+		workspaceProvider = workspace.NewWorkspace
+	}
+
+	// Create repository and workspace instances using providers
+	repoInstance := createRepositoryInstance(
+		repoProvider, fsInstance, gitInstance, params.Config,
+		statusInstance, loggerInstance, promptInstance,
+	)
+	workspaceInstance := createWorkspaceInstance(
+		workspaceProvider, fsInstance, gitInstance, params.Config,
+		statusInstance, loggerInstance, promptInstance,
+	)
+
+	// Use provided hook manager or create a new one
+	hookManager := createHookManager(params.HookManager)
 	cmInstance := &realCM{
 		fs:            fsInstance,
 		git:           gitInstance,
-		config:        cfg,
-		statusManager: status.NewManager(fsInstance, cfg),
+		config:        params.Config,
+		statusManager: statusInstance,
 		logger:        loggerInstance,
 		prompt:        promptInstance,
 		repository:    repoInstance,
 		workspace:     workspaceInstance,
-		hookManager:   hooks.NewHookManager(),
+		hookManager:   hookManager,
 	}
 	return cmInstance, nil
+}
+
+// createHookManager creates a hook manager instance.
+func createHookManager(providedHookManager hooks.HookManagerInterface) hooks.HookManagerInterface {
+	if providedHookManager != nil {
+		return providedHookManager
+	}
+	return hooks.NewHookManager()
+}
+
+// createRepositoryInstance creates a repository instance using the provided provider.
+func createRepositoryInstance(
+	repoProvider RepositoryProvider,
+	fsInstance fs.FS,
+	gitInstance git.Git,
+	config config.Config,
+	statusInstance status.Manager,
+	loggerInstance logger.Logger,
+	promptInstance prompt.Prompter,
+) repository.Repository {
+	return repoProvider(repository.NewRepositoryParams{
+		FS:               fsInstance,
+		Git:              gitInstance,
+		Config:           config,
+		StatusManager:    statusInstance,
+		Logger:           loggerInstance,
+		Prompt:           promptInstance,
+		WorktreeProvider: worktree.NewWorktree,
+	})
+}
+
+// createWorkspaceInstance creates a workspace instance using the provided provider.
+func createWorkspaceInstance(
+	workspaceProvider WorkspaceProvider,
+	fsInstance fs.FS,
+	gitInstance git.Git,
+	config config.Config,
+	statusInstance status.Manager,
+	loggerInstance logger.Logger,
+	promptInstance prompt.Prompter,
+) workspace.Workspace {
+	return workspaceProvider(workspace.NewWorkspaceParams{
+		FS:               fsInstance,
+		Git:              gitInstance,
+		Config:           config,
+		StatusManager:    statusInstance,
+		Logger:           loggerInstance,
+		Prompt:           promptInstance,
+		WorktreeProvider: worktree.NewWorktree,
+	})
 }
 
 // VerbosePrint logs a formatted message using the current logger.
@@ -127,47 +198,10 @@ func (c *realCM) SetLogger(logger logger.Logger) {
 }
 
 // BuildWorktreePath constructs a worktree path from repository URL, remote name, and branch.
-func (c *realCM) BuildWorktreePath(repoURL, remoteName, branch string) string {
+func (c *realCM) BuildWorktreePath(repoURL, _, branch string) string {
 	// For now, construct the path manually since we don't have direct access to the worktree
 	// This should be refactored to use the worktree component properly
 	return fmt.Sprintf("%s/worktrees/%s/%s", c.config.BasePath, repoURL, branch)
-}
-
-// setupHooks configures and registers all hooks for the CM instance.
-func (c *realCM) setupHooks() error {
-	// Register IDE opening hook
-	if err := ide.NewOpeningHook().RegisterForOperations(c.RegisterHook); err != nil {
-		return err
-	}
-	return nil
-}
-
-// NewCMWithDependencies creates a new CM instance with custom repository and workspace dependencies.
-// This is primarily used for testing with mocked dependencies.
-func NewCMWithDependencies(params NewCMParams) CM {
-	fsInstance := fs.NewFS()
-	gitInstance := git.NewGit()
-	loggerInstance := logger.NewNoopLogger()
-	statusInstance := status.NewManager(fsInstance, params.Config)
-	// Use provided hook manager or create a new one
-	var hookManager hooks.HookManagerInterface
-	if params.HookManager != nil {
-		hookManager = params.HookManager
-	} else {
-		hookManager = hooks.NewHookManager()
-	}
-
-	return &realCM{
-		fs:            fsInstance,
-		git:           gitInstance,
-		config:        params.Config,
-		statusManager: statusInstance,
-		logger:        loggerInstance,
-		prompt:        prompt.NewPrompt(),
-		repository:    params.Repository,
-		workspace:     params.Workspace,
-		hookManager:   hookManager,
-	}
 }
 
 // RegisterHook registers a hook for a specific operation.

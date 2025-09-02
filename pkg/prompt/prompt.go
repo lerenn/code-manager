@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-//go:generate mockgen -source=prompt.go -destination=mockprompt.gen.go -package=prompt
+//go:generate mockgen -source=prompt.go -destination=mocks/prompt.gen.go -package=mocks
 
 // Prompter interface provides user interaction functionality.
 type Prompter interface {

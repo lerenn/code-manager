@@ -5,12 +5,14 @@ package workspace
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
+	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/prompt"
+	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/lerenn/code-manager/pkg/worktree"
+	worktreemocks "github.com/lerenn/code-manager/pkg/worktree/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -19,21 +21,23 @@ func TestWorkspace_ValidateWorkspaceReferences_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 	workspace.(*realWorkspace).OriginalFile = "test.code-workspace"
 
@@ -93,21 +97,23 @@ func TestWorkspace_ValidateWorkspaceReferences_RepositoryNotFound(t *testing.T) 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 	workspace.(*realWorkspace).OriginalFile = "test.code-workspace"
 
@@ -132,21 +138,23 @@ func TestWorkspace_ValidateWorkspaceReferences_NoGitDirectory(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
-	mockWorktree := worktree.NewMockWorktree(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	workspace := NewWorkspace(NewWorkspaceParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
+		Logger:        logger.NewNoopLogger(),
 		Prompt:        mockPrompt,
-		Worktree:      mockWorktree,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
 	})
 	workspace.(*realWorkspace).OriginalFile = "test.code-workspace"
 

@@ -17,7 +17,7 @@ type RemoteManagementParams struct {
 func (r *realRepository) HandleRemoteManagement(remoteSource string) error {
 	// If remote source is "origin", no need to add it
 	if remoteSource == "origin" {
-		r.VerbosePrint("Using existing origin remote")
+		r.logger.Logf("Using existing origin remote")
 		return nil
 	}
 
@@ -44,7 +44,7 @@ func (r *realRepository) HandleExistingRemote(remoteSource string) error {
 			return fmt.Errorf("failed to get remote URL: %w", err)
 		}
 
-		r.VerbosePrint("Using existing remote '%s' with URL: %s", remoteSource, remoteURL)
+		r.logger.Logf("Using existing remote '%s' with URL: %s", remoteSource, remoteURL)
 		return nil
 	}
 
@@ -54,7 +54,7 @@ func (r *realRepository) HandleExistingRemote(remoteSource string) error {
 
 // AddNewRemote adds a new remote for the given remote source.
 func (r *realRepository) AddNewRemote(remoteSource string) error {
-	r.VerbosePrint("Adding new remote '%s'", remoteSource)
+	r.logger.Logf("Adding new remote '%s'", remoteSource)
 
 	// Get repository information
 	repoName, err := r.git.GetRepositoryName(".")
@@ -73,7 +73,7 @@ func (r *realRepository) AddNewRemote(remoteSource string) error {
 		return err
 	}
 
-	r.VerbosePrint("Constructed remote URL: %s", remoteURL)
+	r.logger.Logf("Constructed remote URL: %s", remoteURL)
 
 	// Add the remote
 	if err := r.git.AddRemote(".", remoteSource, remoteURL); err != nil {

@@ -5,11 +5,10 @@ package repository
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/prompt"
-	"github.com/lerenn/code-manager/pkg/status"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
+	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
+	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -18,18 +17,16 @@ func TestRepository_HandleRemoteManagement_Origin(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 	})
 
@@ -41,19 +38,19 @@ func TestRepository_HandleRemoteManagement_ExistingRemote(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "upstream").Return(true, nil)
@@ -67,19 +64,19 @@ func TestRepository_HandleRemoteManagement_NewRemote(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	mockGit.EXPECT().RemoteExists(".", "upstream").Return(false, nil)
@@ -95,19 +92,19 @@ func TestRepository_ExtractHostFromURL_HTTPS(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	host := repo.ExtractHostFromURL("https://github.com/octocat/Hello-World.git")
@@ -118,19 +115,19 @@ func TestRepository_ExtractHostFromURL_SSH(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	host := repo.ExtractHostFromURL("git@github.com:lerenn/example.git")
@@ -141,19 +138,19 @@ func TestRepository_ExtractHostFromURL_Invalid(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	host := repo.ExtractHostFromURL("invalid-url")
@@ -164,19 +161,19 @@ func TestRepository_DetermineProtocol_HTTPS(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	protocol := repo.DetermineProtocol("https://github.com/octocat/Hello-World.git")
@@ -187,19 +184,19 @@ func TestRepository_DetermineProtocol_SSH(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	protocol := repo.DetermineProtocol("git@github.com:lerenn/example.git")
@@ -210,19 +207,19 @@ func TestRepository_ExtractRepoNameFromFullPath_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	repoName := repo.ExtractRepoNameFromFullPath("github.com/octocat/Hello-World")
@@ -233,19 +230,19 @@ func TestRepository_ExtractRepoNameFromFullPath_SinglePart(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	repoName := repo.ExtractRepoNameFromFullPath("example")
@@ -256,19 +253,19 @@ func TestRepository_ConstructRemoteURL_HTTPS(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	remoteURL, err := repo.ConstructRemoteURL("https://github.com/octocat/Hello-World.git", "upstream", "github.com/octocat/Hello-World")
@@ -280,19 +277,19 @@ func TestRepository_ConstructRemoteURL_SSH(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	remoteURL, err := repo.ConstructRemoteURL("git@github.com:lerenn/example.git", "upstream", "github.com/octocat/Hello-World")
@@ -304,19 +301,19 @@ func TestRepository_ConstructRemoteURL_InvalidHost(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewNoopLogger()
-	mockPrompt := prompt.NewMockPrompter(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		Config:        createTestConfig(),
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
-		Prompt:        mockPrompt,
+
+		Prompt: mockPrompt,
 	})
 
 	remoteURL, err := repo.ConstructRemoteURL("invalid-url", "upstream", "github.com/octocat/Hello-World")

@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-//go:generate mockgen -source=fs.go -destination=mockfs.gen.go -package=fs
+//go:generate mockgen -source=fs.go -destination=mocks/fs.gen.go -package=mocks
 
 // FS interface provides file system operations for Git repository detection.
 type FS interface {
@@ -235,8 +235,6 @@ func (f *realFS) ExpandPath(path string) (string, error) {
 
 	return filepath.Join(homeDir, strings.TrimPrefix(path, "~")), nil
 }
-
-
 
 // CreateFileIfNotExists creates a file with initial content if it doesn't exist.
 func (f *realFS) CreateFileIfNotExists(filename string, initialContent []byte, perm os.FileMode) error {

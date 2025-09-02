@@ -30,7 +30,7 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
-	testConfig := &config.Config{
+	testConfig := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
@@ -74,11 +74,13 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.Chdir(workspaceDir))
 
 	// Create CM instance
-	cfg := &config.Config{
+	cfg := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance, err := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: cfg,
+	})
 
 	require.NoError(t, err)
 	// Create worktrees first
@@ -136,7 +138,7 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
-	testConfig := &config.Config{
+	testConfig := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
@@ -176,11 +178,13 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, os.Chdir(workspaceDir))
 
 	// Create CM instance
-	cfg := &config.Config{
+	cfg := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance, err := cm.NewCM(cfg)
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: cfg,
+	})
 
 	require.NoError(t, err)
 	// Create worktrees first

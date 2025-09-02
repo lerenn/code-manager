@@ -440,7 +440,7 @@ The hook validates that `ideName` and branch/worktree information are provided a
 ```go
 // pkg/cm/cm.go
 
-func NewCM(cfg *config.Config) (CM, error) {
+func NewCM(cfg config.Config) (CM, error) {
     // ... create dependencies ...
     
     cmInstance := &realCM{

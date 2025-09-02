@@ -28,7 +28,7 @@ func (c *realCM) ListRepositories() ([]RepositoryInfo, error) {
 		// Get all repositories from status manager
 		repositories, err := c.statusManager.ListRepositories()
 		if err != nil {
-			return nil, fmt.Errorf("failed to load repositories from status file: %w", err)
+			return nil, fmt.Errorf("%w: %w", ErrFailedToLoadRepositories, err)
 		}
 
 		if c.logger != nil {

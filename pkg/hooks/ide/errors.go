@@ -15,4 +15,10 @@ var (
 
 	// ErrWorktreeNotFound is returned when a worktree is not found in status.yaml.
 	ErrWorktreeNotFound = errors.New("worktree not found")
+
+	// ErrWorktreePathRequired is returned when the worktreePath parameter is missing.
+	ErrWorktreePathRequired = errors.New("cannot open IDE: worktreePath parameter is required")
+
+	// ErrWorktreePathEmpty is returned when the worktreePath parameter is empty.
+	ErrWorktreePathEmpty = errors.New("cannot open IDE: worktreePath must be a non-empty string")
 )

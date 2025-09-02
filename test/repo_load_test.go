@@ -16,9 +16,11 @@ import (
 func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
@@ -70,14 +72,14 @@ func TestLoadWorktreeWithOptionalRemote(t *testing.T) {
 	t.Run("LoadInvalidFormat", func(t *testing.T) {
 		err := loadWorktree(t, setup, "invalid:branch:format")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "branch name contains invalid character")
+		assert.ErrorIs(t, err, cm.ErrBranchNameContainsColon)
 	})
 
 	// Test 4: Error case - empty argument
 	t.Run("LoadEmptyArgument", func(t *testing.T) {
 		err := loadWorktree(t, setup, "")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "argument cannot be empty")
+		assert.ErrorIs(t, err, cm.ErrArgumentEmpty)
 	})
 }
 
