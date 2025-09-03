@@ -1,0 +1,61 @@
+package workspace
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/lerenn/code-manager/pkg/status"
+)
+
+// ListWorktrees lists worktrees for workspace mode.
+func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
+	w.logger.Logf("Listing worktrees for workspace mode")
+
+	// Load workspace configuration (only if not already loaded)
+	if w.OriginalFile == "" {
+		if err := w.Load(false); err != nil {
+			return nil, fmt.Errorf("failed to load workspace: %w", err)
+		}
+	}
+
+	// Get workspace path
+	workspacePath, err := w.getWorkspacePath()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get workspace from status
+	workspace, err := w.statusManager.GetWorkspace(workspacePath)
+	if err != nil {
+		// If workspace not found, return empty list with no error
+		if errors.Is(err, status.ErrWorkspaceNotFound) {
+			return []status.WorktreeInfo{}, nil
+		}
+		return nil, err
+	}
+
+	// Get worktrees for each repository in the workspace
+	var workspaceWorktrees []status.WorktreeInfo
+	seenWorktrees := make(map[string]bool) // Track seen worktrees to avoid duplicates
+
+	for _, repoURL := range workspace.Repositories {
+		// Get repository to check its worktrees
+		repo, err := w.statusManager.GetRepository(repoURL)
+		if err != nil {
+			continue // Skip if repository not found
+		}
+
+		// Get worktrees for this repository
+		for _, worktree := range repo.Worktrees {
+			// Create a unique key for this worktree to avoid duplicates
+			// Include repository URL to distinguish between worktrees from different repositories
+			worktreeKey := fmt.Sprintf("%s:%s:%s", repoURL, worktree.Remote, worktree.Branch)
+			if !seenWorktrees[worktreeKey] {
+				workspaceWorktrees = append(workspaceWorktrees, worktree)
+				seenWorktrees[worktreeKey] = true
+			}
+		}
+	}
+
+	return workspaceWorktrees, nil
+}

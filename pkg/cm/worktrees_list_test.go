@@ -7,11 +7,12 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
-	"github.com/lerenn/code-manager/pkg/repository"
-	repositoryMocks "github.com/lerenn/code-manager/pkg/repository/mocks"
+	"github.com/lerenn/code-manager/pkg/mode"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
+	workspaceMocks "github.com/lerenn/code-manager/pkg/mode/workspace/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/workspace"
-	workspaceMocks "github.com/lerenn/code-manager/pkg/workspace/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -77,6 +78,6 @@ func TestCM_ListWorktrees_SingleRepository(t *testing.T) {
 
 	result, projectType, err := cm.ListWorktrees(false)
 	assert.NoError(t, err)
-	assert.Equal(t, ProjectTypeSingleRepo, projectType)
+	assert.Equal(t, mode.ModeSingleRepo, projectType)
 	assert.Equal(t, expectedWorktrees, result)
 }

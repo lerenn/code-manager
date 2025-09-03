@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/mode"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -44,11 +45,11 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 		// 3. Handle based on project type
 		var worktreePath string
 		switch projectType {
-		case ProjectTypeSingleRepo:
+		case mode.ModeSingleRepo:
 			worktreePath, err = c.loadWorktreeForSingleRepo(remoteSource, branchName)
-		case ProjectTypeWorkspace:
+		case mode.ModeWorkspace:
 			return ErrWorkspaceModeNotSupported
-		case ProjectTypeNone:
+		case mode.ModeNone:
 			return ErrNoGitRepositoryOrWorkspaceFound
 		default:
 			return fmt.Errorf("unknown project type")

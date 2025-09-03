@@ -10,7 +10,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"

@@ -12,6 +12,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,7 +86,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	var output strings.Builder
 
 	switch projectType {
-	case cm.ProjectTypeSingleRepo:
+	case mode.ModeSingleRepo:
 		if len(worktrees) == 0 {
 			output.WriteString("No worktrees found for current repository\n")
 		} else {
@@ -94,7 +95,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 				output.WriteString(fmt.Sprintf("  %s\n", wt.Branch))
 			}
 		}
-	case cm.ProjectTypeWorkspace:
+	case mode.ModeWorkspace:
 		if len(worktrees) == 0 {
 			output.WriteString("No worktrees found for current workspace\n")
 		} else {

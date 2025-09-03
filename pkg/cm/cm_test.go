@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/repository"
-	"github.com/lerenn/code-manager/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/stretchr/testify/assert"
 )
 

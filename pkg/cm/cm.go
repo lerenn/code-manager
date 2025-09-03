@@ -9,10 +9,11 @@ import (
 	"github.com/lerenn/code-manager/pkg/hooks"
 	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
 	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/mode"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/prompt"
-	"github.com/lerenn/code-manager/pkg/repository"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
@@ -31,7 +32,7 @@ type CM interface {
 	// OpenWorktree opens an existing worktree in the specified IDE.
 	OpenWorktree(worktreeName, ideName string) error
 	// ListWorktrees lists worktrees for the current project with mode detection.
-	ListWorktrees(force bool) ([]status.WorktreeInfo, ProjectType, error)
+	ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, error)
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
 	LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error
 	// Init initializes CM configuration.
@@ -273,8 +274,8 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 func (c *realCM) executeWithHooksAndReturnListWorktrees(
 	operationName string,
 	params map[string]interface{},
-	operation func() ([]status.WorktreeInfo, ProjectType, error),
-) ([]status.WorktreeInfo, ProjectType, error) {
+	operation func() ([]status.WorktreeInfo, mode.Mode, error),
+) ([]status.WorktreeInfo, mode.Mode, error) {
 	ctx := &hooks.HookContext{
 		OperationName: operationName,
 		Parameters:    params,
@@ -284,11 +285,11 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 	}
 	// Execute pre-hooks (if hook manager is available)
 	if err := c.executePreHooks(operationName, ctx); err != nil {
-		return nil, ProjectTypeNone, err
+		return nil, mode.ModeNone, err
 	}
 	// Execute operation
 	var worktrees []status.WorktreeInfo
-	var projectType ProjectType
+	var projectType mode.Mode
 	var resultErr error
 	func() {
 		defer func() {
@@ -307,7 +308,7 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 	}
 	// Execute post-hooks or error-hooks (if hook manager is available)
 	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
-		return nil, ProjectTypeNone, hookErr
+		return nil, mode.ModeNone, hookErr
 	}
 	return worktrees, projectType, resultErr
 }
@@ -374,26 +375,26 @@ func (c *realCM) executePreHooks(operationName string, ctx *hooks.HookContext) e
 }
 
 // detectProjectMode detects the type of project (single repository or workspace).
-func (c *realCM) detectProjectMode() (ProjectType, error) {
+func (c *realCM) detectProjectMode() (mode.Mode, error) {
 	c.VerbosePrint("Detecting project mode...")
 	// First, check if we're in a Git repository
 	exists, err := c.repository.IsGitRepository()
 	if err != nil {
-		return ProjectTypeNone, fmt.Errorf("failed to check Git repository: %w", err)
+		return mode.ModeNone, fmt.Errorf("failed to check Git repository: %w", err)
 	}
 	if exists {
 		c.VerbosePrint("Single repository mode detected")
-		return ProjectTypeSingleRepo, nil
+		return mode.ModeSingleRepo, nil
 	}
 	// If not a Git repository, check for workspace files
 	workspaceFiles, err := c.fs.Glob("*.code-workspace")
 	if err != nil {
-		return ProjectTypeNone, fmt.Errorf("failed to detect workspace files: %w", err)
+		return mode.ModeNone, fmt.Errorf("failed to check Git repository: %w", err)
 	}
 	if len(workspaceFiles) > 0 {
 		c.VerbosePrint("Workspace mode detected")
-		return ProjectTypeWorkspace, nil
+		return mode.ModeWorkspace, nil
 	}
 	c.VerbosePrint("No project mode detected")
-	return ProjectTypeNone, nil
+	return mode.ModeNone, nil
 }

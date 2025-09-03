@@ -12,9 +12,10 @@ import (
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/mode"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
@@ -27,69 +28,27 @@ const DefaultRemote = "origin"
 type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
 
 // Repository interface provides repository management capabilities.
+// It implements the common ModeInterface and adds repository-specific methods.
 type Repository interface {
-	// Validate validates that the current directory is a working Git repository.
-	Validate() error
+	mode.ModeInterface
 
-	// CreateWorktree creates a worktree for the repository with the specified branch.
-	CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error)
-
-	// DeleteWorktree deletes a worktree for the repository with the specified branch.
-	DeleteWorktree(branch string, force bool) error
-
-	// LoadWorktree loads a branch from a remote source and creates a worktree.
+	// Repository-specific methods
 	LoadWorktree(remoteSource, branchName string) (string, error)
-
-	// ListWorktrees lists all worktrees for the repository.
-	ListWorktrees() ([]status.WorktreeInfo, error)
-
-	// IsWorkspaceFile checks if the current directory contains a workspace file.
 	IsWorkspaceFile() (bool, error)
-
-	// IsGitRepository checks if the current directory is a Git repository.
 	IsGitRepository() (bool, error)
-
-	// ValidateGitConfiguration validates that Git configuration is functional.
 	ValidateGitConfiguration(workDir string) error
-
-	// ValidateGitStatus validates that the Git repository is in a clean state.
 	ValidateGitStatus() error
-
-	// ValidateRepository validates that the repository is ready for worktree operations.
 	ValidateRepository(params ValidationParams) (*ValidationResult, error)
-
-	// ValidateWorktreeExists validates that a worktree exists for the specified branch.
 	ValidateWorktreeExists(repoURL, branch string) error
-
-	// ValidateOriginRemote validates that the origin remote is properly configured.
 	ValidateOriginRemote() error
-
-	// HandleRemoteManagement manages remote configuration for the repository.
 	HandleRemoteManagement(repoURL string) error
-
-	// ExtractHostFromURL extracts the host from a repository URL.
 	ExtractHostFromURL(url string) string
-
-	// DetermineProtocol determines the protocol from a repository URL.
 	DetermineProtocol(url string) string
-
-	// ExtractRepoNameFromFullPath extracts the repository name from a full path.
 	ExtractRepoNameFromFullPath(fullPath string) string
-
-	// ConstructRemoteURL constructs a remote URL from host and repository name.
 	ConstructRemoteURL(originURL, remoteSource, repoName string) (string, error)
-
-	// AddWorktreeToStatus adds a worktree to the status file.
 	AddWorktreeToStatus(params StatusParams) error
-
-	// RemoveWorktreeFromStatus removes a worktree from the status file.
 	RemoveWorktreeFromStatus(repoURL, branch string) error
-
-	// AutoAddRepositoryToStatus automatically adds the repository to the status file.
 	AutoAddRepositoryToStatus(repoURL, repoPath string) error
-
-	// SetLogger sets the logger for this repository instance.
-	SetLogger(logger logger.Logger)
 }
 
 // realRepository represents a single Git repository and provides methods for repository operations.
@@ -154,9 +113,7 @@ func (r *realRepository) Validate() error {
 }
 
 // CreateWorktreeOpts contains optional parameters for CreateWorktree.
-type CreateWorktreeOpts struct {
-	IssueInfo *issue.Info
-}
+// This is now defined in the mode package for consistency.
 
 // DeleteWorktreeOpts contains optional parameters for DeleteWorktree.
 type DeleteWorktreeOpts struct {
@@ -169,7 +126,7 @@ type LoadWorktreeOpts struct {
 }
 
 // CreateWorktree creates a worktree for the repository with the specified branch.
-func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error) {
+func (r *realRepository) CreateWorktree(branch string, opts ...mode.CreateWorktreeOpts) (string, error) {
 	r.logger.Logf("Creating worktree for single repository with branch: %s", branch)
 
 	// Validate repository

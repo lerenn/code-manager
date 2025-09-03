@@ -13,8 +13,9 @@ import (
 	reflect "reflect"
 
 	logger "github.com/lerenn/code-manager/pkg/logger"
+	mode "github.com/lerenn/code-manager/pkg/mode"
+	workspace "github.com/lerenn/code-manager/pkg/mode/workspace"
 	status "github.com/lerenn/code-manager/pkg/status"
-	workspace "github.com/lerenn/code-manager/pkg/workspace"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -43,9 +44,9 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 }
 
 // CreateWorktree mocks base method.
-func (m *MockWorkspace) CreateWorktree(branch string, force bool, opts ...workspace.CreateWorktreeOpts) (string, error) {
+func (m *MockWorkspace) CreateWorktree(branch string, opts ...mode.CreateWorktreeOpts) (string, error) {
 	m.ctrl.T.Helper()
-	varargs := []any{branch, force}
+	varargs := []any{branch}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
@@ -56,9 +57,9 @@ func (m *MockWorkspace) CreateWorktree(branch string, force bool, opts ...worksp
 }
 
 // CreateWorktree indicates an expected call of CreateWorktree.
-func (mr *MockWorkspaceMockRecorder) CreateWorktree(branch, force any, opts ...any) *gomock.Call {
+func (mr *MockWorkspaceMockRecorder) CreateWorktree(branch any, opts ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{branch, force}, opts...)
+	varargs := append([]any{branch}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktree", reflect.TypeOf((*MockWorkspace)(nil).CreateWorktree), varargs...)
 }
 
@@ -121,18 +122,18 @@ func (mr *MockWorkspaceMockRecorder) HandleMultipleFiles(workspaceFiles, force a
 }
 
 // ListWorktrees mocks base method.
-func (m *MockWorkspace) ListWorktrees(force bool) ([]status.WorktreeInfo, error) {
+func (m *MockWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorktrees", force)
+	ret := m.ctrl.Call(m, "ListWorktrees")
 	ret0, _ := ret[0].([]status.WorktreeInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListWorktrees indicates an expected call of ListWorktrees.
-func (mr *MockWorkspaceMockRecorder) ListWorktrees(force any) *gomock.Call {
+func (mr *MockWorkspaceMockRecorder) ListWorktrees() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorktrees", reflect.TypeOf((*MockWorkspace)(nil).ListWorktrees), force)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorktrees", reflect.TypeOf((*MockWorkspace)(nil).ListWorktrees))
 }
 
 // Load mocks base method.

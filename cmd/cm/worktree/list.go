@@ -6,6 +6,7 @@ import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
 )
@@ -65,13 +66,13 @@ Examples:
 }
 
 // displayWorktrees displays worktrees based on project type.
-func displayWorktrees(worktrees []status.WorktreeInfo, projectType cm.ProjectType) {
+func displayWorktrees(worktrees []status.WorktreeInfo, projectType mode.Mode) {
 	switch projectType {
-	case cm.ProjectTypeSingleRepo:
+	case mode.ModeSingleRepo:
 		displaySingleRepoWorktrees(worktrees)
-	case cm.ProjectTypeWorkspace:
+	case mode.ModeWorkspace:
 		displayWorkspaceWorktrees(worktrees)
-	case cm.ProjectTypeNone:
+	case mode.ModeNone:
 		// No worktrees to display
 		return
 	}
