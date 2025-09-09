@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestDetectWorkspaceFiles tests the DetectWorkspaceFiles method functionality
+// TestDetectWorkspaceFiles tests the DetectWorkspaceFiles method functionality.
 func TestDetectWorkspaceFiles(t *testing.T) {
 	// TODO: Implement comprehensive tests for the DetectWorkspaceFiles method
 	// This should test:

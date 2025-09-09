@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestParseFile tests the ParseFile method functionality
+// TestParseFile tests the ParseFile method functionality.
 func TestParseFile(t *testing.T) {
 	// TODO: Implement comprehensive tests for the ParseFile method
 	// This should test:

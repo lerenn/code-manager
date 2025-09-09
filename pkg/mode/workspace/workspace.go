@@ -27,9 +27,9 @@ type Folder struct {
 }
 
 // Workspace interface provides workspace management capabilities.
-// It implements the common ModeInterface and adds workspace-specific methods.
+// It implements the common Interface and adds workspace-specific methods.
 type Workspace interface {
-	mode.ModeInterface
+	mode.Interface
 
 	// Workspace-specific methods
 	Load(force bool) error

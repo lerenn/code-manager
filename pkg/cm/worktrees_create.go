@@ -45,7 +45,7 @@ func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 			worktreePath, err = c.createWorkTreeFromIssue(branch, issueRef)
 		} else {
 			// Handle regular worktree creation
-			worktreePath, err = c.createRegularWorkTree(branch, force)
+			worktreePath, err = c.createRegularWorkTree(branch)
 		}
 
 		if err != nil {
@@ -79,7 +79,7 @@ func (c *realCM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) (string
 }
 
 // createRegularWorkTree handles regular worktree creation (non-issue based).
-func (c *realCM) createRegularWorkTree(branch string, force bool) (string, error) {
+func (c *realCM) createRegularWorkTree(branch string) (string, error) {
 	// Sanitize branch name first
 	sanitizedBranch, err := branchpkg.SanitizeBranchName(branch)
 	if err != nil {
@@ -94,7 +94,7 @@ func (c *realCM) createRegularWorkTree(branch string, force bool) (string, error
 	c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
 
 	// Detect project mode and handle accordingly
-	worktreePath, err := c.handleProjectMode(sanitizedBranch, force)
+	worktreePath, err := c.handleProjectMode(sanitizedBranch)
 	if err != nil {
 		return "", err
 	}
@@ -103,8 +103,7 @@ func (c *realCM) createRegularWorkTree(branch string, force bool) (string, error
 }
 
 // handleProjectMode detects project mode and handles worktree creation accordingly.
-// TODO: add force parameter
-func (c *realCM) handleProjectMode(sanitizedBranch string, _ bool) (string, error) {
+func (c *realCM) handleProjectMode(sanitizedBranch string) (string, error) {
 	projectType, err := c.detectProjectMode()
 	if err != nil {
 		c.VerbosePrint("Error: %v", err)

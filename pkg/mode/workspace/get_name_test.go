@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestGetName tests the GetName method functionality
+// TestGetName tests the GetName method functionality.
 func TestGetName(t *testing.T) {
 	// TODO: Implement comprehensive tests for the GetName method
 	// This should test:

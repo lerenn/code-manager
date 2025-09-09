@@ -28,9 +28,9 @@ const DefaultRemote = "origin"
 type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
 
 // Repository interface provides repository management capabilities.
-// It implements the common ModeInterface and adds repository-specific methods.
+// It implements the common Interface and adds repository-specific methods.
 type Repository interface {
-	mode.ModeInterface
+	mode.Interface
 
 	// Repository-specific methods
 	LoadWorktree(remoteSource, branchName string) (string, error)

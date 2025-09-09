@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestListWorktrees tests the ListWorktrees method functionality
+// TestListWorktrees tests the ListWorktrees method functionality.
 func TestListWorktrees(t *testing.T) {
 	// TODO: Implement comprehensive tests for the ListWorktrees method
 	// This should test:

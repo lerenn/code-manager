@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestSetLogger tests the SetLogger method functionality
+// TestSetLogger tests the SetLogger method functionality.
 func TestSetLogger(t *testing.T) {
 	// TODO: Implement comprehensive tests for the SetLogger method
 	// This should test:

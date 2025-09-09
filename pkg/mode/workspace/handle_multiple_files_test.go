@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestHandleMultipleFiles tests the HandleMultipleFiles method functionality
+// TestHandleMultipleFiles tests the HandleMultipleFiles method functionality.
 func TestHandleMultipleFiles(t *testing.T) {
 	// TODO: Implement comprehensive tests for the HandleMultipleFiles method
 	// This should test:

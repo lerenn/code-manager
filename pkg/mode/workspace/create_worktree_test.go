@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestCreateWorktree tests the CreateWorktree method functionality
+// TestCreateWorktree tests the CreateWorktree method functionality.
 func TestCreateWorktree(t *testing.T) {
 	// TODO: Implement comprehensive tests for the CreateWorktree method
 	// This should test:

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestLoad tests the Load method functionality
+// TestLoad tests the Load method functionality.
 func TestLoad(t *testing.T) {
 	// TODO: Implement comprehensive tests for the Load method
 	// This should test:

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestDeleteWorktree tests the DeleteWorktree method functionality
+// TestDeleteWorktree tests the DeleteWorktree method functionality.
 func TestDeleteWorktree(t *testing.T) {
 	// TODO: Implement comprehensive tests for the DeleteWorktree method
 	// This should test:

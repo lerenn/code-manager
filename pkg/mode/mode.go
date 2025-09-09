@@ -1,3 +1,4 @@
+// Package mode provides interfaces and types for detecting and handling different project modes.
 package mode
 
 import (
@@ -23,8 +24,8 @@ type CreateWorktreeOpts struct {
 	IssueInfo *issue.Info
 }
 
-// ModeInterface provides the common interface for both workspace and repository modes.
-type ModeInterface interface {
+// Interface provides the common interface for both workspace and repository modes.
+type Interface interface {
 	// Common methods with harmonized signatures
 	Validate() error
 	CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error)

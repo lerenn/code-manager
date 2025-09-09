@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestValidate tests the Validate method functionality
+// TestValidate tests the Validate method functionality.
 func TestValidate(t *testing.T) {
 	// TODO: Implement comprehensive tests for the Validate method
 	// This should test:

@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-// TestValidateWorkspaceReferences tests the ValidateWorkspaceReferences method functionality
+// TestValidateWorkspaceReferences tests the ValidateWorkspaceReferences method functionality.
 func TestValidateWorkspaceReferences(t *testing.T) {
 	// TODO: Implement comprehensive tests for the ValidateWorkspaceReferences method
 	// This should test:
