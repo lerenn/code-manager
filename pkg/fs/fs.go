@@ -68,6 +68,12 @@ type FS interface {
 
 	// IsPathWithinBase checks if a target path is within the base path.
 	IsPathWithinBase(basePath, targetPath string) (bool, error)
+
+	// ResolvePath resolves relative paths from base directory.
+	ResolvePath(basePath, relativePath string) (string, error)
+
+	// ValidateRepositoryPath validates that path contains a Git repository.
+	ValidateRepositoryPath(path string) (bool, error)
 }
 
 type realFS struct {
@@ -324,4 +330,84 @@ func (f *realFS) IsPathWithinBase(basePath, targetPath string) (bool, error) {
 
 	// If relative path starts with "..", target is outside base path
 	return !strings.HasPrefix(relPath, "..") && relPath != "..", nil
+}
+
+// ResolvePath resolves relative paths from base directory.
+func (f *realFS) ResolvePath(basePath, relativePath string) (string, error) {
+	// Handle empty paths
+	if basePath == "" {
+		return "", fmt.Errorf("%w: base path cannot be empty", ErrPathResolution)
+	}
+	if relativePath == "" {
+		return "", fmt.Errorf("%w: relative path cannot be empty", ErrPathResolution)
+	}
+
+	// If relativePath is already absolute, return it as-is
+	if filepath.IsAbs(relativePath) {
+		return filepath.Clean(relativePath), nil
+	}
+
+	// Resolve relative path from base directory
+	resolvedPath := filepath.Join(basePath, relativePath)
+
+	// Clean the resolved path to remove any ".." or "." components
+	cleanPath := filepath.Clean(resolvedPath)
+
+	// Convert to absolute path
+	absPath, err := filepath.Abs(cleanPath)
+	if err != nil {
+		return "", fmt.Errorf("%w: failed to get absolute path for %s: %w", ErrPathResolution, cleanPath, err)
+	}
+
+	return absPath, nil
+}
+
+// ValidateRepositoryPath validates that path contains a Git repository.
+func (f *realFS) ValidateRepositoryPath(path string) (bool, error) {
+	// Handle empty path
+	if path == "" {
+		return false, fmt.Errorf("%w: path cannot be empty", ErrInvalidRepository)
+	}
+
+	// Check if path exists
+	exists, err := f.Exists(path)
+	if err != nil {
+		return false, fmt.Errorf("%w: failed to check if path exists: %w", ErrInvalidRepository, err)
+	}
+	if !exists {
+		return false, fmt.Errorf("%w: path does not exist: %s", ErrInvalidRepository, path)
+	}
+
+	// Check if path is a directory
+	isDir, err := f.IsDir(path)
+	if err != nil {
+		return false, fmt.Errorf("%w: failed to check if path is directory: %w", ErrInvalidRepository, err)
+	}
+	if !isDir {
+		return false, fmt.Errorf("%w: path is not a directory: %s", ErrInvalidRepository, path)
+	}
+
+	// Check if .git directory exists (indicating a Git repository)
+	gitPath := filepath.Join(path, ".git")
+	gitExists, err := f.Exists(gitPath)
+	if err != nil {
+		return false, fmt.Errorf("%w: failed to check if .git directory exists: %w", ErrInvalidRepository, err)
+	}
+	if !gitExists {
+		return false, fmt.Errorf("%w: path does not contain a Git repository (.git directory not found): %s",
+			ErrInvalidRepository, path)
+	}
+
+	// Check if .git is a directory (not a file for submodules)
+	gitIsDir, err := f.IsDir(gitPath)
+	if err != nil {
+		return false, fmt.Errorf("%w: failed to check if .git is a directory: %w", ErrInvalidRepository, err)
+	}
+	if !gitIsDir {
+		// .git exists but is not a directory - this could be a submodule
+		// For now, we'll consider this valid as it's still a Git repository
+		return true, nil
+	}
+
+	return true, nil
 }

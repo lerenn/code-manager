@@ -7,4 +7,10 @@ import "errors"
 var (
 	// File lock errors.
 	ErrFileLock = errors.New("lock")
+
+	// Path resolution errors.
+	ErrPathResolution = errors.New("path resolution failed")
+
+	// Repository validation errors.
+	ErrInvalidRepository = errors.New("invalid repository path")
 )
