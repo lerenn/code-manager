@@ -75,6 +75,72 @@ type realCM struct {
 
 // NewCM creates a new CM instance.
 func NewCM(params NewCMParams) (CM, error) {
+	instances := createInstances(params)
+	hookManager := createHookManager(params.Hooks)
+
+	// Create repository and workspace instances using providers
+	repoInstance := instances.repoProvider(repository.NewRepositoryParams{
+		FS:               instances.fs,
+		Git:              instances.git,
+		Config:           params.Config,
+		StatusManager:    instances.status,
+		Logger:           instances.logger,
+		Prompt:           instances.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      hookManager,
+	})
+	workspaceInstance := instances.workspaceProvider(workspace.NewWorkspaceParams{
+		FS:               instances.fs,
+		Git:              instances.git,
+		Config:           params.Config,
+		StatusManager:    instances.status,
+		Logger:           instances.logger,
+		Prompt:           instances.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      hookManager,
+	})
+
+	return &realCM{
+		fs:            instances.fs,
+		git:           instances.git,
+		config:        params.Config,
+		statusManager: instances.status,
+		logger:        instances.logger,
+		prompt:        instances.prompt,
+		repository:    repoInstance,
+		workspace:     workspaceInstance,
+		hookManager:   hookManager,
+	}, nil
+}
+
+// createHookManager creates a hook manager instance.
+func createHookManager(providedHookManager hooks.HookManagerInterface) hooks.HookManagerInterface {
+	if providedHookManager != nil {
+		return providedHookManager
+	}
+
+	// Use default hooks manager which includes IDE opening hooks
+	defaultHookManager, err := defaulthooks.NewDefaultHooksManager()
+	if err != nil {
+		// Fallback to basic hook manager if default hooks fail to initialize
+		return hooks.NewHookManager()
+	}
+	return defaultHookManager
+}
+
+// cmInstances holds the created instances for CM.
+type cmInstances struct {
+	fs                fs.FS
+	git               git.Git
+	logger            logger.Logger
+	prompt            prompt.Prompter
+	status            status.Manager
+	repoProvider      RepositoryProvider
+	workspaceProvider WorkspaceProvider
+}
+
+// createInstances creates and initializes all required instances for CM.
+func createInstances(params NewCMParams) cmInstances {
 	fsInstance := params.FS
 	if fsInstance == nil {
 		fsInstance = fs.NewFS()
@@ -110,87 +176,15 @@ func NewCM(params NewCMParams) (CM, error) {
 		workspaceProvider = workspace.NewWorkspace
 	}
 
-	// Create repository and workspace instances using providers
-	repoInstance := createRepositoryInstance(
-		repoProvider, fsInstance, gitInstance, params.Config,
-		statusInstance, loggerInstance, promptInstance,
-	)
-	workspaceInstance := createWorkspaceInstance(
-		workspaceProvider, fsInstance, gitInstance, params.Config,
-		statusInstance, loggerInstance, promptInstance,
-	)
-
-	// Use provided hook manager or create a new one
-	hookManager := createHookManager(params.Hooks)
-	cmInstance := &realCM{
-		fs:            fsInstance,
-		git:           gitInstance,
-		config:        params.Config,
-		statusManager: statusInstance,
-		logger:        loggerInstance,
-		prompt:        promptInstance,
-		repository:    repoInstance,
-		workspace:     workspaceInstance,
-		hookManager:   hookManager,
+	return cmInstances{
+		fs:                fsInstance,
+		git:               gitInstance,
+		logger:            loggerInstance,
+		prompt:            promptInstance,
+		status:            statusInstance,
+		repoProvider:      repoProvider,
+		workspaceProvider: workspaceProvider,
 	}
-	return cmInstance, nil
-}
-
-// createHookManager creates a hook manager instance.
-func createHookManager(providedHookManager hooks.HookManagerInterface) hooks.HookManagerInterface {
-	if providedHookManager != nil {
-		return providedHookManager
-	}
-
-	// Use default hooks manager which includes IDE opening hooks
-	defaultHookManager, err := defaulthooks.NewDefaultHooksManager()
-	if err != nil {
-		// Fallback to basic hook manager if default hooks fail to initialize
-		return hooks.NewHookManager()
-	}
-	return defaultHookManager
-}
-
-// createRepositoryInstance creates a repository instance using the provided provider.
-func createRepositoryInstance(
-	repoProvider RepositoryProvider,
-	fsInstance fs.FS,
-	gitInstance git.Git,
-	config config.Config,
-	statusInstance status.Manager,
-	loggerInstance logger.Logger,
-	promptInstance prompt.Prompter,
-) repository.Repository {
-	return repoProvider(repository.NewRepositoryParams{
-		FS:               fsInstance,
-		Git:              gitInstance,
-		Config:           config,
-		StatusManager:    statusInstance,
-		Logger:           loggerInstance,
-		Prompt:           promptInstance,
-		WorktreeProvider: worktree.NewWorktree,
-	})
-}
-
-// createWorkspaceInstance creates a workspace instance using the provided provider.
-func createWorkspaceInstance(
-	workspaceProvider WorkspaceProvider,
-	fsInstance fs.FS,
-	gitInstance git.Git,
-	config config.Config,
-	statusInstance status.Manager,
-	loggerInstance logger.Logger,
-	promptInstance prompt.Prompter,
-) workspace.Workspace {
-	return workspaceProvider(workspace.NewWorkspaceParams{
-		FS:               fsInstance,
-		Git:              gitInstance,
-		Config:           config,
-		StatusManager:    statusInstance,
-		Logger:           loggerInstance,
-		Prompt:           promptInstance,
-		WorktreeProvider: worktree.NewWorktree,
-	})
 }
 
 // VerbosePrint logs a formatted message using the current logger.

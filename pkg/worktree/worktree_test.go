@@ -95,7 +95,7 @@ func TestWorktree_Create_Success(t *testing.T) {
 	mockGit.EXPECT().CheckReferenceConflict(params.RepoPath, params.Branch).Return(nil)
 	mockGit.EXPECT().BranchExists(params.RepoPath, params.Branch).Return(true, nil)
 	mockFS.EXPECT().MkdirAll(params.WorktreePath, gomock.Any()).Return(nil)
-	mockGit.EXPECT().CreateWorktree(params.RepoPath, params.WorktreePath, params.Branch).Return(nil)
+	mockGit.EXPECT().CreateWorktreeWithNoCheckout(params.RepoPath, params.WorktreePath, params.Branch).Return(nil)
 
 	err := worktree.Create(params)
 	assert.NoError(t, err)
@@ -223,7 +223,7 @@ func TestWorktree_Create_BranchDoesNotExist(t *testing.T) {
 		FromBranch: "origin/main",
 	}).Return(nil)
 	mockFS.EXPECT().MkdirAll(params.WorktreePath, gomock.Any()).Return(nil)
-	mockGit.EXPECT().CreateWorktree(params.RepoPath, params.WorktreePath, params.Branch).Return(nil)
+	mockGit.EXPECT().CreateWorktreeWithNoCheckout(params.RepoPath, params.WorktreePath, params.Branch).Return(nil)
 
 	err := worktree.Create(params)
 	assert.NoError(t, err)

@@ -5,6 +5,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/prompt"
@@ -52,6 +53,7 @@ type realWorkspace struct {
 	logger           logger.Logger
 	prompt           prompt.Prompter
 	worktreeProvider WorktreeProvider
+	hookManager      hooks.HookManagerInterface
 	OriginalFile     string
 }
 
@@ -64,6 +66,7 @@ type NewWorkspaceParams struct {
 	Logger           logger.Logger
 	Prompt           prompt.Prompter
 	WorktreeProvider WorktreeProvider
+	HookManager      hooks.HookManagerInterface
 }
 
 // NewWorkspace creates a new Workspace instance.
@@ -76,5 +79,6 @@ func NewWorkspace(params NewWorkspaceParams) Workspace {
 		logger:           params.Logger,
 		prompt:           params.Prompt,
 		worktreeProvider: params.WorktreeProvider,
+		hookManager:      params.HookManager,
 	}
 }

@@ -69,6 +69,20 @@ func (mr *MockWorktreeMockRecorder) BuildPath(repoURL, remoteName, branch any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildPath", reflect.TypeOf((*MockWorktree)(nil).BuildPath), repoURL, remoteName, branch)
 }
 
+// CheckoutBranch mocks base method.
+func (m *MockWorktree) CheckoutBranch(worktreePath, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckoutBranch", worktreePath, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckoutBranch indicates an expected call of CheckoutBranch.
+func (mr *MockWorktreeMockRecorder) CheckoutBranch(worktreePath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckoutBranch", reflect.TypeOf((*MockWorktree)(nil).CheckoutBranch), worktreePath, branch)
+}
+
 // CleanupDirectory mocks base method.
 func (m *MockWorktree) CleanupDirectory(worktreePath string) error {
 	m.ctrl.T.Helper()

@@ -23,6 +23,12 @@ type Git interface {
 	// CreateWorktree creates a new worktree for the specified branch.
 	CreateWorktree(repoPath, worktreePath, branch string) error
 
+	// CreateWorktreeWithNoCheckout creates a new worktree without checking out files.
+	CreateWorktreeWithNoCheckout(repoPath, worktreePath, branch string) error
+
+	// CheckoutBranch checks out a branch in the specified worktree.
+	CheckoutBranch(worktreePath, branch string) error
+
 	// GetCurrentBranch gets the current branch name.
 	GetCurrentBranch(repoPath string) (string, error)
 
@@ -132,6 +138,31 @@ func (g *realGit) CreateWorktree(repoPath, worktreePath, branch string) error {
 	if err != nil {
 		return fmt.Errorf("git worktree add failed: %w (command: git worktree add %s %s, output: %s)",
 			err, worktreePath, branch, string(output))
+	}
+	return nil
+}
+
+// CreateWorktreeWithNoCheckout creates a new worktree without checking out files.
+func (g *realGit) CreateWorktreeWithNoCheckout(repoPath, worktreePath, branch string) error {
+	cmd := exec.Command("git", "worktree", "add", "--no-checkout", worktreePath, branch)
+	cmd.Dir = repoPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git worktree add --no-checkout failed: %w "+
+			"(command: git worktree add --no-checkout %s %s, output: %s)",
+			err, worktreePath, branch, string(output))
+	}
+	return nil
+}
+
+// CheckoutBranch checks out a branch in the specified worktree.
+func (g *realGit) CheckoutBranch(worktreePath, branch string) error {
+	cmd := exec.Command("git", "checkout", branch)
+	cmd.Dir = worktreePath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("git checkout failed: %w (command: git checkout %s, output: %s)",
+			err, branch, string(output))
 	}
 	return nil
 }

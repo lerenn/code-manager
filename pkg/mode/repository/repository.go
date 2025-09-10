@@ -10,6 +10,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/mode"
@@ -60,6 +61,7 @@ type realRepository struct {
 	logger           logger.Logger
 	prompt           prompt.Prompter
 	worktreeProvider WorktreeProvider
+	hookManager      hooks.HookManagerInterface
 }
 
 // NewRepositoryParams contains parameters for creating a new Repository instance.
@@ -71,6 +73,7 @@ type NewRepositoryParams struct {
 	Logger           logger.Logger
 	Prompt           prompt.Prompter
 	WorktreeProvider WorktreeProvider
+	HookManager      hooks.HookManagerInterface
 }
 
 // NewRepository creates a new Repository instance.
@@ -88,6 +91,7 @@ func NewRepository(params NewRepositoryParams) Repository {
 		logger:           l,
 		prompt:           params.Prompt,
 		worktreeProvider: params.WorktreeProvider,
+		hookManager:      params.HookManager,
 	}
 }
 
@@ -135,27 +139,9 @@ func (r *realRepository) CreateWorktree(branch string, opts ...mode.CreateWorktr
 		return "", err
 	}
 
-	// Create worktree instance using provider
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
-	})
-
-	// Build worktree path
-	worktreePath := worktreeInstance.BuildPath(validationResult.RepoURL, "origin", branch)
-	r.logger.Logf("Worktree path: %s", worktreePath)
-
-	// Validate creation
-	if err := worktreeInstance.ValidateCreation(worktree.ValidateCreationParams{
-		RepoURL:      validationResult.RepoURL,
-		Branch:       branch,
-		WorktreePath: worktreePath,
-		RepoPath:     ".",
-	}); err != nil {
+	// Create and validate worktree instance
+	worktreeInstance, worktreePath, err := r.createAndValidateWorktreeInstance(validationResult.RepoURL, branch)
+	if err != nil {
 		return "", err
 	}
 
@@ -171,16 +157,22 @@ func (r *realRepository) CreateWorktree(branch string, opts ...mode.CreateWorktr
 		issueInfo = opts[0].IssueInfo
 	}
 
-	// Create the worktree
-	if err := worktreeInstance.Create(worktree.CreateParams{
-		RepoURL:      validationResult.RepoURL,
-		Branch:       branch,
-		WorktreePath: worktreePath,
-		RepoPath:     currentDir,
-		Remote:       "origin",
-		IssueInfo:    issueInfo,
-		Force:        false,
-	}); err != nil {
+	// Create the worktree (with --no-checkout)
+	if err := r.createWorktreeWithNoCheckout(
+		worktreeInstance, validationResult.RepoURL, branch, worktreePath, currentDir, issueInfo,
+	); err != nil {
+		return "", err
+	}
+
+	// Execute worktree checkout hooks (for git-crypt setup, etc.)
+	if err := r.executeWorktreeCheckoutHooks(
+		worktreeInstance, worktreePath, branch, currentDir, validationResult.RepoURL,
+	); err != nil {
+		return "", err
+	}
+
+	// Now checkout the branch
+	if err := r.checkoutBranchInWorktree(worktreeInstance, worktreePath, branch); err != nil {
 		return "", err
 	}
 
@@ -194,6 +186,99 @@ func (r *realRepository) CreateWorktree(branch string, opts ...mode.CreateWorktr
 	r.logger.Logf("Successfully created worktree for branch %s at %s", branch, worktreePath)
 
 	return worktreePath, nil
+}
+
+// executeWorktreeCheckoutHooks executes worktree checkout hooks with proper error handling.
+func (r *realRepository) executeWorktreeCheckoutHooks(
+	worktreeInstance worktree.Worktree,
+	worktreePath, branch, currentDir, repoURL string,
+) error {
+	if r.hookManager == nil {
+		return nil
+	}
+
+	ctx := &hooks.HookContext{
+		OperationName: "CreateWorkTree",
+		Parameters: map[string]interface{}{
+			"worktreePath": worktreePath,
+			"branch":       branch,
+			"repoPath":     currentDir,
+			"repoURL":      repoURL,
+		},
+		Results:  make(map[string]interface{}),
+		Metadata: make(map[string]interface{}),
+	}
+
+	if err := r.hookManager.ExecuteWorktreeCheckoutHooks("CreateWorkTree", ctx); err != nil {
+		// Cleanup failed worktree
+		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
+			r.logger.Logf("Warning: failed to clean up worktree directory after hook failure: %v", cleanupErr)
+		}
+		return fmt.Errorf("worktree checkout hooks failed: %w", err)
+	}
+
+	return nil
+}
+
+// createAndValidateWorktreeInstance creates and validates a worktree instance.
+func (r *realRepository) createAndValidateWorktreeInstance(repoURL, branch string) (worktree.Worktree, string, error) {
+	// Create worktree instance using provider
+	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
+		FS:            r.fs,
+		Git:           r.git,
+		StatusManager: r.statusManager,
+		Logger:        r.logger,
+		Prompt:        r.prompt,
+		BasePath:      r.config.BasePath,
+	})
+
+	// Build worktree path
+	worktreePath := worktreeInstance.BuildPath(repoURL, "origin", branch)
+	r.logger.Logf("Worktree path: %s", worktreePath)
+
+	// Validate creation
+	if err := worktreeInstance.ValidateCreation(worktree.ValidateCreationParams{
+		RepoURL:      repoURL,
+		Branch:       branch,
+		WorktreePath: worktreePath,
+		RepoPath:     ".",
+	}); err != nil {
+		return nil, "", err
+	}
+
+	return worktreeInstance, worktreePath, nil
+}
+
+// createWorktreeWithNoCheckout creates the worktree with --no-checkout flag.
+func (r *realRepository) createWorktreeWithNoCheckout(
+	worktreeInstance worktree.Worktree,
+	repoURL, branch, worktreePath, currentDir string,
+	issueInfo *issue.Info,
+) error {
+	return worktreeInstance.Create(worktree.CreateParams{
+		RepoURL:      repoURL,
+		Branch:       branch,
+		WorktreePath: worktreePath,
+		RepoPath:     currentDir,
+		Remote:       "origin",
+		IssueInfo:    issueInfo,
+		Force:        false,
+	})
+}
+
+// checkoutBranchInWorktree checks out the branch in the worktree with proper error handling.
+func (r *realRepository) checkoutBranchInWorktree(
+	worktreeInstance worktree.Worktree,
+	worktreePath, branch string,
+) error {
+	if err := worktreeInstance.CheckoutBranch(worktreePath, branch); err != nil {
+		// Cleanup failed worktree
+		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
+			r.logger.Logf("Warning: failed to clean up worktree directory after checkout failure: %v", cleanupErr)
+		}
+		return fmt.Errorf("failed to checkout branch in worktree: %w", err)
+	}
+	return nil
 }
 
 // addWorktreeToStatusAndHandleCleanup adds the worktree to status and handles cleanup on failure.
