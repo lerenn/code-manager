@@ -62,4 +62,14 @@ var (
 	ErrFailedToDetectDefaultBranch  = errors.New("failed to detect default branch")
 	ErrFailedToCloneRepository      = errors.New("failed to clone repository")
 	ErrFailedToInitializeRepository = errors.New("failed to initialize repository in CM")
+
+	// Workspace creation errors.
+	ErrInvalidWorkspaceName   = errors.New("invalid workspace name")
+	ErrRepositoryNotFound     = errors.New("repository not found")
+	ErrInvalidRepository      = errors.New("invalid repository")
+	ErrDuplicateRepository    = errors.New("duplicate repository")
+	ErrWorkspaceAlreadyExists = errors.New("workspace already exists")
+	ErrStatusUpdate           = errors.New("status file update failed")
+	ErrRepositoryAddition     = errors.New("failed to add repository to status file")
+	ErrPathResolution         = errors.New("path resolution failed")
 )
