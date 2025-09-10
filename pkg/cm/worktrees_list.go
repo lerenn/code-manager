@@ -6,7 +6,10 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
+	repo "github.com/lerenn/code-manager/pkg/mode/repository"
+	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // ListWorktrees lists worktrees for the current project with mode detection.
@@ -30,10 +33,32 @@ func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, er
 
 		switch projectType {
 		case mode.ModeSingleRepo:
-			worktrees, err := c.repository.ListWorktrees()
+			// Create repository instance
+			repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
+				FS:               c.fs,
+				Git:              c.git,
+				Config:           c.config,
+				StatusManager:    c.statusManager,
+				Logger:           c.logger,
+				Prompt:           c.prompt,
+				WorktreeProvider: worktree.NewWorktree,
+				HookManager:      c.hookManager,
+			})
+			worktrees, err := repoInstance.ListWorktrees()
 			return worktrees, mode.ModeSingleRepo, c.translateListError(err)
 		case mode.ModeWorkspace:
-			worktrees, err := c.workspace.ListWorktrees()
+			// Create workspace instance
+			workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
+				FS:               c.fs,
+				Git:              c.git,
+				Config:           c.config,
+				StatusManager:    c.statusManager,
+				Logger:           c.logger,
+				Prompt:           c.prompt,
+				WorktreeProvider: worktree.NewWorktree,
+				HookManager:      c.hookManager,
+			})
+			worktrees, err := workspaceInstance.ListWorktrees()
 			return worktrees, mode.ModeWorkspace, c.translateListError(err)
 		case mode.ModeNone:
 			return nil, mode.ModeNone, ErrNoGitRepositoryOrWorkspaceFound

@@ -62,15 +62,15 @@ type NewCMParams struct {
 }
 
 type realCM struct {
-	fs            fs.FS
-	git           git.Git
-	config        config.Config
-	statusManager status.Manager
-	logger        logger.Logger
-	prompt        prompt.Prompter
-	repository    repository.Repository
-	workspace     workspace.Workspace
-	hookManager   hooks.HookManagerInterface
+	fs                 fs.FS
+	git                git.Git
+	config             config.Config
+	statusManager      status.Manager
+	logger             logger.Logger
+	prompt             prompt.Prompter
+	repositoryProvider RepositoryProvider
+	workspaceProvider  WorkspaceProvider
+	hookManager        hooks.HookManagerInterface
 }
 
 // NewCM creates a new CM instance.
@@ -78,38 +78,16 @@ func NewCM(params NewCMParams) (CM, error) {
 	instances := createInstances(params)
 	hookManager := createHookManager(params.Hooks)
 
-	// Create repository and workspace instances using providers
-	repoInstance := instances.repoProvider(repository.NewRepositoryParams{
-		FS:               instances.fs,
-		Git:              instances.git,
-		Config:           params.Config,
-		StatusManager:    instances.status,
-		Logger:           instances.logger,
-		Prompt:           instances.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      hookManager,
-	})
-	workspaceInstance := instances.workspaceProvider(workspace.NewWorkspaceParams{
-		FS:               instances.fs,
-		Git:              instances.git,
-		Config:           params.Config,
-		StatusManager:    instances.status,
-		Logger:           instances.logger,
-		Prompt:           instances.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      hookManager,
-	})
-
 	return &realCM{
-		fs:            instances.fs,
-		git:           instances.git,
-		config:        params.Config,
-		statusManager: instances.status,
-		logger:        instances.logger,
-		prompt:        instances.prompt,
-		repository:    repoInstance,
-		workspace:     workspaceInstance,
-		hookManager:   hookManager,
+		fs:                 instances.fs,
+		git:                instances.git,
+		config:             params.Config,
+		statusManager:      instances.status,
+		logger:             instances.logger,
+		prompt:             instances.prompt,
+		repositoryProvider: instances.repoProvider,
+		workspaceProvider:  instances.workspaceProvider,
+		hookManager:        hookManager,
 	}, nil
 }
 
@@ -189,15 +167,14 @@ func createInstances(params NewCMParams) cmInstances {
 
 // VerbosePrint logs a formatted message using the current logger.
 func (c *realCM) VerbosePrint(msg string, args ...interface{}) {
-	c.logger.Logf(fmt.Sprintf(msg, args...))
+	if c.logger != nil {
+		c.logger.Logf(fmt.Sprintf(msg, args...))
+	}
 }
 
 // SetLogger sets the logger for this CM instance.
 func (c *realCM) SetLogger(logger logger.Logger) {
 	c.logger = logger
-	// Propagate logger setting to components
-	c.repository.SetLogger(logger)
-	c.workspace.SetLogger(logger)
 }
 
 // BuildWorktreePath constructs a worktree path from repository URL, remote name, and branch.
@@ -371,8 +348,21 @@ func (c *realCM) executePreHooks(operationName string, ctx *hooks.HookContext) e
 // detectProjectMode detects the type of project (single repository or workspace).
 func (c *realCM) detectProjectMode() (mode.Mode, error) {
 	c.VerbosePrint("Detecting project mode...")
+
+	// Create repository instance to check if we're in a Git repository
+	repoInstance := c.repositoryProvider(repository.NewRepositoryParams{
+		FS:               c.fs,
+		Git:              c.git,
+		Config:           c.config,
+		StatusManager:    c.statusManager,
+		Logger:           c.logger,
+		Prompt:           c.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      c.hookManager,
+	})
+
 	// First, check if we're in a Git repository
-	exists, err := c.repository.IsGitRepository()
+	exists, err := repoInstance.IsGitRepository()
 	if err != nil {
 		return mode.ModeNone, fmt.Errorf("failed to check Git repository: %w", err)
 	}

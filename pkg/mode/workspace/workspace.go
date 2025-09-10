@@ -71,12 +71,17 @@ type NewWorkspaceParams struct {
 
 // NewWorkspace creates a new Workspace instance.
 func NewWorkspace(params NewWorkspaceParams) Workspace {
+	l := params.Logger
+	if l == nil {
+		l = logger.NewNoopLogger()
+	}
+
 	return &realWorkspace{
 		fs:               params.FS,
 		git:              params.Git,
 		config:           params.Config,
 		statusManager:    params.StatusManager,
-		logger:           params.Logger,
+		logger:           l,
 		prompt:           params.Prompt,
 		worktreeProvider: params.WorktreeProvider,
 		hookManager:      params.HookManager,

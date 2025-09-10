@@ -123,6 +123,11 @@ type NewWorktreeParams struct {
 
 // NewWorktree creates a new Worktree instance.
 func NewWorktree(params NewWorktreeParams) Worktree {
+	// Set default logger if not provided
+	if params.Logger == nil {
+		params.Logger = logger.NewNoopLogger()
+	}
+
 	return &realWorktree{
 		fs:            params.FS,
 		git:           params.Git,

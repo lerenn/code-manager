@@ -6,7 +6,9 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
-	"github.com/lerenn/code-manager/pkg/mode/workspace"
+	repo "github.com/lerenn/code-manager/pkg/mode/repository"
+	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // DeleteWorkTree deletes a worktree for the specified branch.
@@ -44,8 +46,20 @@ func (c *realCM) DeleteWorkTree(branch string, force bool) error {
 func (c *realCM) handleRepositoryDeleteMode(branch string, force bool) error {
 	c.VerbosePrint("Handling repository delete mode")
 
+	// Create repository instance
+	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
+		FS:               c.fs,
+		Git:              c.git,
+		Config:           c.config,
+		StatusManager:    c.statusManager,
+		Logger:           c.logger,
+		Prompt:           c.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      c.hookManager,
+	})
+
 	// Delete worktree for single repository
-	if err := c.repository.DeleteWorktree(branch, force); err != nil {
+	if err := repoInstance.DeleteWorktree(branch, force); err != nil {
 		return c.translateRepositoryError(err)
 	}
 
@@ -58,8 +72,20 @@ func (c *realCM) handleRepositoryDeleteMode(branch string, force bool) error {
 func (c *realCM) handleWorkspaceDeleteMode(branch string, force bool) error {
 	c.VerbosePrint("Handling workspace delete mode")
 
+	// Create workspace instance
+	workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
+		FS:               c.fs,
+		Git:              c.git,
+		Config:           c.config,
+		StatusManager:    c.statusManager,
+		Logger:           c.logger,
+		Prompt:           c.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      c.hookManager,
+	})
+
 	// Delete worktree for workspace
-	if err := c.workspace.DeleteWorktree(branch, force); err != nil {
+	if err := workspaceInstance.DeleteWorktree(branch, force); err != nil {
 		return c.translateWorkspaceError(err)
 	}
 
@@ -74,16 +100,16 @@ func (c *realCM) translateWorkspaceError(err error) error {
 	}
 
 	// Check for specific workspace errors and translate them
-	if errors.Is(err, workspace.ErrWorktreeExists) {
+	if errors.Is(err, ws.ErrWorktreeExists) {
 		return ErrWorktreeExists
 	}
-	if errors.Is(err, workspace.ErrWorktreeNotInStatus) {
+	if errors.Is(err, ws.ErrWorktreeNotInStatus) {
 		return ErrWorktreeNotInStatus
 	}
-	if errors.Is(err, workspace.ErrRepositoryNotClean) {
+	if errors.Is(err, ws.ErrRepositoryNotClean) {
 		return ErrRepositoryNotClean
 	}
-	if errors.Is(err, workspace.ErrDirectoryExists) {
+	if errors.Is(err, ws.ErrDirectoryExists) {
 		return ErrDirectoryExists
 	}
 
