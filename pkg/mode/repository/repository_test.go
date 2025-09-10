@@ -50,6 +50,7 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	mockWorktree.EXPECT().BuildPath("github.com/octocat/Hello-World", "origin", "test-branch").Return("/test/path/github.com/octocat/Hello-World/origin/test-branch")
 	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().CheckoutBranch("/test/path/github.com/octocat/Hello-World/origin/test-branch", "test-branch").Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	worktreePath, err := repo.CreateWorktree("test-branch")
@@ -322,6 +323,7 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	mockWorktree.EXPECT().BuildPath("github.com/octocat/Hello-World", "origin", "feature-branch").Return("/test/path/github.com/octocat/Hello-World/origin/feature-branch")
 	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().CheckoutBranch("/test/path/github.com/octocat/Hello-World/origin/feature-branch", "feature-branch").Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	worktreePath, err := repo.LoadWorktree("origin", "feature-branch")

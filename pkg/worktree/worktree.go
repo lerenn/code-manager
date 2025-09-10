@@ -23,6 +23,9 @@ type Worktree interface {
 	// Create creates a new worktree with proper validation and cleanup.
 	Create(params CreateParams) error
 
+	// CheckoutBranch checks out the branch in the worktree after hooks have been executed.
+	CheckoutBranch(worktreePath, branch string) error
+
 	// Delete deletes a worktree with proper cleanup and confirmation.
 	Delete(params DeleteParams) error
 
@@ -165,8 +168,8 @@ func (w *realWorktree) Create(params CreateParams) error {
 		return err
 	}
 
-	// Create Git worktree
-	if err := w.git.CreateWorktree(params.RepoPath, params.WorktreePath, params.Branch); err != nil {
+	// Create Git worktree with --no-checkout to allow hooks to prepare
+	if err := w.git.CreateWorktreeWithNoCheckout(params.RepoPath, params.WorktreePath, params.Branch); err != nil {
 		// Clean up directory on failure
 		if cleanupErr := w.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
 			w.logger.Logf("Warning: failed to clean up worktree directory: %v", cleanupErr)
@@ -175,6 +178,18 @@ func (w *realWorktree) Create(params CreateParams) error {
 	}
 
 	w.logger.Logf("✓ Worktree created successfully for %s:%s", params.Remote, params.Branch)
+	return nil
+}
+
+// CheckoutBranch checks out the branch in the worktree after hooks have been executed.
+func (w *realWorktree) CheckoutBranch(worktreePath, branch string) error {
+	w.logger.Logf("Checking out branch %s in worktree at %s", branch, worktreePath)
+
+	if err := w.git.CheckoutBranch(worktreePath, branch); err != nil {
+		return fmt.Errorf("failed to checkout branch in worktree: %w", err)
+	}
+
+	w.logger.Logf("✓ Branch %s checked out successfully in worktree", branch)
 	return nil
 }
 

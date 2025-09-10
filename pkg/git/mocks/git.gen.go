@@ -117,6 +117,20 @@ func (mr *MockGitMockRecorder) CheckReferenceConflict(repoPath, branch any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckReferenceConflict", reflect.TypeOf((*MockGit)(nil).CheckReferenceConflict), repoPath, branch)
 }
 
+// CheckoutBranch mocks base method.
+func (m *MockGit) CheckoutBranch(worktreePath, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CheckoutBranch", worktreePath, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CheckoutBranch indicates an expected call of CheckoutBranch.
+func (mr *MockGitMockRecorder) CheckoutBranch(worktreePath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckoutBranch", reflect.TypeOf((*MockGit)(nil).CheckoutBranch), worktreePath, branch)
+}
+
 // Clone mocks base method.
 func (m *MockGit) Clone(params git.CloneParams) error {
 	m.ctrl.T.Helper()
@@ -200,6 +214,20 @@ func (m *MockGit) CreateWorktree(repoPath, worktreePath, branch string) error {
 func (mr *MockGitMockRecorder) CreateWorktree(repoPath, worktreePath, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktree", reflect.TypeOf((*MockGit)(nil).CreateWorktree), repoPath, worktreePath, branch)
+}
+
+// CreateWorktreeWithNoCheckout mocks base method.
+func (m *MockGit) CreateWorktreeWithNoCheckout(repoPath, worktreePath, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateWorktreeWithNoCheckout", repoPath, worktreePath, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateWorktreeWithNoCheckout indicates an expected call of CreateWorktreeWithNoCheckout.
+func (mr *MockGitMockRecorder) CreateWorktreeWithNoCheckout(repoPath, worktreePath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktreeWithNoCheckout", reflect.TypeOf((*MockGit)(nil).CreateWorktreeWithNoCheckout), repoPath, worktreePath, branch)
 }
 
 // FetchRemote mocks base method.

@@ -41,3 +41,9 @@ type ErrorHook interface {
 	Hook
 	OnError(ctx *HookContext) error
 }
+
+// WorktreeCheckoutHook executes between worktree creation and checkout.
+type WorktreeCheckoutHook interface {
+	Hook
+	OnWorktreeCheckout(ctx *HookContext) error
+}

@@ -104,8 +104,8 @@ func (ci *CodeManager) IntegrationTests(sourceDir *dagger.Directory) *dagger.Con
 // EndToEndTests returns a container that runs the end-to-end tests.
 func (ci *CodeManager) EndToEndTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:" + goVersion() + "-alpine").
-		// Install git for end-to-end tests
-		WithExec([]string{"apk", "add", "--no-cache", "git"}).
+		// Install git and git-crypt for end-to-end tests
+		WithExec([]string{"apk", "add", "--no-cache", "git", "git-crypt"}).
 		// Configure git for testing
 		WithExec([]string{"git", "config", "--global", "user.name", "Test User"}).
 		WithExec([]string{"git", "config", "--global", "user.email", "test@example.com"})
