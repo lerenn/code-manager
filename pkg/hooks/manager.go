@@ -10,10 +10,11 @@ import (
 
 // HookManager manages hook registration and execution.
 type HookManager struct {
-	preHooks   map[string][]PreHook
-	postHooks  map[string][]PostHook
-	errorHooks map[string][]ErrorHook
-	mu         sync.RWMutex
+	preHooks              map[string][]PreHook
+	postHooks             map[string][]PostHook
+	errorHooks            map[string][]ErrorHook
+	worktreeCheckoutHooks map[string][]WorktreeCheckoutHook
+	mu                    sync.RWMutex
 }
 
 // HookManagerInterface defines the interface for hook management.
@@ -22,11 +23,13 @@ type HookManagerInterface interface {
 	RegisterPreHook(operation string, hook PreHook) error
 	RegisterPostHook(operation string, hook PostHook) error
 	RegisterErrorHook(operation string, hook ErrorHook) error
+	RegisterWorktreeCheckoutHook(operation string, hook WorktreeCheckoutHook) error
 
 	// Hook execution.
 	ExecutePreHooks(operation string, ctx *HookContext) error
 	ExecutePostHooks(operation string, ctx *HookContext) error
 	ExecuteErrorHooks(operation string, ctx *HookContext) error
+	ExecuteWorktreeCheckoutHooks(operation string, ctx *HookContext) error
 
 	// Hook management.
 	RemoveHook(operation, hookName string) error
@@ -38,9 +41,10 @@ type HookManagerInterface interface {
 // NewHookManager creates a new HookManager instance.
 func NewHookManager() HookManagerInterface {
 	return &HookManager{
-		preHooks:   make(map[string][]PreHook),
-		postHooks:  make(map[string][]PostHook),
-		errorHooks: make(map[string][]ErrorHook),
+		preHooks:              make(map[string][]PreHook),
+		postHooks:             make(map[string][]PostHook),
+		errorHooks:            make(map[string][]ErrorHook),
+		worktreeCheckoutHooks: make(map[string][]WorktreeCheckoutHook),
 	}
 }
 
@@ -98,6 +102,24 @@ func (hm *HookManager) RegisterErrorHook(operation string, hook ErrorHook) error
 	return nil
 }
 
+// RegisterWorktreeCheckoutHook registers a worktree checkout hook for a specific operation.
+func (hm *HookManager) RegisterWorktreeCheckoutHook(operation string, hook WorktreeCheckoutHook) error {
+	hm.mu.Lock()
+	defer hm.mu.Unlock()
+
+	if hook == nil {
+		return fmt.Errorf("hook cannot be nil")
+	}
+
+	if hm.worktreeCheckoutHooks[operation] == nil {
+		hm.worktreeCheckoutHooks[operation] = make([]WorktreeCheckoutHook, 0)
+	}
+
+	hm.worktreeCheckoutHooks[operation] = append(hm.worktreeCheckoutHooks[operation], hook)
+	hm.sortWorktreeCheckoutHooksByPriority(operation)
+	return nil
+}
+
 // ExecutePreHooks executes all pre-hooks for a specific operation.
 func (hm *HookManager) ExecutePreHooks(operation string, ctx *HookContext) error {
 	hm.mu.RLock()
@@ -143,6 +165,21 @@ func (hm *HookManager) ExecuteErrorHooks(operation string, ctx *HookContext) err
 	return nil
 }
 
+// ExecuteWorktreeCheckoutHooks executes all worktree checkout hooks for a specific operation.
+func (hm *HookManager) ExecuteWorktreeCheckoutHooks(operation string, ctx *HookContext) error {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+
+	// Execute operation-specific worktree checkout hooks.
+	for _, hook := range hm.worktreeCheckoutHooks[operation] {
+		if err := hook.OnWorktreeCheckout(ctx); err != nil {
+			return fmt.Errorf("worktree checkout hook %s failed: %w", hook.Name(), err)
+		}
+	}
+
+	return nil
+}
+
 // RemoveHook removes a hook by name from a specific operation.
 func (hm *HookManager) RemoveHook(operation, hookName string) error {
 	hm.mu.Lock()
@@ -161,6 +198,11 @@ func (hm *HookManager) RemoveHook(operation, hookName string) error {
 	// Remove from error-hooks.
 	if hooks, exists := hm.errorHooks[operation]; exists {
 		hm.errorHooks[operation] = hm.removeErrorHookByName(hooks, hookName)
+	}
+
+	// Remove from worktree checkout hooks.
+	if hooks, exists := hm.worktreeCheckoutHooks[operation]; exists {
+		hm.worktreeCheckoutHooks[operation] = hm.removeWorktreeCheckoutHookByName(hooks, hookName)
 	}
 
 	return nil
@@ -197,6 +239,11 @@ func (hm *HookManager) ListHooks(operation string) ([]Hook, error) {
 
 	// Add error-hooks.
 	for _, hook := range hm.errorHooks[operation] {
+		hooks = append(hooks, hook)
+	}
+
+	// Add worktree checkout hooks.
+	for _, hook := range hm.worktreeCheckoutHooks[operation] {
 		hooks = append(hooks, hook)
 	}
 
@@ -243,6 +290,25 @@ func (hm *HookManager) removePostHookByName(hooks []PostHook, name string) []Pos
 
 func (hm *HookManager) removeErrorHookByName(hooks []ErrorHook, name string) []ErrorHook {
 	var result []ErrorHook
+	for _, hook := range hooks {
+		if hook.Name() != name {
+			result = append(result, hook)
+		}
+	}
+	return result
+}
+
+func (hm *HookManager) sortWorktreeCheckoutHooksByPriority(operation string) {
+	sort.Slice(hm.worktreeCheckoutHooks[operation], func(i, j int) bool {
+		return hm.worktreeCheckoutHooks[operation][i].Priority() < hm.worktreeCheckoutHooks[operation][j].Priority()
+	})
+}
+
+func (hm *HookManager) removeWorktreeCheckoutHookByName(
+	hooks []WorktreeCheckoutHook,
+	name string,
+) []WorktreeCheckoutHook {
+	var result []WorktreeCheckoutHook
 	for _, hook := range hooks {
 		if hook.Name() != name {
 			result = append(result, hook)

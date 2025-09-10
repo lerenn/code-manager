@@ -110,6 +110,20 @@ func (mr *MockHookManagerInterfaceMockRecorder) ExecutePreHooks(operation, ctx a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecutePreHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecutePreHooks), operation, ctx)
 }
 
+// ExecuteWorktreeCheckoutHooks mocks base method.
+func (m *MockHookManagerInterface) ExecuteWorktreeCheckoutHooks(operation string, ctx *hooks.HookContext) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecuteWorktreeCheckoutHooks", operation, ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExecuteWorktreeCheckoutHooks indicates an expected call of ExecuteWorktreeCheckoutHooks.
+func (mr *MockHookManagerInterfaceMockRecorder) ExecuteWorktreeCheckoutHooks(operation, ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteWorktreeCheckoutHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecuteWorktreeCheckoutHooks), operation, ctx)
+}
+
 // ListHooks mocks base method.
 func (m *MockHookManagerInterface) ListHooks(operation string) ([]hooks.Hook, error) {
 	m.ctrl.T.Helper()
@@ -165,6 +179,20 @@ func (m *MockHookManagerInterface) RegisterPreHook(operation string, hook hooks.
 func (mr *MockHookManagerInterfaceMockRecorder) RegisterPreHook(operation, hook any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterPreHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterPreHook), operation, hook)
+}
+
+// RegisterWorktreeCheckoutHook mocks base method.
+func (m *MockHookManagerInterface) RegisterWorktreeCheckoutHook(operation string, hook hooks.WorktreeCheckoutHook) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegisterWorktreeCheckoutHook", operation, hook)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RegisterWorktreeCheckoutHook indicates an expected call of RegisterWorktreeCheckoutHook.
+func (mr *MockHookManagerInterfaceMockRecorder) RegisterWorktreeCheckoutHook(operation, hook any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterWorktreeCheckoutHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterWorktreeCheckoutHook), operation, hook)
 }
 
 // RemoveHook mocks base method.
