@@ -33,8 +33,8 @@ type Remote struct {
 
 // Workspace represents a workspace entry in the status file.
 type Workspace struct {
-	Worktree     string   `yaml:"worktree"`
-	Repositories []string `yaml:"repositories"`
+	Worktree     []string `yaml:"worktree"`     // List of worktree references
+	Repositories []string `yaml:"repositories"` // List of repository URLs/names
 }
 
 // WorktreeInfo represents worktree information.
@@ -134,8 +134,7 @@ type AddRepositoryParams struct {
 
 // AddWorkspaceParams contains parameters for AddWorkspace.
 type AddWorkspaceParams struct {
-	Worktree     string
-	Repositories []string
+	Repositories []string // List of repository URLs/names
 }
 
 // AddWorktree adds a worktree entry to the status file.
@@ -334,7 +333,10 @@ func (s *realManager) AddWorkspace(workspacePath string, params AddWorkspacePara
 	}
 
 	// Create new workspace entry
-	workspace := Workspace(params)
+	workspace := Workspace{
+		Worktree:     []string{}, // Empty initially, populated when worktrees are created
+		Repositories: params.Repositories,
+	}
 
 	// Add to workspaces map
 	status.Workspaces[workspacePath] = workspace

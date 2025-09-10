@@ -322,7 +322,6 @@ func (w *realWorkspace) ensureWorkspaceInStatus(workspaceConfig Config, workspac
 
 	// Add workspace to status using the workspace file path as the key
 	if err := w.statusManager.AddWorkspace(workspaceFilePath, status.AddWorkspaceParams{
-		Worktree:     workspaceFilePath,
 		Repositories: repositories,
 	}); err != nil {
 		return fmt.Errorf("failed to add workspace to status: %w", err)
