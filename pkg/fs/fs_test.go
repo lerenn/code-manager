@@ -535,3 +535,366 @@ func TestFS_IsPathWithinBase(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, within)
 }
+
+func TestFS_ResolvePath(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-resolve-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Create nested directory structure
+	nestedDir := filepath.Join(tmpDir, "level1", "level2")
+	err = os.MkdirAll(nestedDir, 0755)
+	require.NoError(t, err)
+
+	// Test resolving relative paths from base directory
+	basePath := tmpDir
+
+	// Test simple relative path
+	resolved, err := fs.ResolvePath(basePath, "level1")
+	assert.NoError(t, err)
+	expected := filepath.Join(tmpDir, "level1")
+	assert.Equal(t, expected, resolved)
+
+	// Test nested relative path
+	resolved, err = fs.ResolvePath(basePath, "level1/level2")
+	assert.NoError(t, err)
+	expected = filepath.Join(tmpDir, "level1", "level2")
+	assert.Equal(t, expected, resolved)
+
+	// Test relative path with ".." components
+	resolved, err = fs.ResolvePath(nestedDir, "../level1")
+	assert.NoError(t, err)
+	expected = filepath.Join(tmpDir, "level1", "level1")
+	assert.Equal(t, expected, resolved)
+
+	// Test relative path with "." components
+	resolved, err = fs.ResolvePath(basePath, "./level1")
+	assert.NoError(t, err)
+	expected = filepath.Join(tmpDir, "level1")
+	assert.Equal(t, expected, resolved)
+
+	// Test absolute path (should return as-is)
+	absPath := filepath.Join(tmpDir, "absolute")
+	resolved, err = fs.ResolvePath(basePath, absPath)
+	assert.NoError(t, err)
+	assert.Equal(t, absPath, resolved)
+
+	// Test empty base path
+	_, err = fs.ResolvePath("", "relative")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrPathResolution)
+
+	// Test empty relative path
+	_, err = fs.ResolvePath(basePath, "")
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrPathResolution)
+
+	// Test complex relative path with multiple ".." and "."
+	resolved, err = fs.ResolvePath(nestedDir, "../../level1/./level2")
+	assert.NoError(t, err)
+	expected = filepath.Join(tmpDir, "level1", "level2")
+	assert.Equal(t, expected, resolved)
+
+	// Test path that goes outside base directory
+	resolved, err = fs.ResolvePath(nestedDir, "../../../outside")
+	assert.NoError(t, err)
+	// Should still resolve but go outside the base directory
+	expected = filepath.Join(filepath.Dir(tmpDir), "outside")
+	assert.Equal(t, expected, resolved)
+}
+
+func TestFS_ValidateRepositoryPath(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-validate-repo-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test empty path
+	valid, err := fs.ValidateRepositoryPath("")
+	assert.Error(t, err)
+	assert.False(t, valid)
+	assert.ErrorIs(t, err, ErrInvalidRepository)
+
+	// Test non-existent path
+	nonExistentPath := filepath.Join(tmpDir, "non-existent")
+	valid, err = fs.ValidateRepositoryPath(nonExistentPath)
+	assert.Error(t, err)
+	assert.False(t, valid)
+	assert.ErrorIs(t, err, ErrInvalidRepository)
+
+	// Test path that exists but is a file (not directory)
+	testFile := filepath.Join(tmpDir, "test-file.txt")
+	err = os.WriteFile(testFile, []byte("test content"), 0644)
+	require.NoError(t, err)
+
+	valid, err = fs.ValidateRepositoryPath(testFile)
+	assert.Error(t, err)
+	assert.False(t, valid)
+	assert.ErrorIs(t, err, ErrInvalidRepository)
+
+	// Test directory without .git
+	regularDir := filepath.Join(tmpDir, "regular-dir")
+	err = os.MkdirAll(regularDir, 0755)
+	require.NoError(t, err)
+
+	valid, err = fs.ValidateRepositoryPath(regularDir)
+	assert.Error(t, err)
+	assert.False(t, valid)
+	assert.ErrorIs(t, err, ErrInvalidRepository)
+
+	// Test directory with .git as a file (submodule case)
+	submoduleDir := filepath.Join(tmpDir, "submodule-dir")
+	err = os.MkdirAll(submoduleDir, 0755)
+	require.NoError(t, err)
+
+	// Create .git as a file (submodule)
+	gitFile := filepath.Join(submoduleDir, ".git")
+	err = os.WriteFile(gitFile, []byte("gitdir: ../.git/modules/submodule"), 0644)
+	require.NoError(t, err)
+
+	valid, err = fs.ValidateRepositoryPath(submoduleDir)
+	assert.NoError(t, err)
+	assert.True(t, valid)
+
+	// Test directory with .git as a directory (regular repository)
+	repoDir := filepath.Join(tmpDir, "repo-dir")
+	err = os.MkdirAll(repoDir, 0755)
+	require.NoError(t, err)
+
+	// Create .git directory
+	gitDir := filepath.Join(repoDir, ".git")
+	err = os.MkdirAll(gitDir, 0755)
+	require.NoError(t, err)
+
+	// Create some basic Git repository structure
+	objectsDir := filepath.Join(gitDir, "objects")
+	refsDir := filepath.Join(gitDir, "refs")
+	err = os.MkdirAll(objectsDir, 0755)
+	require.NoError(t, err)
+	err = os.MkdirAll(refsDir, 0755)
+	require.NoError(t, err)
+
+	// Create HEAD file
+	headFile := filepath.Join(gitDir, "HEAD")
+	err = os.WriteFile(headFile, []byte("ref: refs/heads/main\n"), 0644)
+	require.NoError(t, err)
+
+	valid, err = fs.ValidateRepositoryPath(repoDir)
+	assert.NoError(t, err)
+	assert.True(t, valid)
+
+	// Test nested repository
+	nestedRepoDir := filepath.Join(tmpDir, "nested", "repo")
+	err = os.MkdirAll(nestedRepoDir, 0755)
+	require.NoError(t, err)
+
+	// Create .git directory in nested location
+	nestedGitDir := filepath.Join(nestedRepoDir, ".git")
+	err = os.MkdirAll(nestedGitDir, 0755)
+	require.NoError(t, err)
+
+	valid, err = fs.ValidateRepositoryPath(nestedRepoDir)
+	assert.NoError(t, err)
+	assert.True(t, valid)
+
+	// Test repository with absolute path
+	absRepoDir, err := filepath.Abs(repoDir)
+	require.NoError(t, err)
+
+	valid, err = fs.ValidateRepositoryPath(absRepoDir)
+	assert.NoError(t, err)
+	assert.True(t, valid)
+}
+
+func TestFS_CreateDirectory(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-create-dir-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test creating a single directory
+	testDir := filepath.Join(tmpDir, "test-dir")
+	err = fs.CreateDirectory(testDir, 0755)
+	assert.NoError(t, err)
+
+	// Verify directory was created
+	exists, err := fs.Exists(testDir)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	isDir, err := fs.IsDir(testDir)
+	assert.NoError(t, err)
+	assert.True(t, isDir)
+
+	// Test creating nested directories
+	nestedDir := filepath.Join(tmpDir, "level1", "level2", "level3")
+	err = fs.CreateDirectory(nestedDir, 0755)
+	assert.NoError(t, err)
+
+	// Verify nested directories were created
+	exists, err = fs.Exists(nestedDir)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+
+	isDir, err = fs.IsDir(nestedDir)
+	assert.NoError(t, err)
+	assert.True(t, isDir)
+
+	// Test creating existing directory (should not error)
+	err = fs.CreateDirectory(testDir, 0755)
+	assert.NoError(t, err)
+
+	// Test creating directory with different permissions
+	permDir := filepath.Join(tmpDir, "perm-dir")
+	err = fs.CreateDirectory(permDir, 0700)
+	assert.NoError(t, err)
+
+	// Verify directory permissions
+	info, err := os.Stat(permDir)
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0700), info.Mode().Perm())
+}
+
+func TestFS_CreateFileWithContent(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-create-file-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test creating a file with content
+	testFile := filepath.Join(tmpDir, "test-file.txt")
+	testContent := []byte("test content for file")
+	err = fs.CreateFileWithContent(testFile, testContent, 0644)
+	assert.NoError(t, err)
+
+	// Verify file was created with correct content
+	readContent, err := fs.ReadFile(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, testContent, readContent)
+
+	// Verify file permissions
+	info, err := os.Stat(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0644), info.Mode().Perm())
+
+	// Test creating file in nested directory
+	nestedFile := filepath.Join(tmpDir, "level1", "level2", "nested-file.txt")
+	nestedContent := []byte("nested file content")
+	err = fs.CreateFileWithContent(nestedFile, nestedContent, 0755)
+	assert.NoError(t, err)
+
+	// Verify nested file was created
+	readContent, err = fs.ReadFile(nestedFile)
+	assert.NoError(t, err)
+	assert.Equal(t, nestedContent, readContent)
+
+	// Verify nested file permissions
+	info, err = os.Stat(nestedFile)
+	assert.NoError(t, err)
+	assert.Equal(t, os.FileMode(0755), info.Mode().Perm())
+
+	// Test overwriting existing file
+	newContent := []byte("new content")
+	err = fs.CreateFileWithContent(testFile, newContent, 0644)
+	assert.NoError(t, err)
+
+	// Verify file was updated
+	readContent, err = fs.ReadFile(testFile)
+	assert.NoError(t, err)
+	assert.Equal(t, newContent, readContent)
+}
+
+func TestFS_IsDirectoryWritable(t *testing.T) {
+	fs := NewFS()
+
+	// Create a temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "test-writable-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	// Test writable directory
+	writable, err := fs.IsDirectoryWritable(tmpDir)
+	assert.NoError(t, err)
+	assert.True(t, writable)
+
+	// Test non-existent directory
+	nonExistentDir := filepath.Join(tmpDir, "non-existent")
+	writable, err = fs.IsDirectoryWritable(nonExistentDir)
+	assert.Error(t, err)
+	assert.False(t, writable)
+
+	// Test file instead of directory
+	testFile := filepath.Join(tmpDir, "test-file.txt")
+	err = os.WriteFile(testFile, []byte("test"), 0644)
+	require.NoError(t, err)
+
+	writable, err = fs.IsDirectoryWritable(testFile)
+	assert.Error(t, err)
+	assert.False(t, writable)
+
+	// Test nested directory
+	nestedDir := filepath.Join(tmpDir, "level1", "level2")
+	err = os.MkdirAll(nestedDir, 0755)
+	require.NoError(t, err)
+
+	writable, err = fs.IsDirectoryWritable(nestedDir)
+	assert.NoError(t, err)
+	assert.True(t, writable)
+}
+
+func TestFS_ExpandPath(t *testing.T) {
+	fs := NewFS()
+
+	// Get home directory for testing
+	homeDir, err := fs.GetHomeDir()
+	require.NoError(t, err)
+
+	// Test expanding ~ to home directory
+	expanded, err := fs.ExpandPath("~")
+	assert.NoError(t, err)
+	assert.Equal(t, homeDir, expanded)
+
+	// Test expanding ~/path to home directory + path
+	expanded, err = fs.ExpandPath("~/test/path")
+	assert.NoError(t, err)
+	expected := filepath.Join(homeDir, "test", "path")
+	assert.Equal(t, expected, expanded)
+
+	// Test expanding ~/ with trailing slash
+	expanded, err = fs.ExpandPath("~/")
+	assert.NoError(t, err)
+	assert.Equal(t, homeDir, expanded)
+
+	// Test path without ~ (should return as-is)
+	regularPath := "/some/regular/path"
+	expanded, err = fs.ExpandPath(regularPath)
+	assert.NoError(t, err)
+	assert.Equal(t, regularPath, expanded)
+
+	// Test relative path without ~ (should return as-is)
+	relativePath := "relative/path"
+	expanded, err = fs.ExpandPath(relativePath)
+	assert.NoError(t, err)
+	assert.Equal(t, relativePath, expanded)
+
+	// Test empty path
+	expanded, err = fs.ExpandPath("")
+	assert.NoError(t, err)
+	assert.Equal(t, "", expanded)
+
+	// Test path with multiple ~ (should only expand the first one)
+	multiTildePath := "~/test/~/path"
+	expanded, err = fs.ExpandPath(multiTildePath)
+	assert.NoError(t, err)
+	expected = filepath.Join(homeDir, "test", "~/path")
+	assert.Equal(t, expected, expanded)
+}

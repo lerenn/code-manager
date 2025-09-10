@@ -293,6 +293,36 @@ func (mr *MockFSMockRecorder) RemoveAll(path any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveAll", reflect.TypeOf((*MockFS)(nil).RemoveAll), path)
 }
 
+// ResolvePath mocks base method.
+func (m *MockFS) ResolvePath(basePath, relativePath string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ResolvePath", basePath, relativePath)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ResolvePath indicates an expected call of ResolvePath.
+func (mr *MockFSMockRecorder) ResolvePath(basePath, relativePath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolvePath", reflect.TypeOf((*MockFS)(nil).ResolvePath), basePath, relativePath)
+}
+
+// ValidateRepositoryPath mocks base method.
+func (m *MockFS) ValidateRepositoryPath(path string) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateRepositoryPath", path)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateRepositoryPath indicates an expected call of ValidateRepositoryPath.
+func (mr *MockFSMockRecorder) ValidateRepositoryPath(path any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRepositoryPath", reflect.TypeOf((*MockFS)(nil).ValidateRepositoryPath), path)
+}
+
 // Which mocks base method.
 func (m *MockFS) Which(command string) (string, error) {
 	m.ctrl.T.Helper()

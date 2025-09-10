@@ -31,7 +31,6 @@ func TestAddWorkspace(t *testing.T) {
 	// Test data
 	workspacePath := "/home/user/workspace.code-workspace"
 	params := AddWorkspaceParams{
-		Worktree:     "origin:feature-a",
 		Repositories: []string{"github.com/octocat/Hello-World", "github.com/lerenn/other"},
 	}
 
@@ -40,7 +39,7 @@ func TestAddWorkspace(t *testing.T) {
 		Repositories: make(map[string]Repository),
 		Workspaces: map[string]Workspace{
 			workspacePath: {
-				Worktree:     params.Worktree,
+				Worktree:     []string{}, // Empty initially, populated when worktrees are created
 				Repositories: params.Repositories,
 			},
 		},
@@ -82,7 +81,6 @@ func TestAddWorkspace_Duplicate(t *testing.T) {
 	// Test data
 	workspacePath := "/home/user/workspace.code-workspace"
 	params := AddWorkspaceParams{
-		Worktree:     "origin:feature-a",
 		Repositories: []string{"github.com/octocat/Hello-World"},
 	}
 
@@ -91,7 +89,7 @@ func TestAddWorkspace_Duplicate(t *testing.T) {
 		Repositories: make(map[string]Repository),
 		Workspaces: map[string]Workspace{
 			workspacePath: {
-				Worktree:     "origin:feature-b",
+				Worktree:     []string{"origin:feature-b"},
 				Repositories: []string{"github.com/lerenn/other"},
 			},
 		},

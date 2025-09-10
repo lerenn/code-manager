@@ -31,7 +31,7 @@ func TestGetWorkspace(t *testing.T) {
 	// Test data
 	workspacePath := "/home/user/workspace.code-workspace"
 	expectedWorkspace := Workspace{
-		Worktree:     "origin:feature-a",
+		Worktree:     []string{"origin:feature-a"},
 		Repositories: []string{"github.com/octocat/Hello-World", "github.com/lerenn/other"},
 	}
 

@@ -41,6 +41,8 @@ type CM interface {
 	Clone(repoURL string, opts ...CloneOpts) error
 	// ListRepositories lists all repositories from the status file with base path validation.
 	ListRepositories() ([]RepositoryInfo, error)
+	// CreateWorkspace creates a new workspace with repository selection.
+	CreateWorkspace(params CreateWorkspaceParams) error
 	// SetLogger sets the logger for this CM instance.
 	SetLogger(logger logger.Logger)
 	// Hook management methods
