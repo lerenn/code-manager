@@ -592,18 +592,6 @@ func NewDefaultHooksManager() (hooks.HookManagerInterface, error) {
 3. Implement key location and validation
 4. Implement git-crypt setup in worktree directories
 
-### Phase 4: Testing and Integration
-1. Create comprehensive unit tests for worktree checkout hooks
-2. Create unit tests for git-crypt hook
-3. Add integration tests with real git-crypt repositories
-4. Update default hooks manager to include git-crypt hook
-
-### Phase 5: Documentation and Polish
-1. Add comprehensive error messages and user guidance
-2. Create documentation for git-crypt hook usage
-3. Add examples and troubleshooting guides
-4. Performance optimization and cleanup
-
 ## Testing Strategy
 
 ### Unit Tests
@@ -611,12 +599,6 @@ func NewDefaultHooksManager() (hooks.HookManagerInterface, error) {
 - Test key location and validation
 - Test hook registration and execution
 - Test error handling scenarios
-
-### Integration Tests
-- Test with real git-crypt repositories
-- Test worktree creation with encrypted files
-- Test key file handling and validation
-- Test cleanup on operation failures
 
 ### E2E Tests
 - Test complete git-crypt workflow
