@@ -327,9 +327,6 @@ Adding workspace to status file
 1. Create comprehensive unit tests for all components
 2. Create integration tests with real file system operations
 3. Create end-to-end tests with real workspace creation
-4. Test error scenarios and recovery mechanisms
-5. Test cross-platform compatibility
-6. Performance testing with large workspaces
 
 ### Future Considerations
 - Consider workspace templates for common repository combinations

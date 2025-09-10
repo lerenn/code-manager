@@ -6,6 +6,7 @@ import (
 
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	"github.com/lerenn/code-manager/cmd/cm/repository"
+	"github.com/lerenn/code-manager/cmd/cm/workspace"
 	"github.com/lerenn/code-manager/cmd/cm/worktree"
 	"github.com/spf13/cobra"
 )
@@ -26,13 +27,14 @@ func main() {
 	// Create subcommands
 	repositoryCmd := repository.CreateRepositoryCmd()
 	worktreeCmd := worktree.CreateWorktreeCmd()
+	workspaceCmd := workspace.CreateWorkspaceCmd()
 	initCmd := createInitCmd()
 
 	// Add initialization check to all commands except init
 	// Note: Individual subcommands will handle their own initialization checks
 
 	// Add subcommands
-	rootCmd.AddCommand(repositoryCmd, worktreeCmd, initCmd)
+	rootCmd.AddCommand(repositoryCmd, worktreeCmd, workspaceCmd, initCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
