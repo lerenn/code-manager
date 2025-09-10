@@ -10,7 +10,7 @@ import (
 
 const defaultRemote = "origin"
 
-//go:generate mockgen -source=git.go -destination=mockgit.gen.go -package=git
+//go:generate mockgen -source=git.go -destination=mocks/git.gen.go -package=mocks
 
 // Git interface provides Git command execution capabilities.
 type Git interface {
@@ -296,7 +296,7 @@ func (g *realGit) CheckReferenceConflict(repoPath, branch string) error {
 		cmd.Dir = repoPath
 		if err := cmd.Run(); err == nil {
 			return fmt.Errorf("%w: cannot create branch '%s': reference 'refs/heads/%s' already exists",
-				ErrReferenceConflict, branch, parentRef)
+				ErrBranchParentExists, branch, parentRef)
 		}
 
 		// Also check tags
@@ -304,7 +304,7 @@ func (g *realGit) CheckReferenceConflict(repoPath, branch string) error {
 		cmd.Dir = repoPath
 		if err := cmd.Run(); err == nil {
 			return fmt.Errorf("%w: cannot create branch '%s': tag 'refs/tags/%s' already exists",
-				ErrReferenceConflict, branch, parentRef)
+				ErrTagParentExists, branch, parentRef)
 		}
 	}
 	return nil

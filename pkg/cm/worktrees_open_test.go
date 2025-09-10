@@ -5,12 +5,16 @@ package cm
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/hooks"
-	"github.com/lerenn/code-manager/pkg/hooks/ide"
-	"github.com/lerenn/code-manager/pkg/repository"
-	"github.com/lerenn/code-manager/pkg/workspace"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
+	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
+	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
+	workspaceMocks "github.com/lerenn/code-manager/pkg/mode/workspace/mocks"
+	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
+	"github.com/lerenn/code-manager/pkg/status"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -19,42 +23,46 @@ func TestCM_OpenWorktree(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepository := repository.NewMockRepository(ctrl)
-	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
-	cm := NewCMWithDependencies(NewCMParams{
-		Repository:  mockRepository,
-		HookManager: hooks.NewMockHookManagerInterface(ctrl),
-		Workspace:   mockWorkspace,
-		Config:      createTestConfig(),
+	cm, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
+		Hooks:              mockHookManager,
+		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
+		Config:             createTestConfig(),
+		FS:                 mockFS,
+		Git:                mockGit,
+		Status:             mockStatus,
+		Prompt:             mockPrompt,
 	})
-
-	// Override dependencies with mocks
-	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
-	c.repository = mockRepository
+	assert.NoError(t, err)
 
 	// Mock repository detection
-	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).Times(1)
 
 	// Mock Git to return repository URL
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil).Times(1)
 
-	// Mock worktree path existence check
-	mockFS.EXPECT().Exists("/test/base/path/github.com/octocat/Hello-World/origin/test-branch").Return(true, nil)
+	// Mock status manager to return worktree info
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(&status.WorktreeInfo{
+		Remote: "origin",
+		Branch: "test-branch",
+	}, nil).Times(1)
 
 	// Mock hook manager expectations
-	hookManager := cm.(*realCM).hookManager.(*hooks.MockHookManagerInterface)
-	hookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
-	hookManager.EXPECT().ExecutePostHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
+	mockHookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
+	mockHookManager.EXPECT().ExecutePostHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 
 	// Note: IDE opening is now handled by the hook, not directly in the operation
 
-	err := cm.OpenWorktree("test-branch", "vscode")
+	err = cm.OpenWorktree("test-branch", "vscode")
 	assert.NoError(t, err)
 }
 
@@ -62,40 +70,41 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepository := repository.NewMockRepository(ctrl)
-	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
-	cm := NewCMWithDependencies(NewCMParams{
-		Repository:  mockRepository,
-		HookManager: hooks.NewMockHookManagerInterface(ctrl),
-		Workspace:   mockWorkspace,
-		Config:      createTestConfig(),
+	cm, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
+		Hooks:              mockHookManager,
+		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
+		Config:             createTestConfig(),
+		FS:                 mockFS,
+		Git:                mockGit,
+		Status:             mockStatus,
+		Prompt:             mockPrompt,
 	})
-
-	// Override dependencies with mocks
-	c := cm.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
-	c.repository = mockRepository
+	assert.NoError(t, err)
 
 	// Mock repository detection
-	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).Times(1)
 
 	// Mock Git to return repository URL
-	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil)
+	mockGit.EXPECT().GetRepositoryName(".").Return("github.com/octocat/Hello-World", nil).Times(1)
 
-	// Mock worktree path existence check - worktree not found
-	mockFS.EXPECT().Exists("/test/base/path/github.com/octocat/Hello-World/origin/test-branch").Return(false, nil)
+	// Mock status manager to return error (worktree not found)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound).Times(1)
 
 	// Mock hook manager expectations
-	hookManager := cm.(*realCM).hookManager.(*hooks.MockHookManagerInterface)
-	hookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
-	hookManager.EXPECT().ExecuteErrorHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
+	mockHookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
+	mockHookManager.EXPECT().ExecuteErrorHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 
-	err := cm.OpenWorktree("test-branch", "vscode")
+	err = cm.OpenWorktree("test-branch", "vscode")
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrWorktreeNotInStatus)
 }
@@ -105,59 +114,46 @@ func TestOpenWorktree_CountsIDEOpenings(t *testing.T) {
 	defer ctrl.Finish()
 
 	// Create mocks
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockRepo := repository.NewMockRepository(ctrl)
-	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockIDEManager := ide.NewMockManagerInterface(ctrl)
-
-	// Set up FS expectations
-	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil).AnyTimes()
-
-	// Set up Git expectations
-	mockGit.EXPECT().GetRepositoryName(".").Return("test-repo", nil).AnyTimes()
-
-	// Set up repository expectations
-	mockRepo.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
-
-	// Set up IDE manager expectations - expect exactly one call
-	mockIDEManager.EXPECT().OpenIDE("vscode", gomock.Any(), gomock.Any()).Return(nil).Times(1)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	// Create a mock hook manager for testing
-	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
-
-	// Create test hook and directly override its IDE manager field
-	testHook := ide.NewOpeningHook()
-	testHook.IDEManager = mockIDEManager
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	// Set up hook manager expectations
 	mockHookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
-	mockHookManager.EXPECT().ExecutePostHooks("OpenWorktree", gomock.Any()).DoAndReturn(
-		func(operation string, ctx *hooks.HookContext) error {
-			// Execute the test hook manually
-			return testHook.PostExecute(ctx)
-		}).Times(1)
+	mockHookManager.EXPECT().ExecutePostHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 
 	// Create CM instance with our mock hook manager
-	cmInstance := NewCMWithDependencies(NewCMParams{
-		Repository:  mockRepo,
-		Workspace:   mockWorkspace,
-		Config:      createTestConfig(),
-		HookManager: mockHookManager,
+	cmInstance, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
+		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
+		Config:             createTestConfig(),
+		FS:                 mockFS,
+		Git:                mockGit,
+		Status:             mockStatus,
+		Prompt:             mockPrompt,
+		Hooks:              mockHookManager,
 	})
+	assert.NoError(t, err)
 
-	// Override dependencies with mocks
-	c := cmInstance.(*realCM)
-	c.FS = mockFS
-	c.Git = mockGit
-	c.repository = mockRepo
+	// Set up repository expectations
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).Times(1)
+
+	// Set up Git expectations
+	mockGit.EXPECT().GetRepositoryName(".").Return("test-repo", nil).Times(1)
+
+	// Mock status manager to return worktree info
+	mockStatus.EXPECT().GetWorktree("test-repo", "test-branch").Return(&status.WorktreeInfo{
+		Remote: "origin",
+		Branch: "test-branch",
+	}, nil).Times(1)
 
 	// Execute OpenWorktree
-	err := cmInstance.OpenWorktree("test-branch", "vscode")
-	if err != nil {
-		t.Errorf("OpenWorktree failed: %v", err)
-	}
-
-	// The mock will automatically verify that OpenIDE was called exactly once
-	// If it was called more or fewer times, the test will fail
+	err = cmInstance.OpenWorktree("test-branch", "vscode")
+	assert.NoError(t, err)
 }

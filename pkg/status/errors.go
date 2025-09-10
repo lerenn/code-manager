@@ -18,4 +18,7 @@ var (
 	// Workspace management errors.
 	ErrWorkspaceNotFound      = errors.New("workspace not found in status")
 	ErrWorkspaceAlreadyExists = errors.New("workspace already exists")
+
+	// Status file errors.
+	ErrStatusFileParse = errors.New("failed to parse status file")
 )

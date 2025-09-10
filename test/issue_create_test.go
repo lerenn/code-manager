@@ -12,7 +12,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/forge"
-	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -41,21 +40,12 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 	// Create a test Git repository
 	createTestGitRepo(t, setup.RepoPath)
 
-	// Create a issue info that would be returned by the GitHub API
-	issueInfo := &issue.Info{
-		Number:      26,
-		Title:       "test issue",
-		Description: "test issue",
-		State:       "open",
-		URL:         "https://github.com/octocat/Hello-World/issues/26",
-		Repository:  "Hello-World",
-		Owner:       "octocat",
-	}
-
 	// Create a worktree manually with issue information to simulate the behavior
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 	require.NoError(t, err)
 
@@ -100,11 +90,11 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 	require.NoError(t, os.WriteFile(setup.StatusPath, statusData, 0644))
 
 	// Now verify that the issue information is stored correctly in the status file
-	verifyIssueInfoInStatusFile(t, setup, "test-branch", issueInfo)
+	verifyIssueInfoInStatusFile(t, setup, "test-branch")
 }
 
 // verifyIssueInfoInStatusFile verifies that issue information is correctly stored in the status file
-func verifyIssueInfoInStatusFile(t *testing.T, setup *TestSetup, branch string, expectedIssue *issue.Info) {
+func verifyIssueInfoInStatusFile(t *testing.T, setup *TestSetup, branch string) {
 	t.Helper()
 
 	// Read the status file
@@ -162,17 +152,6 @@ func TestCreateFromIssue_WorkspaceStatusFileVerification(t *testing.T) {
 	err := os.WriteFile(workspaceFile, []byte(workspaceContent), 0644)
 	require.NoError(t, err)
 
-	// Create issue info
-	issueInfo := &issue.Info{
-		Number:      456,
-		Title:       "Workspace Test Issue",
-		Description: "This is a test issue for workspace mode",
-		State:       "open",
-		URL:         "https://github.com/octocat/Hello-World/issues/456",
-		Repository:  "test-repo",
-		Owner:       "test-owner",
-	}
-
 	// Manually add workspace repository entries with issue information
 	status := readStatusFile(t, setup.StatusPath)
 
@@ -201,7 +180,7 @@ func TestCreateFromIssue_WorkspaceStatusFileVerification(t *testing.T) {
 	require.NoError(t, os.WriteFile(setup.StatusPath, statusData, 0644))
 
 	// Verify that the issue information is stored correctly in workspace mode
-	verifyIssueInfoInStatusFile(t, setup, "workspace-branch", issueInfo)
+	verifyIssueInfoInStatusFile(t, setup, "workspace-branch")
 }
 
 // TestCreateFromIssue_NoIssueInfo tests that worktrees without issue info don't have the Issue field
@@ -216,9 +195,11 @@ func TestCreateFromIssue_NoIssueInfo(t *testing.T) {
 	addGitHubRemote(t, setup.RepoPath)
 
 	// Create a worktree without issue information
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 	require.NoError(t, err)
 
@@ -433,9 +414,11 @@ func TestCreateFromIssue_WithIDE(t *testing.T) {
 // Helper functions
 
 func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) error {
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 	require.NoError(t, err)
 
@@ -450,9 +433,11 @@ func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) er
 }
 
 func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIssueWithBranchParams) error {
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   params.Setup.CmPath,
-		StatusFile: params.Setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   params.Setup.CmPath,
+			StatusFile: params.Setup.StatusPath,
+		},
 	})
 	require.NoError(t, err)
 
@@ -467,9 +452,11 @@ func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIs
 }
 
 func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssueWithIDEParams) error {
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   params.Setup.CmPath,
-		StatusFile: params.Setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   params.Setup.CmPath,
+			StatusFile: params.Setup.StatusPath,
+		},
 	})
 	require.NoError(t, err)
 

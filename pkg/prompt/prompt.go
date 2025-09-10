@@ -7,10 +7,10 @@ import (
 	"strings"
 )
 
-//go:generate mockgen -source=prompt.go -destination=mockprompt.gen.go -package=prompt
+//go:generate mockgen -source=prompt.go -destination=mocks/prompt.gen.go -package=mocks
 
-// Prompt interface provides user interaction functionality.
-type Prompt interface {
+// Prompter interface provides user interaction functionality.
+type Prompter interface {
 	// PromptForBasePath prompts the user for the base path with examples.
 	PromptForBasePath(defaultBasePath string) (string, error)
 
@@ -23,7 +23,7 @@ type realPrompt struct {
 }
 
 // NewPrompt creates a new Prompt instance.
-func NewPrompt() Prompt {
+func NewPrompt() Prompter {
 	return &realPrompt{
 		reader: bufio.NewReader(os.Stdin),
 	}

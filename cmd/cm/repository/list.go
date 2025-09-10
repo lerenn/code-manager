@@ -6,6 +6,7 @@ import (
 
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -33,11 +34,15 @@ Examples:
 			if err != nil {
 				return err
 			}
-			cmManager, err := cm.NewCM(cfg)
+			cmManager, err := cm.NewCM(cm.NewCMParams{
+				Config: cfg,
+			})
 			if err != nil {
 				return err
 			}
-			cmManager.SetVerbose(config.Verbose)
+			if config.Verbose {
+				cmManager.SetLogger(logger.NewVerboseLogger())
+			}
 
 			repositories, err := cmManager.ListRepositories()
 			if err != nil {

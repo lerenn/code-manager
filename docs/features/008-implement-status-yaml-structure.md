@@ -18,7 +18,7 @@ The Code Manager (cm) needs a persistent state tracking mechanism to maintain in
 7. **Workspace Support**: Track workspace file associations for multi-repo workspaces
 8. **Path Validation**: Ensure all tracked paths are valid and accessible
 9. **Error Recovery**: Handle corruption and provide recovery mechanisms
-10. **Configuration Integration**: Support configurable status file location via existing config system
+10. *Configuration Integration**: Support configurable status file location via existing config system
 
 ### Non-Functional Requirements
 1. **Performance**: Status file operations should be fast (< 100ms for read/write)
@@ -117,7 +117,7 @@ type Config struct {
 - `ListAllWorktrees() ([]status.Repository, error)`: List all tracked worktrees
 
 **Updated Constructor**:
-- `NewCM(cfg *config.Config) CM`: Creates Status Manager internally
+- `NewCM(cfg config.Config) CM`: Creates Status Manager internally
 
 **Implementation Structure**:
 - Extends existing CM package with status management
@@ -218,7 +218,7 @@ pkg/
 #### Unit Tests (Business Logic)
 - **Status Package**: Mock FS adapter for file operations
 - **CM Package**: Mock Status Manager for status operations
-- **Config Package**: Mock file system for config operations
+- *Config Package**: Mock file system for config operations
 
 #### Integration Tests (Adapters)
 - **FS Package**: Real file system operations with cleanup

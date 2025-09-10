@@ -12,6 +12,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,9 +23,11 @@ import (
 func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error) {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
@@ -53,15 +56,17 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	}
 
 	// Create CM instance with the test configuration
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)
 	// Set verbose mode if requested
 	if isVerbose {
-		cmInstance.SetVerbose(true)
+
 	}
 
 	// Change to repo directory and list worktrees
@@ -80,7 +85,8 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	// Format output similar to CLI output
 	var output strings.Builder
 
-	if projectType == cm.ProjectTypeSingleRepo {
+	switch projectType {
+	case mode.ModeSingleRepo:
 		if len(worktrees) == 0 {
 			output.WriteString("No worktrees found for current repository\n")
 		} else {
@@ -89,7 +95,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 				output.WriteString(fmt.Sprintf("  %s\n", wt.Branch))
 			}
 		}
-	} else if projectType == cm.ProjectTypeWorkspace {
+	case mode.ModeWorkspace:
 		if len(worktrees) == 0 {
 			output.WriteString("No worktrees found for current workspace\n")
 		} else {
@@ -270,7 +276,7 @@ func TestListWorktreesStatusFileCorruption(t *testing.T) {
 	// Test listing worktrees with corrupted status file
 	worktrees, err := listWorktrees(t, setup)
 	require.Error(t, err, "Should return error with corrupted status file")
-	assert.Contains(t, err.Error(), "failed to parse status file", "Should show appropriate error message")
+	assert.ErrorIs(t, err, status.ErrStatusFileParse, "Should show appropriate error message")
 	assert.Nil(t, worktrees, "Should return nil worktrees")
 }
 
@@ -465,9 +471,11 @@ func TestRepositoryListCommand(t *testing.T) {
 func listRepositories(t *testing.T, setup *TestSetup) ([]cm.RepositoryInfo, error) {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   setup.CmPath,
-		StatusFile: setup.StatusPath,
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   setup.CmPath,
+			StatusFile: setup.StatusPath,
+		},
 	})
 
 	require.NoError(t, err)

@@ -5,11 +5,12 @@ import (
 	"fmt"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
 // ListWorktrees lists worktrees for the current project with mode detection.
-func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, ProjectType, error) {
+func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, error) {
 	// Prepare parameters for hooks
 	params := map[string]interface{}{
 		"force": force,
@@ -17,27 +18,27 @@ func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, ProjectType, 
 
 	// Execute with hooks
 	return c.executeWithHooksAndReturnListWorktrees(consts.ListWorktrees, params, func() (
-		[]status.WorktreeInfo, ProjectType, error,
+		[]status.WorktreeInfo, mode.Mode, error,
 	) {
 		c.VerbosePrint("Listing worktrees with mode detection")
 
 		// Detect project mode
 		projectType, err := c.detectProjectMode()
 		if err != nil {
-			return nil, ProjectTypeNone, fmt.Errorf("failed to detect project mode: %w", err)
+			return nil, mode.ModeNone, fmt.Errorf("failed to detect project mode: %w", err)
 		}
 
 		switch projectType {
-		case ProjectTypeSingleRepo:
+		case mode.ModeSingleRepo:
 			worktrees, err := c.repository.ListWorktrees()
-			return worktrees, ProjectTypeSingleRepo, c.translateListError(err)
-		case ProjectTypeWorkspace:
-			worktrees, err := c.workspace.ListWorktrees(force)
-			return worktrees, ProjectTypeWorkspace, c.translateListError(err)
-		case ProjectTypeNone:
-			return nil, ProjectTypeNone, ErrNoGitRepositoryOrWorkspaceFound
+			return worktrees, mode.ModeSingleRepo, c.translateListError(err)
+		case mode.ModeWorkspace:
+			worktrees, err := c.workspace.ListWorktrees()
+			return worktrees, mode.ModeWorkspace, c.translateListError(err)
+		case mode.ModeNone:
+			return nil, mode.ModeNone, ErrNoGitRepositoryOrWorkspaceFound
 		default:
-			return nil, ProjectTypeNone, fmt.Errorf("unknown project type")
+			return nil, mode.ModeNone, fmt.Errorf("unknown project type")
 		}
 	})
 }

@@ -16,7 +16,7 @@ The Code Manager (cm) needs to provide visibility into all tracked repositories 
 5. **Repository Name Display**: Show full repository URLs as stored in status.yaml
 6. **Empty State Handling**: Display appropriate message when no repositories are found
 7. **Error Handling**: Handle status file errors and corruption gracefully
-8. **Configuration Integration**: Use existing configuration for status file and base_path location
+8. *Configuration Integration**: Use existing configuration for status file and base_path location
 
 ### Non-Functional Requirements
 1. **Performance**: Listing should complete quickly (< 100ms)
@@ -146,13 +146,13 @@ cm r list           # Short alias
 
 #### Error Types
 1. **StatusFileError**: When status.yaml file cannot be read or parsed (reuse existing status package errors)
-2. **ConfigurationError**: When base_path configuration is invalid (reuse existing config package errors)
+2. *ConfigurationError**: When base_path configuration is invalid (reuse existing config package errors)
 3. **PermissionError**: When unable to access status file due to permissions (reuse existing FS package errors)
 
 #### Error Handling Strategy
 - **Status File Missing**: Return error with clear message
 - **Status File Corrupted**: Return error with parsing details
-- **Configuration Issues**: Return error with configuration details
+- *Configuration Issues**: Return error with configuration details
 - **Permission Issues**: Return error with permission details
 - **Base Path Issues**: Continue with warning in verbose mode
 

@@ -3,13 +3,14 @@ package worktree
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
 func createDeleteCmd() *cobra.Command {
 	var force bool
 	deleteCmd := &cobra.Command{
-		Use:   "delete <branch> [--force]",
+		Use:   "delete <branch> [--force/-f]",
 		Short: "Delete a worktree for the specified branch",
 		Long: `Delete a worktree for the specified branch.
 
@@ -27,18 +28,22 @@ Examples:
 			if err != nil {
 				return err
 			}
-			cmManager, err := cm.NewCM(cfg)
+			cmManager, err := cm.NewCM(cm.NewCMParams{
+				Config: cfg,
+			})
 			if err != nil {
 				return err
 			}
-			cmManager.SetVerbose(config.Verbose)
+			if config.Verbose {
+				cmManager.SetLogger(logger.NewVerboseLogger())
+			}
 
 			return cmManager.DeleteWorkTree(args[0], force)
 		},
 	}
 
 	// Add force flag
-	deleteCmd.Flags().BoolVar(&force, "force", false, "Skip confirmation prompts")
+	deleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Skip confirmation prompts")
 
 	return deleteCmd
 }

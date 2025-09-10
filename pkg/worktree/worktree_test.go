@@ -6,11 +6,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/fs"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/lerenn/code-manager/pkg/git"
+	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/prompt"
+	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -19,20 +21,18 @@ func TestNewWorktree(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	params := NewWorktreeParams{
 		FS:            mockFS,
 		Git:           mockGit,
 		StatusManager: mockStatus,
-		Logger:        mockLogger,
 		Prompt:        mockPrompt,
 		BasePath:      "/test/path",
-		Verbose:       true,
 	}
 
 	worktree := NewWorktree(params)
@@ -43,20 +43,19 @@ func TestWorktree_BuildPath(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	path := worktree.BuildPath("github.com/octocat/Hello-World", "origin", "feature-branch")
@@ -68,20 +67,15 @@ func TestWorktree_Create_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+		fs: mockFS, git: mockGit, statusManager: mockStatus, logger: logger.NewNoopLogger(), prompt: mockPrompt,
+		basePath: "/test/base",
 	}
 
 	params := CreateParams{
@@ -111,20 +105,14 @@ func TestWorktree_Create_DirectoryExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+		fs: mockFS, git: mockGit, statusManager: mockStatus, prompt: mockPrompt, basePath: "/test/base",
 	}
 
 	params := CreateParams{
@@ -148,20 +136,19 @@ func TestWorktree_Create_WorktreeExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	params := CreateParams{
@@ -191,20 +178,19 @@ func TestWorktree_Create_BranchDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	params := CreateParams{
@@ -247,20 +233,19 @@ func TestWorktree_Delete_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	params := DeleteParams{
@@ -290,20 +275,19 @@ func TestWorktree_Delete_WorktreeNotInStatus(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	params := DeleteParams{
@@ -325,20 +309,19 @@ func TestWorktree_Delete_WithConfirmation(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	params := DeleteParams{
@@ -369,20 +352,19 @@ func TestWorktree_Delete_ConfirmationCancelled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	params := DeleteParams{
@@ -410,20 +392,19 @@ func TestWorktree_ValidateCreation_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	params := ValidateCreationParams{
@@ -446,20 +427,19 @@ func TestWorktree_ValidateDeletion_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	params := ValidateDeletionParams{
@@ -483,20 +463,19 @@ func TestWorktree_EnsureBranchExists_BranchExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -514,20 +493,19 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	repoPath := "/test/repo"
@@ -558,20 +536,19 @@ func TestWorktree_EnsureBranchExists_BranchExistsOnRemote(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	repoPath := "/test/repo"
@@ -600,20 +577,19 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist_RemoteFallback(t *testin
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	repoPath := "/test/repo"
@@ -644,20 +620,19 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist_DefaultBranchFallback(t 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
+		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
 		basePath:      "/test/base",
-		verbose:       false,
 	}
 
 	repoPath := "/test/repo"
@@ -689,20 +664,19 @@ func TestWorktree_AddToStatus_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	params := AddToStatusParams{
@@ -725,20 +699,19 @@ func TestWorktree_RemoveFromStatus_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	repoURL := "github.com/octocat/Hello-World"
@@ -755,20 +728,19 @@ func TestWorktree_Exists_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -786,20 +758,19 @@ func TestWorktree_GetPath_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -818,20 +789,19 @@ func TestWorktree_CleanupDirectory_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	mockGit := git.NewMockGit(ctrl)
-	mockStatus := status.NewMockManager(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
-	mockPrompt := prompt.NewMockPrompt(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
 		fs:            mockFS,
 		git:           mockGit,
 		statusManager: mockStatus,
-		logger:        mockLogger,
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
-		verbose:       false,
+
+		prompt:   mockPrompt,
+		basePath: "/test/base",
 	}
 
 	worktreePath := "/test/worktree/path"

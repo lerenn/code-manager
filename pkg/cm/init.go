@@ -44,7 +44,7 @@ func (c *realCM) Init(opts InitOpts) error {
 		}
 
 		// Create base path directory if it doesn't exist
-		if err := c.FS.CreateDirectory(expandedBasePath, 0755); err != nil {
+		if err := c.fs.CreateDirectory(expandedBasePath, 0755); err != nil {
 			return fmt.Errorf("failed to create base path directory: %w", err)
 		}
 
@@ -54,12 +54,12 @@ func (c *realCM) Init(opts InitOpts) error {
 		}
 
 		// Ensure status exists (create initial on first run). If reset, it was recreated earlier.
-		exists, err := c.FS.Exists(c.Config.StatusFile)
+		exists, err := c.fs.Exists(c.config.StatusFile)
 		if err != nil {
 			return fmt.Errorf("failed to check status existence: %w", err)
 		}
 		if !exists {
-			if err := c.StatusManager.CreateInitialStatus(); err != nil {
+			if err := c.statusManager.CreateInitialStatus(); err != nil {
 				return fmt.Errorf("failed to create initial status: %w", err)
 			}
 		}
@@ -68,7 +68,7 @@ func (c *realCM) Init(opts InitOpts) error {
 		fmt.Printf("CM initialized successfully!\n")
 		fmt.Printf("Base path: %s\n", expandedBasePath)
 		fmt.Printf("Configuration: %s\n", c.getConfigPath())
-		fmt.Printf("Status file: %s\n", c.Config.StatusFile)
+		fmt.Printf("Status file: %s\n", c.config.StatusFile)
 
 		return nil
 	})
@@ -82,7 +82,7 @@ func (c *realCM) getAndValidateBasePath(flagBasePath string, nonInteractive bool
 	}
 
 	// Validate and expand base path
-	expandedBasePath, err := c.FS.ExpandPath(basePath)
+	expandedBasePath, err := c.fs.ExpandPath(basePath)
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrFailedToExpandBasePath, err)
 	}
@@ -98,9 +98,9 @@ func (c *realCM) getAndValidateBasePath(flagBasePath string, nonInteractive bool
 
 // updateConfiguration updates and saves the configuration.
 func (c *realCM) updateConfiguration(expandedBasePath string) error {
-	newConfig := &config.Config{
+	newConfig := config.Config{
 		BasePath:   expandedBasePath,
-		StatusFile: c.Config.StatusFile, // Keep existing status file path
+		StatusFile: c.config.StatusFile, // Keep existing status file path
 	}
 
 	configPath := c.getConfigPath()
@@ -115,7 +115,7 @@ func (c *realCM) updateConfiguration(expandedBasePath string) error {
 
 // getConfigPath returns the config file path.
 func (c *realCM) getConfigPath() string {
-	homeDir, err := c.FS.GetHomeDir()
+	homeDir, err := c.fs.GetHomeDir()
 	if err != nil {
 		// Fallback to default path if home directory cannot be determined
 		return filepath.Join("~", ".cm", "config.yaml")
@@ -126,7 +126,7 @@ func (c *realCM) getConfigPath() string {
 // handleReset handles the reset functionality.
 func (c *realCM) handleReset(force bool) error {
 	if !force {
-		confirmed, err := c.Prompt.PromptForConfirmation(
+		confirmed, err := c.prompt.PromptForConfirmation(
 			"This will reset your CM configuration and remove all existing worktrees. Are you sure?", false)
 		if err != nil {
 			return fmt.Errorf("failed to get user confirmation: %w", err)
@@ -139,7 +139,7 @@ func (c *realCM) handleReset(force bool) error {
 	c.VerbosePrint("Resetting CM configuration")
 
 	// Clear status file by recreating empty structure
-	if err := c.StatusManager.CreateInitialStatus(); err != nil {
+	if err := c.statusManager.CreateInitialStatus(); err != nil {
 		return fmt.Errorf("failed to reset status: %w", err)
 	}
 
@@ -154,9 +154,9 @@ func (c *realCM) getBasePath(flagBasePath string, nonInteractive bool) (string, 
 
 	if nonInteractive {
 		// Use default base path instead of prompting
-		return c.Config.BasePath, nil
+		return c.config.BasePath, nil
 	}
 
 	// Interactive prompt
-	return c.Prompt.PromptForBasePath(c.Config.BasePath)
+	return c.prompt.PromptForBasePath(c.config.BasePath)
 }

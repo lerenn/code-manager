@@ -21,7 +21,7 @@ var (
 )
 
 // LoadConfig loads the configuration and returns an error if not found.
-func LoadConfig() (*config.Config, error) {
+func LoadConfig() (config.Config, error) {
 	manager := config.NewManager()
 
 	var path string
@@ -35,7 +35,12 @@ func LoadConfig() (*config.Config, error) {
 		path = filepath.Join(homeDir, ".cm", "config.yaml")
 	}
 
-	return manager.LoadConfigStrict(path)
+	config, err := manager.LoadConfigStrict(path)
+	if err != nil {
+		return config, fmt.Errorf("%w: %w", ErrFailedToLoadConfig, err)
+	}
+
+	return config, nil
 }
 
 // CheckInitialization checks if CM is initialized and returns an error if not.

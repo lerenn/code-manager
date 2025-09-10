@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:generate mockgen -source=status.go -destination=mockstatus.gen.go -package=status
+//go:generate mockgen -source=status.go -destination=mocks/status.gen.go -package=mocks
 
 // Status represents the status.yaml file structure.
 type Status struct {
@@ -76,12 +76,12 @@ type Manager interface {
 
 type realManager struct {
 	fs         fs.FS
-	config     *config.Config
+	config     config.Config
 	workspaces map[string]map[string][]WorktreeInfo // workspace -> branch -> worktrees
 }
 
 // NewManager creates a new Status Manager instance.
-func NewManager(fs fs.FS, config *config.Config) Manager {
+func NewManager(fs fs.FS, config config.Config) Manager {
 	manager := &realManager{
 		fs:         fs,
 		config:     config,
@@ -431,10 +431,6 @@ func (s *realManager) GetWorkspaceBranches(workspacePath string) ([]string, erro
 
 // getStatusFilePath returns the status file path from configuration.
 func (s *realManager) getStatusFilePath() (string, error) {
-	if s.config == nil {
-		return "", ErrConfigurationNotInitialized
-	}
-
 	if s.config.StatusFile == "" {
 		return "", fmt.Errorf("status file path is not configured")
 	}
@@ -476,7 +472,7 @@ func (s *realManager) loadStatus() (*Status, error) {
 	// Parse YAML
 	var status Status
 	if err := yaml.Unmarshal(data, &status); err != nil {
-		return nil, fmt.Errorf("failed to parse status file: %w", err)
+		return nil, fmt.Errorf("%w: %w", ErrStatusFileParse, err)
 	}
 
 	return &status, nil

@@ -11,8 +11,8 @@ import (
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -30,7 +30,7 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	defer os.RemoveAll(workspaceBaseDir)
 
 	// Create temporary config
-	testConfig := &config.Config{
+	testConfig := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
@@ -74,12 +74,13 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, os.Chdir(workspaceDir))
 
 	// Create CM instance
-	cfg := &config.Config{
+	cfg := config.Config{
 		BasePath:   tempDir,
 		StatusFile: filepath.Join(tempDir, "status.yaml"),
 	}
-	cmInstance, err := cm.NewCM(cfg)
-	cmInstance.SetVerbose(true)
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: cfg,
+	})
 
 	require.NoError(t, err)
 	// Create worktrees

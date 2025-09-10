@@ -20,12 +20,15 @@ func NewOpeningHook() *OpeningHook {
 	fsInstance := fs.NewFS()
 	loggerInstance := logger.NewNoopLogger()
 	return &OpeningHook{
-		IDEManager: NewManager(fsInstance, loggerInstance),
+		IDEManager: NewManager(NewManagerParams{
+			FS:     fsInstance,
+			Logger: loggerInstance,
+		}),
 	}
 }
 
 // RegisterForOperations registers this hook for the operations that create worktrees.
-func (h *OpeningHook) RegisterForOperations(registerHook func(operation string, hook hooks.Hook) error) error {
+func (h *OpeningHook) RegisterForOperations(registerHook func(operation string, hook hooks.PostHook) error) error {
 	// Register as post-hook for operations that create worktrees
 	if err := registerHook(consts.CreateWorkTree, h); err != nil {
 		return err
@@ -74,12 +77,12 @@ func (h *OpeningHook) PostExecute(ctx *hooks.HookContext) error {
 	// Get worktree path from parameters
 	worktreePath, hasWorktreePath := ctx.Parameters["worktreePath"]
 	if !hasWorktreePath {
-		return fmt.Errorf("cannot open IDE: worktreePath parameter is required")
+		return ErrWorktreePathRequired
 	}
 
 	worktreePathStr, ok := worktreePath.(string)
 	if !ok || worktreePathStr == "" {
-		return fmt.Errorf("cannot open IDE: worktreePath must be a non-empty string")
+		return ErrWorktreePathEmpty
 	}
 
 	// Get IDE name from parameters
@@ -96,13 +99,13 @@ func (h *OpeningHook) PostExecute(ctx *hooks.HookContext) error {
 	}
 
 	// Open the IDE
-	if err := h.IDEManager.OpenIDE(ideNameStr, worktreePathStr, true); err != nil {
+	if err := h.IDEManager.OpenIDE(ideNameStr, worktreePathStr); err != nil {
 		// For OpenWorktree operations, IDE opening failure should fail the operation
 		// For CreateWorkTree and LoadWorktree operations, IDE opening failure should not prevent success
 		if ctx.OperationName == consts.OpenWorktree {
 			return fmt.Errorf("failed to open IDE %s: %w", ideNameStr, err)
 		}
-		
+
 		// IDE opening failed, but this should not prevent the worktree creation from succeeding
 		// Log the error but don't fail the operation
 		// TODO: Consider adding proper logging here when logger is available

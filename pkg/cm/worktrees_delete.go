@@ -5,7 +5,8 @@ import (
 	"fmt"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
-	"github.com/lerenn/code-manager/pkg/workspace"
+	"github.com/lerenn/code-manager/pkg/mode"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 )
 
 // DeleteWorkTree deletes a worktree for the specified branch.
@@ -27,11 +28,11 @@ func (c *realCM) DeleteWorkTree(branch string, force bool) error {
 		}
 
 		switch projectType {
-		case ProjectTypeSingleRepo:
+		case mode.ModeSingleRepo:
 			return c.handleRepositoryDeleteMode(branch, force)
-		case ProjectTypeWorkspace:
+		case mode.ModeWorkspace:
 			return c.handleWorkspaceDeleteMode(branch, force)
-		case ProjectTypeNone:
+		case mode.ModeNone:
 			return ErrNoGitRepositoryOrWorkspaceFound
 		default:
 			return fmt.Errorf("unknown project type")

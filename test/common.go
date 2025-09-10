@@ -55,7 +55,7 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 	require.NoError(t, os.MkdirAll(cmPath, 0755))
 
 	// Create test config using the config package
-	testConfig := &config.Config{
+	testConfig := config.Config{
 		BasePath:   cmPath,
 		StatusFile: statusPath,
 	}

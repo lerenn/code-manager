@@ -6,10 +6,13 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
-	"github.com/lerenn/code-manager/pkg/hooks"
-	"github.com/lerenn/code-manager/pkg/repository"
+	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
+	"github.com/lerenn/code-manager/pkg/mode"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
+	workspaceMocks "github.com/lerenn/code-manager/pkg/mode/workspace/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/workspace"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -18,17 +21,18 @@ func TestCM_ListWorktrees_NoRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepository := repository.NewMockRepository(ctrl)
-	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
-	cm := NewCMWithDependencies(NewCMParams{
-		Repository:  mockRepository,
-		HookManager: mockHookManager,
-		Workspace:   mockWorkspace,
-		Config:      createTestConfig(),
+	cm, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
+		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
+		Hooks:              mockHookManager,
+		Config:             createTestConfig(),
 	})
+	assert.NoError(t, err)
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
@@ -47,17 +51,18 @@ func TestCM_ListWorktrees_SingleRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepository := repository.NewMockRepository(ctrl)
-	mockWorkspace := workspace.NewMockWorkspace(ctrl)
-	mockHookManager := hooks.NewMockHookManagerInterface(ctrl)
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	// Create CM with mocked dependencies
-	cm := NewCMWithDependencies(NewCMParams{
-		Repository:  mockRepository,
-		HookManager: mockHookManager,
-		Workspace:   mockWorkspace,
-		Config:      createTestConfig(),
+	cm, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
+		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
+		Hooks:              mockHookManager,
+		Config:             createTestConfig(),
 	})
+	assert.NoError(t, err)
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
@@ -73,6 +78,6 @@ func TestCM_ListWorktrees_SingleRepository(t *testing.T) {
 
 	result, projectType, err := cm.ListWorktrees(false)
 	assert.NoError(t, err)
-	assert.Equal(t, ProjectTypeSingleRepo, projectType)
+	assert.Equal(t, mode.ModeSingleRepo, projectType)
 	assert.Equal(t, expectedWorktrees, result)
 }

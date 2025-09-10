@@ -22,9 +22,11 @@ func TestCreateWorktreeFromDefaultBranch(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create CM instance with temporary config
-	cmInstance, err := cm.NewCM(&config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			BasePath:   tempDir,
+			StatusFile: filepath.Join(tempDir, "status.yaml"),
+		},
 	})
 
 	require.NoError(t, err)

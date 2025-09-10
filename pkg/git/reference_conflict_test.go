@@ -37,7 +37,7 @@ func TestCheckReferenceConflict(t *testing.T) {
 		// Try to create a branch called "feat/test" - should conflict
 		err := git.CheckReferenceConflict(tempDir, "feat/test")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot create branch 'feat/test': reference 'refs/heads/feat' already exists")
+		assert.ErrorIs(t, err, ErrBranchParentExists)
 	})
 
 	t.Run("conflict when parent tag exists", func(t *testing.T) {
@@ -51,7 +51,7 @@ func TestCheckReferenceConflict(t *testing.T) {
 		// Try to create a branch called "feature/branch" - should conflict
 		err := git.CheckReferenceConflict(tempDir, "feature/branch")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot create branch 'feature/branch': tag 'refs/tags/feature' already exists")
+		assert.ErrorIs(t, err, ErrTagParentExists)
 	})
 
 	t.Run("no conflict for deeply nested branch without conflicts", func(t *testing.T) {
@@ -71,7 +71,7 @@ func TestCheckReferenceConflict(t *testing.T) {
 		// Try to create a branch called "feature/subfeature/implementation" - should conflict
 		err := git.CheckReferenceConflict(tempDir, "feature/subfeature/implementation")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "cannot create branch 'feature/subfeature/implementation': reference 'refs/heads/feature/subfeature' already exists")
+		assert.ErrorIs(t, err, ErrBranchParentExists)
 	})
 }
 

@@ -40,7 +40,7 @@ cm load feature/improvement -v
 6. **Repository Detection**: Work in single repository mode (current behavior)
 7. **Error Handling**: Handle various error conditions gracefully
 8. **User Feedback**: Provide clear feedback about the loading operation
-9. **Configuration Integration**: Use existing configuration for worktree management
+9. *Configuration Integration**: Use existing configuration for worktree management
 10. **IDE Integration**: Support opening loaded worktree in IDE with `-i` flag
 
 ### Non-Functional Requirements

@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-//go:generate mockgen -source=manager.go -destination=mockmanager.gen.go -package=hooks
+//go:generate mockgen -source=manager.go -destination=mocks/manager.gen.go -package=mocks
 
 // HookManager manages hook registration and execution.
 type HookManager struct {

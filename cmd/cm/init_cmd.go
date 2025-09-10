@@ -7,6 +7,7 @@ import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	pkgconfig "github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -23,9 +24,9 @@ func createInitCmd() *cobra.Command {
 		Long: `Initialize CM configuration with interactive prompts or direct path specification.
 
 Flags:
-  --force       Skip interactive confirmation when using --reset flag
-  --base-path   Set the base path for code storage directly (skips interactive prompt)
-  --reset       Reset existing CM configuration and start fresh`,
+  --force, -f       Skip interactive confirmation when using --reset flag
+  --base-path, -b   Set the base path for code storage directly (skips interactive prompt)
+  --reset, -r       Reset existing CM configuration and start fresh`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			// Resolve config path
@@ -47,11 +48,15 @@ Flags:
 				return err
 			}
 
-			cmManager, err := cm.NewCM(cfg)
+			cmManager, err := cm.NewCM(cm.NewCMParams{
+				Config: cfg,
+			})
 			if err != nil {
 				return err
 			}
-			cmManager.SetVerbose(config.Verbose)
+			if config.Verbose {
+				cmManager.SetLogger(logger.NewVerboseLogger())
+			}
 
 			opts := cm.InitOpts{
 				Force:    force,
@@ -64,10 +69,10 @@ Flags:
 	}
 
 	// Add flags
-	initCmd.Flags().BoolVar(&force, "force", false, "Skip interactive confirmation when using --reset flag")
-	initCmd.Flags().StringVar(&basePath, "base-path", "",
+	initCmd.Flags().BoolVarP(&force, "force", "f", false, "Skip interactive confirmation when using --reset flag")
+	initCmd.Flags().StringVarP(&basePath, "base-path", "b", "",
 		"Set the base path for code storage directly (skips interactive prompt)")
-	initCmd.Flags().BoolVar(&reset, "reset", false, "Reset existing CM configuration and start fresh")
+	initCmd.Flags().BoolVarP(&reset, "reset", "r", false, "Reset existing CM configuration and start fresh")
 
 	return initCmd
 }

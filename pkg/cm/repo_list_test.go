@@ -5,11 +5,10 @@ package cm
 import (
 	"testing"
 
-	basepkg "github.com/lerenn/code-manager/internal/base"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/logger"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
+	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -18,22 +17,18 @@ func TestListRepositories(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockStatus := status.NewMockManager(ctrl)
-	mockFS := fs.NewMockFS(ctrl)
-	mockLogger := logger.NewMockLogger(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
 
-	cfg := &config.Config{
-		BasePath: "/test/base/path",
-	}
+	var cm CM
+	var err error
 
-	cm := &realCM{
-		Base: &basepkg.Base{
-			FS:            mockFS,
-			Config:        cfg,
-			StatusManager: mockStatus,
-			Logger:        mockLogger,
-		},
-	}
+	cm, err = NewCM(NewCMParams{
+		Config: createTestConfig(),
+		Status: mockStatus,
+		FS:     mockFS,
+	})
+	assert.NoError(t, err)
 
 	t.Run("successful listing with repositories in base path", func(t *testing.T) {
 		repositories := map[string]status.Repository{
@@ -45,12 +40,10 @@ func TestListRepositories(t *testing.T) {
 			},
 		}
 
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 		mockStatus.EXPECT().ListRepositories().Return(repositories, nil)
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
+
 		mockFS.EXPECT().IsPathWithinBase("/test/base/path", "/test/base/path/example").Return(true, nil)
 		mockFS.EXPECT().IsPathWithinBase("/test/base/path", "/test/base/path/another").Return(true, nil)
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 
 		result, err := cm.ListRepositories()
 
@@ -74,12 +67,10 @@ func TestListRepositories(t *testing.T) {
 			},
 		}
 
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 		mockStatus.EXPECT().ListRepositories().Return(repositories, nil)
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
+
 		mockFS.EXPECT().IsPathWithinBase("/test/base/path", "/test/base/path/example").Return(true, nil)
 		mockFS.EXPECT().IsPathWithinBase("/test/base/path", "/other/path/outside").Return(false, nil)
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 
 		result, err := cm.ListRepositories()
 
@@ -94,10 +85,7 @@ func TestListRepositories(t *testing.T) {
 	t.Run("empty repository list", func(t *testing.T) {
 		repositories := map[string]status.Repository{}
 
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 		mockStatus.EXPECT().ListRepositories().Return(repositories, nil)
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 
 		result, err := cm.ListRepositories()
 
@@ -106,14 +94,14 @@ func TestListRepositories(t *testing.T) {
 	})
 
 	t.Run("status manager error", func(t *testing.T) {
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
+
 		mockStatus.EXPECT().ListRepositories().Return(nil, assert.AnError)
 
 		result, err := cm.ListRepositories()
 
 		assert.Error(t, err)
 		assert.Nil(t, result)
-		assert.Contains(t, err.Error(), "failed to load repositories from status file")
+		assert.ErrorIs(t, err, ErrFailedToLoadRepositories)
 	})
 
 	t.Run("base path validation error", func(t *testing.T) {
@@ -123,12 +111,9 @@ func TestListRepositories(t *testing.T) {
 			},
 		}
 
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 		mockStatus.EXPECT().ListRepositories().Return(repositories, nil)
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
+
 		mockFS.EXPECT().IsPathWithinBase("/test/base/path", "/test/base/path/example").Return(false, assert.AnError)
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
-		mockLogger.EXPECT().Logf(gomock.Any(), gomock.Any())
 
 		result, err := cm.ListRepositories()
 
@@ -139,13 +124,13 @@ func TestListRepositories(t *testing.T) {
 	})
 
 	t.Run("without logger", func(t *testing.T) {
-		cmNoLogger := &realCM{
-			Base: &basepkg.Base{
-				FS:            mockFS,
-				Config:        cfg,
-				StatusManager: mockStatus,
-			},
-		}
+		var cmNoLogger CM
+
+		cmNoLogger, err = NewCM(NewCMParams{
+			Config: createTestConfig(),
+			Status: mockStatus,
+			FS:     mockFS,
+		})
 
 		repositories := map[string]status.Repository{
 			"github.com/lerenn/example": {
@@ -163,4 +148,12 @@ func TestListRepositories(t *testing.T) {
 		assert.Equal(t, "github.com/lerenn/example", result[0].Name)
 		assert.True(t, result[0].InBasePath)
 	})
+}
+
+// createTestConfig creates a test configuration for use in tests.
+func createTestConfig() config.Config {
+	return config.Config{
+		BasePath:   "/test/base/path",
+		StatusFile: "/test/status.yaml",
+	}
 }

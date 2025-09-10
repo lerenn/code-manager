@@ -6,8 +6,6 @@ import (
 	"sync"
 )
 
-//go:generate mockgen -source=logger.go -destination=mocklogger.gen.go -package=logger
-
 // Logger interface provides logging capabilities.
 type Logger interface {
 	// Logf logs a formatted message.
@@ -25,19 +23,19 @@ func NewNoopLogger() Logger {
 // Logf does nothing for noop logger.
 func (n *noopLogger) Logf(_ string, _ ...interface{}) {}
 
-// defaultLogger is a thread-safe logger that writes to stdout.
-type defaultLogger struct {
+// verboseLogger is a thread-safe logger that writes to stdout.
+type verboseLogger struct {
 	mu sync.Mutex
 }
 
-// NewDefaultLogger creates a new default logger.
-func NewDefaultLogger() Logger {
-	return &defaultLogger{}
+// NewVerboseLogger creates a new verbose logger.
+func NewVerboseLogger() Logger {
+	return &verboseLogger{}
 }
 
 // Logf writes a formatted message to stdout with thread safety.
-func (d *defaultLogger) Logf(format string, args ...interface{}) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+func (v *verboseLogger) Logf(format string, args ...interface{}) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	fmt.Printf(format+"\n", args...)
 }
