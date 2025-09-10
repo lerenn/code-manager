@@ -6,6 +6,8 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
+	repo "github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -70,7 +72,19 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 func (c *realCM) loadWorktreeForSingleRepo(remoteSource, branchName string) (string, error) {
 	c.VerbosePrint("Loading worktree for single repository mode")
 
-	worktreePath, err := c.repository.LoadWorktree(remoteSource, branchName)
+	// Create repository instance
+	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
+		FS:               c.fs,
+		Git:              c.git,
+		Config:           c.config,
+		StatusManager:    c.statusManager,
+		Logger:           c.logger,
+		Prompt:           c.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      c.hookManager,
+	})
+
+	worktreePath, err := repoInstance.LoadWorktree(remoteSource, branchName)
 	if err != nil {
 		return "", err
 	}
