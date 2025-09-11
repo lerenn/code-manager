@@ -128,16 +128,44 @@ func (mr *MockManagerMockRecorder) SaveConfig(arg0, configPath any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveConfig", reflect.TypeOf((*MockManager)(nil).SaveConfig), arg0, configPath)
 }
 
-// ValidateBasePath mocks base method.
-func (m *MockManager) ValidateBasePath(basePath string) error {
+// ValidateRepositoriesDir mocks base method.
+func (m *MockManager) ValidateRepositoriesDir(repositoriesDir string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateBasePath", basePath)
+	ret := m.ctrl.Call(m, "ValidateRepositoriesDir", repositoriesDir)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ValidateBasePath indicates an expected call of ValidateBasePath.
-func (mr *MockManagerMockRecorder) ValidateBasePath(basePath any) *gomock.Call {
+// ValidateRepositoriesDir indicates an expected call of ValidateRepositoriesDir.
+func (mr *MockManagerMockRecorder) ValidateRepositoriesDir(repositoriesDir any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateBasePath", reflect.TypeOf((*MockManager)(nil).ValidateBasePath), basePath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateRepositoriesDir", reflect.TypeOf((*MockManager)(nil).ValidateRepositoriesDir), repositoriesDir)
+}
+
+// ValidateStatusFile mocks base method.
+func (m *MockManager) ValidateStatusFile(statusFile string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateStatusFile", statusFile)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateStatusFile indicates an expected call of ValidateStatusFile.
+func (mr *MockManagerMockRecorder) ValidateStatusFile(statusFile any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateStatusFile", reflect.TypeOf((*MockManager)(nil).ValidateStatusFile), statusFile)
+}
+
+// ValidateWorkspacesDir mocks base method.
+func (m *MockManager) ValidateWorkspacesDir(workspacesDir string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateWorkspacesDir", workspacesDir)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ValidateWorkspacesDir indicates an expected call of ValidateWorkspacesDir.
+func (mr *MockManagerMockRecorder) ValidateWorkspacesDir(workspacesDir any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateWorkspacesDir", reflect.TypeOf((*MockManager)(nil).ValidateWorkspacesDir), workspacesDir)
 }

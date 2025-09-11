@@ -20,21 +20,25 @@ func TestConfig_Validate(t *testing.T) {
 		{
 			name: "valid config",
 			config: Config{
-				BasePath: filepath.Join(t.TempDir(), "test", "path"),
+				RepositoriesDir: filepath.Join(t.TempDir(), "test", "path"),
+				WorkspacesDir:   filepath.Join(t.TempDir(), "test", "workspaces"),
+				StatusFile:      filepath.Join(t.TempDir(), "test", "status.yaml"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "valid config without worktrees_dir",
 			config: Config{
-				BasePath: filepath.Join(t.TempDir(), "test", "path"),
+				RepositoriesDir: filepath.Join(t.TempDir(), "test", "path"),
+				WorkspacesDir:   filepath.Join(t.TempDir(), "test", "workspaces"),
+				StatusFile:      filepath.Join(t.TempDir(), "test", "status.yaml"),
 			},
 			wantErr: false,
 		},
 		{
 			name: "empty base path",
 			config: Config{
-				BasePath: "",
+				RepositoriesDir: "",
 			},
 			wantErr: true,
 		},
@@ -44,8 +48,8 @@ func TestConfig_Validate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.config.Validate()
 			if tt.wantErr {
-				if tt.config.BasePath == "" {
-					assert.ErrorIs(t, err, ErrBasePathEmpty)
+				if tt.config.RepositoriesDir == "" {
+					assert.ErrorIs(t, err, ErrRepositoriesDirEmpty)
 				} else {
 					assert.Error(t, err)
 				}
@@ -61,8 +65,8 @@ func TestRealManager_DefaultConfig(t *testing.T) {
 	config := manager.DefaultConfig()
 
 	assert.NotNil(t, config)
-	assert.NotEmpty(t, config.BasePath)
-	assert.Contains(t, config.BasePath, "Code")
+	assert.NotEmpty(t, config.RepositoriesDir)
+	assert.Contains(t, config.RepositoriesDir, "Code")
 }
 
 func TestRealManager_LoadConfig(t *testing.T) {
@@ -71,7 +75,9 @@ func TestRealManager_LoadConfig(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write valid YAML config with a path that can be created
-	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "cm") + `
+	validYAML := `repositories_dir: ` + filepath.Join(tempDir, "custom", "path", "to", "cm") + `
+workspaces_dir: ` + filepath.Join(tempDir, "custom", "path", "to", "workspaces") + `
+status_file: ` + filepath.Join(tempDir, "custom", "path", "to", "status.yaml") + `
 `
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
 	assert.NoError(t, err)
@@ -81,7 +87,9 @@ func TestRealManager_LoadConfig(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.BasePath)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.RepositoriesDir)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "workspaces"), config.WorkspacesDir)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "status.yaml"), config.StatusFile)
 }
 
 func TestRealManager_LoadConfig_FileNotFound(t *testing.T) {
@@ -116,7 +124,9 @@ func TestLoadConfigWithFallback_WithValidFile(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write valid YAML config with a path that can be created
-	validYAML := `base_path: ` + filepath.Join(tempDir, "custom", "path", "to", "cm") + `
+	validYAML := `repositories_dir: ` + filepath.Join(tempDir, "custom", "path", "to", "cm") + `
+workspaces_dir: ` + filepath.Join(tempDir, "custom", "path", "to", "workspaces") + `
+status_file: ` + filepath.Join(tempDir, "custom", "path", "to", "status.yaml") + `
 `
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
 	assert.NoError(t, err)
@@ -125,7 +135,9 @@ func TestLoadConfigWithFallback_WithValidFile(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, config)
-	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.BasePath)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "cm"), config.RepositoriesDir)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "workspaces"), config.WorkspacesDir)
+	assert.Equal(t, filepath.Join(tempDir, "custom", "path", "to", "status.yaml"), config.StatusFile)
 }
 
 func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
@@ -133,13 +145,13 @@ func TestLoadConfigWithFallback_WithMissingFile(t *testing.T) {
 
 	assert.NoError(t, err) // Should not error, should fallback to default
 	assert.NotNil(t, config)
-	assert.Contains(t, config.BasePath, "Code")
+	assert.Contains(t, config.RepositoriesDir, "Code")
 }
 
 func TestConfig_ExpandTildes(t *testing.T) {
 	config := &Config{
-		BasePath:   "~/.cm-test",
-		StatusFile: "~/.cm-test/status.yaml",
+		RepositoriesDir: "~/.cm-test",
+		StatusFile:      "~/.cm-test/status.yaml",
 	}
 
 	err := config.expandTildes()
@@ -148,24 +160,24 @@ func TestConfig_ExpandTildes(t *testing.T) {
 	homeDir, err := os.UserHomeDir()
 	require.NoError(t, err)
 
-	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.BasePath)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.RepositoriesDir)
 	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "status.yaml"), config.StatusFile)
 }
 
 func TestConfig_ExpandTildes_NoTildes(t *testing.T) {
-	originalBasePath := "/custom/path"
+	originalRepositoriesDir := "/custom/path"
 	originalStatusFile := "/custom/path/status.yaml"
 
 	config := &Config{
-		BasePath:   originalBasePath,
-		StatusFile: originalStatusFile,
+		RepositoriesDir: originalRepositoriesDir,
+		StatusFile:      originalStatusFile,
 	}
 
 	err := config.expandTildes()
 	assert.NoError(t, err)
 
 	// Paths should remain unchanged
-	assert.Equal(t, originalBasePath, config.BasePath)
+	assert.Equal(t, originalRepositoriesDir, config.RepositoriesDir)
 	assert.Equal(t, originalStatusFile, config.StatusFile)
 }
 
@@ -175,7 +187,8 @@ func TestRealManager_LoadConfig_WithTildes(t *testing.T) {
 	configPath := filepath.Join(tempDir, "test-config.yaml")
 
 	// Write YAML config with tildes
-	validYAML := `base_path: ~/.cm-test
+	validYAML := `repositories_dir: ~/.cm-test
+workspaces_dir: ~/.cm-test/workspaces
 status_file: ~/.cm-test/status.yaml
 `
 	err := os.WriteFile(configPath, []byte(validYAML), 0644)
@@ -190,6 +203,7 @@ status_file: ~/.cm-test/status.yaml
 	homeDir, err := os.UserHomeDir()
 	require.NoError(t, err)
 
-	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.BasePath)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test"), config.RepositoriesDir)
+	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "workspaces"), config.WorkspacesDir)
 	assert.Equal(t, filepath.Join(homeDir, ".cm-test", "status.yaml"), config.StatusFile)
 }

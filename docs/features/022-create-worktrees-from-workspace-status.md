@@ -147,18 +147,18 @@ type RepositoryProvider func(params repository.NewRepositoryParams) repository.R
 
 ### Config Package Changes
 
-#### Rename BasePath to RepositoriesDir and Add WorkspacesDir Field
+#### Rename RepositoriesDir to RepositoriesDir and Add WorkspacesDir Field
 Update config structure:
 ```go
 type Config struct {
-    RepositoriesDir string `yaml:"repositories_dir"`  // Renamed from BasePath
+    RepositoriesDir string `yaml:"repositories_dir"`  // Renamed from RepositoriesDir
     WorkspacesDir   string `yaml:"workspaces_dir"`    // New field
     // ... existing fields ...
 }
 ```
 
 **Changes:**
-- Rename `BasePath` field to `RepositoriesDir` for clarity
+- Rename `RepositoriesDir` field to `RepositoriesDir` for clarity
 - Add new `WorkspacesDir` field
 - Update YAML tag from `base_path` to `repositories_dir`
 - No migration needed - this is a breaking change that users will need to update their config
@@ -268,7 +268,7 @@ Use consistent naming pattern across all repositories:
 2. Implement `CreateWorkTreeFromWorkspace` method
 3. Update `CreateWorkTree` to handle workspace flag
 4. Add workspace validation logic
-5. Rename `BasePath` to `RepositoriesDir` in config structure
+5. Rename `RepositoriesDir` to `RepositoriesDir` in config structure
 6. Add `WorkspacesDir` field to config structure
 
 ### Phase 2: Mode Detection Cleanup

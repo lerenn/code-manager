@@ -25,8 +25,8 @@ func TestOpenExistingWorktree(t *testing.T) {
 	// Create a worktree first
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -75,8 +75,8 @@ func TestOpenNonExistentWorktree(t *testing.T) {
 	// Test opening a non-existent worktree
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -104,8 +104,8 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	// Create a worktree first
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 

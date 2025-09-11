@@ -15,8 +15,9 @@ import (
 
 // Config represents the application configuration.
 type Config struct {
-	BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code)
-	StatusFile string `yaml:"status_file"` // Status file path (default: ~/.cm/status.yaml)
+	RepositoriesDir string `yaml:"repositories_dir"` // User's repositories directory (default: ~/Code/repos)
+	WorkspacesDir   string `yaml:"workspaces_dir"`   // User's workspaces directory (default: ~/Code/workspaces)
+	StatusFile      string `yaml:"status_file"`      // Status file path (default: ~/.cm/status.yaml)
 }
 
 // Manager interface provides configuration management functionality.
@@ -26,7 +27,9 @@ type Manager interface {
 	DefaultConfig() Config
 	SaveConfig(config Config, configPath string) error
 	CreateConfigDirectory(configPath string) error
-	ValidateBasePath(basePath string) error
+	ValidateRepositoriesDir(repositoriesDir string) error
+	ValidateWorkspacesDir(workspacesDir string) error
+	ValidateStatusFile(statusFile string) error
 	EnsureConfigFile(configPath string) (Config, bool, error)
 }
 
@@ -84,12 +87,14 @@ func (c *realManager) DefaultConfig() Config {
 		homeDir = "."
 	}
 
-	basePath := filepath.Join(homeDir, "Code")
+	repositoriesDir := filepath.Join(homeDir, "Code", "repos")
+	workspacesDir := filepath.Join(homeDir, "Code", "workspaces")
 	statusFile := filepath.Join(homeDir, ".cm", "status.yaml")
 
 	return Config{
-		BasePath:   basePath,
-		StatusFile: statusFile,
+		RepositoriesDir: repositoriesDir,
+		WorkspacesDir:   workspacesDir,
+		StatusFile:      statusFile,
 	}
 }
 
@@ -123,25 +128,76 @@ func (c *realManager) CreateConfigDirectory(configPath string) error {
 	return nil
 }
 
-// ValidateBasePath validates the base path for accessibility and permissions.
-func (c *realManager) ValidateBasePath(basePath string) error {
-	if basePath == "" {
-		return ErrBasePathEmpty
+// ValidateRepositoriesDir validates the repositories directory for accessibility and permissions.
+func (c *realManager) ValidateRepositoriesDir(repositoriesDir string) error {
+	if repositoriesDir == "" {
+		return ErrRepositoriesDirEmpty
 	}
 
 	// Check if directory exists
-	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+	if _, err := os.Stat(repositoriesDir); os.IsNotExist(err) {
 		// Try to create the directory to validate permissions
-		if err := os.MkdirAll(basePath, 0755); err != nil {
-			return fmt.Errorf("base path is not accessible: %w", err)
+		if err := os.MkdirAll(repositoriesDir, 0755); err != nil {
+			return fmt.Errorf("repositories directory is not accessible: %w", err)
 		}
 	} else if err != nil {
-		return fmt.Errorf("base path is not accessible: %w", err)
+		return fmt.Errorf("repositories directory is not accessible: %w", err)
 	}
 
 	// Check if directory is writable
-	if err := c.validateDirectoryWritable(basePath); err != nil {
-		return fmt.Errorf("base path is not writable: %w", err)
+	if err := c.validateDirectoryWritable(repositoriesDir); err != nil {
+		return fmt.Errorf("repositories directory is not writable: %w", err)
+	}
+
+	return nil
+}
+
+// ValidateWorkspacesDir validates the workspaces directory for accessibility and permissions.
+func (c *realManager) ValidateWorkspacesDir(workspacesDir string) error {
+	if workspacesDir == "" {
+		return ErrWorkspacesDirEmpty
+	}
+
+	// Check if directory exists
+	if _, err := os.Stat(workspacesDir); os.IsNotExist(err) {
+		// Try to create the directory to validate permissions
+		if err := os.MkdirAll(workspacesDir, 0755); err != nil {
+			return fmt.Errorf("workspaces directory is not accessible: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("workspaces directory is not accessible: %w", err)
+	}
+
+	// Check if directory is writable
+	if err := c.validateDirectoryWritable(workspacesDir); err != nil {
+		return fmt.Errorf("workspaces directory is not writable: %w", err)
+	}
+
+	return nil
+}
+
+// ValidateStatusFile validates the status file path for accessibility and permissions.
+func (c *realManager) ValidateStatusFile(statusFile string) error {
+	if statusFile == "" {
+		return ErrStatusFileEmpty
+	}
+
+	// Get the directory containing the status file
+	statusDir := filepath.Dir(statusFile)
+
+	// Check if directory exists
+	if _, err := os.Stat(statusDir); os.IsNotExist(err) {
+		// Try to create the directory to validate permissions
+		if err := os.MkdirAll(statusDir, 0755); err != nil {
+			return fmt.Errorf("status file directory is not accessible: %w", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("status file directory is not accessible: %w", err)
+	}
+
+	// Check if directory is writable
+	if err := c.validateDirectoryWritable(statusDir); err != nil {
+		return fmt.Errorf("status file directory is not writable: %w", err)
 	}
 
 	return nil
@@ -190,12 +246,21 @@ func (c Config) validateDirectoryAccessibility(path, pathName string) error {
 
 // Validate validates the configuration values.
 func (c Config) Validate() error {
-	if c.BasePath == "" {
-		return ErrBasePathEmpty
+	if c.RepositoriesDir == "" {
+		return ErrRepositoriesDirEmpty
 	}
 
-	// Check if base path is accessible
-	if err := c.validateDirectoryAccessibility(c.BasePath, "base_path"); err != nil {
+	if c.WorkspacesDir == "" {
+		return ErrWorkspacesDirEmpty
+	}
+
+	// Check if repositories directory is accessible
+	if err := c.validateDirectoryAccessibility(c.RepositoriesDir, "repositories_dir"); err != nil {
+		return err
+	}
+
+	// Check if workspaces directory is accessible
+	if err := c.validateDirectoryAccessibility(c.WorkspacesDir, "workspaces_dir"); err != nil {
 		return err
 	}
 
@@ -218,7 +283,8 @@ func (c *Config) expandTildes() error {
 	}
 
 	// Expand tildes in all paths
-	c.BasePath = c.expandTilde(c.BasePath, homeDir)
+	c.RepositoriesDir = c.expandTilde(c.RepositoriesDir, homeDir)
+	c.WorkspacesDir = c.expandTilde(c.WorkspacesDir, homeDir)
 	c.StatusFile = c.expandTilde(c.StatusFile, homeDir)
 
 	return nil

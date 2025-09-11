@@ -9,9 +9,9 @@ import (
 
 // RepositoryInfo contains information about a repository for display purposes.
 type RepositoryInfo struct {
-	Name       string
-	Path       string
-	InBasePath bool
+	Name              string
+	Path              string
+	InRepositoriesDir bool
 }
 
 // ListRepositories lists all repositories from the status file with base path validation.
@@ -38,21 +38,21 @@ func (c *realCM) ListRepositories() ([]RepositoryInfo, error) {
 		// Convert to RepositoryInfo slice with base path validation
 		var repoInfos []RepositoryInfo
 		for repoName, repo := range repositories {
-			// Check if repository path is within configured base path
-			inBasePath, err := c.fs.IsPathWithinBase(c.config.BasePath, repo.Path)
+			// Check if repository path is within configured repositories directory
+			inRepositoriesDir, err := c.fs.IsPathWithinBase(c.config.RepositoriesDir, repo.Path)
 			if err != nil {
 				// Log warning but continue processing other repositories
 				if c.logger != nil {
 					c.logger.Logf("Failed to validate base path for repository %s: %v", repoName, err)
 				}
 				// Default to false if validation fails
-				inBasePath = false
+				inRepositoriesDir = false
 			}
 
 			repoInfo := RepositoryInfo{
-				Name:       repoName,
-				Path:       repo.Path,
-				InBasePath: inBasePath,
+				Name:              repoName,
+				Path:              repo.Path,
+				InRepositoriesDir: inRepositoriesDir,
 			}
 			repoInfos = append(repoInfos, repoInfo)
 		}

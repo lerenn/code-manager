@@ -55,7 +55,7 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 	// Mock repository detection and worktree creation
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().Validate().Return(nil)
-	mockRepository.EXPECT().CreateWorktree("test-branch").Return("/test/base/path/test-repo/origin/test-branch", nil)
+	mockRepository.EXPECT().CreateWorktree("test-branch", gomock.Any()).Return("/test/base/path/test-repo/origin/test-branch", nil)
 
 	err = cm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
@@ -97,7 +97,7 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	// Mock repository detection and worktree creation
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().Validate().Return(nil)
-	mockRepository.EXPECT().CreateWorktree("test-branch").Return("/test/base/path/test-repo/origin/test-branch", nil)
+	mockRepository.EXPECT().CreateWorktree("test-branch", gomock.Any()).Return("/test/base/path/test-repo/origin/test-branch", nil)
 
 	// Note: IDE opening is now handled by the hook system, not tested here
 	err = cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: "vscode"})

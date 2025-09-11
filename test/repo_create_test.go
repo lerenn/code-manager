@@ -21,8 +21,8 @@ func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -201,8 +201,8 @@ func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
 	// Test creating a worktree with verbose flag
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -247,8 +247,8 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 	// Test creating a worktree with IDE opening
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -296,8 +296,8 @@ func TestCreateWorktreeFromOriginDefaultBranch(t *testing.T) {
 	// Clone the octocat/Hello-World repository
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 	require.NoError(t, err)
@@ -389,8 +389,8 @@ func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
 	// Test creating a worktree with unsupported IDE
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 

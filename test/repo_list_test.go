@@ -25,8 +25,8 @@ func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error
 
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -58,8 +58,8 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	// Create CM instance with the test configuration
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -426,7 +426,7 @@ func TestRepositoryListCommand(t *testing.T) {
 	assert.Len(t, repositories, 1)
 	assert.Equal(t, repoURL, repositories[0].Name)
 	assert.Equal(t, repoPath, repositories[0].Path)
-	assert.True(t, repositories[0].InBasePath)
+	assert.True(t, repositories[0].InRepositoriesDir)
 
 	// Test with repository outside base path
 	outsideRepoURL := "github.com/lerenn/outside-repo"
@@ -464,7 +464,7 @@ func TestRepositoryListCommand(t *testing.T) {
 		}
 	}
 	require.NotNil(t, outsideRepo)
-	assert.False(t, outsideRepo.InBasePath)
+	assert.False(t, outsideRepo.InRepositoriesDir)
 }
 
 // listRepositories lists repositories using the CM instance
@@ -473,8 +473,8 @@ func listRepositories(t *testing.T, setup *TestSetup) ([]cm.RepositoryInfo, erro
 
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 

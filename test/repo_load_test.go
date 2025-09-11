@@ -18,8 +18,8 @@ func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 

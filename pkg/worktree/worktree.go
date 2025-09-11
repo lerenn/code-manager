@@ -103,22 +103,22 @@ type AddToStatusParams struct {
 
 // realWorktree provides the real implementation of the Worktree interface.
 type realWorktree struct {
-	fs            fs.FS
-	git           git.Git
-	statusManager status.Manager
-	logger        logger.Logger
-	prompt        prompt.Prompter
-	basePath      string
+	fs              fs.FS
+	git             git.Git
+	statusManager   status.Manager
+	logger          logger.Logger
+	prompt          prompt.Prompter
+	repositoriesDir string
 }
 
 // NewWorktreeParams contains parameters for creating a new Worktree instance.
 type NewWorktreeParams struct {
-	FS            fs.FS
-	Git           git.Git
-	StatusManager status.Manager
-	Logger        logger.Logger
-	Prompt        prompt.Prompter
-	BasePath      string
+	FS              fs.FS
+	Git             git.Git
+	StatusManager   status.Manager
+	Logger          logger.Logger
+	Prompt          prompt.Prompter
+	RepositoriesDir string
 }
 
 // NewWorktree creates a new Worktree instance.
@@ -129,19 +129,19 @@ func NewWorktree(params NewWorktreeParams) Worktree {
 	}
 
 	return &realWorktree{
-		fs:            params.FS,
-		git:           params.Git,
-		statusManager: params.StatusManager,
-		logger:        params.Logger,
-		prompt:        params.Prompt,
-		basePath:      params.BasePath,
+		fs:              params.FS,
+		git:             params.Git,
+		statusManager:   params.StatusManager,
+		logger:          params.Logger,
+		prompt:          params.Prompt,
+		repositoriesDir: params.RepositoriesDir,
 	}
 }
 
 // BuildPath constructs a worktree path from repository URL, remote name, and branch.
 func (w *realWorktree) BuildPath(repoURL, remoteName, branch string) string {
 	// Use structure: $base_path/<repo_url>/<remote_name>/<branch>
-	return filepath.Join(w.basePath, repoURL, remoteName, branch)
+	return filepath.Join(w.repositoriesDir, repoURL, remoteName, branch)
 }
 
 // Create creates a new worktree with proper validation and cleanup.

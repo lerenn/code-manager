@@ -31,8 +31,8 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 
 	// Create temporary config
 	testConfig := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	configPath := filepath.Join(tempDir, "config.yaml")
 	configData, err := yaml.Marshal(testConfig)
@@ -75,8 +75,8 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 
 	// Create CM instance
 	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: cfg,
@@ -85,7 +85,9 @@ func TestCreateWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	// Create worktrees
 	branchName := "feature/test-branch"
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, cm.CreateWorkTreeOpts{
+		WorkspaceName: "test-workspace",
+	})
 	require.NoError(t, err)
 
 	// Verify worktrees were created
@@ -160,16 +162,16 @@ func TestCreateWorkspace_EndToEnd(t *testing.T) {
 	defer os.RemoveAll(reposDir)
 
 	// Create test repository
-	repoDir := filepath.Join(reposDir, "Hello-World")
-	require.NoError(t, os.MkdirAll(repoDir, 0755))
+	repositoriesDir := filepath.Join(reposDir, "Hello-World")
+	require.NoError(t, os.MkdirAll(repositoriesDir, 0755))
 
 	// Initialize Git repository
-	createTestGitRepo(t, repoDir)
+	createTestGitRepo(t, repositoriesDir)
 
 	// Create CM instance
 	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: cfg,
@@ -180,7 +182,7 @@ func TestCreateWorkspace_EndToEnd(t *testing.T) {
 	workspaceName := "test-workspace-absolute"
 	params := cm.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
-		Repositories:  []string{repoDir},
+		Repositories:  []string{repositoriesDir},
 	}
 
 	err = cmInstance.CreateWorkspace(params)
@@ -209,8 +211,8 @@ func TestCreateWorkspace_EndToEnd_ErrorCases(t *testing.T) {
 
 	// Create CM instance
 	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: cfg,
@@ -249,15 +251,15 @@ func TestCreateWorkspace_EndToEnd_ErrorCases(t *testing.T) {
 
 	// Test 4: Create workspace with duplicate repositories
 	// Create a test repository first
-	repoDir, err := os.MkdirTemp("", "cm-test-repo-*")
+	repositoriesDir, err := os.MkdirTemp("", "cm-test-repo-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(repoDir)
+	defer os.RemoveAll(repositoriesDir)
 
-	createTestGitRepo(t, repoDir)
+	createTestGitRepo(t, repositoriesDir)
 
 	params = cm.CreateWorkspaceParams{
 		WorkspaceName: "duplicate-workspace",
-		Repositories:  []string{repoDir, repoDir},
+		Repositories:  []string{repositoriesDir, repositoriesDir},
 	}
 
 	err = cmInstance.CreateWorkspace(params)
@@ -268,7 +270,7 @@ func TestCreateWorkspace_EndToEnd_ErrorCases(t *testing.T) {
 	// First create a workspace
 	params = cm.CreateWorkspaceParams{
 		WorkspaceName: "existing-workspace",
-		Repositories:  []string{repoDir},
+		Repositories:  []string{repositoriesDir},
 	}
 
 	err = cmInstance.CreateWorkspace(params)
@@ -288,8 +290,8 @@ func TestCreateWorkspace_EndToEnd_InvalidRepository(t *testing.T) {
 
 	// Create CM instance
 	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: cfg,
@@ -342,14 +344,14 @@ func TestCreateWorkspace_EndToEnd_RelativePathResolution(t *testing.T) {
 	defer os.RemoveAll(reposDir)
 
 	// Create test repository with specific name to get unique remote URL
-	repoDir := filepath.Join(reposDir, "Hello-World")
-	require.NoError(t, os.MkdirAll(repoDir, 0755))
-	createTestGitRepo(t, repoDir)
+	repositoriesDir := filepath.Join(reposDir, "Hello-World")
+	require.NoError(t, os.MkdirAll(repositoriesDir, 0755))
+	createTestGitRepo(t, repositoriesDir)
 
 	// Create CM instance
 	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: cfg,

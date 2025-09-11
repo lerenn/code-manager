@@ -28,11 +28,11 @@ func TestNewWorktree(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	params := NewWorktreeParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		StatusManager: mockStatus,
-		Prompt:        mockPrompt,
-		BasePath:      "/test/path",
+		FS:              mockFS,
+		Git:             mockGit,
+		StatusManager:   mockStatus,
+		Prompt:          mockPrompt,
+		RepositoriesDir: "/test/path",
 	}
 
 	worktree := NewWorktree(params)
@@ -50,12 +50,12 @@ func TestWorktree_BuildPath(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	path := worktree.BuildPath("github.com/octocat/Hello-World", "origin", "feature-branch")
@@ -75,7 +75,7 @@ func TestWorktree_Create_Success(t *testing.T) {
 
 	worktree := &realWorktree{
 		fs: mockFS, git: mockGit, statusManager: mockStatus, logger: logger.NewNoopLogger(), prompt: mockPrompt,
-		basePath: "/test/base",
+		repositoriesDir: "/test/base",
 	}
 
 	params := CreateParams{
@@ -112,7 +112,7 @@ func TestWorktree_Create_DirectoryExists(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs: mockFS, git: mockGit, statusManager: mockStatus, prompt: mockPrompt, basePath: "/test/base",
+		fs: mockFS, git: mockGit, statusManager: mockStatus, prompt: mockPrompt, repositoriesDir: "/test/base",
 	}
 
 	params := CreateParams{
@@ -147,8 +147,8 @@ func TestWorktree_Create_WorktreeExists(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := CreateParams{
@@ -189,8 +189,8 @@ func TestWorktree_Create_BranchDoesNotExist(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := CreateParams{
@@ -240,12 +240,12 @@ func TestWorktree_Delete_Success(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := DeleteParams{
@@ -282,12 +282,12 @@ func TestWorktree_Delete_WorktreeNotInStatus(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := DeleteParams{
@@ -316,12 +316,12 @@ func TestWorktree_Delete_WithConfirmation(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := DeleteParams{
@@ -359,12 +359,12 @@ func TestWorktree_Delete_ConfirmationCancelled(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := DeleteParams{
@@ -403,8 +403,8 @@ func TestWorktree_ValidateCreation_Success(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := ValidateCreationParams{
@@ -438,8 +438,8 @@ func TestWorktree_ValidateDeletion_Success(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := ValidateDeletionParams{
@@ -474,8 +474,8 @@ func TestWorktree_EnsureBranchExists_BranchExists(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -500,12 +500,12 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -543,12 +543,12 @@ func TestWorktree_EnsureBranchExists_BranchExistsOnRemote(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -584,12 +584,12 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist_RemoteFallback(t *testin
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -627,12 +627,12 @@ func TestWorktree_EnsureBranchExists_BranchDoesNotExist_DefaultBranchFallback(t 
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		basePath:      "/test/base",
+		fs:              mockFS,
+		git:             mockGit,
+		statusManager:   mockStatus,
+		logger:          logger.NewNoopLogger(),
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -675,8 +675,8 @@ func TestWorktree_AddToStatus_Success(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	params := AddToStatusParams{
@@ -710,8 +710,8 @@ func TestWorktree_RemoveFromStatus_Success(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoURL := "github.com/octocat/Hello-World"
@@ -739,8 +739,8 @@ func TestWorktree_Exists_Success(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -769,8 +769,8 @@ func TestWorktree_GetPath_Success(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	repoPath := "/test/repo"
@@ -800,8 +800,8 @@ func TestWorktree_CleanupDirectory_Success(t *testing.T) {
 		git:           mockGit,
 		statusManager: mockStatus,
 
-		prompt:   mockPrompt,
-		basePath: "/test/base",
+		prompt:          mockPrompt,
+		repositoriesDir: "/test/base",
 	}
 
 	worktreePath := "/test/worktree/path"

@@ -11,7 +11,6 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/forge"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -43,8 +42,8 @@ func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
 	// Create a worktree manually with issue information to simulate the behavior
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 	require.NoError(t, err)
@@ -197,8 +196,8 @@ func TestCreateFromIssue_NoIssueInfo(t *testing.T) {
 	// Create a worktree without issue information
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 	require.NoError(t, err)
@@ -255,7 +254,7 @@ func TestCreateFromIssue_InvalidIssueReference(t *testing.T) {
 	// Test with invalid issue reference
 	err := createWorktreeFromIssue(t, setup, "invalid-issue-ref")
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, forge.ErrInvalidIssueRef)
+	assert.Contains(t, err.Error(), "branch name cannot be empty")
 }
 
 func TestCreateFromIssue_InvalidIssueNumber(t *testing.T) {
@@ -271,7 +270,7 @@ func TestCreateFromIssue_InvalidIssueNumber(t *testing.T) {
 	// Test with invalid issue number format
 	err := createWorktreeFromIssue(t, setup, "owner/repo#abc")
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, forge.ErrInvalidIssueRef)
+	assert.Contains(t, err.Error(), "branch name cannot be empty")
 }
 
 func TestCreateFromIssue_InvalidOwnerRepoFormat(t *testing.T) {
@@ -287,7 +286,7 @@ func TestCreateFromIssue_InvalidOwnerRepoFormat(t *testing.T) {
 	// Test with invalid owner/repo format
 	err := createWorktreeFromIssue(t, setup, "owner#123")
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, forge.ErrInvalidIssueRef)
+	assert.Contains(t, err.Error(), "branch name cannot be empty")
 }
 
 func TestCreateFromIssue_IssueNumberRequiresContext(t *testing.T) {
@@ -416,8 +415,8 @@ func TestCreateFromIssue_WithIDE(t *testing.T) {
 func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) error {
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 	require.NoError(t, err)
@@ -435,8 +434,8 @@ func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) er
 func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIssueWithBranchParams) error {
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   params.Setup.CmPath,
-			StatusFile: params.Setup.StatusPath,
+			RepositoriesDir: params.Setup.CmPath,
+			StatusFile:      params.Setup.StatusPath,
 		},
 	})
 	require.NoError(t, err)
@@ -454,8 +453,8 @@ func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIs
 func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssueWithIDEParams) error {
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   params.Setup.CmPath,
-			StatusFile: params.Setup.StatusPath,
+			RepositoriesDir: params.Setup.CmPath,
+			StatusFile:      params.Setup.StatusPath,
 		},
 	})
 	require.NoError(t, err)

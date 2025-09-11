@@ -14,8 +14,8 @@ import (
 func TestNewCM_WithProviders(t *testing.T) {
 	// Create test config
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	// Create mock providers
@@ -44,8 +44,8 @@ func TestNewCM_WithProviders(t *testing.T) {
 func TestNewCM_WithoutProviders(t *testing.T) {
 	// Create test config
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	// Test creating CM without providers (should create defaults)

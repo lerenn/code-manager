@@ -46,9 +46,9 @@ var (
 	ErrFailedToLoadRepositories = errors.New("failed to load repositories from status file")
 
 	// Initialization errors.
-	ErrAlreadyInitialized     = errors.New("CM is already initialized")
-	ErrNotInitialized         = errors.New("CM is not initialized")
-	ErrFailedToExpandBasePath = errors.New("failed to expand base path")
+	ErrAlreadyInitialized            = errors.New("CM is already initialized")
+	ErrNotInitialized                = errors.New("CM is not initialized")
+	ErrFailedToExpandRepositoriesDir = errors.New("failed to expand repositories directory")
 
 	// Project detection errors.
 	ErrNoGitRepositoryOrWorkspaceFound = errors.New("no Git repository or workspace found")

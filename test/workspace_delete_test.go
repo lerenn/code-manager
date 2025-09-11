@@ -31,8 +31,8 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 
 	// Create temporary config
 	testConfig := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	configPath := filepath.Join(tempDir, "config.yaml")
 	configData, err := yaml.Marshal(testConfig)
@@ -75,8 +75,8 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 
 	// Create CM instance
 	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: cfg,
@@ -85,7 +85,9 @@ func TestDeleteWorktree_WorkspaceMode(t *testing.T) {
 	require.NoError(t, err)
 	// Create worktrees first
 	branchName := "feature/test-branch"
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, cm.CreateWorkTreeOpts{
+		WorkspaceName: "test-workspace",
+	})
 	require.NoError(t, err)
 
 	// Verify worktrees were created
@@ -139,8 +141,8 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 
 	// Create temporary config
 	testConfig := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	configPath := filepath.Join(tempDir, "config.yaml")
 	configData, err := yaml.Marshal(testConfig)
@@ -179,8 +181,8 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 
 	// Create CM instance
 	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
+		RepositoriesDir: tempDir,
+		StatusFile:      filepath.Join(tempDir, "status.yaml"),
 	}
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: cfg,
@@ -189,7 +191,9 @@ func TestDeleteWorktree_WorkspaceMode_Force(t *testing.T) {
 	require.NoError(t, err)
 	// Create worktrees first
 	branchName := "feature/test-branch"
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, cm.CreateWorkTreeOpts{
+		WorkspaceName: "test-workspace",
+	})
 	require.NoError(t, err)
 
 	// Verify worktree was created

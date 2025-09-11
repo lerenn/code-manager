@@ -13,7 +13,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -25,15 +24,23 @@ const DefaultRemote = "origin"
 
 //go:generate mockgen -source=repository.go -destination=mocks/repository.gen.go -package=mocks
 
+// CreateWorktreeOpts contains optional parameters for worktree creation in repository mode.
+type CreateWorktreeOpts struct {
+	IDEName       string
+	IssueInfo     *issue.Info
+	WorkspaceName string
+}
+
 // WorktreeProvider is a function type that creates worktree instances.
 type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
 
 // Repository interface provides repository management capabilities.
-// It implements the common Interface and adds repository-specific methods.
 type Repository interface {
-	mode.Interface
-
-	// Repository-specific methods
+	Validate() error
+	CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error)
+	DeleteWorktree(branch string, force bool) error
+	ListWorktrees() ([]status.WorktreeInfo, error)
+	SetLogger(logger logger.Logger)
 	LoadWorktree(remoteSource, branchName string) (string, error)
 	IsWorkspaceFile() (bool, error)
 	IsGitRepository() (bool, error)
@@ -130,7 +137,7 @@ type LoadWorktreeOpts struct {
 }
 
 // CreateWorktree creates a worktree for the repository with the specified branch.
-func (r *realRepository) CreateWorktree(branch string, opts ...mode.CreateWorktreeOpts) (string, error) {
+func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error) {
 	r.logger.Logf("Creating worktree for single repository with branch: %s", branch)
 
 	// Validate repository
@@ -224,12 +231,12 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 func (r *realRepository) createAndValidateWorktreeInstance(repoURL, branch string) (worktree.Worktree, string, error) {
 	// Create worktree instance using provider
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
+		FS:              r.fs,
+		Git:             r.git,
+		StatusManager:   r.statusManager,
+		Logger:          r.logger,
+		Prompt:          r.prompt,
+		RepositoriesDir: r.config.RepositoriesDir,
 	})
 
 	// Build worktree path
@@ -439,12 +446,12 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 
 	// Create worktree instance using provider
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
+		FS:              r.fs,
+		Git:             r.git,
+		StatusManager:   r.statusManager,
+		Logger:          r.logger,
+		Prompt:          r.prompt,
+		RepositoriesDir: r.config.RepositoriesDir,
 	})
 
 	// Delete the worktree

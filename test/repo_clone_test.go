@@ -20,8 +20,8 @@ func cloneRepository(t *testing.T, setup *TestSetup, repoURL string, recursive b
 
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 

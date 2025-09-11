@@ -13,7 +13,6 @@ import (
 	reflect "reflect"
 
 	logger "github.com/lerenn/code-manager/pkg/logger"
-	mode "github.com/lerenn/code-manager/pkg/mode"
 	workspace "github.com/lerenn/code-manager/pkg/mode/workspace"
 	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
@@ -44,7 +43,7 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 }
 
 // CreateWorktree mocks base method.
-func (m *MockWorkspace) CreateWorktree(branch string, opts ...mode.CreateWorktreeOpts) (string, error) {
+func (m *MockWorkspace) CreateWorktree(branch string, opts ...workspace.CreateWorktreeOpts) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{branch}
 	for _, a := range opts {

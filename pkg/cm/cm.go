@@ -183,7 +183,7 @@ func (c *realCM) SetLogger(logger logger.Logger) {
 func (c *realCM) BuildWorktreePath(repoURL, _, branch string) string {
 	// For now, construct the path manually since we don't have direct access to the worktree
 	// This should be refactored to use the worktree component properly
-	return fmt.Sprintf("%s/worktrees/%s/%s", c.config.BasePath, repoURL, branch)
+	return fmt.Sprintf("%s/worktrees/%s/%s", c.config.RepositoriesDir, repoURL, branch)
 }
 
 // RegisterHook registers a hook for a specific operation.

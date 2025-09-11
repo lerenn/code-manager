@@ -19,10 +19,7 @@ func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 	}
 
 	// Get workspace path
-	workspacePath, err := w.getWorkspacePath()
-	if err != nil {
-		return nil, err
-	}
+	workspacePath := w.getWorkspacePath()
 
 	// Get workspace from status
 	workspace, err := w.statusManager.GetWorkspace(workspacePath)

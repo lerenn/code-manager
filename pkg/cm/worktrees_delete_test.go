@@ -42,8 +42,8 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 		},
 		Hooks: mockHookManager,
 		Config: config.Config{
-			BasePath:   "/test/base/path",
-			StatusFile: "/test/status.yaml",
+			RepositoriesDir: "/test/base/path",
+			StatusFile:      "/test/status.yaml",
 		},
 		FS:     mockFS,
 		Git:    mockGit,
@@ -92,8 +92,8 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 		},
 		Hooks: mockHookManager,
 		Config: config.Config{
-			BasePath:   "/test/base/path",
-			StatusFile: "/test/status.yaml",
+			RepositoriesDir: "/test/base/path",
+			StatusFile:      "/test/status.yaml",
 		},
 		FS:     mockFS,
 		Git:    mockGit,

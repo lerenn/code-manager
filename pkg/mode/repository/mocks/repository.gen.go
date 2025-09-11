@@ -13,7 +13,6 @@ import (
 	reflect "reflect"
 
 	logger "github.com/lerenn/code-manager/pkg/logger"
-	mode "github.com/lerenn/code-manager/pkg/mode"
 	repository "github.com/lerenn/code-manager/pkg/mode/repository"
 	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
@@ -87,7 +86,7 @@ func (mr *MockRepositoryMockRecorder) ConstructRemoteURL(originURL, remoteSource
 }
 
 // CreateWorktree mocks base method.
-func (m *MockRepository) CreateWorktree(branch string, opts ...mode.CreateWorktreeOpts) (string, error) {
+func (m *MockRepository) CreateWorktree(branch string, opts ...repository.CreateWorktreeOpts) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{branch}
 	for _, a := range opts {

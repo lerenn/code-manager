@@ -17,8 +17,8 @@ func TestNewManager(t *testing.T) {
 
 	mockFS := fsmocks.NewMockFS(ctrl)
 	cfg := config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	// Mock expectations for initialization

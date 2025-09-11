@@ -24,8 +24,8 @@ func TestCreateWorktreeFromDefaultBranch(t *testing.T) {
 	// Create CM instance with temporary config
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   tempDir,
-			StatusFile: filepath.Join(tempDir, "status.yaml"),
+			RepositoriesDir: tempDir,
+			StatusFile:      filepath.Join(tempDir, "status.yaml"),
 		},
 	})
 

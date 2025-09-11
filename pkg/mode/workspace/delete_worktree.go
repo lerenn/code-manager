@@ -38,8 +38,7 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 	sanitizedBranchForFilename := strings.ReplaceAll(branch, "/", "-")
 
 	worktreeWorkspacePath := filepath.Join(
-		w.config.BasePath,
-		"workspaces",
+		w.config.WorkspacesDir,
 		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename),
 	)
 

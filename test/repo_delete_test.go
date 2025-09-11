@@ -26,8 +26,8 @@ func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   params.Setup.CmPath,
-			StatusFile: params.Setup.StatusPath,
+			RepositoriesDir: params.Setup.CmPath,
+			StatusFile:      params.Setup.StatusPath,
 		},
 	})
 
@@ -128,8 +128,8 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 	// Delete the worktree with verbose mode
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -206,8 +206,8 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 	// Delete worktree using CM instance with force flag and verbose mode
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
