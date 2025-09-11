@@ -45,9 +45,6 @@ type CM interface {
 	CreateWorkspace(params CreateWorkspaceParams) error
 	// SetLogger sets the logger for this CM instance.
 	SetLogger(logger logger.Logger)
-	// Hook management methods
-	RegisterHook(operation string, hook hooks.Hook) error
-	UnregisterHook(operation, hookName string) error
 }
 
 // NewCMParams contains parameters for creating a new CM instance.
@@ -186,34 +183,12 @@ func (c *realCM) BuildWorktreePath(repoURL, _, branch string) string {
 	return fmt.Sprintf("%s/worktrees/%s/%s", c.config.RepositoriesDir, repoURL, branch)
 }
 
-// RegisterHook registers a hook for a specific operation.
-func (c *realCM) RegisterHook(operation string, hook hooks.Hook) error {
-	// This is a simplified implementation - in practice, you'd want to determine
-	// the hook type and register it appropriately.
-	switch h := hook.(type) {
-	case hooks.PostHook:
-		return c.hookManager.RegisterPostHook(operation, h)
-	case hooks.PreHook:
-		return c.hookManager.RegisterPreHook(operation, h)
-	case hooks.ErrorHook:
-		return c.hookManager.RegisterErrorHook(operation, h)
-	default:
-		return fmt.Errorf("unsupported hook type")
-	}
-}
-
-// UnregisterHook removes a hook by name from a specific operation.
-func (c *realCM) UnregisterHook(operation, hookName string) error {
-	return c.hookManager.RemoveHook(operation, hookName)
-}
-
 // executeWithHooks executes an operation with pre and post hooks.
 func (c *realCM) executeWithHooks(operationName string, params map[string]interface{}, operation func() error) error {
 	ctx := &hooks.HookContext{
 		OperationName: operationName,
 		Parameters:    params,
 		Results:       make(map[string]interface{}),
-		CM:            c,
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)
@@ -253,7 +228,6 @@ func (c *realCM) executeWithHooksAndReturnListWorktrees(
 		OperationName: operationName,
 		Parameters:    params,
 		Results:       make(map[string]interface{}),
-		CM:            c,
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)
@@ -296,7 +270,6 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 		OperationName: operationName,
 		Parameters:    params,
 		Results:       make(map[string]interface{}),
-		CM:            c,
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)

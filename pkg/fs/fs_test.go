@@ -257,57 +257,6 @@ func TestFS_FileLock(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestFS_CreateFileIfNotExists(t *testing.T) {
-	fs := NewFS()
-
-	// Create a temporary directory for testing
-	tmpDir, err := os.MkdirTemp("", "test-create-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	// Test creating a new file
-	testFile := filepath.Join(tmpDir, "new-file.txt")
-	initialContent := []byte("initial content")
-
-	err = fs.CreateFileIfNotExists(testFile, initialContent, 0644)
-	assert.NoError(t, err)
-
-	// Verify file was created with correct content
-	readContent, err := fs.ReadFile(testFile)
-	assert.NoError(t, err)
-	assert.Equal(t, initialContent, readContent)
-
-	// Test creating the same file again (should not error and not overwrite)
-	newContent := []byte("new content")
-	err = fs.CreateFileIfNotExists(testFile, newContent, 0644)
-	assert.NoError(t, err)
-
-	// Verify content was not changed
-	readContent, err = fs.ReadFile(testFile)
-	assert.NoError(t, err)
-	assert.Equal(t, initialContent, readContent)
-
-	// Test creating file in nested directory
-	nestedFile := filepath.Join(tmpDir, "level1", "level2", "nested-file.txt")
-	err = fs.CreateFileIfNotExists(nestedFile, initialContent, 0644)
-	assert.NoError(t, err)
-
-	// Verify nested file was created
-	readContent, err = fs.ReadFile(nestedFile)
-	assert.NoError(t, err)
-	assert.Equal(t, initialContent, readContent)
-
-	// Test creating file with different permissions
-	permFile := filepath.Join(tmpDir, "perm-file.txt")
-	err = fs.CreateFileIfNotExists(permFile, initialContent, 0755)
-	assert.NoError(t, err)
-
-	// Verify file permissions
-	info, err := os.Stat(permFile)
-	assert.NoError(t, err)
-	assert.Equal(t, os.FileMode(0755), info.Mode().Perm())
-}
-
 func TestFS_RemoveAll(t *testing.T) {
 	fs := NewFS()
 
@@ -811,44 +760,6 @@ func TestFS_CreateFileWithContent(t *testing.T) {
 	readContent, err = fs.ReadFile(testFile)
 	assert.NoError(t, err)
 	assert.Equal(t, newContent, readContent)
-}
-
-func TestFS_IsDirectoryWritable(t *testing.T) {
-	fs := NewFS()
-
-	// Create a temporary directory for testing
-	tmpDir, err := os.MkdirTemp("", "test-writable-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
-
-	// Test writable directory
-	writable, err := fs.IsDirectoryWritable(tmpDir)
-	assert.NoError(t, err)
-	assert.True(t, writable)
-
-	// Test non-existent directory
-	nonExistentDir := filepath.Join(tmpDir, "non-existent")
-	writable, err = fs.IsDirectoryWritable(nonExistentDir)
-	assert.Error(t, err)
-	assert.False(t, writable)
-
-	// Test file instead of directory
-	testFile := filepath.Join(tmpDir, "test-file.txt")
-	err = os.WriteFile(testFile, []byte("test"), 0644)
-	require.NoError(t, err)
-
-	writable, err = fs.IsDirectoryWritable(testFile)
-	assert.Error(t, err)
-	assert.False(t, writable)
-
-	// Test nested directory
-	nestedDir := filepath.Join(tmpDir, "level1", "level2")
-	err = os.MkdirAll(nestedDir, 0755)
-	require.NoError(t, err)
-
-	writable, err = fs.IsDirectoryWritable(nestedDir)
-	assert.NoError(t, err)
-	assert.True(t, writable)
 }
 
 func TestFS_ExpandPath(t *testing.T) {

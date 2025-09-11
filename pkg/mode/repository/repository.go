@@ -53,7 +53,6 @@ type Repository interface {
 	ExtractRepoNameFromFullPath(fullPath string) string
 	ConstructRemoteURL(originURL, remoteSource, repoName string) (string, error)
 	AddWorktreeToStatus(params StatusParams) error
-	RemoveWorktreeFromStatus(repoURL, branch string) error
 	AutoAddRepositoryToStatus(repoURL, repoPath string) error
 }
 
@@ -123,11 +122,6 @@ func (r *realRepository) Validate() error {
 
 // CreateWorktreeOpts contains optional parameters for CreateWorktree.
 // This is now defined in the mode package for consistency.
-
-// DeleteWorktreeOpts contains optional parameters for DeleteWorktree.
-type DeleteWorktreeOpts struct {
-	Force bool
-}
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
 type LoadWorktreeOpts struct {
@@ -506,20 +500,6 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 	r.logger.Logf("Creating worktree for branch '%s'", branchName)
 	worktreePath, err := r.CreateWorktree(branchName)
 	return worktreePath, err
-}
-
-// ParseConfirmationInput parses confirmation input from user.
-func (r *realRepository) ParseConfirmationInput(input string) (bool, error) {
-	switch strings.ToLower(strings.TrimSpace(input)) {
-	case "y", "yes":
-		return true, nil
-	case "n", "no", "":
-		return false, nil
-	case "q", "quit", "exit", "cancel":
-		return false, fmt.Errorf("user cancelled")
-	default:
-		return false, fmt.Errorf("invalid input")
-	}
 }
 
 // SetLogger sets the logger for this repository instance.

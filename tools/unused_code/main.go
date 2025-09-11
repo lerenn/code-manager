@@ -26,6 +26,7 @@ type UsageInfo struct {
 	File    string
 	Line    int
 	Context string
+	IsTest  bool // Whether this usage is in a test file
 }
 
 // PublicSymbol represents any public symbol (function, type, method, etc.)
@@ -53,10 +54,11 @@ func main() {
 
 	// Parse command line arguments
 	var rootDir string
-	var mode AnalysisMode = FunctionsOnly
+	mode := FunctionsOnly
 	var showHelp bool
+	var debugSymbol string
 
-	for _, arg := range os.Args[1:] {
+	for i, arg := range os.Args[1:] {
 		switch arg {
 		case "--help", "-h":
 			showHelp = true
@@ -64,6 +66,10 @@ func main() {
 			mode = AllSymbols
 		case "--functions-only", "-f":
 			mode = FunctionsOnly
+		case "--debug", "-d":
+			if i+1 < len(os.Args)-1 {
+				debugSymbol = os.Args[i+2]
+			}
 		default:
 			if strings.HasPrefix(arg, "-") {
 				fmt.Printf("❌ Unknown flag: %s\n", arg)
@@ -88,9 +94,9 @@ func main() {
 	// Run the analysis
 	switch mode {
 	case FunctionsOnly:
-		analyzeFunctionsOnly(rootDir)
+		analyzeFunctionsOnly(rootDir, debugSymbol)
 	case AllSymbols:
-		analyzeAllSymbols(rootDir)
+		analyzeAllSymbols(rootDir, debugSymbol)
 	}
 }
 
@@ -116,7 +122,7 @@ func printUsage() {
 	fmt.Println("  - Check if functions are used in build tags or conditional compilation")
 }
 
-func analyzeFunctionsOnly(rootDir string) {
+func analyzeFunctionsOnly(rootDir string, _ string) {
 	fmt.Println("🔍 Finding unused public functions (functions only)...")
 	fmt.Println(strings.Repeat("=", 60))
 
@@ -165,10 +171,11 @@ func analyzeFunctionsOnly(rootDir string) {
 	fmt.Printf("📈 Summary:\n")
 	fmt.Printf("   Total public functions: %d\n", len(publicFunctions))
 	fmt.Printf("   Unused functions: %d\n", len(unusedFunctions))
-	fmt.Printf("   Usage rate: %.1f%%\n", float64(len(publicFunctions)-len(unusedFunctions))/float64(len(publicFunctions))*100)
+	usageRate := float64(len(publicFunctions)-len(unusedFunctions)) / float64(len(publicFunctions)) * 100
+	fmt.Printf("   Usage rate: %.1f%%\n", usageRate)
 }
 
-func analyzeAllSymbols(rootDir string) {
+func analyzeAllSymbols(rootDir string, debugSymbol string) {
 	fmt.Println("🔍 Advanced analysis of unused public symbols...")
 	fmt.Println(strings.Repeat("=", 60))
 
@@ -181,6 +188,12 @@ func analyzeAllSymbols(rootDir string) {
 
 	// Check which symbols are unused
 	unusedSymbols := findUnusedSymbols(publicSymbols, usages)
+
+	// Debug specific symbol if requested
+	if debugSymbol != "" {
+		debugSymbolUsage(debugSymbol, publicSymbols, usages)
+		return
+	}
 
 	// Display results
 	if len(unusedSymbols) == 0 {
@@ -224,7 +237,7 @@ func analyzeAllSymbols(rootDir string) {
 func findPublicFunctions(rootDir string) []FunctionInfo {
 	var functions []FunctionInfo
 
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(rootDir, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -310,7 +323,7 @@ func findPublicFunctions(rootDir string) []FunctionInfo {
 func findPublicSymbols(rootDir string) []PublicSymbol {
 	var symbols []PublicSymbol
 
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(rootDir, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -426,7 +439,7 @@ func findPublicSymbols(rootDir string) []PublicSymbol {
 func findFunctionUsages(rootDir string) map[string][]UsageInfo {
 	usages := make(map[string][]UsageInfo)
 
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(rootDir, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -436,13 +449,15 @@ func findFunctionUsages(rootDir string) map[string][]UsageInfo {
 			return nil
 		}
 
-		// Skip vendor, .git, cmd, and .dagger directories
+		// Skip vendor, .git, and .dagger directories (but include cmd/ for usage analysis)
 		if strings.Contains(path, "/vendor/") ||
 			strings.Contains(path, "/.git/") ||
-			strings.Contains(path, "/cmd/") ||
 			strings.Contains(path, "/.dagger/") {
 			return nil
 		}
+
+		// Check if this is a test file
+		isTestFile := strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/mocks/")
 
 		// Parse the Go file
 		fset := token.NewFileSet()
@@ -465,6 +480,7 @@ func findFunctionUsages(rootDir string) map[string][]UsageInfo {
 						File:    path,
 						Line:    pos.Line,
 						Context: getContextLine(fset, x.Pos()),
+						IsTest:  isTestFile,
 					})
 				}
 			case *ast.SelectorExpr:
@@ -476,6 +492,152 @@ func findFunctionUsages(rootDir string) map[string][]UsageInfo {
 						File:    path,
 						Line:    pos.Line,
 						Context: getContextLine(fset, x.Sel.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.StarExpr:
+				// Handle pointer types like *Cursor
+				if ident, ok := x.X.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.ArrayType:
+				// Handle array/slice types like []Cursor
+				if ident, ok := x.Elt.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.MapType:
+				// Handle map types like map[string]Cursor
+				if ident, ok := x.Value.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+				if ident, ok := x.Key.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.ChanType:
+				// Handle channel types like chan Cursor
+				if ident, ok := x.Value.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.FuncType:
+				// Handle function types that use public types in parameters or returns
+				// Parameters
+				if x.Params != nil {
+					for _, param := range x.Params.List {
+						if ident, ok := param.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+							pos := fset.Position(ident.Pos())
+							usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+								Package: packageName,
+								File:    path,
+								Line:    pos.Line,
+								Context: getContextLine(fset, ident.Pos()),
+								IsTest:  isTestFile,
+							})
+						}
+					}
+				}
+				// Return types
+				if x.Results != nil {
+					for _, result := range x.Results.List {
+						if ident, ok := result.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+							pos := fset.Position(ident.Pos())
+							usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+								Package: packageName,
+								File:    path,
+								Line:    pos.Line,
+								Context: getContextLine(fset, ident.Pos()),
+								IsTest:  isTestFile,
+							})
+						}
+					}
+				}
+			case *ast.CompositeLit:
+				// Handle composite literals like &Cursor{...} or Cursor{...}
+				if ident, ok := x.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.TypeAssertExpr:
+				// Handle type assertions like x.(*Cursor)
+				if ident, ok := x.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.CallExpr:
+				// Handle function calls that might return types, like NewCursor()
+				// This is a bit more complex, but we can check if the function name suggests it returns a type
+				if ident, ok := x.Fun.(*ast.Ident); ok && isPublic(ident.Name) {
+					// Check if this looks like a constructor function (starts with "New")
+					if strings.HasPrefix(ident.Name, "New") {
+						// Extract the type name from the constructor
+						typeName := strings.TrimPrefix(ident.Name, "New")
+						if isPublic(typeName) {
+							pos := fset.Position(ident.Pos())
+							usages[typeName] = append(usages[typeName], UsageInfo{
+								Package: packageName,
+								File:    path,
+								Line:    pos.Line,
+								Context: getContextLine(fset, ident.Pos()),
+								IsTest:  isTestFile,
+							})
+						}
+					}
+				}
+				// Handle method calls like w.Validate()
+				if selector, ok := x.Fun.(*ast.SelectorExpr); ok && selector.Sel != nil && isPublic(selector.Sel.Name) {
+					pos := fset.Position(selector.Sel.Pos())
+					usages[selector.Sel.Name] = append(usages[selector.Sel.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, selector.Sel.Pos()),
+						IsTest:  isTestFile,
 					})
 				}
 			}
@@ -497,7 +659,7 @@ func findFunctionUsages(rootDir string) map[string][]UsageInfo {
 func findSymbolUsages(rootDir string) map[string][]UsageInfo {
 	usages := make(map[string][]UsageInfo)
 
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(rootDir, func(path string, _ os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -507,13 +669,15 @@ func findSymbolUsages(rootDir string) map[string][]UsageInfo {
 			return nil
 		}
 
-		// Skip vendor, .git, cmd, and .dagger directories
+		// Skip vendor, .git, and .dagger directories (but include cmd/ for usage analysis)
 		if strings.Contains(path, "/vendor/") ||
 			strings.Contains(path, "/.git/") ||
-			strings.Contains(path, "/cmd/") ||
 			strings.Contains(path, "/.dagger/") {
 			return nil
 		}
+
+		// Check if this is a test file
+		isTestFile := strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/mocks/")
 
 		// Parse the Go file
 		fset := token.NewFileSet()
@@ -536,6 +700,7 @@ func findSymbolUsages(rootDir string) map[string][]UsageInfo {
 						File:    path,
 						Line:    pos.Line,
 						Context: getContextLine(fset, x.Pos()),
+						IsTest:  isTestFile,
 					})
 				}
 			case *ast.SelectorExpr:
@@ -547,6 +712,152 @@ func findSymbolUsages(rootDir string) map[string][]UsageInfo {
 						File:    path,
 						Line:    pos.Line,
 						Context: getContextLine(fset, x.Sel.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.StarExpr:
+				// Handle pointer types like *Cursor
+				if ident, ok := x.X.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.ArrayType:
+				// Handle array/slice types like []Cursor
+				if ident, ok := x.Elt.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.MapType:
+				// Handle map types like map[string]Cursor
+				if ident, ok := x.Value.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+				if ident, ok := x.Key.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.ChanType:
+				// Handle channel types like chan Cursor
+				if ident, ok := x.Value.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.FuncType:
+				// Handle function types that use public types in parameters or returns
+				// Parameters
+				if x.Params != nil {
+					for _, param := range x.Params.List {
+						if ident, ok := param.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+							pos := fset.Position(ident.Pos())
+							usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+								Package: packageName,
+								File:    path,
+								Line:    pos.Line,
+								Context: getContextLine(fset, ident.Pos()),
+								IsTest:  isTestFile,
+							})
+						}
+					}
+				}
+				// Return types
+				if x.Results != nil {
+					for _, result := range x.Results.List {
+						if ident, ok := result.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+							pos := fset.Position(ident.Pos())
+							usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+								Package: packageName,
+								File:    path,
+								Line:    pos.Line,
+								Context: getContextLine(fset, ident.Pos()),
+								IsTest:  isTestFile,
+							})
+						}
+					}
+				}
+			case *ast.CompositeLit:
+				// Handle composite literals like &Cursor{...} or Cursor{...}
+				if ident, ok := x.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.TypeAssertExpr:
+				// Handle type assertions like x.(*Cursor)
+				if ident, ok := x.Type.(*ast.Ident); ok && isPublic(ident.Name) {
+					pos := fset.Position(ident.Pos())
+					usages[ident.Name] = append(usages[ident.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, ident.Pos()),
+						IsTest:  isTestFile,
+					})
+				}
+			case *ast.CallExpr:
+				// Handle function calls that might return types, like NewCursor()
+				// This is a bit more complex, but we can check if the function name suggests it returns a type
+				if ident, ok := x.Fun.(*ast.Ident); ok && isPublic(ident.Name) {
+					// Check if this looks like a constructor function (starts with "New")
+					if strings.HasPrefix(ident.Name, "New") {
+						// Extract the type name from the constructor
+						typeName := strings.TrimPrefix(ident.Name, "New")
+						if isPublic(typeName) {
+							pos := fset.Position(ident.Pos())
+							usages[typeName] = append(usages[typeName], UsageInfo{
+								Package: packageName,
+								File:    path,
+								Line:    pos.Line,
+								Context: getContextLine(fset, ident.Pos()),
+								IsTest:  isTestFile,
+							})
+						}
+					}
+				}
+				// Handle method calls like w.Validate()
+				if selector, ok := x.Fun.(*ast.SelectorExpr); ok && selector.Sel != nil && isPublic(selector.Sel.Name) {
+					pos := fset.Position(selector.Sel.Pos())
+					usages[selector.Sel.Name] = append(usages[selector.Sel.Name], UsageInfo{
+						Package: packageName,
+						File:    path,
+						Line:    pos.Line,
+						Context: getContextLine(fset, selector.Sel.Pos()),
+						IsTest:  isTestFile,
 					})
 				}
 			}
@@ -573,15 +884,22 @@ func findUnusedFunctions(functions []FunctionInfo, usages map[string][]UsageInfo
 		if usageList, exists := usages[fn.Name]; !exists || len(usageList) == 0 {
 			unused = append(unused, fn)
 		} else {
-			// Check if the usage is actually in a different file (not just the definition)
-			usedElsewhere := false
+			// Filter out false positives - check if all usages are actually declarations
+			realUsages := 0
+			productionUsages := 0
 			for _, usage := range usageList {
-				if usage.File != fn.File {
-					usedElsewhere = true
-					break
+				// Skip if this looks like a declaration rather than a usage
+				if !isDeclarationContext(usage.Context) {
+					realUsages++
+					// Count production (non-test) usages
+					if !usage.IsTest {
+						productionUsages++
+					}
 				}
 			}
-			if !usedElsewhere {
+
+			// If no real usages found, or only test usages found, mark as unused
+			if realUsages == 0 || productionUsages == 0 {
 				unused = append(unused, fn)
 			}
 		}
@@ -599,18 +917,26 @@ func findUnusedSymbols(symbols []PublicSymbol, usages map[string][]UsageInfo) []
 		if usageList, exists := usages[symbol.Name]; !exists || len(usageList) == 0 {
 			unused = append(unused, symbol)
 		} else {
-			// Check if the usage is actually in a different file (not just the definition)
-			usedElsewhere := false
+			// Filter out false positives - check if all usages are actually declarations
+			realUsages := 0
+			productionUsages := 0
 			for _, usage := range usageList {
-				if usage.File != symbol.File {
-					usedElsewhere = true
-					break
+				// Skip if this looks like a declaration rather than a usage
+				if !isDeclarationContext(usage.Context) {
+					realUsages++
+					// Count production (non-test) usages
+					if !usage.IsTest {
+						productionUsages++
+					}
 				}
 			}
-			if !usedElsewhere {
+
+			// If no real usages found, or only test usages found, mark as unused
+			if realUsages == 0 || productionUsages == 0 {
 				unused = append(unused, symbol)
 			}
 		}
+		// If usageList exists and has entries, the symbol is used (even if only in the same file)
 	}
 
 	return unused
@@ -644,4 +970,143 @@ func getContextLine(fset *token.FileSet, pos token.Pos) string {
 	}
 
 	return ""
+}
+
+// isDeclarationContext checks if the context suggests this is a declaration rather than a usage
+func isDeclarationContext(context string) bool {
+	context = strings.TrimSpace(context)
+
+	// Check for type declarations (most specific)
+	if strings.HasPrefix(context, "type ") {
+		return true
+	}
+
+	// Check for variable/constant declarations
+	// But be careful: "var name Type" is a usage of Type, not a declaration of Type
+	// Only "var name = value" or "const name = value" are declarations of the variable/constant
+	if strings.HasPrefix(context, "var ") || strings.HasPrefix(context, "const ") {
+		// Check if this is a type declaration vs a variable using a type
+		// Pattern: "var name Type" - this is a usage of Type, not a declaration
+		// Pattern: "var name = value" - this is a declaration of name
+		parts := strings.Fields(context)
+		if len(parts) >= 3 {
+			// If it's "var name Type" (3 parts), it's a usage of the type
+			// If it's "var name = value" (4+ parts), it's a declaration
+			if len(parts) == 3 {
+				return false // This is a usage of the type, not a declaration
+			}
+		}
+		return true
+	}
+
+	// Check for interface method declarations (standalone method signatures)
+	// Pattern: "MethodName(params) returnType" without "func" prefix
+	if strings.Contains(context, "(") && strings.Contains(context, ")") &&
+		(strings.Contains(context, " string") || strings.Contains(context, " error") ||
+			strings.Contains(context, " int") || strings.Contains(context, " bool")) &&
+		!strings.Contains(context, "errors.Is") && !strings.Contains(context, "errors.New") &&
+		!strings.Contains(context, "func ") && // Exclude function signatures
+		!strings.Contains(context, " := ") && // Exclude variable assignments
+		!strings.Contains(context, " = ") { // Exclude variable assignments
+		return true
+	}
+
+	// Check for function/method implementations
+	// Pattern: "func (receiver) MethodName" or "func MethodName"
+	if strings.HasPrefix(context, "func ") {
+		// Check if this is a method implementation (has receiver)
+		// Pattern: "func (receiver) MethodName" - this is a method implementation
+		// We need to be more specific: look for "func (" followed by receiver type
+		if strings.HasPrefix(context, "func (") && strings.Contains(context, ") ") {
+			// This looks like a method implementation with receiver
+			return true
+		}
+
+		// For standalone functions, we need to be more careful
+		// If the symbol appears in the return type or parameter list, it's a usage
+		// For now, let's be conservative and not mark function signatures as declarations
+		return false
+	}
+
+	return false
+}
+
+// debugSymbolUsage shows detailed information about a specific symbol
+func debugSymbolUsage(symbolName string, publicSymbols []PublicSymbol, usages map[string][]UsageInfo) {
+	fmt.Printf("🔍 Debug information for symbol: %s\n", symbolName)
+	fmt.Println(strings.Repeat("=", 60))
+
+	// Find the symbol definition
+	var symbol *PublicSymbol
+	for _, s := range publicSymbols {
+		if s.Name == symbolName {
+			symbol = &s
+			break
+		}
+	}
+
+	if symbol == nil {
+		fmt.Printf("❌ Symbol '%s' not found in public symbols\n", symbolName)
+		return
+	}
+
+	fmt.Printf("📋 Symbol Definition:\n")
+	fmt.Printf("   Name: %s\n", symbol.Name)
+	fmt.Printf("   Type: %s\n", symbol.Type)
+	fmt.Printf("   Package: %s\n", symbol.Package)
+	fmt.Printf("   File: %s:%d\n", symbol.File, symbol.Line)
+	fmt.Println()
+
+	// Show all usages
+	usageList := usages[symbolName]
+	if len(usageList) == 0 {
+		fmt.Printf("⚠️  No usages found for symbol '%s'\n", symbolName)
+		return
+	}
+
+	fmt.Printf("📊 Found %d total usages:\n", len(usageList))
+	fmt.Println()
+
+	productionUsages := 0
+	testUsages := 0
+	realUsages := 0
+	realProductionUsages := 0
+
+	for i, usage := range usageList {
+		usageType := "TEST"
+		if !usage.IsTest {
+			usageType = "PROD"
+			productionUsages++
+		} else {
+			testUsages++
+		}
+
+		isDeclaration := isDeclarationContext(usage.Context)
+		declarationFlag := ""
+		if isDeclaration {
+			declarationFlag = " [DECLARATION]"
+		} else {
+			realUsages++
+			if !usage.IsTest {
+				realProductionUsages++
+			}
+		}
+
+		fmt.Printf("%d. [%s]%s %s:%d\n", i+1, usageType, declarationFlag, usage.File, usage.Line)
+		fmt.Printf("   Context: %s\n", usage.Context)
+		fmt.Println()
+	}
+
+	fmt.Printf("📈 Usage Summary:\n")
+	fmt.Printf("   Total usages: %d\n", len(usageList))
+	fmt.Printf("   Production usages: %d\n", productionUsages)
+	fmt.Printf("   Test usages: %d\n", testUsages)
+	fmt.Printf("   Real usages (after filtering): %d\n", realUsages)
+	fmt.Printf("   Real production usages: %d\n", realProductionUsages)
+
+	if realProductionUsages == 0 {
+		fmt.Printf("⚠️  This symbol is only used in tests or declarations - considered unused\n")
+	} else {
+		fmt.Printf("✅ This symbol is used in production code\n")
+	}
 }

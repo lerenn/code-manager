@@ -46,7 +46,11 @@ func TestGit_CreateWorktree(t *testing.T) {
 	testWorktreePath := filepath.Join(".", "test-worktree-"+strings.ReplaceAll(t.Name(), "/", "-"))
 
 	// Create a test branch first
-	err := git.CreateBranch(".", testBranchName)
+	err := git.CreateBranchFrom(CreateBranchFromParams{
+		RepoPath:   ".",
+		NewBranch:  testBranchName,
+		FromBranch: "HEAD",
+	})
 	if err != nil {
 		t.Fatalf("Expected no error creating branch: %v", err)
 	}
@@ -97,7 +101,11 @@ func TestGit_RemoveWorktree(t *testing.T) {
 	testWorktreePath := filepath.Join(".", "test-remove-worktree-"+strings.ReplaceAll(t.Name(), "/", "-"))
 
 	// Create a test branch first
-	err := git.CreateBranch(".", testBranchName)
+	err := git.CreateBranchFrom(CreateBranchFromParams{
+		RepoPath:   ".",
+		NewBranch:  testBranchName,
+		FromBranch: "HEAD",
+	})
 	if err != nil {
 		t.Fatalf("Expected no error creating branch: %v", err)
 	}
@@ -156,7 +164,11 @@ func TestGit_GetWorktreePath(t *testing.T) {
 	testWorktreePath := filepath.Join(".", "test-get-path-"+strings.ReplaceAll(t.Name(), "/", "-"))
 
 	// Create a test branch first
-	err := git.CreateBranch(".", testBranchName)
+	err := git.CreateBranchFrom(CreateBranchFromParams{
+		RepoPath:   ".",
+		NewBranch:  testBranchName,
+		FromBranch: "HEAD",
+	})
 	if err != nil {
 		t.Fatalf("Expected no error creating branch: %v", err)
 	}

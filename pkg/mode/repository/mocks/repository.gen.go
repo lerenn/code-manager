@@ -220,20 +220,6 @@ func (mr *MockRepositoryMockRecorder) LoadWorktree(remoteSource, branchName any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadWorktree", reflect.TypeOf((*MockRepository)(nil).LoadWorktree), remoteSource, branchName)
 }
 
-// RemoveWorktreeFromStatus mocks base method.
-func (m *MockRepository) RemoveWorktreeFromStatus(repoURL, branch string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveWorktreeFromStatus", repoURL, branch)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RemoveWorktreeFromStatus indicates an expected call of RemoveWorktreeFromStatus.
-func (mr *MockRepositoryMockRecorder) RemoveWorktreeFromStatus(repoURL, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktreeFromStatus", reflect.TypeOf((*MockRepository)(nil).RemoveWorktreeFromStatus), repoURL, branch)
-}
-
 // SetLogger mocks base method.
 func (m *MockRepository) SetLogger(arg0 logger.Logger) {
 	m.ctrl.T.Helper()

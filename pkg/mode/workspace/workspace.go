@@ -40,13 +40,10 @@ type Workspace interface {
 	CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error)
 	DeleteWorktree(branch string, force bool) error
 	ListWorktrees() ([]status.WorktreeInfo, error)
-	ListWorkspaceWorktrees(workspaceName string) ([]WorktreeInfo, error)
-	DeleteWorkspace(workspaceName string, force bool) error
 	SetLogger(logger logger.Logger)
 	Load() error
 	ParseFile(filename string) (Config, error)
 	GetName(config Config, filename string) string
-	HandleMultipleFiles(workspaceFiles []string, force bool) (string, error)
 	ValidateWorkspaceReferences() error
 }
 

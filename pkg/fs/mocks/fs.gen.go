@@ -54,20 +54,6 @@ func (mr *MockFSMockRecorder) CreateDirectory(path, perm any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateDirectory", reflect.TypeOf((*MockFS)(nil).CreateDirectory), path, perm)
 }
 
-// CreateFileIfNotExists mocks base method.
-func (m *MockFS) CreateFileIfNotExists(filename string, initialContent []byte, perm os.FileMode) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateFileIfNotExists", filename, initialContent, perm)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateFileIfNotExists indicates an expected call of CreateFileIfNotExists.
-func (mr *MockFSMockRecorder) CreateFileIfNotExists(filename, initialContent, perm any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateFileIfNotExists", reflect.TypeOf((*MockFS)(nil).CreateFileIfNotExists), filename, initialContent, perm)
-}
-
 // CreateFileWithContent mocks base method.
 func (m *MockFS) CreateFileWithContent(path string, content []byte, perm os.FileMode) error {
 	m.ctrl.T.Helper()
@@ -189,21 +175,6 @@ func (m *MockFS) IsDir(path string) (bool, error) {
 func (mr *MockFSMockRecorder) IsDir(path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDir", reflect.TypeOf((*MockFS)(nil).IsDir), path)
-}
-
-// IsDirectoryWritable mocks base method.
-func (m *MockFS) IsDirectoryWritable(path string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDirectoryWritable", path)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsDirectoryWritable indicates an expected call of IsDirectoryWritable.
-func (mr *MockFSMockRecorder) IsDirectoryWritable(path any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDirectoryWritable", reflect.TypeOf((*MockFS)(nil).IsDirectoryWritable), path)
 }
 
 // IsNotExist mocks base method.

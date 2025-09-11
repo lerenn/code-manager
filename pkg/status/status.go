@@ -52,12 +52,6 @@ type Manager interface {
 	RemoveWorktree(repoURL, branch string) error
 	// GetWorktree retrieves the status of a specific worktree.
 	GetWorktree(repoURL, branch string) (*WorktreeInfo, error)
-	// ListAllWorktrees lists all tracked worktrees.
-	ListAllWorktrees() ([]WorktreeInfo, error)
-	// GetWorkspaceWorktrees returns all worktrees for a specific workspace and branch.
-	GetWorkspaceWorktrees(workspacePath, branchName string) ([]WorktreeInfo, error)
-	// GetWorkspaceBranches returns all branch names for a specific workspace.
-	GetWorkspaceBranches(workspacePath string) ([]string, error)
 	// CreateInitialStatus creates the initial status file structure.
 	CreateInitialStatus() error
 	// AddRepository adds a repository entry to the status file.
@@ -70,12 +64,6 @@ type Manager interface {
 	AddWorkspace(workspacePath string, params AddWorkspaceParams) error
 	// GetWorkspace retrieves a workspace entry from the status file.
 	GetWorkspace(workspacePath string) (*Workspace, error)
-	// ListWorkspaces lists all workspaces in the status file.
-	ListWorkspaces() (map[string]Workspace, error)
-	// RemoveWorkspace removes a workspace entry from the status file.
-	RemoveWorkspace(workspaceName string) error
-	// GetWorkspaceByName retrieves a workspace entry by name (not path).
-	GetWorkspaceByName(workspaceName string) (*Workspace, error)
 }
 
 type realManager struct {
@@ -246,24 +234,6 @@ func (s *realManager) GetWorktree(repoURL, branch string) (*WorktreeInfo, error)
 	return nil, fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoURL, branch)
 }
 
-// ListAllWorktrees lists all tracked worktrees.
-func (s *realManager) ListAllWorktrees() ([]WorktreeInfo, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	var worktrees []WorktreeInfo
-	for _, repo := range status.Repositories {
-		for _, worktree := range repo.Worktrees {
-			worktrees = append(worktrees, worktree)
-		}
-	}
-
-	return worktrees, nil
-}
-
 // AddRepository adds a repository entry to the status file.
 func (s *realManager) AddRepository(repoURL string, params AddRepositoryParams) error {
 	// Load current status
@@ -370,70 +340,6 @@ func (s *realManager) GetWorkspace(workspacePath string) (*Workspace, error) {
 	return &workspace, nil
 }
 
-// ListWorkspaces lists all workspaces in the status file.
-func (s *realManager) ListWorkspaces() (map[string]Workspace, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	return status.Workspaces, nil
-}
-
-// RemoveWorkspace removes a workspace entry from the status file.
-func (s *realManager) RemoveWorkspace(workspaceName string) error {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Find workspace by name (not path)
-	var workspacePath string
-	found := false
-
-	for path := range status.Workspaces {
-		if s.getWorkspaceNameFromPath(path) == workspaceName {
-			workspacePath = path
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("%w: %s", ErrWorkspaceNotFound, workspaceName)
-	}
-
-	// Remove workspace from status
-	delete(status.Workspaces, workspacePath)
-
-	// Save updated status
-	if err := s.saveStatus(status); err != nil {
-		return fmt.Errorf("failed to save status: %w", err)
-	}
-
-	return nil
-}
-
-// GetWorkspaceByName retrieves a workspace entry by name (not path).
-func (s *realManager) GetWorkspaceByName(workspaceName string) (*Workspace, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Find workspace by name (not path)
-	for path, workspace := range status.Workspaces {
-		if s.getWorkspaceNameFromPath(path) == workspaceName {
-			return &workspace, nil
-		}
-	}
-
-	return nil, fmt.Errorf("%w: %s", ErrWorkspaceNotFound, workspaceName)
-}
-
 // computeWorkspacesMap computes the workspaces map from the workspaces list.
 func (s *realManager) computeWorkspacesMap(workspaces map[string]Workspace) {
 	s.workspaces = make(map[string]map[string][]WorktreeInfo)
@@ -461,31 +367,6 @@ func (s *realManager) getWorkspaceNameFromPath(workspacePath string) string {
 	// For now, we'll use the filename without .code-workspace extension
 	// This matches the logic in the workspace.go getName method
 	return strings.TrimSuffix(filepath.Base(workspacePath), ".code-workspace")
-}
-
-// GetWorkspaceWorktrees returns all worktrees for a specific workspace and branch.
-func (s *realManager) GetWorkspaceWorktrees(workspacePath, branchName string) ([]WorktreeInfo, error) {
-	workspaceName := s.getWorkspaceNameFromPath(workspacePath)
-	if s.workspaces[workspaceName] == nil {
-		return []WorktreeInfo{}, nil
-	}
-
-	return s.workspaces[workspaceName][branchName], nil
-}
-
-// GetWorkspaceBranches returns all branch names for a specific workspace.
-func (s *realManager) GetWorkspaceBranches(workspacePath string) ([]string, error) {
-	workspaceName := s.getWorkspaceNameFromPath(workspacePath)
-	if s.workspaces[workspaceName] == nil {
-		return []string{}, nil
-	}
-
-	var branches []string
-	for branch := range s.workspaces[workspaceName] {
-		branches = append(branches, branch)
-	}
-
-	return branches, nil
 }
 
 // getStatusFilePath returns the status file path from configuration.

@@ -40,25 +40,6 @@ func (m *MockGit) EXPECT() *MockGitMockRecorder {
 	return m.recorder
 }
 
-// Add mocks base method.
-func (m *MockGit) Add(repoPath string, files ...string) error {
-	m.ctrl.T.Helper()
-	varargs := []any{repoPath}
-	for _, a := range files {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "Add", varargs...)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Add indicates an expected call of Add.
-func (mr *MockGitMockRecorder) Add(repoPath any, files ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{repoPath}, files...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Add", reflect.TypeOf((*MockGit)(nil).Add), varargs...)
-}
-
 // AddRemote mocks base method.
 func (m *MockGit) AddRemote(repoPath, remoteName, remoteURL string) error {
 	m.ctrl.T.Helper()
@@ -145,20 +126,6 @@ func (mr *MockGitMockRecorder) Clone(params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clone", reflect.TypeOf((*MockGit)(nil).Clone), params)
 }
 
-// Commit mocks base method.
-func (m *MockGit) Commit(repoPath, message string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Commit", repoPath, message)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Commit indicates an expected call of Commit.
-func (mr *MockGitMockRecorder) Commit(repoPath, message any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Commit", reflect.TypeOf((*MockGit)(nil).Commit), repoPath, message)
-}
-
 // ConfigGet mocks base method.
 func (m *MockGit) ConfigGet(workDir, key string) (string, error) {
 	m.ctrl.T.Helper()
@@ -172,20 +139,6 @@ func (m *MockGit) ConfigGet(workDir, key string) (string, error) {
 func (mr *MockGitMockRecorder) ConfigGet(workDir, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConfigGet", reflect.TypeOf((*MockGit)(nil).ConfigGet), workDir, key)
-}
-
-// CreateBranch mocks base method.
-func (m *MockGit) CreateBranch(repoPath, branch string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateBranch", repoPath, branch)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateBranch indicates an expected call of CreateBranch.
-func (mr *MockGitMockRecorder) CreateBranch(repoPath, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateBranch", reflect.TypeOf((*MockGit)(nil).CreateBranch), repoPath, branch)
 }
 
 // CreateBranchFrom mocks base method.
@@ -242,21 +195,6 @@ func (m *MockGit) FetchRemote(repoPath, remoteName string) error {
 func (mr *MockGitMockRecorder) FetchRemote(repoPath, remoteName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchRemote", reflect.TypeOf((*MockGit)(nil).FetchRemote), repoPath, remoteName)
-}
-
-// GetBranchRemote mocks base method.
-func (m *MockGit) GetBranchRemote(repoPath, branch string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetBranchRemote", repoPath, branch)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetBranchRemote indicates an expected call of GetBranchRemote.
-func (mr *MockGitMockRecorder) GetBranchRemote(repoPath, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBranchRemote", reflect.TypeOf((*MockGit)(nil).GetBranchRemote), repoPath, branch)
 }
 
 // GetCurrentBranch mocks base method.
