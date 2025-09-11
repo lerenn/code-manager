@@ -62,6 +62,20 @@ func (mr *MockWorkspaceMockRecorder) CreateWorktree(branch any, opts ...any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktree", reflect.TypeOf((*MockWorkspace)(nil).CreateWorktree), varargs...)
 }
 
+// DeleteWorkspace mocks base method.
+func (m *MockWorkspace) DeleteWorkspace(workspaceName string, force bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWorkspace", workspaceName, force)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteWorkspace indicates an expected call of DeleteWorkspace.
+func (mr *MockWorkspaceMockRecorder) DeleteWorkspace(workspaceName, force any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorkspace", reflect.TypeOf((*MockWorkspace)(nil).DeleteWorkspace), workspaceName, force)
+}
+
 // DeleteWorktree mocks base method.
 func (m *MockWorkspace) DeleteWorktree(branch string, force bool) error {
 	m.ctrl.T.Helper()
@@ -103,6 +117,21 @@ func (m *MockWorkspace) HandleMultipleFiles(workspaceFiles []string, force bool)
 func (mr *MockWorkspaceMockRecorder) HandleMultipleFiles(workspaceFiles, force any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMultipleFiles", reflect.TypeOf((*MockWorkspace)(nil).HandleMultipleFiles), workspaceFiles, force)
+}
+
+// ListWorkspaceWorktrees mocks base method.
+func (m *MockWorkspace) ListWorkspaceWorktrees(workspaceName string) ([]workspace.WorktreeInfo, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkspaceWorktrees", workspaceName)
+	ret0, _ := ret[0].([]workspace.WorktreeInfo)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListWorkspaceWorktrees indicates an expected call of ListWorkspaceWorktrees.
+func (mr *MockWorkspaceMockRecorder) ListWorkspaceWorktrees(workspaceName any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkspaceWorktrees", reflect.TypeOf((*MockWorkspace)(nil).ListWorkspaceWorktrees), workspaceName)
 }
 
 // ListWorktrees mocks base method.
