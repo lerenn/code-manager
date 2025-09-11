@@ -94,7 +94,7 @@ type CreateWorkspaceParams struct {
 
 #### FS Package Extension
 **New Interface Methods**:
-- `ResolvePath(basePath, relativePath string) (string, error)`: Resolve relative paths from base directory
+- `ResolvePath(repositoriesDir, relativePath string) (string, error)`: Resolve relative paths from base directory
 - `ValidateRepositoryPath(path string) (bool, error)`: Validate that path contains a Git repository
 
 **Key Characteristics**:

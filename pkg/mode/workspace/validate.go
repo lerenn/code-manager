@@ -2,7 +2,7 @@ package workspace
 
 // Validate validates all repositories in a workspace.
 func (w *realWorkspace) Validate() error {
-	w.logger.Logf("Validating workspace: %s", w.OriginalFile)
+	w.logger.Logf("Validating workspace: %s", w.file)
 
 	// Use the new workspace validation logic that ensures repositories are in status
 	// and have default branch worktrees

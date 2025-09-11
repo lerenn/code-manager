@@ -56,8 +56,8 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 
 	// Create test config using the config package
 	testConfig := config.Config{
-		BasePath:   cmPath,
-		StatusFile: statusPath,
+		RepositoriesDir: cmPath,
+		StatusFile:      statusPath,
 	}
 
 	configPath := filepath.Join(tempDir, "config.yaml")
@@ -298,8 +298,8 @@ func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 		// Search for worktree in each top-level directory in .cm
 		for _, entry := range cmEntries {
 			if entry.IsDir() {
-				repoDir := filepath.Join(setup.CmPath, entry.Name())
-				if result := findWorktree(repoDir); result != "" {
+				repositoriesDir := filepath.Join(setup.CmPath, entry.Name())
+				if result := findWorktree(repositoriesDir); result != "" {
 					worktreePath = result
 					break
 				}
@@ -367,8 +367,8 @@ func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 	// Search for worktree in each top-level directory
 	for _, entry := range entries {
 		if entry.IsDir() {
-			repoDir := filepath.Join(worktreesDir, entry.Name())
-			if result := findWorktree(repoDir); result != "" {
+			repositoriesDir := filepath.Join(worktreesDir, entry.Name())
+			if result := findWorktree(repositoriesDir); result != "" {
 				worktreePath = result
 				break
 			}

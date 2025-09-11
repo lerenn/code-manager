@@ -58,68 +58,6 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	assert.NotEmpty(t, worktreePath)
 }
 
-func TestRepository_IsWorkspaceFile_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fsmocks.NewMockFS(ctrl)
-	mockGit := gitmocks.NewMockGit(ctrl)
-	mockStatus := statusmocks.NewMockManager(ctrl)
-
-	mockPrompt := promptmocks.NewMockPrompter(ctrl)
-	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-
-		Prompt: mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
-			return mockWorktree
-		},
-	})
-
-	// Mock workspace files found
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{"project.code-workspace"}, nil)
-
-	exists, err := repo.IsWorkspaceFile()
-	assert.NoError(t, err)
-	assert.True(t, exists)
-}
-
-func TestRepository_IsWorkspaceFile_NotFound(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fsmocks.NewMockFS(ctrl)
-	mockGit := gitmocks.NewMockGit(ctrl)
-	mockStatus := statusmocks.NewMockManager(ctrl)
-
-	mockPrompt := promptmocks.NewMockPrompter(ctrl)
-	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-
-		Prompt: mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
-			return mockWorktree
-		},
-	})
-
-	// Mock no workspace files found
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
-
-	exists, err := repo.IsWorkspaceFile()
-	assert.NoError(t, err)
-	assert.False(t, exists)
-}
-
 func TestRepository_IsGitRepository_Directory(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

@@ -41,7 +41,7 @@ The Code Manager (cm) needs a standardized directory structure to organize and m
 *Config Structure**:
 ```go
 type Config struct {
-    BasePath string `yaml:"base_path"`
+    RepositoriesDir string `yaml:"base_path"`
     // Future configuration fields can be added here
 }
 ```
@@ -70,7 +70,7 @@ type Config struct {
 - `CreateReposDirectoryStructure(repoName, branchName string) (string, error)`: Create and return the full directory path
 - `sanitizeRepositoryName(remoteURL string) (string, error)`: Extract and sanitize repo name from Git remote
 - `sanitizeBranchName(branchName string) (string, error)`: Validate and sanitize branch name
-- `getBasePath() (string, error)`: Get the configurable base path for CM
+- `getRepositoriesDir() (string, error)`: Get the configurable base path for CM
 
 **Updated Constructor:**
 - `NewCM(config config.Config) CM`: Accept configuration as parameter
@@ -147,7 +147,7 @@ The CM package implements directory structure management:
 **Key Components:**
 - Updated constructor: `NewCM(config config.Config)`
 - Public method: `CreateReposDirectoryStructure()`
-- Private helper methods: `sanitizeRepositoryName()`, `sanitizeBranchName()`, `getBasePath()`
+- Private helper methods: `sanitizeRepositoryName()`, `sanitizeBranchName()`, `getRepositoriesDir()`
 - Dependency injection of FS interface and Config
 - Error handling with wrapped errors
 - Integration with existing `Run()` method
@@ -156,7 +156,7 @@ The CM package implements directory structure management:
 - `CreateReposDirectoryStructure()` orchestrates the full directory creation process
 - `sanitizeRepositoryName()` extracts full repo path from Git remote URL and sanitizes it
 - `sanitizeBranchName()` validates and sanitizes branch names, replacing invalid characters with underscores/hyphens
-- `getBasePath()` retrieves base path from injected Config, with fallback to default
+- `getRepositoriesDir()` retrieves base path from injected Config, with fallback to default
 - Use `fmt.Errorf()` with `%w` for error wrapping
 - Provide clear user messages for different creation states
 - Support verbose mode for detailed directory creation steps

@@ -35,14 +35,14 @@ Currently, CM uses hardcoded default paths for configuration and data storage. U
 #### Updated Config Structure
 ```go
 type Config struct {
-    BasePath   string `yaml:"base_path"`   // User's code directory (default: ~/Code)
+    RepositoriesDir   string `yaml:"base_path"`   // User's code directory (default: ~/Code)
     StatusFile string `yaml:"status_file"` // Status file path (default: ~/.cm/status.yaml)
     // WorktreesDir field removed - computed as $base_path/worktrees
 }
 
 // New method for computing worktrees directory
 func (c Config) GetWorktreesDir() string {
-    return filepath.Join(c.BasePath, "worktrees")
+    return filepath.Join(c.RepositoriesDir, "worktrees")
 }
 ```
 
@@ -89,14 +89,14 @@ cm init [--force] [--base-path <path>]
 **New Interface Methods**:
 - `IsInitialized() (bool, error)`: Check if CM is initialized
 - `Init(opts InitOpts) error`: Initialize CM configuration
-- `ValidateInitPaths(basePath string) error`: Validate user-provided paths
+- `ValidateInitPaths(repositoriesDir string) error`: Validate user-provided paths
 
 **Option Struct**:
 ```go
 type InitOpts struct {
     Force    bool
     Reset    bool
-    BasePath string
+    RepositoriesDir string
 }
 ```
 
@@ -122,7 +122,7 @@ type InitOpts struct {
 **New Interface Methods**:
 - `SaveConfig(config Config, configPath string) error`: Save configuration to file
 - `CreateConfigDirectory(configPath string) error`: Create config directory structure
-- `ValidateBasePath(basePath string) error`: Validate base path accessibility
+- `ValidateRepositoriesDir(repositoriesDir string) error`: Validate base path accessibility
 - `GetWorktreesDir() string`: Compute worktrees directory path
 
 **Updated Default Configuration**:
@@ -169,7 +169,7 @@ Flags:
             opts := cm.InitOpts{
                 Force:    force,
                 Reset:    reset,
-                BasePath: basePath,
+                RepositoriesDir: repositoriesDir,
             }
             
             return cmManager.Init(opts)
@@ -192,7 +192,7 @@ Extends business logic with initialization functionality:
 **New Methods**:
 - `IsInitialized()`: Check status file for initialization flag
 - `Init(opts InitOpts)`: Main initialization workflow
-- `ValidateInitPaths(basePath)`: Validate user-provided paths
+- `ValidateInitPaths(repositoriesDir)`: Validate user-provided paths
 
 **Initialization Workflow**:
 1. Check if already initialized (unless --reset)
@@ -224,7 +224,7 @@ Extends configuration management with save functionality:
 **New Methods**:
 - `SaveConfig(config, path)`: Save configuration to YAML file
 - `CreateConfigDirectory(path)`: Create config directory structure
-- `ValidateBasePath(path)`: Validate base path accessibility
+- `ValidateRepositoriesDir(path)`: Validate base path accessibility
 - `GetWorktreesDir() string`: Compute worktrees directory path
 
 **Updated Defaults**:

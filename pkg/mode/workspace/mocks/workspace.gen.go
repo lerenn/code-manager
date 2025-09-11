@@ -13,7 +13,6 @@ import (
 	reflect "reflect"
 
 	logger "github.com/lerenn/code-manager/pkg/logger"
-	mode "github.com/lerenn/code-manager/pkg/mode"
 	workspace "github.com/lerenn/code-manager/pkg/mode/workspace"
 	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
@@ -44,7 +43,7 @@ func (m *MockWorkspace) EXPECT() *MockWorkspaceMockRecorder {
 }
 
 // CreateWorktree mocks base method.
-func (m *MockWorkspace) CreateWorktree(branch string, opts ...mode.CreateWorktreeOpts) (string, error) {
+func (m *MockWorkspace) CreateWorktree(branch string, opts ...workspace.CreateWorktreeOpts) (string, error) {
 	m.ctrl.T.Helper()
 	varargs := []any{branch}
 	for _, a := range opts {
@@ -75,21 +74,6 @@ func (m *MockWorkspace) DeleteWorktree(branch string, force bool) error {
 func (mr *MockWorkspaceMockRecorder) DeleteWorktree(branch, force any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorktree", reflect.TypeOf((*MockWorkspace)(nil).DeleteWorktree), branch, force)
-}
-
-// DetectWorkspaceFiles mocks base method.
-func (m *MockWorkspace) DetectWorkspaceFiles() ([]string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DetectWorkspaceFiles")
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// DetectWorkspaceFiles indicates an expected call of DetectWorkspaceFiles.
-func (mr *MockWorkspaceMockRecorder) DetectWorkspaceFiles() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DetectWorkspaceFiles", reflect.TypeOf((*MockWorkspace)(nil).DetectWorkspaceFiles))
 }
 
 // GetName mocks base method.
@@ -137,17 +121,17 @@ func (mr *MockWorkspaceMockRecorder) ListWorktrees() *gomock.Call {
 }
 
 // Load mocks base method.
-func (m *MockWorkspace) Load(force bool) error {
+func (m *MockWorkspace) Load() error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Load", force)
+	ret := m.ctrl.Call(m, "Load")
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Load indicates an expected call of Load.
-func (mr *MockWorkspaceMockRecorder) Load(force any) *gomock.Call {
+func (mr *MockWorkspaceMockRecorder) Load() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockWorkspace)(nil).Load), force)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockWorkspace)(nil).Load))
 }
 
 // ParseFile mocks base method.

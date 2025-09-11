@@ -171,8 +171,8 @@ var (
 ### Path Generation
 
 ```go
-func generateWorktreePath(basePath, repoURL, remoteName, branch string) string {
-    return filepath.Join(basePath, repoURL, remoteName, branch)
+func generateWorktreePath(repositoriesDir, repoURL, remoteName, branch string) string {
+    return filepath.Join(repositoriesDir, repoURL, remoteName, branch)
 }
 ```
 

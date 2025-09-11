@@ -25,12 +25,12 @@ type StatusParams struct {
 func (r *realRepository) AddWorktreeToStatus(params StatusParams) error {
 	// Create worktree instance using provider
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
+		FS:              r.fs,
+		Git:             r.git,
+		StatusManager:   r.statusManager,
+		Logger:          r.logger,
+		Prompt:          r.prompt,
+		RepositoriesDir: r.config.RepositoriesDir,
 	})
 
 	if err := worktreeInstance.AddToStatus(worktree.AddToStatusParams{
@@ -73,12 +73,12 @@ func (r *realRepository) HandleRepositoryNotFoundError(params StatusParams) erro
 
 	// Try adding the worktree again
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
+		FS:              r.fs,
+		Git:             r.git,
+		StatusManager:   r.statusManager,
+		Logger:          r.logger,
+		Prompt:          r.prompt,
+		RepositoriesDir: r.config.RepositoriesDir,
 	})
 
 	if err := worktreeInstance.AddToStatus(worktree.AddToStatusParams{
@@ -139,12 +139,12 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 // RemoveWorktreeFromStatus removes a worktree from the status file.
 func (r *realRepository) RemoveWorktreeFromStatus(repoURL, branch string) error {
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
+		FS:              r.fs,
+		Git:             r.git,
+		StatusManager:   r.statusManager,
+		Logger:          r.logger,
+		Prompt:          r.prompt,
+		RepositoriesDir: r.config.RepositoriesDir,
 	})
 	return worktreeInstance.RemoveFromStatus(repoURL, branch)
 }
@@ -152,12 +152,12 @@ func (r *realRepository) RemoveWorktreeFromStatus(repoURL, branch string) error 
 // CleanupWorktreeDirectory cleans up the worktree directory.
 func (r *realRepository) CleanupWorktreeDirectory(worktreePath string) {
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
+		FS:              r.fs,
+		Git:             r.git,
+		StatusManager:   r.statusManager,
+		Logger:          r.logger,
+		Prompt:          r.prompt,
+		RepositoriesDir: r.config.RepositoriesDir,
 	})
 	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
 		r.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
@@ -170,12 +170,12 @@ func (r *realRepository) CleanupOnWorktreeCreationFailure(repoURL, branch, workt
 		r.logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
 	}
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:            r.fs,
-		Git:           r.git,
-		StatusManager: r.statusManager,
-		Logger:        r.logger,
-		Prompt:        r.prompt,
-		BasePath:      r.config.BasePath,
+		FS:              r.fs,
+		Git:             r.git,
+		StatusManager:   r.statusManager,
+		Logger:          r.logger,
+		Prompt:          r.prompt,
+		RepositoriesDir: r.config.RepositoriesDir,
 	})
 	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
 		r.logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)

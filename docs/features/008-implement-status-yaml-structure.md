@@ -101,7 +101,7 @@ type Repository struct {
 **New Config Fields**:
 ```go
 type Config struct {
-    BasePath   string `yaml:"base_path"`
+    RepositoriesDir   string `yaml:"base_path"`
     StatusFile string `yaml:"status_file"` // New field
 }
 ```

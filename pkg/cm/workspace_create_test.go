@@ -26,8 +26,8 @@ func TestCreateWorkspace_Success(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -84,8 +84,8 @@ func TestCreateWorkspace_InvalidWorkspaceName(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -116,8 +116,8 @@ func TestCreateWorkspace_WorkspaceAlreadyExists(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -152,8 +152,8 @@ func TestCreateWorkspace_EmptyRepositories(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -187,8 +187,8 @@ func TestCreateWorkspace_DuplicateRepositories(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -232,8 +232,8 @@ func TestCreateWorkspace_RepositoryNotFound(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -273,8 +273,8 @@ func TestCreateWorkspace_InvalidRepository(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -315,8 +315,8 @@ func TestCreateWorkspace_RelativePathResolution(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -369,8 +369,8 @@ func TestCreateWorkspace_StatusUpdateFailure(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{
@@ -414,8 +414,8 @@ func TestCreateWorkspace_RepositoryAdditionFailure(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 
 	cm := &realCM{

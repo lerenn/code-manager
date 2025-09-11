@@ -39,21 +39,6 @@ func (m *MockPrompter) EXPECT() *MockPrompterMockRecorder {
 	return m.recorder
 }
 
-// PromptForBasePath mocks base method.
-func (m *MockPrompter) PromptForBasePath(defaultBasePath string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PromptForBasePath", defaultBasePath)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// PromptForBasePath indicates an expected call of PromptForBasePath.
-func (mr *MockPrompterMockRecorder) PromptForBasePath(defaultBasePath any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForBasePath", reflect.TypeOf((*MockPrompter)(nil).PromptForBasePath), defaultBasePath)
-}
-
 // PromptForConfirmation mocks base method.
 func (m *MockPrompter) PromptForConfirmation(message string, defaultYes bool) (bool, error) {
 	m.ctrl.T.Helper()
@@ -67,4 +52,49 @@ func (m *MockPrompter) PromptForConfirmation(message string, defaultYes bool) (b
 func (mr *MockPrompterMockRecorder) PromptForConfirmation(message, defaultYes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForConfirmation", reflect.TypeOf((*MockPrompter)(nil).PromptForConfirmation), message, defaultYes)
+}
+
+// PromptForRepositoriesDir mocks base method.
+func (m *MockPrompter) PromptForRepositoriesDir(defaultRepositoriesDir string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromptForRepositoriesDir", defaultRepositoriesDir)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PromptForRepositoriesDir indicates an expected call of PromptForRepositoriesDir.
+func (mr *MockPrompterMockRecorder) PromptForRepositoriesDir(defaultRepositoriesDir any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForRepositoriesDir", reflect.TypeOf((*MockPrompter)(nil).PromptForRepositoriesDir), defaultRepositoriesDir)
+}
+
+// PromptForStatusFile mocks base method.
+func (m *MockPrompter) PromptForStatusFile(defaultStatusFile string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromptForStatusFile", defaultStatusFile)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PromptForStatusFile indicates an expected call of PromptForStatusFile.
+func (mr *MockPrompterMockRecorder) PromptForStatusFile(defaultStatusFile any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForStatusFile", reflect.TypeOf((*MockPrompter)(nil).PromptForStatusFile), defaultStatusFile)
+}
+
+// PromptForWorkspacesDir mocks base method.
+func (m *MockPrompter) PromptForWorkspacesDir(defaultWorkspacesDir string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromptForWorkspacesDir", defaultWorkspacesDir)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PromptForWorkspacesDir indicates an expected call of PromptForWorkspacesDir.
+func (mr *MockPrompterMockRecorder) PromptForWorkspacesDir(defaultWorkspacesDir any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForWorkspacesDir", reflect.TypeOf((*MockPrompter)(nil).PromptForWorkspacesDir), defaultWorkspacesDir)
 }

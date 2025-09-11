@@ -19,8 +19,9 @@ import (
 // createTestConfig creates a test configuration.
 func createTestConfig() config.Config {
 	return config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/repositories/path",
+		WorkspacesDir:   "/test/workspaces/path",
+		StatusFile:      "/test/status.yaml",
 	}
 }
 

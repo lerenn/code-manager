@@ -57,7 +57,7 @@ Examples:
 
 			for i, repo := range repositories {
 				indicator := ""
-				if !repo.InBasePath {
+				if !repo.InRepositoriesDir {
 					indicator = "*"
 				}
 				fmt.Printf("  %d. %s%s\n", i+1, indicator, repo.Name)

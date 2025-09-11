@@ -37,7 +37,7 @@ func LoadConfig() (config.Config, error) {
 
 	config, err := manager.LoadConfigStrict(path)
 	if err != nil {
-		return config, fmt.Errorf("%w: %w", ErrFailedToLoadConfig, err)
+		return config, err
 	}
 
 	return config, nil
@@ -47,7 +47,7 @@ func LoadConfig() (config.Config, error) {
 func CheckInitialization() error {
 	cfg, err := LoadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return err
 	}
 
 	fsInstance := fs.NewFS()

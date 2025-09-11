@@ -23,8 +23,9 @@ import (
 // createInitTestConfig creates a test configuration for use in tests.
 func createInitTestConfig() config.Config {
 	return config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/tmp/test-status.yaml",
 	}
 }
 
@@ -58,19 +59,31 @@ func TestRealCM_Init_Success(t *testing.T) {
 	// Create a temporary directory for testing
 	tempDir := t.TempDir()
 
-	// Mock prompt for base path
-	mockPrompt.EXPECT().PromptForBasePath("/test/base/path").Return("~/Code", nil)
+	// Mock prompt for repositories path
+	mockPrompt.EXPECT().PromptForRepositoriesDir("/test/base/path").Return("~/Code", nil)
 	mockFS.EXPECT().ExpandPath("~/Code").Return(tempDir, nil)
+
+	// Mock prompt for workspaces path
+	mockPrompt.EXPECT().PromptForWorkspacesDir(filepath.Join(filepath.Dir(tempDir), "workspaces")).Return("~/Code/workspaces", nil)
+	mockFS.EXPECT().ExpandPath("~/Code/workspaces").Return(filepath.Join(filepath.Dir(tempDir), "workspaces"), nil)
+
+	// Mock prompt for status file
+	mockPrompt.EXPECT().PromptForStatusFile("/tmp/test-status.yaml").Return("/tmp/test-status.yaml", nil)
+	mockFS.EXPECT().ExpandPath("/tmp/test-status.yaml").Return("/tmp/test-status.yaml", nil)
+
+	// Mock directory creation
 	mockFS.EXPECT().CreateDirectory(tempDir, os.FileMode(0755)).Return(nil)
+	mockFS.EXPECT().CreateDirectory(filepath.Join(filepath.Dir(tempDir), "workspaces"), os.FileMode(0755)).Return(nil)
+
 	mockFS.EXPECT().GetHomeDir().Return(filepath.Dir(tempDir), nil).AnyTimes()
-	mockFS.EXPECT().Exists("/test/status.yaml").Return(false, nil)
+	mockFS.EXPECT().Exists("/tmp/test-status.yaml").Return(false, nil)
 	mockStatus.EXPECT().CreateInitialStatus().Return(nil).AnyTimes()
 
 	err = cm.Init(InitOpts{})
 	assert.NoError(t, err)
 }
 
-func TestRealCM_Init_InvalidBasePath(t *testing.T) {
+func TestRealCM_Init_InvalidRepositoriesDir(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -101,14 +114,14 @@ func TestRealCM_Init_InvalidBasePath(t *testing.T) {
 	mockFS.EXPECT().ExpandPath("/invalid/path").Return("", assert.AnError)
 
 	opts := InitOpts{
-		Force:    false,
-		Reset:    false,
-		BasePath: "/invalid/path",
+		Force:           false,
+		Reset:           false,
+		RepositoriesDir: "/invalid/path",
 	}
 
 	err = cm.Init(opts)
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrFailedToExpandBasePath)
+	assert.ErrorIs(t, err, ErrFailedToExpandRepositoriesDir)
 }
 
 func TestRealCM_Init_ResetSuccess(t *testing.T) {
@@ -144,13 +157,25 @@ func TestRealCM_Init_ResetSuccess(t *testing.T) {
 	// Mock reset initialization
 	mockPrompt.EXPECT().PromptForConfirmation(
 		"This will reset your CM configuration and remove all existing worktrees. Are you sure?", false).Return(true, nil)
-	mockPrompt.EXPECT().PromptForBasePath("/test/base/path").Return("~/Code", nil)
+	mockPrompt.EXPECT().PromptForRepositoriesDir("/test/base/path").Return("~/Code", nil)
 	mockFS.EXPECT().ExpandPath("~/Code").Return(tempDir, nil)
+
+	// Mock prompt for workspaces path
+	mockPrompt.EXPECT().PromptForWorkspacesDir(filepath.Join(filepath.Dir(tempDir), "workspaces")).Return("~/Code/workspaces", nil)
+	mockFS.EXPECT().ExpandPath("~/Code/workspaces").Return(filepath.Join(filepath.Dir(tempDir), "workspaces"), nil)
+
+	// Mock prompt for status file
+	mockPrompt.EXPECT().PromptForStatusFile("/tmp/test-status.yaml").Return("/tmp/test-status.yaml", nil)
+	mockFS.EXPECT().ExpandPath("/tmp/test-status.yaml").Return("/tmp/test-status.yaml", nil)
+
+	// Mock directory creation
 	mockFS.EXPECT().CreateDirectory(tempDir, os.FileMode(0755)).Return(nil)
+	mockFS.EXPECT().CreateDirectory(filepath.Join(filepath.Dir(tempDir), "workspaces"), os.FileMode(0755)).Return(nil)
+
 	mockFS.EXPECT().GetHomeDir().Return(filepath.Dir(tempDir), nil).AnyTimes()
 	mockStatus.EXPECT().CreateInitialStatus().Return(nil).AnyTimes()
 	// Add expectation for status file existence check
-	mockFS.EXPECT().Exists("/test/status.yaml").Return(false, nil)
+	mockFS.EXPECT().Exists("/tmp/test-status.yaml").Return(false, nil)
 
 	err = cm.Init(InitOpts{Reset: true})
 	assert.NoError(t, err)

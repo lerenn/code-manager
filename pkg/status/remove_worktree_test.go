@@ -19,8 +19,8 @@ func TestRemoveWorktree(t *testing.T) {
 	mockFS := fsmocks.NewMockFS(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -101,8 +101,8 @@ func TestRemoveWorktree_NotFound(t *testing.T) {
 	mockFS := fsmocks.NewMockFS(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -155,8 +155,8 @@ func TestRemoveWorktree_RepositoryNotFound(t *testing.T) {
 	mockFS := fsmocks.NewMockFS(ctrl)
 
 	cfg := config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	manager := &realManager{

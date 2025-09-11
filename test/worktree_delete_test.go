@@ -26,8 +26,8 @@ func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   params.Setup.CmPath,
-			StatusFile: params.Setup.StatusPath,
+			RepositoriesDir: params.Setup.CmPath,
+			StatusFile:      params.Setup.StatusPath,
 		},
 	})
 
@@ -43,7 +43,7 @@ func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 }
 
 // TestDeleteWorktreeSingleRepo tests deleting a worktree in single repository mode
-func TestDeleteWorktreeSingleRepo(t *testing.T) {
+func TestDeleteWorktreeRepoMode(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -96,7 +96,7 @@ func TestDeleteWorktreeSingleRepo(t *testing.T) {
 }
 
 // TestDeleteWorktreeNonExistentBranch tests deleting a non-existent worktree
-func TestDeleteWorktreeNonExistentBranch(t *testing.T) {
+func TestDeleteWorktreeRepoModeNonExistentBranch(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -114,7 +114,7 @@ func TestDeleteWorktreeNonExistentBranch(t *testing.T) {
 }
 
 // TestDeleteWorktreeVerboseMode tests deleting a worktree with verbose output
-func TestDeleteWorktreeVerboseMode(t *testing.T) {
+func TestDeleteWorktreeRepoModeVerboseMode(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -128,8 +128,8 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 	// Delete the worktree with verbose mode
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -154,7 +154,7 @@ func TestDeleteWorktreeVerboseMode(t *testing.T) {
 }
 
 // TestDeleteWorktreeCLI tests deleting a worktree using the CM instance directly
-func TestDeleteWorktreeCLI(t *testing.T) {
+func TestDeleteWorktreeRepoModeCLI(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -192,7 +192,7 @@ func TestDeleteWorktreeCLI(t *testing.T) {
 }
 
 // TestDeleteWorktreeCLIWithVerbose tests deleting a worktree using the CM instance with verbose output
-func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
+func TestDeleteWorktreeRepoModeCLIWithVerbose(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -206,8 +206,8 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 	// Delete worktree using CM instance with force flag and verbose mode
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -232,7 +232,7 @@ func TestDeleteWorktreeCLIWithVerbose(t *testing.T) {
 }
 
 // TestDeleteWorktreeCLINonExistentBranch tests delete command with non-existent branch
-func TestDeleteWorktreeCLINonExistentBranch(t *testing.T) {
+func TestDeleteWorktreeRepoModeCLINonExistentBranch(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 

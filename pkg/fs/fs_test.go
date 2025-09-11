@@ -550,16 +550,16 @@ func TestFS_ResolvePath(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test resolving relative paths from base directory
-	basePath := tmpDir
+	repositoriesDir := tmpDir
 
 	// Test simple relative path
-	resolved, err := fs.ResolvePath(basePath, "level1")
+	resolved, err := fs.ResolvePath(repositoriesDir, "level1")
 	assert.NoError(t, err)
 	expected := filepath.Join(tmpDir, "level1")
 	assert.Equal(t, expected, resolved)
 
 	// Test nested relative path
-	resolved, err = fs.ResolvePath(basePath, "level1/level2")
+	resolved, err = fs.ResolvePath(repositoriesDir, "level1/level2")
 	assert.NoError(t, err)
 	expected = filepath.Join(tmpDir, "level1", "level2")
 	assert.Equal(t, expected, resolved)
@@ -571,14 +571,14 @@ func TestFS_ResolvePath(t *testing.T) {
 	assert.Equal(t, expected, resolved)
 
 	// Test relative path with "." components
-	resolved, err = fs.ResolvePath(basePath, "./level1")
+	resolved, err = fs.ResolvePath(repositoriesDir, "./level1")
 	assert.NoError(t, err)
 	expected = filepath.Join(tmpDir, "level1")
 	assert.Equal(t, expected, resolved)
 
 	// Test absolute path (should return as-is)
 	absPath := filepath.Join(tmpDir, "absolute")
-	resolved, err = fs.ResolvePath(basePath, absPath)
+	resolved, err = fs.ResolvePath(repositoriesDir, absPath)
 	assert.NoError(t, err)
 	assert.Equal(t, absPath, resolved)
 
@@ -588,7 +588,7 @@ func TestFS_ResolvePath(t *testing.T) {
 	assert.ErrorIs(t, err, ErrPathResolution)
 
 	// Test empty relative path
-	_, err = fs.ResolvePath(basePath, "")
+	_, err = fs.ResolvePath(repositoriesDir, "")
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrPathResolution)
 
@@ -662,12 +662,12 @@ func TestFS_ValidateRepositoryPath(t *testing.T) {
 	assert.True(t, valid)
 
 	// Test directory with .git as a directory (regular repository)
-	repoDir := filepath.Join(tmpDir, "repo-dir")
-	err = os.MkdirAll(repoDir, 0755)
+	repositoriesDir := filepath.Join(tmpDir, "repo-dir")
+	err = os.MkdirAll(repositoriesDir, 0755)
 	require.NoError(t, err)
 
 	// Create .git directory
-	gitDir := filepath.Join(repoDir, ".git")
+	gitDir := filepath.Join(repositoriesDir, ".git")
 	err = os.MkdirAll(gitDir, 0755)
 	require.NoError(t, err)
 
@@ -684,29 +684,29 @@ func TestFS_ValidateRepositoryPath(t *testing.T) {
 	err = os.WriteFile(headFile, []byte("ref: refs/heads/main\n"), 0644)
 	require.NoError(t, err)
 
-	valid, err = fs.ValidateRepositoryPath(repoDir)
+	valid, err = fs.ValidateRepositoryPath(repositoriesDir)
 	assert.NoError(t, err)
 	assert.True(t, valid)
 
 	// Test nested repository
-	nestedRepoDir := filepath.Join(tmpDir, "nested", "repo")
-	err = os.MkdirAll(nestedRepoDir, 0755)
+	nestedRepositoriesDir := filepath.Join(tmpDir, "nested", "repo")
+	err = os.MkdirAll(nestedRepositoriesDir, 0755)
 	require.NoError(t, err)
 
 	// Create .git directory in nested location
-	nestedGitDir := filepath.Join(nestedRepoDir, ".git")
+	nestedGitDir := filepath.Join(nestedRepositoriesDir, ".git")
 	err = os.MkdirAll(nestedGitDir, 0755)
 	require.NoError(t, err)
 
-	valid, err = fs.ValidateRepositoryPath(nestedRepoDir)
+	valid, err = fs.ValidateRepositoryPath(nestedRepositoriesDir)
 	assert.NoError(t, err)
 	assert.True(t, valid)
 
 	// Test repository with absolute path
-	absRepoDir, err := filepath.Abs(repoDir)
+	absRepositoriesDir, err := filepath.Abs(repositoriesDir)
 	require.NoError(t, err)
 
-	valid, err = fs.ValidateRepositoryPath(absRepoDir)
+	valid, err = fs.ValidateRepositoryPath(absRepositoriesDir)
 	assert.NoError(t, err)
 	assert.True(t, valid)
 }

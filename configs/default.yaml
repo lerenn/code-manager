@@ -1,10 +1,14 @@
 # Default configuration for CM
 # This file contains the default configuration settings for the Code Manager (CM)
 
-# Base path for code storage
-# Default: $HOME/Code
-base_path: ~/Code
+# Repositories directory
+# Default: $HOME/Code/src
+repositories_dir: ~/Code/src
 
 # Status file path
 # Default: $HOME/.cm/status.yaml
 status_file: ~/.cm/status.yaml
+
+# Worktrees directory
+# Default: $base_path/worktrees
+worktrees_dir: ~/Code/worktrees

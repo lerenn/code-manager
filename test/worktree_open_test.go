@@ -15,7 +15,7 @@ import (
 )
 
 // TestOpenExistingWorktree tests opening an existing worktree with IDE
-func TestOpenExistingWorktree(t *testing.T) {
+func TestOpenWorktreeRepoModeExisting(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -25,8 +25,8 @@ func TestOpenExistingWorktree(t *testing.T) {
 	// Create a worktree first
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -65,7 +65,7 @@ func TestOpenExistingWorktree(t *testing.T) {
 }
 
 // TestOpenNonExistentWorktree tests opening a non-existent worktree
-func TestOpenNonExistentWorktree(t *testing.T) {
+func TestOpenWorktreeRepoModeNonExistent(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -75,8 +75,8 @@ func TestOpenNonExistentWorktree(t *testing.T) {
 	// Test opening a non-existent worktree
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 
@@ -94,7 +94,7 @@ func TestOpenNonExistentWorktree(t *testing.T) {
 }
 
 // TestOpenWorktreeWithUnsupportedIDE tests opening a worktree with unsupported IDE
-func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
+func TestOpenWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -104,8 +104,8 @@ func TestOpenWorktreeWithUnsupportedIDE(t *testing.T) {
 	// Create a worktree first
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   setup.CmPath,
-			StatusFile: setup.StatusPath,
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
 	})
 

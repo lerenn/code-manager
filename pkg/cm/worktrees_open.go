@@ -20,7 +20,7 @@ func (c *realCM) OpenWorktree(worktreeName, ideName string) error {
 		c.VerbosePrint("Opening worktree: %s in IDE: %s", worktreeName, ideName)
 
 		// Detect project mode
-		projectType, err := c.detectProjectMode()
+		projectType, err := c.detectProjectMode("")
 		if err != nil {
 			return fmt.Errorf("failed to detect project mode: %w", err)
 		}

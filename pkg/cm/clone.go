@@ -139,9 +139,9 @@ func (c *realCM) checkRepositoryExists(normalizedURL string) error {
 
 // generateClonePath generates the target path for cloning a repository.
 func (c *realCM) generateClonePath(normalizedURL, defaultBranch string) string {
-	// Use the new path structure: $base_path/<repo_url>/<remote_name>/<default_branch>
+	// Use the new path structure: $repositories_dir/<repo_url>/<remote_name>/<default_branch>
 	remoteName := "origin" // Default remote name
-	return filepath.Join(c.config.BasePath, normalizedURL, remoteName, defaultBranch)
+	return filepath.Join(c.config.RepositoriesDir, normalizedURL, remoteName, defaultBranch)
 }
 
 // initializeRepositoryInCM initializes a cloned repository in CM.

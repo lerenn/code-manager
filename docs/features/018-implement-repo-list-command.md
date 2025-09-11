@@ -107,13 +107,13 @@ Error: failed to load repositories from status file: file not found
 type RepositoryInfo struct {
     Name        string
     Path        string
-    InBasePath  bool
+    InRepositoriesDir  bool
 }
 ```
 
 **Implementation Notes**:
 - RepositoryInfo contains all necessary information for display
-- InBasePath field determines whether to show asterisk
+- InRepositoriesDir field determines whether to show asterisk
 - Name field contains repository path (e.g., `github.com/lerenn/example`) from status.yaml
 - Path field contains the repository's absolute local path
 - Defined in `repo_list.go` file within CM package for reusability in CLI

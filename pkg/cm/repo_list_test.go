@@ -51,10 +51,10 @@ func TestListRepositories(t *testing.T) {
 		assert.Len(t, result, 2)
 		assert.Equal(t, "github.com/lerenn/another", result[0].Name)
 		assert.Equal(t, "/test/base/path/another", result[0].Path)
-		assert.True(t, result[0].InBasePath)
+		assert.True(t, result[0].InRepositoriesDir)
 		assert.Equal(t, "github.com/lerenn/example", result[1].Name)
 		assert.Equal(t, "/test/base/path/example", result[1].Path)
-		assert.True(t, result[1].InBasePath)
+		assert.True(t, result[1].InRepositoriesDir)
 	})
 
 	t.Run("successful listing with repositories outside base path", func(t *testing.T) {
@@ -77,9 +77,9 @@ func TestListRepositories(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, result, 2)
 		assert.Equal(t, "github.com/lerenn/example", result[0].Name)
-		assert.True(t, result[0].InBasePath)
+		assert.True(t, result[0].InRepositoriesDir)
 		assert.Equal(t, "github.com/lerenn/outside", result[1].Name)
-		assert.False(t, result[1].InBasePath)
+		assert.False(t, result[1].InRepositoriesDir)
 	})
 
 	t.Run("empty repository list", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestListRepositories(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, result, 1)
 		assert.Equal(t, "github.com/lerenn/example", result[0].Name)
-		assert.False(t, result[0].InBasePath) // Defaults to false on error
+		assert.False(t, result[0].InRepositoriesDir) // Defaults to false on error
 	})
 
 	t.Run("without logger", func(t *testing.T) {
@@ -146,14 +146,14 @@ func TestListRepositories(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, result, 1)
 		assert.Equal(t, "github.com/lerenn/example", result[0].Name)
-		assert.True(t, result[0].InBasePath)
+		assert.True(t, result[0].InRepositoriesDir)
 	})
 }
 
 // createTestConfig creates a test configuration for use in tests.
 func createTestConfig() config.Config {
 	return config.Config{
-		BasePath:   "/test/base/path",
-		StatusFile: "/test/status.yaml",
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
 	}
 }

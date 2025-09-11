@@ -67,10 +67,10 @@ type FS interface {
 	ExpandPath(path string) (string, error)
 
 	// IsPathWithinBase checks if a target path is within the base path.
-	IsPathWithinBase(basePath, targetPath string) (bool, error)
+	IsPathWithinBase(repositoriesDir, targetPath string) (bool, error)
 
 	// ResolvePath resolves relative paths from base directory.
-	ResolvePath(basePath, relativePath string) (string, error)
+	ResolvePath(repositoriesDir, relativePath string) (string, error)
 
 	// ValidateRepositoryPath validates that path contains a Git repository.
 	ValidateRepositoryPath(path string) (bool, error)
@@ -294,25 +294,25 @@ func (f *realFS) ExecuteCommand(command string, args ...string) error {
 }
 
 // IsPathWithinBase checks if a target path is within the base path.
-func (f *realFS) IsPathWithinBase(basePath, targetPath string) (bool, error) {
+func (f *realFS) IsPathWithinBase(repositoriesDir, targetPath string) (bool, error) {
 	// Handle empty paths
-	if basePath == "" && targetPath == "" {
+	if repositoriesDir == "" && targetPath == "" {
 		return true, nil
 	}
-	if basePath == "" {
+	if repositoriesDir == "" {
 		return false, nil
 	}
 
 	// Normalize path separators - convert backslashes to forward slashes for cross-platform compatibility
-	normalizedBasePath := strings.ReplaceAll(basePath, "\\", "/")
+	normalizedRepositoriesDir := strings.ReplaceAll(repositoriesDir, "\\", "/")
 	normalizedTargetPath := strings.ReplaceAll(targetPath, "\\", "/")
 
 	// Clean the paths
-	cleanBasePath := filepath.Clean(normalizedBasePath)
+	cleanRepositoriesDir := filepath.Clean(normalizedRepositoriesDir)
 	cleanTargetPath := filepath.Clean(normalizedTargetPath)
 
 	// Convert both paths to absolute paths for comparison
-	absBasePath, err := filepath.Abs(cleanBasePath)
+	absRepositoriesDir, err := filepath.Abs(cleanRepositoriesDir)
 	if err != nil {
 		return false, fmt.Errorf("failed to get absolute path for base path: %w", err)
 	}
@@ -323,7 +323,7 @@ func (f *realFS) IsPathWithinBase(basePath, targetPath string) (bool, error) {
 	}
 
 	// Check if target path is within base path by comparing path components
-	relPath, err := filepath.Rel(absBasePath, absTargetPath)
+	relPath, err := filepath.Rel(absRepositoriesDir, absTargetPath)
 	if err != nil {
 		return false, err // Return the error if we can't get relative path
 	}
@@ -333,9 +333,9 @@ func (f *realFS) IsPathWithinBase(basePath, targetPath string) (bool, error) {
 }
 
 // ResolvePath resolves relative paths from base directory.
-func (f *realFS) ResolvePath(basePath, relativePath string) (string, error) {
+func (f *realFS) ResolvePath(repositoriesDir, relativePath string) (string, error) {
 	// Handle empty paths
-	if basePath == "" {
+	if repositoriesDir == "" {
 		return "", fmt.Errorf("%w: base path cannot be empty", ErrPathResolution)
 	}
 	if relativePath == "" {
@@ -348,7 +348,7 @@ func (f *realFS) ResolvePath(basePath, relativePath string) (string, error) {
 	}
 
 	// Resolve relative path from base directory
-	resolvedPath := filepath.Join(basePath, relativePath)
+	resolvedPath := filepath.Join(repositoriesDir, relativePath)
 
 	// Clean the resolved path to remove any ".." or "." components
 	cleanPath := filepath.Clean(resolvedPath)

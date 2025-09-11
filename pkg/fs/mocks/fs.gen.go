@@ -221,18 +221,18 @@ func (mr *MockFSMockRecorder) IsNotExist(err any) *gomock.Call {
 }
 
 // IsPathWithinBase mocks base method.
-func (m *MockFS) IsPathWithinBase(basePath, targetPath string) (bool, error) {
+func (m *MockFS) IsPathWithinBase(repositoriesDir, targetPath string) (bool, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsPathWithinBase", basePath, targetPath)
+	ret := m.ctrl.Call(m, "IsPathWithinBase", repositoriesDir, targetPath)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // IsPathWithinBase indicates an expected call of IsPathWithinBase.
-func (mr *MockFSMockRecorder) IsPathWithinBase(basePath, targetPath any) *gomock.Call {
+func (mr *MockFSMockRecorder) IsPathWithinBase(repositoriesDir, targetPath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPathWithinBase", reflect.TypeOf((*MockFS)(nil).IsPathWithinBase), basePath, targetPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsPathWithinBase", reflect.TypeOf((*MockFS)(nil).IsPathWithinBase), repositoriesDir, targetPath)
 }
 
 // MkdirAll mocks base method.
@@ -294,18 +294,18 @@ func (mr *MockFSMockRecorder) RemoveAll(path any) *gomock.Call {
 }
 
 // ResolvePath mocks base method.
-func (m *MockFS) ResolvePath(basePath, relativePath string) (string, error) {
+func (m *MockFS) ResolvePath(repositoriesDir, relativePath string) (string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ResolvePath", basePath, relativePath)
+	ret := m.ctrl.Call(m, "ResolvePath", repositoriesDir, relativePath)
 	ret0, _ := ret[0].(string)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ResolvePath indicates an expected call of ResolvePath.
-func (mr *MockFSMockRecorder) ResolvePath(basePath, relativePath any) *gomock.Call {
+func (mr *MockFSMockRecorder) ResolvePath(repositoriesDir, relativePath any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolvePath", reflect.TypeOf((*MockFS)(nil).ResolvePath), basePath, relativePath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResolvePath", reflect.TypeOf((*MockFS)(nil).ResolvePath), repositoriesDir, relativePath)
 }
 
 // ValidateRepositoryPath mocks base method.

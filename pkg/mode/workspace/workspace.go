@@ -6,14 +6,21 @@ import (
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/hooks"
+	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 //go:generate mockgen -source=workspace.go -destination=mocks/workspace.gen.go -package=mocks
+
+// CreateWorktreeOpts contains optional parameters for worktree creation in workspace mode.
+type CreateWorktreeOpts struct {
+	IDEName       string
+	IssueInfo     *issue.Info
+	WorkspaceName string
+}
 
 // Config represents the configuration of a workspace.
 type Config struct {
@@ -28,13 +35,13 @@ type Folder struct {
 }
 
 // Workspace interface provides workspace management capabilities.
-// It implements the common Interface and adds workspace-specific methods.
 type Workspace interface {
-	mode.Interface
-
-	// Workspace-specific methods
-	Load(force bool) error
-	DetectWorkspaceFiles() ([]string, error)
+	Validate() error
+	CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error)
+	DeleteWorktree(branch string, force bool) error
+	ListWorktrees() ([]status.WorktreeInfo, error)
+	SetLogger(logger logger.Logger)
+	Load() error
 	ParseFile(filename string) (Config, error)
 	GetName(config Config, filename string) string
 	HandleMultipleFiles(workspaceFiles []string, force bool) (string, error)
@@ -54,7 +61,7 @@ type realWorkspace struct {
 	prompt           prompt.Prompter
 	worktreeProvider WorktreeProvider
 	hookManager      hooks.HookManagerInterface
-	OriginalFile     string
+	file             string
 }
 
 // NewWorkspaceParams contains parameters for creating a new Workspace instance.

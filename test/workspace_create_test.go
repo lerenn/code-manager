@@ -3,381 +3,321 @@
 package test
 
 import (
-	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/mode/workspace"
-	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
-func TestCreateWorktree_WorkspaceMode(t *testing.T) {
-	// Create temporary test directory for CM base path
-	tempDir, err := os.MkdirTemp("", "cm-workspace-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+// createWorkspace creates a workspace using the CM instance
+func createWorkspace(t *testing.T, setup *TestSetup, workspaceName string, repositories []string) error {
+	t.Helper()
 
-	// Create separate directory for workspace structure
-	workspaceBaseDir, err := os.MkdirTemp("", "cm-workspace-structure-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(workspaceBaseDir)
-
-	// Create temporary config
-	testConfig := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
-	}
-	configPath := filepath.Join(tempDir, "config.yaml")
-	configData, err := yaml.Marshal(testConfig)
-	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(configPath, configData, 0644))
-
-	// Create workspace structure
-	workspaceDir := filepath.Join(workspaceBaseDir, "workspace")
-	require.NoError(t, os.MkdirAll(workspaceDir, 0755))
-
-	// Create workspace file
-	workspaceConfig := &workspace.Config{
-		Name: "test-workspace",
-		Folders: []workspace.Folder{
-			{Name: "Hello-World", Path: "./Hello-World"},
-			{Name: "Spoon-Knife", Path: "./Spoon-Knife"},
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
 		},
-	}
-
-	workspaceData, err := json.MarshalIndent(workspaceConfig, "", "  ")
-	require.NoError(t, err)
-	workspacePath := filepath.Join(workspaceDir, "project.code-workspace")
-	require.NoError(t, os.WriteFile(workspacePath, workspaceData, 0644))
-
-	// Create repositories
-	helloWorldDir := filepath.Join(workspaceDir, "Hello-World")
-	spoonKnifeDir := filepath.Join(workspaceDir, "Spoon-Knife")
-	require.NoError(t, os.MkdirAll(helloWorldDir, 0755))
-	require.NoError(t, os.MkdirAll(spoonKnifeDir, 0755))
-
-	// Initialize Git repositories
-	createTestGitRepo(t, helloWorldDir)
-	createTestGitRepo(t, spoonKnifeDir)
-
-	// Change to workspace directory
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer os.Chdir(originalDir)
-	require.NoError(t, os.Chdir(workspaceDir))
-
-	// Create CM instance
-	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
-	}
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
-	})
-
-	require.NoError(t, err)
-	// Create worktrees
-	branchName := "feature/test-branch"
-	err = cmInstance.CreateWorkTree(branchName)
-	require.NoError(t, err)
-
-	// Verify worktrees were created
-	worktrees, _, err := cmInstance.ListWorktrees(false)
-	require.NoError(t, err)
-	assert.Len(t, worktrees, 2)
-
-	// Verify worktree directories exist (new structure: repo/origin/branch)
-	helloWorldWorktreePath := filepath.Join(tempDir, "github.com/octocat/Hello-World", "origin", branchName)
-	spoonKnifeWorktreePath := filepath.Join(tempDir, "github.com/octocat/Spoon-Knife", "origin", branchName)
-	assert.DirExists(t, helloWorldWorktreePath)
-	assert.DirExists(t, spoonKnifeWorktreePath)
-
-	// Verify worktree-specific workspace file was created
-	workspaceWorktreePath := filepath.Join(tempDir, "workspaces", "test-workspace-feature-test-branch.code-workspace")
-	assert.FileExists(t, workspaceWorktreePath)
-
-	// Verify worktree-specific workspace file content
-	workspaceWorktreeData, err := os.ReadFile(workspaceWorktreePath)
-	require.NoError(t, err)
-
-	var worktreeWorkspaceConfig workspace.Config
-	require.NoError(t, json.Unmarshal(workspaceWorktreeData, &worktreeWorkspaceConfig))
-
-	assert.Equal(t, "test-workspace-feature-test-branch", worktreeWorkspaceConfig.Name)
-	assert.Len(t, worktreeWorkspaceConfig.Folders, 2)
-	assert.Equal(t, "Hello-World", worktreeWorkspaceConfig.Folders[0].Name)
-	assert.Equal(t, helloWorldWorktreePath, worktreeWorkspaceConfig.Folders[0].Path)
-	assert.Equal(t, "Spoon-Knife", worktreeWorkspaceConfig.Folders[1].Name)
-	assert.Equal(t, spoonKnifeWorktreePath, worktreeWorkspaceConfig.Folders[1].Path)
-
-	// Verify status file entries
-	statusManager := status.NewManager(fs.NewFS(), cfg)
-	allWorktrees, err := statusManager.ListAllWorktrees()
-	require.NoError(t, err)
-	assert.Len(t, allWorktrees, 2)
-
-	// Find Hello-World and Spoon-Knife worktrees
-	var helloWorldWorktree, spoonKnifeWorktree *status.WorktreeInfo
-	foundHelloWorld := false
-	foundSpoonKnife := false
-
-	for _, worktree := range allWorktrees {
-		if worktree.Branch == branchName {
-			if !foundHelloWorld {
-				helloWorldWorktree = &worktree
-				foundHelloWorld = true
-			} else if !foundSpoonKnife {
-				spoonKnifeWorktree = &worktree
-				foundSpoonKnife = true
-			}
-		}
-	}
-
-	require.NotNil(t, helloWorldWorktree, "Should have Hello-World worktree")
-	require.NotNil(t, spoonKnifeWorktree, "Should have Spoon-Knife worktree")
-	assert.Equal(t, branchName, helloWorldWorktree.Branch)
-	assert.Equal(t, branchName, spoonKnifeWorktree.Branch)
-	assert.Equal(t, "origin", helloWorldWorktree.Remote, "Should have origin remote")
-	assert.Equal(t, "origin", spoonKnifeWorktree.Remote, "Should have origin remote")
-}
-
-func TestCreateWorkspace_EndToEnd(t *testing.T) {
-	// Create temporary test directory for CM base path
-	tempDir, err := os.MkdirTemp("", "cm-workspace-create-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
-
-	// Create separate directory for repositories
-	reposDir, err := os.MkdirTemp("", "cm-repos-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(reposDir)
-
-	// Create test repository
-	repoDir := filepath.Join(reposDir, "Hello-World")
-	require.NoError(t, os.MkdirAll(repoDir, 0755))
-
-	// Initialize Git repository
-	createTestGitRepo(t, repoDir)
-
-	// Create CM instance
-	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
-	}
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
 	})
 	require.NoError(t, err)
 
-	// Test 1: Create workspace with absolute path
-	workspaceName := "test-workspace-absolute"
 	params := cm.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
-		Repositories:  []string{repoDir},
+		Repositories:  repositories,
 	}
 
-	err = cmInstance.CreateWorkspace(params)
-	require.NoError(t, err)
-
-	// Verify workspace was created in status file
-	statusManager := status.NewManager(fs.NewFS(), cfg)
-	workspace, err := statusManager.GetWorkspace(workspaceName)
-	require.NoError(t, err)
-	require.NotNil(t, workspace)
-	assert.Len(t, workspace.Repositories, 1)
-	assert.Contains(t, workspace.Repositories, "https://github.com/octocat/Hello-World.git")
-
-	// Test 2: Verify repositories were added to status file
-	repositories, err := statusManager.ListRepositories()
-	require.NoError(t, err)
-	assert.Len(t, repositories, 1)
-	assert.Contains(t, repositories, "https://github.com/octocat/Hello-World.git")
+	return cmInstance.CreateWorkspace(params)
 }
 
-func TestCreateWorkspace_EndToEnd_ErrorCases(t *testing.T) {
-	// Create temporary test directory for CM base path
-	tempDir, err := os.MkdirTemp("", "cm-workspace-create-error-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+// TestCreateWorkspaceSuccess tests successful workspace creation with multiple repositories
+func TestCreateWorkspaceSuccess(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
 
-	// Create CM instance
-	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
-	}
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
-	})
-	require.NoError(t, err)
+	// Create multiple test Git repositories with different remote URLs
+	repo1Path := filepath.Join(setup.TempDir, "Hello-World")
+	repo2Path := filepath.Join(setup.TempDir, "Spoon-Knife")
 
-	// Test 1: Create workspace with empty name
-	params := cm.CreateWorkspaceParams{
-		WorkspaceName: "",
-		Repositories:  []string{"/some/path"},
-	}
+	require.NoError(t, os.MkdirAll(repo1Path, 0755))
+	require.NoError(t, os.MkdirAll(repo2Path, 0755))
 
-	err = cmInstance.CreateWorkspace(params)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, cm.ErrInvalidWorkspaceName)
+	createTestGitRepo(t, repo1Path)
+	createTestGitRepo(t, repo2Path)
 
-	// Test 2: Create workspace with no repositories
-	params = cm.CreateWorkspaceParams{
-		WorkspaceName: "empty-workspace",
-		Repositories:  []string{},
-	}
+	// Test creating a workspace with multiple repositories
+	err := createWorkspace(t, setup, "test-workspace", []string{repo1Path, repo2Path})
+	require.NoError(t, err, "Workspace creation should succeed")
 
-	err = cmInstance.CreateWorkspace(params)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "at least one repository must be specified")
+	// Verify the status.yaml file was created and updated
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Workspaces, "Status file should have workspaces section")
 
-	// Test 3: Create workspace with non-existent repository
-	params = cm.CreateWorkspaceParams{
-		WorkspaceName: "invalid-workspace",
-		Repositories:  []string{"/non/existent/path"},
-	}
+	// Check that we have one workspace entry
+	require.Len(t, status.Workspaces, 1, "Should have one workspace entry")
 
-	err = cmInstance.CreateWorkspace(params)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, cm.ErrRepositoryNotFound)
+	// Check that the workspace exists
+	workspace, exists := status.Workspaces["test-workspace"]
+	require.True(t, exists, "Workspace should exist in status file")
 
-	// Test 4: Create workspace with duplicate repositories
-	// Create a test repository first
-	repoDir, err := os.MkdirTemp("", "cm-test-repo-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(repoDir)
+	// Check that the workspace has the correct repositories
+	require.Len(t, workspace.Repositories, 2, "Workspace should have two repositories")
 
-	createTestGitRepo(t, repoDir)
+	// Verify that repositories were added to the status file
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+	require.Len(t, status.Repositories, 2, "Should have two repository entries")
 
-	params = cm.CreateWorkspaceParams{
-		WorkspaceName: "duplicate-workspace",
-		Repositories:  []string{repoDir, repoDir},
+	// Check that both repositories are in the workspace
+	repoURLs := make(map[string]bool)
+	for _, repoURL := range workspace.Repositories {
+		repoURLs[repoURL] = true
 	}
 
-	err = cmInstance.CreateWorkspace(params)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, cm.ErrDuplicateRepository)
+	// Verify both repositories are referenced in the workspace
+	require.True(t, len(repoURLs) == 2, "Workspace should reference both repositories")
+}
 
-	// Test 5: Create workspace that already exists
-	// First create a workspace
-	params = cm.CreateWorkspaceParams{
-		WorkspaceName: "existing-workspace",
-		Repositories:  []string{repoDir},
-	}
+// TestCreateWorkspaceDuplicateName tests workspace creation with duplicate workspace name
+func TestCreateWorkspaceDuplicateName(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
 
-	err = cmInstance.CreateWorkspace(params)
-	require.NoError(t, err)
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Create the workspace first time
+	err := createWorkspace(t, setup, "test-workspace", []string{setup.RepoPath})
+	require.NoError(t, err, "First workspace creation should succeed")
 
 	// Try to create the same workspace again
-	err = cmInstance.CreateWorkspace(params)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, cm.ErrWorkspaceAlreadyExists)
+	err = createWorkspace(t, setup, "test-workspace", []string{setup.RepoPath})
+	assert.Error(t, err, "Second workspace creation should fail")
+	assert.ErrorIs(t, err, cm.ErrWorkspaceAlreadyExists, "Error should mention workspace already exists")
+
+	// Verify only one workspace entry exists in status file
+	status := readStatusFile(t, setup.StatusPath)
+	assert.Len(t, status.Workspaces, 1, "Should still have only one workspace entry")
 }
 
-func TestCreateWorkspace_EndToEnd_InvalidRepository(t *testing.T) {
-	// Create temporary test directory for CM base path
-	tempDir, err := os.MkdirTemp("", "cm-workspace-create-invalid-repo-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+// TestCreateWorkspaceInvalidName tests workspace creation with invalid workspace name
+func TestCreateWorkspaceInvalidName(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
 
-	// Create CM instance
-	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
-	}
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
-	})
-	require.NoError(t, err)
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
 
-	// Test 1: Create workspace with directory that exists but is not a Git repository
-	nonGitDir, err := os.MkdirTemp("", "cm-non-git-repo-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(nonGitDir)
+	// Test creating a workspace with empty name
+	err := createWorkspace(t, setup, "", []string{setup.RepoPath})
+	assert.Error(t, err, "Workspace creation with empty name should fail")
+	assert.ErrorIs(t, err, cm.ErrInvalidWorkspaceName, "Error should mention invalid workspace name")
 
-	// Create a regular directory (not a Git repository)
-	err = os.WriteFile(filepath.Join(nonGitDir, "some-file.txt"), []byte("content"), 0644)
-	require.NoError(t, err)
+	// Test creating a workspace with invalid characters
+	err = createWorkspace(t, setup, "invalid/name", []string{setup.RepoPath})
+	assert.Error(t, err, "Workspace creation with invalid characters should fail")
+	assert.ErrorIs(t, err, cm.ErrInvalidWorkspaceName, "Error should mention invalid workspace name")
 
-	params := cm.CreateWorkspaceParams{
-		WorkspaceName: "invalid-repo-workspace",
-		Repositories:  []string{nonGitDir},
-	}
+	// Verify status file exists but is empty (created during CM initialization)
+	_, err = os.Stat(setup.StatusPath)
+	assert.NoError(t, err, "Status file should exist (created during CM initialization)")
 
-	err = cmInstance.CreateWorkspace(params)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, cm.ErrInvalidRepository)
-
-	// Test 2: Create workspace with file instead of directory
-	testFile, err := os.CreateTemp("", "cm-test-file-*")
-	require.NoError(t, err)
-	defer os.Remove(testFile.Name())
-	defer os.RemoveAll(testFile.Name())
-
-	params = cm.CreateWorkspaceParams{
-		WorkspaceName: "file-workspace",
-		Repositories:  []string{testFile.Name()},
-	}
-
-	err = cmInstance.CreateWorkspace(params)
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, cm.ErrInvalidRepository)
+	// Verify status file is empty (no workspaces added)
+	status := readStatusFile(t, setup.StatusPath)
+	assert.Len(t, status.Workspaces, 0, "Status file should be empty for failed operation")
 }
 
-func TestCreateWorkspace_EndToEnd_RelativePathResolution(t *testing.T) {
-	// Create temporary test directory for CM base path
-	tempDir, err := os.MkdirTemp("", "cm-workspace-create-relative-test-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+// TestCreateWorkspaceNoRepositories tests workspace creation with no repositories
+func TestCreateWorkspaceNoRepositories(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
 
-	// Create separate directory for repositories
-	reposDir, err := os.MkdirTemp("", "cm-repos-relative-*")
-	require.NoError(t, err)
-	defer os.RemoveAll(reposDir)
+	// Test creating a workspace with no repositories
+	err := createWorkspace(t, setup, "test-workspace", []string{})
+	assert.Error(t, err, "Workspace creation with no repositories should fail")
+	assert.Contains(t, err.Error(), "at least one repository must be specified", "Error should mention repositories are required")
 
-	// Create test repository with specific name to get unique remote URL
-	repoDir := filepath.Join(reposDir, "Hello-World")
-	require.NoError(t, os.MkdirAll(repoDir, 0755))
-	createTestGitRepo(t, repoDir)
+	// Verify status file exists but is empty (created during CM initialization)
+	_, err = os.Stat(setup.StatusPath)
+	assert.NoError(t, err, "Status file should exist (created during CM initialization)")
 
-	// Create CM instance
-	cfg := config.Config{
-		BasePath:   tempDir,
-		StatusFile: filepath.Join(tempDir, "status.yaml"),
-	}
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
-	})
-	require.NoError(t, err)
+	// Verify status file is empty (no workspaces added)
+	status := readStatusFile(t, setup.StatusPath)
+	assert.Len(t, status.Workspaces, 0, "Status file should be empty for failed operation")
+}
 
-	// Test relative path resolution from different working directories
-	originalDir, err := os.Getwd()
-	require.NoError(t, err)
-	defer os.Chdir(originalDir)
+// TestCreateWorkspaceInvalidRepositories tests workspace creation with invalid repositories
+func TestCreateWorkspaceInvalidRepositories(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
 
-	// Change to repos directory
-	require.NoError(t, os.Chdir(reposDir))
+	// Test creating a workspace with non-existent repository
+	err := createWorkspace(t, setup, "test-workspace", []string{"/non/existent/path"})
+	assert.Error(t, err, "Workspace creation with non-existent repository should fail")
+	assert.ErrorIs(t, err, cm.ErrRepositoryNotFound, "Error should mention repository not found")
 
-	// Test 1: Simple relative path
-	params := cm.CreateWorkspaceParams{
-		WorkspaceName: "relative-workspace-1",
-		Repositories:  []string{"./Hello-World"},
-	}
+	// Test creating a workspace with invalid repository (not a git repo)
+	invalidRepoPath := filepath.Join(setup.TempDir, "not-a-git-repo")
+	require.NoError(t, os.MkdirAll(invalidRepoPath, 0755))
+	// Create a file to make it not a git repository
+	require.NoError(t, os.WriteFile(filepath.Join(invalidRepoPath, "file.txt"), []byte("not a git repo"), 0644))
 
-	err = cmInstance.CreateWorkspace(params)
-	require.NoError(t, err)
+	err = createWorkspace(t, setup, "test-workspace", []string{invalidRepoPath})
+	assert.Error(t, err, "Workspace creation with invalid repository should fail")
+	assert.ErrorIs(t, err, cm.ErrInvalidRepository, "Error should mention invalid repository")
 
-	// Verify workspace was created
-	statusManager := status.NewManager(fs.NewFS(), cfg)
-	workspace, err := statusManager.GetWorkspace("relative-workspace-1")
-	require.NoError(t, err)
-	require.NotNil(t, workspace)
-	assert.Len(t, workspace.Repositories, 1)
-	assert.Contains(t, workspace.Repositories, "https://github.com/octocat/Hello-World.git")
+	// Verify status file exists but is empty (created during CM initialization)
+	_, err = os.Stat(setup.StatusPath)
+	assert.NoError(t, err, "Status file should exist (created during CM initialization)")
+
+	// Verify status file is empty (no workspaces added)
+	status := readStatusFile(t, setup.StatusPath)
+	assert.Len(t, status.Workspaces, 0, "Status file should be empty for failed operation")
+}
+
+// TestCreateWorkspaceWithRelativePaths tests workspace creation with relative paths
+func TestCreateWorkspaceWithRelativePaths(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository in a subdirectory
+	repoSubDir := filepath.Join(setup.TempDir, "subdir")
+	require.NoError(t, os.MkdirAll(repoSubDir, 0755))
+	createTestGitRepo(t, repoSubDir)
+
+	// Change to the temp directory to test relative paths
+	restore := safeChdir(t, setup.TempDir)
+	defer restore()
+
+	// Test creating a workspace with relative path
+	err := createWorkspace(t, setup, "test-workspace", []string{"./subdir"})
+	require.NoError(t, err, "Workspace creation with relative path should succeed")
+
+	// Verify the status.yaml file was created and updated
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Workspaces, "Status file should have workspaces section")
+
+	// Check that we have one workspace entry
+	require.Len(t, status.Workspaces, 1, "Should have one workspace entry")
+
+	// Check that the workspace exists
+	workspace, exists := status.Workspaces["test-workspace"]
+	require.True(t, exists, "Workspace should exist in status file")
+
+	// Check that the workspace has the correct repository
+	require.Len(t, workspace.Repositories, 1, "Workspace should have one repository")
+
+	// Verify that repository was added to the status file
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+	require.Len(t, status.Repositories, 1, "Should have one repository entry")
+}
+
+// TestCreateWorkspaceWithMixedRepositoryTypes tests workspace creation with mixed repository types
+func TestCreateWorkspaceWithMixedRepositoryTypes(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create multiple test Git repositories with different remote URLs
+	repo1Path := filepath.Join(setup.TempDir, "Hello-World")
+	repo2Path := filepath.Join(setup.TempDir, "Spoon-Knife")
+
+	require.NoError(t, os.MkdirAll(repo1Path, 0755))
+	require.NoError(t, os.MkdirAll(repo2Path, 0755))
+
+	createTestGitRepo(t, repo1Path)
+	createTestGitRepo(t, repo2Path)
+
+	// Create a third repository with a custom remote URL to avoid conflicts
+	repo3Path := filepath.Join(setup.TempDir, "subdir", "Custom-Repo")
+	require.NoError(t, os.MkdirAll(repo3Path, 0755))
+
+	// Create a custom Git repository with a different remote URL
+	restore := safeChdir(t, repo3Path)
+	defer restore()
+
+	// Set up Git environment variables for all commands
+	gitEnv := append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+
+	// Initialize Git repository
+	cmd := exec.Command("git", "init")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Set the default branch
+	cmd = exec.Command("git", "branch", "-M", "main")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Add a custom remote URL
+	cmd = exec.Command("git", "remote", "add", "origin", "https://github.com/octocat/Custom-Repo.git")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Create initial commit
+	readmePath := filepath.Join(repo3Path, "README.md")
+	require.NoError(t, os.WriteFile(readmePath, []byte("# Custom Repository\n\nThis is a custom test repository.\n"), 0644))
+
+	cmd = exec.Command("git", "add", "README.md")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	cmd = exec.Command("git", "commit", "-m", "Initial commit")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Change to the temp directory to test relative paths
+	restore = safeChdir(t, setup.TempDir)
+	defer restore()
+
+	// Test creating a workspace with mixed repository types (absolute and relative paths)
+	err := createWorkspace(t, setup, "mixed-workspace", []string{repo1Path, repo2Path, "./subdir/Custom-Repo"})
+	require.NoError(t, err, "Workspace creation with mixed repository types should succeed")
+
+	// Verify the status.yaml file was created and updated
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Workspaces, "Status file should have workspaces section")
+
+	// Check that we have one workspace entry
+	require.Len(t, status.Workspaces, 1, "Should have one workspace entry")
+
+	// Check that the workspace exists
+	workspace, exists := status.Workspaces["mixed-workspace"]
+	require.True(t, exists, "Workspace should exist in status file")
+
+	// Check that the workspace has the correct repositories
+	require.Len(t, workspace.Repositories, 3, "Workspace should have three repositories")
+
+	// Verify that repositories were added to the status file
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+	require.Len(t, status.Repositories, 3, "Should have three repository entries")
+}
+
+// TestCreateWorkspaceDuplicateRepositories tests workspace creation with duplicate repositories
+func TestCreateWorkspaceDuplicateRepositories(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Test creating a workspace with duplicate repositories
+	err := createWorkspace(t, setup, "test-workspace", []string{setup.RepoPath, setup.RepoPath})
+	assert.Error(t, err, "Workspace creation with duplicate repositories should fail")
+	assert.ErrorIs(t, err, cm.ErrDuplicateRepository, "Error should mention duplicate repository")
+
+	// Verify status file exists but is empty (created during CM initialization)
+	_, err = os.Stat(setup.StatusPath)
+	assert.NoError(t, err, "Status file should exist (created during CM initialization)")
+
+	// Verify status file is empty (no workspaces added)
+	status := readStatusFile(t, setup.StatusPath)
+	assert.Len(t, status.Workspaces, 0, "Status file should be empty for failed operation")
 }

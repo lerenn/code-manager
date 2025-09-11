@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCreateWorktreeFromDefaultBranch(t *testing.T) {
+func TestCreateWorktreeRepoModeFromDefaultBranch(t *testing.T) {
 	// Create temporary test environment
 	tempDir, err := os.MkdirTemp("", "cm-test-*")
 	require.NoError(t, err)
@@ -24,8 +24,8 @@ func TestCreateWorktreeFromDefaultBranch(t *testing.T) {
 	// Create CM instance with temporary config
 	cmInstance, err := cm.NewCM(cm.NewCMParams{
 		Config: config.Config{
-			BasePath:   tempDir,
-			StatusFile: filepath.Join(tempDir, "status.yaml"),
+			RepositoriesDir: tempDir,
+			StatusFile:      filepath.Join(tempDir, "status.yaml"),
 		},
 	})
 

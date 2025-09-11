@@ -55,7 +55,7 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 	// Mock repository detection and worktree creation
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().Validate().Return(nil)
-	mockRepository.EXPECT().CreateWorktree("test-branch").Return("/test/base/path/test-repo/origin/test-branch", nil)
+	mockRepository.EXPECT().CreateWorktree("test-branch", gomock.Any()).Return("/test/base/path/test-repo/origin/test-branch", nil)
 
 	err = cm.CreateWorkTree("test-branch")
 	assert.NoError(t, err)
@@ -97,9 +97,140 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	// Mock repository detection and worktree creation
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().Validate().Return(nil)
-	mockRepository.EXPECT().CreateWorktree("test-branch").Return("/test/base/path/test-repo/origin/test-branch", nil)
+	mockRepository.EXPECT().CreateWorktree("test-branch", gomock.Any()).Return("/test/base/path/test-repo/origin/test-branch", nil)
 
 	// Note: IDE opening is now handled by the hook system, not tested here
 	err = cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: "vscode"})
 	assert.NoError(t, err)
+}
+
+func TestCM_CreateWorkTree_WorkspaceMode(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusMocks.NewMockManager(ctrl)
+	mockPrompt := promptMocks.NewMockPrompter(ctrl)
+
+	// Create CM with mocked dependencies
+	cm, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
+			return mockRepository
+		},
+		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
+			return mockWorkspace
+		},
+		Hooks:  mockHookManager,
+		Config: createTestConfig(),
+		FS:     mockFS,
+		Git:    mockGit,
+		Status: mockStatus,
+		Prompt: mockPrompt,
+	})
+	assert.NoError(t, err)
+
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+
+	// Mock workspace worktree creation
+	workspaceName := "test-workspace"
+	expectedPath := "/test/workspaces/test-workspace-feature-branch.code-workspace"
+	mockWorkspace.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return(expectedPath, nil)
+
+	opts := CreateWorkTreeOpts{WorkspaceName: workspaceName}
+	err = cm.CreateWorkTree("feature-branch", opts)
+	assert.NoError(t, err)
+}
+
+func TestCM_CreateWorkTree_WorkspaceModeWithIDE(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusMocks.NewMockManager(ctrl)
+	mockPrompt := promptMocks.NewMockPrompter(ctrl)
+
+	// Create CM with mocked dependencies
+	cm, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
+			return mockRepository
+		},
+		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
+			return mockWorkspace
+		},
+		Hooks:  mockHookManager,
+		Config: createTestConfig(),
+		FS:     mockFS,
+		Git:    mockGit,
+		Status: mockStatus,
+		Prompt: mockPrompt,
+	})
+	assert.NoError(t, err)
+
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+
+	// Mock workspace worktree creation
+	workspaceName := "test-workspace"
+	expectedPath := "/test/workspaces/test-workspace-feature-branch.code-workspace"
+	mockWorkspace.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return(expectedPath, nil)
+
+	opts := CreateWorkTreeOpts{
+		WorkspaceName: workspaceName,
+		IDEName:       "vscode",
+	}
+	err = cm.CreateWorkTree("feature-branch", opts)
+	assert.NoError(t, err)
+}
+
+func TestCM_CreateWorkTree_WorkspaceModeFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepository := repositoryMocks.NewMockRepository(ctrl)
+	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusMocks.NewMockManager(ctrl)
+	mockPrompt := promptMocks.NewMockPrompter(ctrl)
+
+	// Create CM with mocked dependencies
+	cm, err := NewCM(NewCMParams{
+		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
+			return mockRepository
+		},
+		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
+			return mockWorkspace
+		},
+		Hooks:  mockHookManager,
+		Config: createTestConfig(),
+		FS:     mockFS,
+		Git:    mockGit,
+		Status: mockStatus,
+		Prompt: mockPrompt,
+	})
+	assert.NoError(t, err)
+
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecuteErrorHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+
+	// Mock workspace worktree creation failure
+	workspaceName := "test-workspace"
+	mockWorkspace.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", assert.AnError)
+
+	opts := CreateWorkTreeOpts{WorkspaceName: workspaceName}
+	err = cm.CreateWorkTree("feature-branch", opts)
+	assert.Error(t, err)
 }
