@@ -72,6 +72,10 @@ type Manager interface {
 	GetWorkspace(workspacePath string) (*Workspace, error)
 	// ListWorkspaces lists all workspaces in the status file.
 	ListWorkspaces() (map[string]Workspace, error)
+	// RemoveWorkspace removes a workspace entry from the status file.
+	RemoveWorkspace(workspaceName string) error
+	// GetWorkspaceByName retrieves a workspace entry by name (not path).
+	GetWorkspaceByName(workspaceName string) (*Workspace, error)
 }
 
 type realManager struct {
@@ -375,6 +379,59 @@ func (s *realManager) ListWorkspaces() (map[string]Workspace, error) {
 	}
 
 	return status.Workspaces, nil
+}
+
+// RemoveWorkspace removes a workspace entry from the status file.
+func (s *realManager) RemoveWorkspace(workspaceName string) error {
+	// Load current status
+	status, err := s.loadStatus()
+	if err != nil {
+		return fmt.Errorf("failed to load status: %w", err)
+	}
+
+	// Find workspace by name (not path)
+	var workspacePath string
+	found := false
+
+	for path := range status.Workspaces {
+		if s.getWorkspaceNameFromPath(path) == workspaceName {
+			workspacePath = path
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Errorf("%w: %s", ErrWorkspaceNotFound, workspaceName)
+	}
+
+	// Remove workspace from status
+	delete(status.Workspaces, workspacePath)
+
+	// Save updated status
+	if err := s.saveStatus(status); err != nil {
+		return fmt.Errorf("failed to save status: %w", err)
+	}
+
+	return nil
+}
+
+// GetWorkspaceByName retrieves a workspace entry by name (not path).
+func (s *realManager) GetWorkspaceByName(workspaceName string) (*Workspace, error) {
+	// Load current status
+	status, err := s.loadStatus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load status: %w", err)
+	}
+
+	// Find workspace by name (not path)
+	for path, workspace := range status.Workspaces {
+		if s.getWorkspaceNameFromPath(path) == workspaceName {
+			return &workspace, nil
+		}
+	}
+
+	return nil, fmt.Errorf("%w: %s", ErrWorkspaceNotFound, workspaceName)
 }
 
 // computeWorkspacesMap computes the workspaces map from the workspaces list.
