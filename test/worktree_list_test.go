@@ -110,7 +110,7 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 }
 
 // TestListWorktreesEmpty tests listing worktrees when none exist
-func TestListWorktreesEmpty(t *testing.T) {
+func TestListWorktreesRepoModeEmpty(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -129,7 +129,7 @@ func TestListWorktreesEmpty(t *testing.T) {
 }
 
 // TestListWorktreesWithWorktrees tests listing worktrees when some exist
-func TestListWorktreesWithWorktrees(t *testing.T) {
+func TestListWorktreesRepoModeWithWorktrees(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -171,7 +171,7 @@ func TestListWorktreesWithWorktrees(t *testing.T) {
 }
 
 // TestListWorktreesVerboseMode tests listing worktrees with verbose output
-func TestListWorktreesVerboseMode(t *testing.T) {
+func TestListWorktreesRepoModeVerboseMode(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -192,7 +192,7 @@ func TestListWorktreesVerboseMode(t *testing.T) {
 }
 
 // TestListWorktreesQuietMode tests listing worktrees with quiet output
-func TestListWorktreesQuietMode(t *testing.T) {
+func TestListWorktreesRepoModeQuietMode(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -215,7 +215,7 @@ func TestListWorktreesQuietMode(t *testing.T) {
 }
 
 // TestListWorktreesNoRepository tests listing worktrees when not in a Git repository
-func TestListWorktreesNoRepository(t *testing.T) {
+func TestListWorktreesRepoModeNoRepository(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -233,36 +233,8 @@ func TestListWorktreesNoRepository(t *testing.T) {
 	assert.Contains(t, output, "no Git repository or workspace found", "Should show appropriate error message")
 }
 
-// TestListWorktreesWorkspaceMode tests listing worktrees in workspace mode (placeholder)
-func TestListWorktreesWorkspaceMode(t *testing.T) {
-	setup := setupTestEnvironment(t)
-	defer cleanupTestEnvironment(t, setup)
-
-	// Create a workspace file instead of a Git repository
-	workspaceFile := filepath.Join(setup.RepoPath, "test.code-workspace")
-	workspaceContent := `{
-		"folders": [
-			{
-				"name": "Test Project",
-				"path": "."
-			}
-		]
-	}`
-	require.NoError(t, os.WriteFile(workspaceFile, []byte(workspaceContent), 0644))
-
-	// Test listing worktrees in workspace mode
-	worktrees, err := listWorktrees(t, setup)
-	require.NoError(t, err, "Should succeed in workspace mode")
-	assert.Len(t, worktrees, 0, "Should return empty list in workspace mode (placeholder)")
-
-	// Test CLI command output
-	output, err := runListCommand(t, setup)
-	require.NoError(t, err, "CLI command should succeed")
-	assert.Contains(t, output, "No worktrees found for current workspace", "Should show appropriate message for workspace mode")
-}
-
 // TestListWorktreesStatusFileCorruption tests listing worktrees with corrupted status file
-func TestListWorktreesStatusFileCorruption(t *testing.T) {
+func TestListWorktreesRepoModeStatusFileCorruption(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -281,7 +253,7 @@ func TestListWorktreesStatusFileCorruption(t *testing.T) {
 }
 
 // TestListWorktreesMultipleRepositories tests that only worktrees for current repository are shown
-func TestListWorktreesMultipleRepositories(t *testing.T) {
+func TestListWorktreesRepoModeMultipleRepositories(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -326,7 +298,7 @@ func TestListWorktreesMultipleRepositories(t *testing.T) {
 }
 
 // TestListWorktreesRepositoryNameExtraction tests repository name extraction from different Git configurations
-func TestListWorktreesRepositoryNameExtraction(t *testing.T) {
+func TestListWorktreesRepoModeRepositoryNameExtraction(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -364,7 +336,7 @@ func TestListWorktreesRepositoryNameExtraction(t *testing.T) {
 }
 
 // TestListWorktreesNoRemoteOrigin tests repository name extraction when no remote origin is configured
-func TestListWorktreesNoRemoteOrigin(t *testing.T) {
+func TestListWorktreesRepoModeNoRemoteOrigin(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -390,7 +362,7 @@ func TestListWorktreesNoRemoteOrigin(t *testing.T) {
 }
 
 // TestRepositoryListCommand tests the repository list command
-func TestRepositoryListCommand(t *testing.T) {
+func TestRepositoryListCommandRepoMode(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 

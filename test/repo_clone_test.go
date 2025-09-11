@@ -38,8 +38,8 @@ func cloneRepository(t *testing.T, setup *TestSetup, repoURL string, recursive b
 	return err
 }
 
-// TestCloneRepositorySuccess tests successful cloning of a repository
-func TestCloneRepositorySuccess(t *testing.T) {
+// TestCloneRepositoryRepoModeSuccess tests successful cloning of a repository
+func TestCloneRepositoryRepoModeSuccess(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -96,8 +96,8 @@ func TestCloneRepositorySuccess(t *testing.T) {
 	assert.FileExists(t, readmePath, "Repository should have README file")
 }
 
-// TestCloneRepositoryShallow tests shallow cloning of a repository
-func TestCloneRepositoryShallow(t *testing.T) {
+// TestCloneRepositoryRepoModeShallow tests shallow cloning of a repository
+func TestCloneRepositoryRepoModeShallow(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -141,8 +141,8 @@ func TestCloneRepositoryShallow(t *testing.T) {
 	require.NoError(t, err, "Shallow clone should be a valid Git repository")
 }
 
-// TestCloneRepositoryAlreadyExists tests cloning a repository that already exists
-func TestCloneRepositoryAlreadyExists(t *testing.T) {
+// TestCloneRepositoryRepoModeAlreadyExists tests cloning a repository that already exists
+func TestCloneRepositoryRepoModeAlreadyExists(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -163,8 +163,8 @@ func TestCloneRepositoryAlreadyExists(t *testing.T) {
 	require.Len(t, status.Repositories, 1, "Should still have only one repository entry")
 }
 
-// TestCloneRepositoryInvalidURL tests cloning with an invalid URL
-func TestCloneRepositoryInvalidURL(t *testing.T) {
+// TestCloneRepositoryRepoModeInvalidURL tests cloning with an invalid URL
+func TestCloneRepositoryRepoModeInvalidURL(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -174,8 +174,8 @@ func TestCloneRepositoryInvalidURL(t *testing.T) {
 	assert.ErrorIs(t, err, cm.ErrUnsupportedRepositoryURLFormat, "Error should indicate invalid URL format")
 }
 
-// TestCloneRepositoryEmptyURL tests cloning with an empty URL
-func TestCloneRepositoryEmptyURL(t *testing.T) {
+// TestCloneRepositoryRepoModeEmptyURL tests cloning with an empty URL
+func TestCloneRepositoryRepoModeEmptyURL(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -185,8 +185,8 @@ func TestCloneRepositoryEmptyURL(t *testing.T) {
 	assert.ErrorIs(t, err, cm.ErrRepositoryURLEmpty, "Error should indicate empty URL")
 }
 
-// TestCloneRepositoryHTTPSURL tests cloning with HTTPS URL format
-func TestCloneRepositoryHTTPSURL(t *testing.T) {
+// TestCloneRepositoryRepoModeHTTPSURL tests cloning with HTTPS URL format
+func TestCloneRepositoryRepoModeHTTPSURL(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -219,8 +219,8 @@ func TestCloneRepositoryHTTPSURL(t *testing.T) {
 	assert.DirExists(t, repo.Path, "Cloned repository should exist")
 }
 
-// TestCloneRepositoryWithDotGitSuffix tests cloning with .git suffix
-func TestCloneRepositoryWithDotGitSuffix(t *testing.T) {
+// TestCloneRepositoryRepoModeWithDotGitSuffix tests cloning with .git suffix
+func TestCloneRepositoryRepoModeWithDotGitSuffix(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -253,8 +253,8 @@ func TestCloneRepositoryWithDotGitSuffix(t *testing.T) {
 	assert.DirExists(t, repo.Path, "Cloned repository should exist")
 }
 
-// TestCloneRepositoryDefaultBranchDetection tests that default branch is correctly detected
-func TestCloneRepositoryDefaultBranchDetection(t *testing.T) {
+// TestCloneRepositoryRepoModeDefaultBranchDetection tests that default branch is correctly detected
+func TestCloneRepositoryRepoModeDefaultBranchDetection(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -293,8 +293,8 @@ func TestCloneRepositoryDefaultBranchDetection(t *testing.T) {
 	assert.True(t, actualBranch == "main" || actualBranch == "master", "Default branch should be main or master")
 }
 
-// TestCloneRepositorySSHURL tests cloning with SSH URL format (if SSH is available)
-func TestCloneRepositorySSHURL(t *testing.T) {
+// TestCloneRepositoryRepoModeSSHURL tests cloning with SSH URL format (if SSH is available)
+func TestCloneRepositoryRepoModeSSHURL(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 

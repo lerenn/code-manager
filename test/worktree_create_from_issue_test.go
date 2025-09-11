@@ -32,7 +32,7 @@ type createWorktreeFromIssueWithIDEParams struct {
 
 // TestCreateFromIssue_StatusFileVerification tests that issue information is stored in the status file
 // TODO: Fix this test - it's causing a nil pointer dereference due to repository validation issues
-func TestCreateFromIssue_StatusFileVerification(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeStatusFileVerification(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -127,7 +127,7 @@ func verifyIssueInfoInStatusFile(t *testing.T, setup *TestSetup, branch string) 
 }
 
 // TestCreateFromIssue_WorkspaceStatusFileVerification tests that issue information is stored in workspace mode
-func TestCreateFromIssue_WorkspaceStatusFileVerification(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeWorkspaceStatusFileVerification(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -183,7 +183,7 @@ func TestCreateFromIssue_WorkspaceStatusFileVerification(t *testing.T) {
 }
 
 // TestCreateFromIssue_NoIssueInfo tests that worktrees without issue info don't have the Issue field
-func TestCreateFromIssue_NoIssueInfo(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeNoIssueInfo(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -241,7 +241,7 @@ func TestCreateFromIssue_NoIssueInfo(t *testing.T) {
 	t.Logf("✅ Verified that regular worktree has no issue information in status file")
 }
 
-func TestCreateFromIssue_InvalidIssueReference(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeInvalidIssueReference(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -257,7 +257,7 @@ func TestCreateFromIssue_InvalidIssueReference(t *testing.T) {
 	assert.Contains(t, err.Error(), "branch name cannot be empty")
 }
 
-func TestCreateFromIssue_InvalidIssueNumber(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeInvalidIssueNumber(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -273,7 +273,7 @@ func TestCreateFromIssue_InvalidIssueNumber(t *testing.T) {
 	assert.Contains(t, err.Error(), "branch name cannot be empty")
 }
 
-func TestCreateFromIssue_InvalidOwnerRepoFormat(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeInvalidOwnerRepoFormat(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -289,7 +289,7 @@ func TestCreateFromIssue_InvalidOwnerRepoFormat(t *testing.T) {
 	assert.Contains(t, err.Error(), "branch name cannot be empty")
 }
 
-func TestCreateFromIssue_IssueNumberRequiresContext(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeIssueNumberRequiresContext(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -310,7 +310,7 @@ func TestCreateFromIssue_IssueNumberRequiresContext(t *testing.T) {
 	}
 }
 
-func TestCreateFromIssue_ValidGitHubURL(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeValidGitHubURL(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -333,7 +333,7 @@ func TestCreateFromIssue_ValidGitHubURL(t *testing.T) {
 	}
 }
 
-func TestCreateFromIssue_ValidOwnerRepoFormat(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeValidOwnerRepoFormat(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -356,7 +356,7 @@ func TestCreateFromIssue_ValidOwnerRepoFormat(t *testing.T) {
 	}
 }
 
-func TestCreateFromIssue_WithCustomBranchName(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeWithCustomBranchName(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -383,7 +383,7 @@ func TestCreateFromIssue_WithCustomBranchName(t *testing.T) {
 	}
 }
 
-func TestCreateFromIssue_WithIDE(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeWithIDE(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -503,7 +503,7 @@ func addGitHubRemote(t *testing.T, repoPath string) {
 }
 
 // TestCreateFromIssue_WorkspaceMode tests the create from issue functionality in workspace mode
-func TestCreateFromIssue_WorkspaceMode(t *testing.T) {
+func TestCreateWorktreeFromIssueRepoModeWorkspaceMode(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 

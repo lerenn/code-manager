@@ -41,8 +41,7 @@ type Workspace interface {
 	DeleteWorktree(branch string, force bool) error
 	ListWorktrees() ([]status.WorktreeInfo, error)
 	SetLogger(logger logger.Logger)
-	Load(force bool) error
-	DetectWorkspaceFiles() ([]string, error)
+	Load() error
 	ParseFile(filename string) (Config, error)
 	GetName(config Config, filename string) string
 	HandleMultipleFiles(workspaceFiles []string, force bool) (string, error)
@@ -62,7 +61,7 @@ type realWorkspace struct {
 	prompt           prompt.Prompter
 	worktreeProvider WorktreeProvider
 	hookManager      hooks.HookManagerInterface
-	OriginalFile     string
+	file             string
 }
 
 // NewWorkspaceParams contains parameters for creating a new Workspace instance.

@@ -190,21 +190,6 @@ func (mr *MockRepositoryMockRecorder) IsGitRepository() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsGitRepository", reflect.TypeOf((*MockRepository)(nil).IsGitRepository))
 }
 
-// IsWorkspaceFile mocks base method.
-func (m *MockRepository) IsWorkspaceFile() (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsWorkspaceFile")
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// IsWorkspaceFile indicates an expected call of IsWorkspaceFile.
-func (mr *MockRepositoryMockRecorder) IsWorkspaceFile() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsWorkspaceFile", reflect.TypeOf((*MockRepository)(nil).IsWorkspaceFile))
-}
-
 // ListWorktrees mocks base method.
 func (m *MockRepository) ListWorktrees() ([]status.WorktreeInfo, error) {
 	m.ctrl.T.Helper()

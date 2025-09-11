@@ -31,7 +31,7 @@ func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 	return cmInstance.LoadWorktree(branchArg)
 }
 
-func TestLoadWorktreeWithOptionalRemote(t *testing.T) {
+func TestLoadWorktreeRepoModeWithOptionalRemote(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -83,7 +83,7 @@ func TestLoadWorktreeWithOptionalRemote(t *testing.T) {
 	})
 }
 
-func TestLoadWorktreeWithNewRemote(t *testing.T) {
+func TestLoadWorktreeRepoModeWithNewRemote(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 

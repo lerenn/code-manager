@@ -24,7 +24,7 @@ func (c *realCM) DeleteWorkTree(branch string, force bool) error {
 		c.VerbosePrint("Deleting worktree for branch: %s (force: %t)", branch, force)
 
 		// Detect project mode
-		projectType, err := c.detectProjectMode()
+		projectType, err := c.detectProjectMode("")
 		if err != nil {
 			return fmt.Errorf("failed to detect project mode: %w", err)
 		}

@@ -348,8 +348,14 @@ func (c *realCM) executePreHooks(operationName string, ctx *hooks.HookContext) e
 }
 
 // detectProjectMode detects the type of project (single repository or workspace).
-func (c *realCM) detectProjectMode() (mode.Mode, error) {
+func (c *realCM) detectProjectMode(workspaceName string) (mode.Mode, error) {
 	c.VerbosePrint("Detecting project mode...")
+
+	// If workspaceName is provided, return workspace mode
+	if workspaceName != "" {
+		c.VerbosePrint("Workspace mode detected (workspace: %s)", workspaceName)
+		return mode.ModeWorkspace, nil
+	}
 
 	// Create repository instance to check if we're in a Git repository
 	repoInstance := c.repositoryProvider(repository.NewRepositoryParams{
@@ -363,7 +369,7 @@ func (c *realCM) detectProjectMode() (mode.Mode, error) {
 		HookManager:      c.hookManager,
 	})
 
-	// First, check if we're in a Git repository
+	// Check if we're in a Git repository
 	exists, err := repoInstance.IsGitRepository()
 	if err != nil {
 		return mode.ModeNone, fmt.Errorf("failed to check Git repository: %w", err)
@@ -372,15 +378,7 @@ func (c *realCM) detectProjectMode() (mode.Mode, error) {
 		c.VerbosePrint("Single repository mode detected")
 		return mode.ModeSingleRepo, nil
 	}
-	// If not a Git repository, check for workspace files
-	workspaceFiles, err := c.fs.Glob("*.code-workspace")
-	if err != nil {
-		return mode.ModeNone, fmt.Errorf("failed to check Git repository: %w", err)
-	}
-	if len(workspaceFiles) > 0 {
-		c.VerbosePrint("Workspace mode detected")
-		return mode.ModeWorkspace, nil
-	}
+
 	c.VerbosePrint("No project mode detected")
 	return mode.ModeNone, nil
 }

@@ -12,8 +12,8 @@ func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 	w.logger.Logf("Listing worktrees for workspace mode")
 
 	// Load workspace configuration (only if not already loaded)
-	if w.OriginalFile == "" {
-		if err := w.Load(false); err != nil {
+	if w.file == "" {
+		if err := w.Load(); err != nil {
 			return nil, fmt.Errorf("failed to load workspace: %w", err)
 		}
 	}

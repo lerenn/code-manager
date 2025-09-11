@@ -11,8 +11,8 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 	w.logger.Logf("Deleting worktrees for branch: %s", branch)
 
 	// Load workspace configuration (only if not already loaded)
-	if w.OriginalFile == "" {
-		if err := w.Load(force); err != nil {
+	if w.file == "" {
+		if err := w.Load(); err != nil {
 			return fmt.Errorf("failed to load workspace: %w", err)
 		}
 	}
@@ -28,11 +28,11 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 	}
 
 	// Get workspace name for worktree-specific workspace file
-	workspaceConfig, err := w.ParseFile(w.OriginalFile)
+	workspaceConfig, err := w.ParseFile(w.file)
 	if err != nil {
 		return fmt.Errorf("failed to parse workspace file: %w", err)
 	}
-	workspaceName := w.GetName(workspaceConfig, w.OriginalFile)
+	workspaceName := w.GetName(workspaceConfig, w.file)
 
 	// Sanitize branch name for filename (replace slashes with hyphens)
 	sanitizedBranchForFilename := strings.ReplaceAll(branch, "/", "-")

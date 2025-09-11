@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGitCryptHookIntegration tests the git-crypt hook functionality in isolation
-func TestGitCryptHookIntegration(t *testing.T) {
+// TestCreateWorktreeWithGitCryptRepoModeIntegration tests the git-crypt hook functionality in isolation
+func TestCreateWorktreeWithGitCryptRepoModeIntegration(t *testing.T) {
 	// Fail test if git-crypt is not available
 	if !isGitCryptAvailable() {
 		t.Fatal("git-crypt is not available on this system - this is a required dependency")
@@ -35,8 +35,8 @@ func TestGitCryptHookIntegration(t *testing.T) {
 	testGitCryptHook(t, setup.RepoPath)
 }
 
-// TestGitCryptHookWithMissingKey tests the git-crypt hook when key is missing
-func TestGitCryptHookWithMissingKey(t *testing.T) {
+// TestCreateWorktreeWithGitCryptRepoModeWithMissingKey tests the git-crypt hook when key is missing
+func TestCreateWorktreeWithGitCryptRepoModeWithMissingKey(t *testing.T) {
 	// Fail test if git-crypt is not available
 	if !isGitCryptAvailable() {
 		t.Fatal("git-crypt is not available on this system - this is a required dependency")

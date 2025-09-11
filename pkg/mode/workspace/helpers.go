@@ -72,5 +72,5 @@ func (w *realWorkspace) removeWorktreeStatusEntries(worktrees []status.WorktreeI
 func (w *realWorkspace) getWorkspacePath() string {
 	// This is a simplified implementation
 	// In practice, you might want to implement proper workspace path resolution
-	return filepath.Dir(w.OriginalFile)
+	return filepath.Dir(w.file)
 }

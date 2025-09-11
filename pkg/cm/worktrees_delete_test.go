@@ -109,9 +109,6 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 	// Mock no repository found
 	mockRepository.EXPECT().IsGitRepository().Return(false, nil)
 
-	// Mock no workspace files found
-	mockFS.EXPECT().Glob("*.code-workspace").Return([]string{}, nil)
-
 	err = cm.DeleteWorkTree("test-branch", true)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)

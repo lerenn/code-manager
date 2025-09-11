@@ -57,7 +57,7 @@ func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 		c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
 
 		// 1. First determine the mode (workspace or repository)
-		projectType, err := c.detectProjectMode()
+		projectType, err := c.detectProjectMode(workspaceName)
 		if err != nil {
 			return fmt.Errorf("failed to detect project mode: %w", err)
 		}
@@ -106,41 +106,24 @@ func (c *realCM) handleWorktreeCreation(
 ) (string, error) {
 	switch projectType {
 	case mode.ModeWorkspace:
-		return c.handleWorktreeCreationInWorkspace(sanitizedBranch, issueRef, workspaceName, opts...)
+		if issueRef != "" {
+			// Workspace mode with issue-based creation
+			return c.createWorkTreeFromIssueForWorkspace(&sanitizedBranch, issueRef)
+		}
+		// Workspace mode with specific workspace name
+		return c.createWorkTreeFromWorkspace(workspaceName, sanitizedBranch, opts...)
 	case mode.ModeSingleRepo:
-		return c.handleWorktreeCreationInRepository(sanitizedBranch, issueRef, opts...)
+		if issueRef != "" {
+			// Repository mode with issue-based creation
+			return c.createWorkTreeFromIssueForSingleRepo(&sanitizedBranch, issueRef)
+		}
+		// Repository mode with regular creation
+		return c.handleRepositoryMode(sanitizedBranch)
 	case mode.ModeNone:
 		return "", ErrNoGitRepositoryOrWorkspaceFound
 	default:
 		return "", fmt.Errorf("unknown project type")
 	}
-}
-
-// handleWorktreeCreationInWorkspace handles worktree creation in workspace mode.
-func (c *realCM) handleWorktreeCreationInWorkspace(
-	sanitizedBranch, issueRef, workspaceName string,
-	opts ...CreateWorkTreeOpts,
-) (string, error) {
-	if issueRef != "" {
-		// Workspace mode with issue-based creation
-		// TODO: Implement workspace issue-based creation
-		return "", fmt.Errorf("workspace issue-based creation not yet implemented")
-	}
-	// Workspace mode with specific workspace name
-	return c.createWorkTreeFromWorkspace(workspaceName, sanitizedBranch, opts...)
-}
-
-// handleWorktreeCreationInRepository handles worktree creation in repository mode.
-func (c *realCM) handleWorktreeCreationInRepository(
-	sanitizedBranch, issueRef string,
-	_ ...CreateWorkTreeOpts,
-) (string, error) {
-	if issueRef != "" {
-		// Repository mode with issue-based creation
-		return c.createWorkTreeFromIssue(sanitizedBranch, issueRef)
-	}
-	// Repository mode with regular creation
-	return c.handleRepositoryMode(sanitizedBranch)
 }
 
 // createWorkTreeFromWorkspace creates worktrees from workspace definition in status.yaml.
@@ -234,40 +217,6 @@ func (c *realCM) translateRepositoryError(err error) error {
 
 	// Return the original error if no translation is needed
 	return err
-}
-
-// createWorkTreeFromIssue creates a worktree from a forge issue.
-func (c *realCM) createWorkTreeFromIssue(branch string, issueRef string) (string, error) {
-	c.VerbosePrint("Starting worktree creation from issue: %s", issueRef)
-
-	// 1. Detect project mode (repository or workspace)
-	projectType, err := c.detectProjectMode()
-	if err != nil {
-		c.VerbosePrint("Error: %v", err)
-		return "", fmt.Errorf("failed to detect project mode: %w", err)
-	}
-
-	// 2. Handle based on project type
-	var createErr error
-	var worktreePath string
-
-	switch projectType {
-	case mode.ModeSingleRepo:
-		worktreePath, createErr = c.createWorkTreeFromIssueForSingleRepo(&branch, issueRef)
-	case mode.ModeWorkspace:
-		worktreePath, createErr = c.createWorkTreeFromIssueForWorkspace(&branch, issueRef)
-	case mode.ModeNone:
-		return "", ErrNoGitRepositoryOrWorkspaceFound
-	default:
-		return "", fmt.Errorf("unknown project type")
-	}
-
-	// 3. Check for worktree creation errors first
-	if createErr != nil {
-		return "", createErr
-	}
-
-	return worktreePath, nil
 }
 
 // createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.

@@ -13,7 +13,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
-	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/worktree"
@@ -42,7 +41,6 @@ type Repository interface {
 	ListWorktrees() ([]status.WorktreeInfo, error)
 	SetLogger(logger logger.Logger)
 	LoadWorktree(remoteSource, branchName string) (string, error)
-	IsWorkspaceFile() (bool, error)
 	IsGitRepository() (bool, error)
 	ValidateGitConfiguration(workDir string) error
 	ValidateGitStatus() error
@@ -394,25 +392,6 @@ func (r *realRepository) IsGitRepository() (bool, error) {
 
 	r.logger.Logf("Git worktree detected (.git file)")
 	return true, nil
-}
-
-// IsWorkspaceFile checks if the current directory contains workspace files.
-func (r *realRepository) IsWorkspaceFile() (bool, error) {
-	r.logger.Logf("Checking for workspace files...")
-
-	// Check for .code-workspace files
-	workspaceFiles, err := r.fs.Glob("*.code-workspace")
-	if err != nil {
-		return false, fmt.Errorf("%w: %w", workspace.ErrFailedToCheckWorkspaceFiles, err)
-	}
-
-	if len(workspaceFiles) > 0 {
-		r.logger.Logf("Workspace files found: %v", workspaceFiles)
-		return true, nil
-	}
-
-	r.logger.Logf("No workspace files found")
-	return false, nil
 }
 
 // DeleteWorktree deletes a worktree for the repository with the specified branch.

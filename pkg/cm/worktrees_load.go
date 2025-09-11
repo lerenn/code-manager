@@ -38,7 +38,7 @@ func (c *realCM) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error 
 		c.VerbosePrint("Parsed: remote=%s, branch=%s", remoteSource, branchName)
 
 		// 2. Detect project mode (repository or workspace)
-		projectType, err := c.detectProjectMode()
+		projectType, err := c.detectProjectMode("")
 		if err != nil {
 			c.VerbosePrint("Error: %v", err)
 			return fmt.Errorf("failed to detect project type: %w", err)

@@ -35,7 +35,7 @@ func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 }
 
 // TestCreateWorktreeSingleRepo tests creating a worktree in single repository mode
-func TestCreateWorktreeSingleRepo(t *testing.T) {
+func TestCreateWorktreeRepoMode(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -90,7 +90,7 @@ func TestCreateWorktreeSingleRepo(t *testing.T) {
 
 // TestCreateWorktreeNonExistentBranch tests creating a worktree for a non-existent branch
 // Note: The CLI actually creates the branch if it doesn't exist, so this test verifies that behavior
-func TestCreateWorktreeNonExistentBranch(t *testing.T) {
+func TestCreateWorktreeRepoModeNonExistentBranch(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -148,7 +148,7 @@ func TestCreateWorktreeNonExistentBranch(t *testing.T) {
 }
 
 // TestCreateWorktreeAlreadyExists tests creating a worktree that already exists
-func TestCreateWorktreeAlreadyExists(t *testing.T) {
+func TestCreateWorktreeRepoModeAlreadyExists(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -170,7 +170,7 @@ func TestCreateWorktreeAlreadyExists(t *testing.T) {
 }
 
 // TestCreateWorktreeOutsideGitRepo tests creating a worktree outside a Git repository
-func TestCreateWorktreeOutsideGitRepo(t *testing.T) {
+func TestCreateWorktreeRepoModeOutsideGitRepo(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -191,7 +191,7 @@ func TestCreateWorktreeOutsideGitRepo(t *testing.T) {
 }
 
 // TestCreateWorktreeWithVerboseFlag tests creating a worktree with verbose output
-func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
+func TestCreateWorktreeRepoModeWithVerboseFlag(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -220,7 +220,7 @@ func TestCreateWorktreeWithVerboseFlag(t *testing.T) {
 }
 
 // TestCreateWorktreeWithQuietFlag tests creating a worktree with quiet output
-func TestCreateWorktreeWithQuietFlag(t *testing.T) {
+func TestCreateWorktreeRepoModeWithQuietFlag(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -237,7 +237,7 @@ func TestCreateWorktreeWithQuietFlag(t *testing.T) {
 }
 
 // TestCreateWorktreeWithIDE tests creating a worktree with IDE opening
-func TestCreateWorktreeWithIDE(t *testing.T) {
+func TestCreateWorktreeRepoModeWithIDE(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -289,7 +289,7 @@ func TestCreateWorktreeWithIDE(t *testing.T) {
 
 // TestCreateWorktreeFromOriginDefaultBranch tests that new worktrees are created from origin's default branch
 // and not from the local default branch, even when the local branch has been reset to an older commit
-func TestCreateWorktreeFromOriginDefaultBranch(t *testing.T) {
+func TestCreateWorktreeRepoModeFromOriginDefaultBranch(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
@@ -379,7 +379,7 @@ func TestCreateWorktreeFromOriginDefaultBranch(t *testing.T) {
 }
 
 // TestCreateWorktreeWithUnsupportedIDE tests creating a worktree with unsupported IDE
-func TestCreateWorktreeWithUnsupportedIDE(t *testing.T) {
+func TestCreateWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 

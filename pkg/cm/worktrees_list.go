@@ -26,7 +26,7 @@ func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, er
 		c.VerbosePrint("Listing worktrees with mode detection")
 
 		// Detect project mode
-		projectType, err := c.detectProjectMode()
+		projectType, err := c.detectProjectMode("")
 		if err != nil {
 			return nil, mode.ModeNone, fmt.Errorf("failed to detect project mode: %w", err)
 		}
