@@ -33,7 +33,7 @@ type Remote struct {
 
 // Workspace represents a workspace entry in the status file.
 type Workspace struct {
-	Worktree     []string `yaml:"worktree"`     // List of worktree references
+	Worktrees    []string `yaml:"worktrees"`    // List of worktrees references
 	Repositories []string `yaml:"repositories"` // List of repository URLs/names
 }
 
@@ -64,6 +64,12 @@ type Manager interface {
 	AddWorkspace(workspacePath string, params AddWorkspaceParams) error
 	// GetWorkspace retrieves a workspace entry from the status file.
 	GetWorkspace(workspacePath string) (*Workspace, error)
+	// RemoveWorkspace removes a workspace entry from the status file.
+	RemoveWorkspace(workspaceName string) error
+	// UpdateWorkspace updates an existing workspace entry in the status file.
+	UpdateWorkspace(workspaceName string, workspace Workspace) error
+	// ListWorkspaces lists all workspaces in the status file.
+	ListWorkspaces() (map[string]Workspace, error)
 }
 
 type realManager struct {
@@ -308,7 +314,7 @@ func (s *realManager) AddWorkspace(workspacePath string, params AddWorkspacePara
 
 	// Create new workspace entry
 	workspace := Workspace{
-		Worktree:     []string{}, // Empty initially, populated when worktrees are created
+		Worktrees:    []string{}, // Empty initially, populated when worktrees are created
 		Repositories: params.Repositories,
 	}
 
@@ -338,6 +344,17 @@ func (s *realManager) GetWorkspace(workspacePath string) (*Workspace, error) {
 	}
 
 	return &workspace, nil
+}
+
+// ListWorkspaces lists all workspaces in the status file.
+func (s *realManager) ListWorkspaces() (map[string]Workspace, error) {
+	// Load current status
+	status, err := s.loadStatus()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load status: %w", err)
+	}
+
+	return status.Workspaces, nil
 }
 
 // computeWorkspacesMap computes the workspaces map from the workspaces list.

@@ -7,28 +7,39 @@ import (
 	"github.com/lerenn/code-manager/pkg/cm/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
-	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
-// ListWorktrees lists worktrees for the current project with mode detection.
-func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, error) {
+// ListWorktrees lists worktrees for a workspace or repository.
+func (c *realCM) ListWorktrees(opts ...ListWorktreesOpts) ([]status.WorktreeInfo, error) {
+	// Parse options
+	var options ListWorktreesOpts
+	if len(opts) > 0 {
+		options = opts[0]
+	}
+
 	// Prepare parameters for hooks
 	params := map[string]interface{}{
-		"force": force,
+		"workspace_name": options.WorkspaceName,
 	}
 
 	// Execute with hooks
-	return c.executeWithHooksAndReturnListWorktrees(consts.ListWorktrees, params, func() (
-		[]status.WorktreeInfo, mode.Mode, error,
-	) {
-		c.VerbosePrint("Listing worktrees with mode detection")
+	var result []status.WorktreeInfo
+	err := c.executeWithHooks(consts.ListWorktrees, params, func() error {
+		var err error
+		c.VerbosePrint("Listing worktrees")
 
-		// Detect project mode
+		// If workspace name is provided, list workspace worktrees
+		if options.WorkspaceName != "" {
+			result, err = c.listWorkspaceWorktrees(options.WorkspaceName)
+			return err
+		}
+
+		// Otherwise, detect project mode and list accordingly
 		projectType, err := c.detectProjectMode("")
 		if err != nil {
-			return nil, mode.ModeNone, fmt.Errorf("failed to detect project mode: %w", err)
+			return fmt.Errorf("failed to detect project mode: %w", err)
 		}
 
 		switch projectType {
@@ -45,27 +56,69 @@ func (c *realCM) ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, er
 				HookManager:      c.hookManager,
 			})
 			worktrees, err := repoInstance.ListWorktrees()
-			return worktrees, mode.ModeSingleRepo, c.translateListError(err)
+			result = worktrees
+			return c.translateListError(err)
 		case mode.ModeWorkspace:
-			// Create workspace instance
-			workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
-				FS:               c.fs,
-				Git:              c.git,
-				Config:           c.config,
-				StatusManager:    c.statusManager,
-				Logger:           c.logger,
-				Prompt:           c.prompt,
-				WorktreeProvider: worktree.NewWorktree,
-				HookManager:      c.hookManager,
-			})
-			worktrees, err := workspaceInstance.ListWorktrees()
-			return worktrees, mode.ModeWorkspace, c.translateListError(err)
+			return fmt.Errorf("workspace mode detected but no workspace name provided")
 		case mode.ModeNone:
-			return nil, mode.ModeNone, ErrNoGitRepositoryOrWorkspaceFound
+			return ErrNoGitRepositoryOrWorkspaceFound
 		default:
-			return nil, mode.ModeNone, fmt.Errorf("unknown project type")
+			return fmt.Errorf("unknown project type")
 		}
 	})
+	return result, err
+}
+
+// listWorkspaceWorktrees lists all worktrees associated with a workspace.
+func (c *realCM) listWorkspaceWorktrees(workspaceName string) ([]status.WorktreeInfo, error) {
+	c.VerbosePrint("Listing worktrees for workspace: %s", workspaceName)
+
+	// Get workspace from status
+	workspace, err := c.statusManager.GetWorkspace(workspaceName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get workspace: %w", err)
+	}
+
+	return c.listWorkspaceWorktreesFromWorkspace(workspace)
+}
+
+// listWorkspaceWorktreesFromWorkspace lists all worktrees from a workspace object.
+func (c *realCM) listWorkspaceWorktreesFromWorkspace(workspace *status.Workspace) ([]status.WorktreeInfo, error) {
+	// Get worktrees that are specifically associated with this workspace
+	workspaceWorktrees := make([]status.WorktreeInfo, 0)
+
+	// Iterate through the worktrees listed in the workspace
+	for _, worktreeRef := range workspace.Worktrees {
+		// Find the worktree in the workspace's repositories
+		found := false
+		for _, repoURL := range workspace.Repositories {
+			// Get repository to check its worktrees
+			repo, err := c.statusManager.GetRepository(repoURL)
+			if err != nil {
+				c.VerbosePrint("  ⚠ Skipping repository %s: %v", repoURL, err)
+				continue // Skip if repository not found
+			}
+
+			// Look for the worktree reference in this repository's worktrees
+			for _, worktree := range repo.Worktrees {
+				if worktree.Branch == worktreeRef {
+					workspaceWorktrees = append(workspaceWorktrees, worktree)
+					found = true
+					break
+				}
+			}
+			if found {
+				break
+			}
+		}
+
+		if !found {
+			c.VerbosePrint("  ⚠ Worktree reference '%s' not found in workspace repositories", worktreeRef)
+		}
+	}
+
+	c.VerbosePrint("Found %d worktrees for workspace", len(workspaceWorktrees))
+	return workspaceWorktrees, nil
 }
 
 // translateListError translates errors from list operations to CM package errors.

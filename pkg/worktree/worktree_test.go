@@ -263,7 +263,7 @@ func TestWorktree_Delete_Success(t *testing.T) {
 
 	// Mock expectations
 	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(existingWorktree, nil)
-	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath).Return(nil)
+	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath, params.Force).Return(nil)
 	mockFS.EXPECT().RemoveAll(params.WorktreePath).Return(nil)
 	mockStatus.EXPECT().RemoveWorktree(params.RepoURL, params.Branch).Return(nil)
 
@@ -340,7 +340,7 @@ func TestWorktree_Delete_WithConfirmation(t *testing.T) {
 	// Mock expectations
 	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(existingWorktree, nil)
 	mockPrompt.EXPECT().PromptForConfirmation(gomock.Any(), false).Return(true, nil)
-	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath).Return(nil)
+	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath, params.Force).Return(nil)
 	mockFS.EXPECT().RemoveAll(params.WorktreePath).Return(nil)
 	mockStatus.EXPECT().RemoveWorktree(params.RepoURL, params.Branch).Return(nil)
 

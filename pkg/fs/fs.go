@@ -45,6 +45,9 @@ type FS interface {
 	// RemoveAll removes a file or directory and all its contents.
 	RemoveAll(path string) error
 
+	// Remove removes a file or empty directory.
+	Remove(path string) error
+
 	// Which finds the executable path for a command using the system's PATH.
 	Which(command string) (string, error)
 
@@ -217,6 +220,11 @@ func (f *realFS) ExpandPath(path string) (string, error) {
 // RemoveAll removes a file or directory and all its contents.
 func (f *realFS) RemoveAll(path string) error {
 	return os.RemoveAll(path)
+}
+
+// Remove removes a file or empty directory.
+func (f *realFS) Remove(path string) error {
+	return os.Remove(path)
 }
 
 // Which finds the executable path for a command using the system's PATH.

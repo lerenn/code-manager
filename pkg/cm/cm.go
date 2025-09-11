@@ -23,16 +23,19 @@ type RepositoryProvider func(params repository.NewRepositoryParams) repository.R
 // WorkspaceProvider is a function type that creates workspace instances.
 type WorkspaceProvider func(params workspace.NewWorkspaceParams) workspace.Workspace
 
+// WorktreeProvider is a function type that creates worktree instances.
+type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
+
 // CM interface provides Git repository detection functionality.
 type CM interface {
 	// CreateWorkTree executes the main application logic.
 	CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 	// DeleteWorkTree deletes a worktree for the specified branch.
-	DeleteWorkTree(branch string, force bool) error
+	DeleteWorkTree(branch string, force bool, opts ...DeleteWorktreeOpts) error
 	// OpenWorktree opens an existing worktree in the specified IDE.
 	OpenWorktree(worktreeName, ideName string) error
-	// ListWorktrees lists worktrees for the current project with mode detection.
-	ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, error)
+	// ListWorktrees lists worktrees for a workspace or repository.
+	ListWorktrees(opts ...ListWorktreesOpts) ([]status.WorktreeInfo, error)
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
 	LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error
 	// Init initializes CM configuration.
@@ -43,6 +46,10 @@ type CM interface {
 	ListRepositories() ([]RepositoryInfo, error)
 	// CreateWorkspace creates a new workspace with repository selection.
 	CreateWorkspace(params CreateWorkspaceParams) error
+	// DeleteWorkspace deletes a workspace and all associated resources.
+	DeleteWorkspace(params DeleteWorkspaceParams) error
+	// ListWorkspaces lists all workspaces from the status file.
+	ListWorkspaces() ([]WorkspaceInfo, error)
 	// SetLogger sets the logger for this CM instance.
 	SetLogger(logger logger.Logger)
 }
@@ -51,6 +58,7 @@ type CM interface {
 type NewCMParams struct {
 	RepositoryProvider RepositoryProvider
 	WorkspaceProvider  WorkspaceProvider
+	WorktreeProvider   WorktreeProvider
 	Config             config.Config
 	Hooks              hooks.HookManagerInterface
 	Status             status.Manager
@@ -69,6 +77,7 @@ type realCM struct {
 	prompt             prompt.Prompter
 	repositoryProvider RepositoryProvider
 	workspaceProvider  WorkspaceProvider
+	worktreeProvider   WorktreeProvider
 	hookManager        hooks.HookManagerInterface
 }
 
@@ -86,6 +95,7 @@ func NewCM(params NewCMParams) (CM, error) {
 		prompt:             instances.prompt,
 		repositoryProvider: instances.repoProvider,
 		workspaceProvider:  instances.workspaceProvider,
+		worktreeProvider:   instances.worktreeProvider,
 		hookManager:        hookManager,
 	}, nil
 }
@@ -114,6 +124,7 @@ type cmInstances struct {
 	status            status.Manager
 	repoProvider      RepositoryProvider
 	workspaceProvider WorkspaceProvider
+	worktreeProvider  WorktreeProvider
 }
 
 // createInstances creates and initializes all required instances for CM.
@@ -153,6 +164,11 @@ func createInstances(params NewCMParams) cmInstances {
 		workspaceProvider = workspace.NewWorkspace
 	}
 
+	worktreeProvider := params.WorktreeProvider
+	if worktreeProvider == nil {
+		worktreeProvider = worktree.NewWorktree
+	}
+
 	return cmInstances{
 		fs:                fsInstance,
 		git:               gitInstance,
@@ -161,6 +177,7 @@ func createInstances(params NewCMParams) cmInstances {
 		status:            statusInstance,
 		repoProvider:      repoProvider,
 		workspaceProvider: workspaceProvider,
+		worktreeProvider:  worktreeProvider,
 	}
 }
 
@@ -298,6 +315,46 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 		return nil, hookErr
 	}
 	return repositories, resultErr
+}
+
+// executeWithHooksAndReturnWorkspaces executes an operation with pre and post hooks that returns workspaces.
+func (c *realCM) executeWithHooksAndReturnWorkspaces(
+	operationName string,
+	params map[string]interface{},
+	operation func() ([]WorkspaceInfo, error),
+) ([]WorkspaceInfo, error) {
+	ctx := &hooks.HookContext{
+		OperationName: operationName,
+		Parameters:    params,
+		Results:       make(map[string]interface{}),
+		Metadata:      make(map[string]interface{}),
+	}
+	// Execute pre-hooks (if hook manager is available)
+	if err := c.executePreHooks(operationName, ctx); err != nil {
+		return nil, err
+	}
+	// Execute operation
+	var workspaces []WorkspaceInfo
+	var resultErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				resultErr = fmt.Errorf("panic in %s: %v", operationName, r)
+			}
+		}()
+		workspaces, resultErr = operation()
+	}()
+	// Update context with results
+	ctx.Error = resultErr
+	if resultErr == nil {
+		ctx.Results["workspaces"] = workspaces
+		ctx.Results["success"] = true
+	}
+	// Execute post-hooks or error-hooks (if hook manager is available)
+	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
+		return nil, hookErr
+	}
+	return workspaces, resultErr
 }
 
 // executeHooks executes pre-hooks, post-hooks, or error-hooks based on the operation result.

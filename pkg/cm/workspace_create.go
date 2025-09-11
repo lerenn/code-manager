@@ -15,6 +15,17 @@ type CreateWorkspaceParams struct {
 	Repositories  []string // Repository identifiers (names, paths, URLs)
 }
 
+// DeleteWorkspaceParams contains parameters for DeleteWorkspace.
+type DeleteWorkspaceParams struct {
+	WorkspaceName string // Name of the workspace to delete
+	Force         bool   // Skip confirmation prompts
+}
+
+// ListWorktreesOpts contains options for ListWorktrees.
+type ListWorktreesOpts struct {
+	WorkspaceName string // Name of the workspace to list worktrees for (optional)
+}
+
 // CreateWorkspace creates a new workspace with repository selection.
 func (c *realCM) CreateWorkspace(params CreateWorkspaceParams) error {
 	return c.executeWithHooks("create_workspace", map[string]interface{}{

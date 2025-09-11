@@ -49,7 +49,7 @@ type Git interface {
 	WorktreeExists(repoPath, branch string) (bool, error)
 
 	// RemoveWorktree removes a worktree from Git's tracking.
-	RemoveWorktree(repoPath, worktreePath string) error
+	RemoveWorktree(repoPath, worktreePath string, force bool) error
 
 	// GetWorktreePath gets the path of a worktree for a branch.
 	GetWorktreePath(repoPath, branch string) (string, error)
@@ -336,13 +336,18 @@ func (g *realGit) WorktreeExists(repoPath, branch string) (bool, error) {
 }
 
 // RemoveWorktree removes a worktree from Git's tracking.
-func (g *realGit) RemoveWorktree(repoPath, worktreePath string) error {
-	cmd := exec.Command("git", "worktree", "remove", worktreePath)
+func (g *realGit) RemoveWorktree(repoPath, worktreePath string, force bool) error {
+	var cmd *exec.Cmd
+	if force {
+		cmd = exec.Command("git", "worktree", "remove", "--force", worktreePath)
+	} else {
+		cmd = exec.Command("git", "worktree", "remove", worktreePath)
+	}
 	cmd.Dir = repoPath
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("git worktree remove failed: %w (command: git worktree remove %s, output: %s)",
-			err, worktreePath, string(output))
+		return fmt.Errorf("git worktree remove failed: %w (command: %s, output: %s)",
+			err, cmd.String(), string(output))
 	}
 	return nil
 }

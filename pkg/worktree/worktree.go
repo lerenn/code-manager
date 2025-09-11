@@ -215,7 +215,7 @@ func (w *realWorktree) Delete(params DeleteParams) error {
 	}
 
 	// Remove worktree from Git tracking first
-	if err := w.git.RemoveWorktree(params.RepoPath, params.WorktreePath); err != nil {
+	if err := w.git.RemoveWorktree(params.RepoPath, params.WorktreePath, params.Force); err != nil {
 		return fmt.Errorf("failed to remove worktree from Git: %w", err)
 	}
 
