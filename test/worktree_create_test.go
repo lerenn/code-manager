@@ -571,17 +571,6 @@ func TestCreateWorktreeWorkspaceMode_EmptyRepositories(t *testing.T) {
 	err = cmInstance.CreateWorkspace(workspaceParams)
 	// This should fail because workspace creation requires at least one repository
 	assert.Error(t, err)
-	return
-
-	// Try to create worktrees from empty workspace
-	branch := "feature-branch"
-	err = cmInstance.CreateWorkTree(branch, cm.CreateWorkTreeOpts{
-		WorkspaceName: workspaceName,
-	})
-
-	// Verify error
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "workspace 'empty-workspace' has no repositories defined")
 }
 
 // TestCreateWorktreeWorkspaceMode_RepositoryNotFound tests error handling for workspace with non-existent repositories
