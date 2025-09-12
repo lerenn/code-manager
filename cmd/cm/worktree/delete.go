@@ -10,15 +10,19 @@ import (
 func createDeleteCmd() *cobra.Command {
 	var force bool
 	deleteCmd := &cobra.Command{
-		Use:   "delete <branch> [--force/-f]",
-		Short: "Delete a worktree for the specified branch",
-		Long: `Delete a worktree for the specified branch.
+		Use:   "delete <branch> [branch2] [branch3] ... [--force/-f]",
+		Short: "Delete worktrees for the specified branches",
+		Long: `Delete worktrees for the specified branches.
+
+You can delete multiple worktrees at once by providing multiple branch names.
 
 Examples:
   cm worktree delete feature-branch
   cm wt delete feature-branch --force
-  cm w delete feature-branch --force`,
-		Args: cobra.ExactArgs(1),
+  cm w delete feature-branch --force
+  cm worktree delete branch1 branch2 branch3
+  cm wt delete branch1 branch2 --force`,
+		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := config.CheckInitialization(); err != nil {
 				return err
@@ -38,7 +42,7 @@ Examples:
 				cmManager.SetLogger(logger.NewVerboseLogger())
 			}
 
-			return cmManager.DeleteWorkTree(args[0], force)
+			return cmManager.DeleteWorkTrees(args, force)
 		},
 	}
 
