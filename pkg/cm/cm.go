@@ -31,6 +31,8 @@ type CM interface {
 	DeleteWorkTree(branch string, force bool) error
 	// DeleteWorkTrees deletes multiple worktrees for the specified branches.
 	DeleteWorkTrees(branches []string, force bool) error
+	// DeleteAllWorktrees deletes all worktrees for the current repository or workspace.
+	DeleteAllWorktrees(force bool) error
 	// OpenWorktree opens an existing worktree in the specified IDE.
 	OpenWorktree(worktreeName, ideName string) error
 	// ListWorktrees lists worktrees for the current project with mode detection.
