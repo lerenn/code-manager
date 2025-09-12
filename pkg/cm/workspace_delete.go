@@ -69,7 +69,11 @@ func (c *realCM) deleteWorkspace(params DeleteWorkspaceParams) error {
 }
 
 // showDeletionConfirmation shows a confirmation prompt with detailed deletion summary.
-func (c *realCM) showDeletionConfirmation(workspaceName string, workspace *status.Workspace, worktrees []status.WorktreeInfo) error {
+func (c *realCM) showDeletionConfirmation(
+	workspaceName string,
+	workspace *status.Workspace,
+	worktrees []status.WorktreeInfo,
+) error {
 	// Group worktrees by repository for better display
 	repoWorktrees := make(map[string][]string)
 
@@ -128,7 +132,11 @@ func (c *realCM) showDeletionConfirmation(workspaceName string, workspace *statu
 }
 
 // deleteWorkspaceWorktrees deletes all worktrees associated with a workspace.
-func (c *realCM) deleteWorkspaceWorktrees(workspace *status.Workspace, worktrees []status.WorktreeInfo, force bool) error {
+func (c *realCM) deleteWorkspaceWorktrees(
+	workspace *status.Workspace,
+	worktrees []status.WorktreeInfo,
+	force bool,
+) error {
 	c.VerbosePrint("Deleting %d worktrees for workspace", len(worktrees))
 
 	// Process each repository in the workspace

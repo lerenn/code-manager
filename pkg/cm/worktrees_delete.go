@@ -198,7 +198,7 @@ func (c *realCM) deleteWorkspaceWorktree(workspaceName, branch string, force boo
 }
 
 // deleteWorktreeFromRepository deletes a worktree from a specific repository.
-func (c *realCM) deleteWorktreeFromRepository(repoURL, worktreeKey string, worktreeInfo status.WorktreeInfo, force bool) error {
+func (c *realCM) deleteWorktreeFromRepository(repoURL, _ string, worktreeInfo status.WorktreeInfo, force bool) error {
 	c.VerbosePrint("Deleting worktree from repository: %s", repoURL)
 
 	// Get repository path from status

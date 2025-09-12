@@ -234,49 +234,6 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 	return resultErr
 }
 
-// executeWithHooksAndReturnListWorktrees executes an operation with pre and post hooks
-// that returns worktrees and project type.
-func (c *realCM) executeWithHooksAndReturnListWorktrees(
-	operationName string,
-	params map[string]interface{},
-	operation func() ([]status.WorktreeInfo, mode.Mode, error),
-) ([]status.WorktreeInfo, mode.Mode, error) {
-	ctx := &hooks.HookContext{
-		OperationName: operationName,
-		Parameters:    params,
-		Results:       make(map[string]interface{}),
-		Metadata:      make(map[string]interface{}),
-	}
-	// Execute pre-hooks (if hook manager is available)
-	if err := c.executePreHooks(operationName, ctx); err != nil {
-		return nil, mode.ModeNone, err
-	}
-	// Execute operation
-	var worktrees []status.WorktreeInfo
-	var projectType mode.Mode
-	var resultErr error
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				resultErr = fmt.Errorf("panic in %s: %v", operationName, r)
-			}
-		}()
-		worktrees, projectType, resultErr = operation()
-	}()
-	// Update context with results
-	ctx.Error = resultErr
-	if resultErr == nil {
-		ctx.Results["worktrees"] = worktrees
-		ctx.Results["projectType"] = projectType
-		ctx.Results["success"] = true
-	}
-	// Execute post-hooks or error-hooks (if hook manager is available)
-	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
-		return nil, mode.ModeNone, hookErr
-	}
-	return worktrees, projectType, resultErr
-}
-
 // executeWithHooksAndReturnRepositories executes an operation with pre and post hooks that returns repositories.
 func (c *realCM) executeWithHooksAndReturnRepositories(
 	operationName string,

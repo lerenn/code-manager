@@ -67,7 +67,8 @@ Examples:
 	}
 
 	// Add workspace flag to list command (optional)
-	listCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "", "Name of the workspace to list worktrees for (optional)")
+	listCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
+		"Name of the workspace to list worktrees for (optional)")
 
 	return listCmd
 }

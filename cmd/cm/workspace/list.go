@@ -43,7 +43,7 @@ Examples:
 }
 
 // createListCmdRunE creates the RunE function for the list command.
-func createListCmdRunE(_ *cobra.Command, args []string) error {
+func createListCmdRunE(_ *cobra.Command, _ []string) error {
 	// Resolve config path
 	var path string
 	if config.ConfigPath != "" {

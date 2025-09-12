@@ -55,7 +55,8 @@ Examples:
 
 	// Add flags
 	deleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Skip confirmation prompts")
-	deleteCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "", "Name of the workspace to delete worktree from (optional)")
+	deleteCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
+		"Name of the workspace to delete worktree from (optional)")
 
 	return deleteCmd
 }
