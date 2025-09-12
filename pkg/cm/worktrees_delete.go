@@ -111,6 +111,39 @@ func (c *realCM) handleWorkspaceDeleteMode(branch string, force bool) error {
 	return nil
 }
 
+// DeleteWorkTrees deletes multiple worktrees for the specified branches.
+func (c *realCM) DeleteWorkTrees(branches []string, force bool) error {
+	if len(branches) == 0 {
+		return fmt.Errorf("no branches specified for deletion")
+	}
+
+	c.VerbosePrint("Deleting %d worktrees: %v (force: %t)", len(branches), branches, force)
+
+	var errors []error
+	for _, branch := range branches {
+		c.VerbosePrint("Deleting worktree for branch: %s", branch)
+		if err := c.DeleteWorkTree(branch, force); err != nil {
+			c.VerbosePrint("Failed to delete worktree for branch %s: %v", branch, err)
+			errors = append(errors, fmt.Errorf("failed to delete worktree for branch %s: %w", branch, err))
+		} else {
+			c.VerbosePrint("Successfully deleted worktree for branch: %s", branch)
+		}
+	}
+
+	if len(errors) > 0 {
+		if len(errors) == len(branches) {
+			// All deletions failed
+			return fmt.Errorf("failed to delete all worktrees: %v", errors)
+		}
+		// Some deletions failed
+		c.VerbosePrint("Some worktrees failed to delete: %v", errors)
+		return fmt.Errorf("some worktrees failed to delete: %v", errors)
+	}
+
+	c.VerbosePrint("All worktrees deleted successfully")
+	return nil
+}
+
 // translateWorkspaceError translates workspace package errors to CM package errors.
 func (c *realCM) translateWorkspaceError(err error) error {
 	if err == nil {
