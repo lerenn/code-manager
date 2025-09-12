@@ -4,6 +4,7 @@ package repository
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
@@ -216,16 +217,30 @@ func TestRealRepository_DeleteAllWorktrees_PartialFailure(t *testing.T) {
 	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "feature/branch1").Return("/test/repos/worktrees/test-repo/feature/branch1", nil)
 	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "feature/branch2").Return("/test/repos/worktrees/test-repo/feature/branch2", nil)
 
-	// Mock worktree deletion: first succeeds, second fails
-	mockWorktree.EXPECT().Delete(gomock.Any()).Return(nil).Times(1)
-	mockWorktree.EXPECT().Delete(gomock.Any()).Return(fmt.Errorf("deletion failed")).Times(1)
+	// Mock worktree deletion: one succeeds, one fails (order is non-deterministic due to map iteration)
+	// We need to handle both possible orders since map iteration order is not guaranteed
+	// Use DoAndReturn to track which calls have been made
+	callCount := 0
+	mockWorktree.EXPECT().Delete(gomock.Any()).DoAndReturn(func(params worktree.DeleteParams) error {
+		callCount++
+		if callCount == 1 {
+			return nil // First call succeeds
+		}
+		return fmt.Errorf("deletion failed") // Second call fails
+	}).Times(2)
 
 	// No logging expectations needed for nil logger
 
 	err := repo.DeleteAllWorktrees(true)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "some worktrees failed to delete")
-	assert.Contains(t, err.Error(), "feature/branch2")
+	// Check that the error contains at least one of the branch names that failed
+	// Since we can't predict which branch will fail due to non-deterministic map iteration
+	errorMsg := err.Error()
+	containsBranch1 := strings.Contains(errorMsg, "feature/branch1")
+	containsBranch2 := strings.Contains(errorMsg, "feature/branch2")
+	assert.True(t, containsBranch1 || containsBranch2,
+		"Error should contain at least one of the branch names, got: %s", errorMsg)
 }
 
 func TestRealRepository_DeleteAllWorktrees_AllFailures(t *testing.T) {
