@@ -407,6 +407,7 @@ func TestDeleteMultipleWorktreesEmptyList(t *testing.T) {
 	assert.Error(t, err, "Should fail when trying to delete with empty branch list")
 	assert.Contains(t, err.Error(), "no branches specified for deletion")
 }
+<<<<<<< HEAD
 
 // TestDeleteWorktreeWithModifiedFiles tests deleting a worktree with modified files using force flag
 func TestDeleteWorktreeWithModifiedFiles(t *testing.T) {
