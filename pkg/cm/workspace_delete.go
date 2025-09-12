@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lerenn/code-manager/pkg/branch"
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
@@ -151,7 +152,9 @@ func (c *realCM) deleteWorkspaceWorktrees(
 		// Find worktrees for this repository
 		for _, worktree := range worktrees {
 			// Check if this worktree belongs to this repository
-			if repoWorktree, exists := repo.Worktrees[worktree.Branch]; exists && repoWorktree.Remote == worktree.Remote {
+			// Worktrees are stored with key format "remote:branch"
+			worktreeKey := fmt.Sprintf("%s:%s", worktree.Remote, worktree.Branch)
+			if _, exists := repo.Worktrees[worktreeKey]; exists {
 				c.VerbosePrint("  Deleting worktree: %s/%s", worktree.Remote, worktree.Branch)
 
 				// Get worktree path
@@ -179,18 +182,29 @@ func (c *realCM) deleteWorkspaceWorktrees(
 func (c *realCM) deleteWorkspaceFiles(workspaceName string, worktrees []status.WorktreeInfo) error {
 	c.VerbosePrint("Deleting workspace files")
 
-	// Delete main workspace file
+	// Delete main workspace file if it exists
 	workspaceFile := c.getWorkspaceFilePath(workspaceName)
-	if err := c.deleteWorkspaceFile(workspaceFile); err != nil {
-		return fmt.Errorf("failed to delete main workspace file: %w", err)
+	if exists, err := c.fs.Exists(workspaceFile); err == nil && exists {
+		if err := c.deleteWorkspaceFile(workspaceFile); err != nil {
+			return fmt.Errorf("failed to delete main workspace file: %w", err)
+		}
+		c.VerbosePrint("    ✓ Deleted main workspace file: %s", workspaceFile)
+	} else {
+		c.VerbosePrint("    Main workspace file does not exist: %s", workspaceFile)
 	}
 
 	// Delete worktree-specific workspace files
 	for _, worktree := range worktrees {
 		worktreeWorkspaceFile := c.getWorktreeWorkspaceFilePath(workspaceName, worktree.Branch)
-		if err := c.deleteWorkspaceFile(worktreeWorkspaceFile); err != nil {
-			c.VerbosePrint("    ⚠ Could not delete worktree workspace file %s: %v", worktreeWorkspaceFile, err)
-			// Continue with other files even if one fails
+		if exists, err := c.fs.Exists(worktreeWorkspaceFile); err == nil && exists {
+			if err := c.deleteWorkspaceFile(worktreeWorkspaceFile); err != nil {
+				c.VerbosePrint("    ⚠ Could not delete worktree workspace file %s: %v", worktreeWorkspaceFile, err)
+				// Continue with other files even if one fails
+			} else {
+				c.VerbosePrint("    ✓ Deleted worktree workspace file: %s", worktreeWorkspaceFile)
+			}
+		} else {
+			c.VerbosePrint("    Worktree workspace file does not exist: %s", worktreeWorkspaceFile)
 		}
 	}
 
@@ -240,6 +254,8 @@ func (c *realCM) getWorkspaceFilePath(workspaceName string) string {
 }
 
 // getWorktreeWorkspaceFilePath returns the path to a worktree-specific workspace file.
-func (c *realCM) getWorktreeWorkspaceFilePath(workspaceName, branch string) string {
-	return filepath.Join(c.config.WorkspacesDir, fmt.Sprintf("%s-%s.code-workspace", workspaceName, branch))
+func (c *realCM) getWorktreeWorkspaceFilePath(workspaceName, branchName string) string {
+	// Sanitize branch name for filename (replace / with -)
+	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
+	return filepath.Join(c.config.WorkspacesDir, fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename))
 }

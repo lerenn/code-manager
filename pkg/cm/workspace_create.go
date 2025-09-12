@@ -175,14 +175,22 @@ func (c *realCM) addRepositoriesToStatus(repositories []string) ([]string, error
 	var finalRepos []string
 
 	for _, repo := range repositories {
-		// Check if repository already exists in status
-		if existingRepo, err := c.statusManager.GetRepository(repo); err == nil && existingRepo != nil {
-			finalRepos = append(finalRepos, repo)
+		// Get repository URL from Git remote origin
+		repoURL, err := c.git.GetRemoteURL(repo, "origin")
+		if err != nil {
+			// If no origin remote, use the path as the identifier
+			repoURL = repo
+		}
+
+		// Check if repository already exists in status using the remote URL
+		if existingRepo, err := c.statusManager.GetRepository(repoURL); err == nil && existingRepo != nil {
+			finalRepos = append(finalRepos, repoURL)
+			c.VerbosePrint("  ✓ %s (already exists in status)", repo)
 			continue
 		}
 
 		// Add new repository to status file
-		repoURL, err := c.addRepositoryToStatus(repo)
+		repoURL, err = c.addRepositoryToStatus(repo)
 		if err != nil {
 			return nil, fmt.Errorf("%w: failed to add repository '%s': %w", ErrRepositoryAddition, repo, err)
 		}

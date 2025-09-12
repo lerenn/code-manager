@@ -4,6 +4,7 @@ package test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -61,6 +62,59 @@ func createWorkspaceWithWorktrees(t *testing.T, setup *TestSetup, workspaceName 
 	require.NoError(t, cmInstance.CreateWorkTree("feature/test-branch", worktreeOpts))
 }
 
+// createCustomTestGitRepo creates a Git repository with a custom remote URL
+func createCustomTestGitRepo(t *testing.T, repoPath, remoteURL string) {
+	t.Helper()
+
+	// Safely change to the repository directory for setup
+	restore := safeChdir(t, repoPath)
+	defer restore()
+
+	// Set up Git environment variables for all commands
+	gitEnv := append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+
+	// Initialize Git repository
+	cmd := exec.Command("git", "init")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Set the default branch
+	cmd = exec.Command("git", "branch", "-M", "main")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Add custom remote URL
+	cmd = exec.Command("git", "remote", "add", "origin", remoteURL)
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Create initial commit
+	readmePath := filepath.Join(repoPath, "README.md")
+	require.NoError(t, os.WriteFile(readmePath, []byte("# Custom Repository\n\nThis is a custom test repository.\n"), 0644))
+
+	cmd = exec.Command("git", "add", "README.md")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	cmd = exec.Command("git", "commit", "-m", "Initial commit")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	// Create a test branch
+	cmd = exec.Command("git", "checkout", "-b", "feature/test-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+
+	cmd = exec.Command("git", "checkout", "main")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+}
+
 // TestDeleteWorkspaceSuccess tests successful workspace deletion with worktrees
 func TestDeleteWorkspaceSuccess(t *testing.T) {
 	setup := setupTestEnvironment(t)
@@ -89,8 +143,11 @@ func TestDeleteWorkspaceSuccess(t *testing.T) {
 
 	// Check that worktrees exist in repositories
 	require.NotNil(t, status.Repositories)
-	for _, repoPath := range repositories {
-		repo, exists := status.Repositories[repoPath]
+	workspace := status.Workspaces[workspaceName]
+	// Store repository URLs for verification after deletion
+	repositoryURLs := workspace.Repositories
+	for _, repoURL := range repositoryURLs {
+		repo, exists := status.Repositories[repoURL]
 		require.True(t, exists, "Repository should exist in status")
 		require.NotEmpty(t, repo.Worktrees, "Repository should have worktrees")
 	}
@@ -106,8 +163,8 @@ func TestDeleteWorkspaceSuccess(t *testing.T) {
 
 	// Verify worktrees are removed from repositories
 	require.NotNil(t, status.Repositories)
-	for _, repoPath := range repositories {
-		repo, exists := status.Repositories[repoPath]
+	for _, repoURL := range repositoryURLs {
+		repo, exists := status.Repositories[repoURL]
 		require.True(t, exists, "Repository should still exist in status")
 		require.Empty(t, repo.Worktrees, "Repository should have no worktrees after workspace deletion")
 	}
@@ -210,7 +267,8 @@ func TestDeleteWorkspaceMultipleRepositories(t *testing.T) {
 
 	createTestGitRepo(t, repo1Path)
 	createTestGitRepo(t, repo2Path)
-	createTestGitRepo(t, repo3Path)
+	// Create a custom repository with a different remote URL to avoid conflicts
+	createCustomTestGitRepo(t, repo3Path, "https://github.com/octocat/Custom-Repo.git")
 
 	workspaceName := "multi-repo-workspace"
 	repositories := []string{repo1Path, repo2Path, repo3Path}
@@ -224,6 +282,9 @@ func TestDeleteWorkspaceMultipleRepositories(t *testing.T) {
 	workspace := status.Workspaces[workspaceName]
 	require.Len(t, workspace.Repositories, 3, "Workspace should have three repositories")
 
+	// Store repository URLs for verification after deletion
+	repositoryURLs := workspace.Repositories
+
 	// Delete workspace
 	err := deleteWorkspace(t, setup, workspaceName, true)
 	require.NoError(t, err, "Deleting multi-repository workspace should succeed")
@@ -233,8 +294,8 @@ func TestDeleteWorkspaceMultipleRepositories(t *testing.T) {
 	require.NotContains(t, status.Workspaces, workspaceName, "Multi-repository workspace should be removed")
 
 	// Verify all worktrees are removed from all repositories
-	for _, repoPath := range repositories {
-		repo, exists := status.Repositories[repoPath]
+	for _, repoURL := range repositoryURLs {
+		repo, exists := status.Repositories[repoURL]
 		require.True(t, exists, "Repository should still exist in status")
 		require.Empty(t, repo.Worktrees, "Repository should have no worktrees after workspace deletion")
 	}
@@ -261,7 +322,7 @@ func TestDeleteWorkspacePreservesOtherWorkspaces(t *testing.T) {
 
 	// Create first workspace
 	createWorkspaceWithWorktrees(t, setup, workspace1Name, []string{repo1Path})
-	
+
 	// Create second workspace with a different repository
 	createWorkspaceWithWorktrees(t, setup, workspace2Name, []string{repo2Path})
 
@@ -284,7 +345,8 @@ func TestDeleteWorkspacePreservesOtherWorkspaces(t *testing.T) {
 	require.Len(t, workspace2.Repositories, 1, "Second workspace should still have its repository")
 
 	// Verify second workspace's worktrees are preserved
-	repo2, exists := status.Repositories[repo2Path]
+	repo2URL := workspace2.Repositories[0]
+	repo2, exists := status.Repositories[repo2URL]
 	require.True(t, exists, "Second repository should still exist")
 	require.NotEmpty(t, repo2.Worktrees, "Second repository should still have worktrees")
 }
@@ -294,18 +356,46 @@ func TestDeleteWorkspaceWithSharedRepositories(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
-	// Create a test Git repository
-	createTestGitRepo(t, setup.RepoPath)
+	// Create two test Git repositories
+	repo1Path := filepath.Join(setup.TempDir, "Hello-World")
+	repo2Path := filepath.Join(setup.TempDir, "Spoon-Knife")
+
+	require.NoError(t, os.MkdirAll(repo1Path, 0755))
+	require.NoError(t, os.MkdirAll(repo2Path, 0755))
+
+	createTestGitRepo(t, repo1Path)
+	createTestGitRepo(t, repo2Path)
 
 	// Create two workspaces sharing the same repository
 	workspace1Name := "workspace-1"
 	workspace2Name := "workspace-2"
 
-	// Create first workspace
-	createWorkspaceWithWorktrees(t, setup, workspace1Name, []string{setup.RepoPath})
-	
-	// Create second workspace sharing the same repository
-	createWorkspaceWithWorktrees(t, setup, workspace2Name, []string{setup.RepoPath})
+	// Create first workspace with first repository
+	createWorkspaceWithWorktrees(t, setup, workspace1Name, []string{repo1Path})
+
+	// Create second workspace sharing the same repository but with different worktrees
+	// We need to create worktrees manually for the second workspace since they can't share the same worktree
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
+		},
+	})
+	require.NoError(t, err)
+
+	// Create second workspace
+	createParams := cm.CreateWorkspaceParams{
+		WorkspaceName: workspace2Name,
+		Repositories:  []string{repo1Path},
+	}
+	require.NoError(t, cmInstance.CreateWorkspace(createParams))
+
+	// Create worktrees for the second workspace with different branch names
+	worktreeOpts := cm.CreateWorkTreeOpts{
+		WorkspaceName: workspace2Name,
+	}
+	require.NoError(t, cmInstance.CreateWorkTree("feature/workspace2-branch", worktreeOpts))
 
 	// Verify both workspaces exist and share the repository
 	status := readStatusFile(t, setup.StatusPath)
@@ -313,12 +403,15 @@ func TestDeleteWorkspaceWithSharedRepositories(t *testing.T) {
 	require.Contains(t, status.Workspaces, workspace2Name)
 
 	// The repository should have worktrees from both workspaces
-	repo, exists := status.Repositories[setup.RepoPath]
+	// Get the repository URL from the first workspace
+	workspace1 := status.Workspaces[workspace1Name]
+	repoURL := workspace1.Repositories[0]
+	repo, exists := status.Repositories[repoURL]
 	require.True(t, exists, "Repository should exist")
 	require.Len(t, repo.Worktrees, 2, "Repository should have worktrees from both workspaces")
 
 	// Delete first workspace
-	err := deleteWorkspace(t, setup, workspace1Name, true)
+	err = deleteWorkspace(t, setup, workspace1Name, true)
 	require.NoError(t, err, "Deleting first workspace should succeed")
 
 	// Verify first workspace is removed but second remains
@@ -327,7 +420,7 @@ func TestDeleteWorkspaceWithSharedRepositories(t *testing.T) {
 	require.Contains(t, status.Workspaces, workspace2Name, "Second workspace should remain")
 
 	// Verify repository still exists and has worktrees from second workspace only
-	repo, exists = status.Repositories[setup.RepoPath]
+	repo, exists = status.Repositories[repoURL]
 	require.True(t, exists, "Repository should still exist")
 	require.Len(t, repo.Worktrees, 1, "Repository should have worktrees from second workspace only")
 }
@@ -346,10 +439,10 @@ func TestDeleteWorkspaceFileSystemCleanup(t *testing.T) {
 	createWorkspaceWithWorktrees(t, setup, workspaceName, []string{setup.RepoPath})
 
 	// Verify workspace files exist
-	workspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName+".code-workspace")
+	// Only the worktree-specific workspace file should exist
+	// The branch name "feature/test-branch" gets sanitized to "feature-test-branch" for filenames
 	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-feature-test-branch.code-workspace")
 
-	require.FileExists(t, workspaceFile, "Main workspace file should exist")
 	require.FileExists(t, worktreeWorkspaceFile, "Worktree workspace file should exist")
 
 	// Delete workspace
@@ -357,9 +450,6 @@ func TestDeleteWorkspaceFileSystemCleanup(t *testing.T) {
 	require.NoError(t, err, "Workspace deletion should succeed")
 
 	// Verify all workspace files are deleted
-	_, err = os.Stat(workspaceFile)
-	require.True(t, os.IsNotExist(err), "Main workspace file should be deleted")
-
 	_, err = os.Stat(worktreeWorkspaceFile)
 	require.True(t, os.IsNotExist(err), "Worktree workspace file should be deleted")
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/lerenn/code-manager/pkg/branch"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
@@ -219,9 +220,12 @@ func (w *realWorkspace) createWorktreeForRepository(repoURL, repoPath, branch st
 }
 
 // createWorkspaceFile creates a .code-workspace file in the workspaces directory.
-func (w *realWorkspace) createWorkspaceFile(workspaceName, branch string, repositories []string) (string, error) {
+func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, repositories []string) (string, error) {
+	// Sanitize branch name for filename (replace / with -)
+	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
+
 	// Create workspace file path
-	workspaceFileName := fmt.Sprintf("%s-%s.code-workspace", workspaceName, branch)
+	workspaceFileName := fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename)
 	workspaceFilePath := filepath.Join(w.config.WorkspacesDir, workspaceFileName)
 
 	// Ensure workspaces directory exists

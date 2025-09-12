@@ -196,10 +196,9 @@ func (c *realCM) SetLogger(logger logger.Logger) {
 }
 
 // BuildWorktreePath constructs a worktree path from repository URL, remote name, and branch.
-func (c *realCM) BuildWorktreePath(repoURL, _, branch string) string {
-	// For now, construct the path manually since we don't have direct access to the worktree
-	// This should be refactored to use the worktree component properly
-	return fmt.Sprintf("%s/worktrees/%s/%s", c.config.RepositoriesDir, repoURL, branch)
+func (c *realCM) BuildWorktreePath(repoURL, remoteName, branch string) string {
+	// Use the same path format as the worktree component
+	return fmt.Sprintf("%s/%s/%s/%s", c.config.RepositoriesDir, repoURL, remoteName, branch)
 }
 
 // executeWithHooks executes an operation with pre and post hooks.
