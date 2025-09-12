@@ -38,6 +38,7 @@ type Repository interface {
 	Validate() error
 	CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error)
 	DeleteWorktree(branch string, force bool) error
+	DeleteAllWorktrees(force bool) error
 	ListWorktrees() ([]status.WorktreeInfo, error)
 	SetLogger(logger logger.Logger)
 	LoadWorktree(remoteSource, branchName string) (string, error)

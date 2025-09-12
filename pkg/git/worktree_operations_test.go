@@ -114,7 +114,7 @@ func TestGit_RemoveWorktree(t *testing.T) {
 	}
 
 	// Remove the worktree
-	err = git.RemoveWorktree(".", testWorktreePath)
+	err = git.RemoveWorktree(".", testWorktreePath, false)
 	if err != nil {
 		t.Fatalf("Expected no error removing worktree: %v", err)
 	}
@@ -134,15 +134,69 @@ func TestGit_RemoveWorktree(t *testing.T) {
 	}
 
 	// Test removing non-existent worktree
-	err = git.RemoveWorktree(".", "/non/existent/worktree")
+	err = git.RemoveWorktree(".", "/non/existent/worktree", false)
 	if err == nil {
 		t.Error("Expected error when removing non-existent worktree")
 	}
 
 	// Test in non-existent directory
-	err = git.RemoveWorktree("/non/existent/directory", "/tmp/test-worktree")
+	err = git.RemoveWorktree("/non/existent/directory", "/tmp/test-worktree", false)
 	if err == nil {
 		t.Error("Expected error for non-existent directory")
+	}
+}
+
+func TestGit_RemoveWorktreeWithForce(t *testing.T) {
+	git := NewGit()
+	_, cleanup := setupTestRepo(t)
+	defer cleanup()
+
+	// Test creating and then removing a worktree with force flag
+	testBranchName := "test-remove-worktree-force-branch-" + strings.ReplaceAll(t.Name(), "/", "-")
+	testWorktreePath := filepath.Join(".", "test-remove-worktree-force-"+strings.ReplaceAll(t.Name(), "/", "-"))
+
+	// Create a test branch first
+	err := git.CreateBranch(".", testBranchName)
+	if err != nil {
+		t.Fatalf("Expected no error creating branch: %v", err)
+	}
+
+	// Create a worktree
+	err = git.CreateWorktree(".", testWorktreePath, testBranchName)
+	if err != nil {
+		t.Fatalf("Expected no error creating worktree: %v", err)
+	}
+
+	// Create a modified file in the worktree to test force removal
+	modifiedFile := filepath.Join(testWorktreePath, "modified.txt")
+	err = os.WriteFile(modifiedFile, []byte("modified content"), 0644)
+	if err != nil {
+		t.Fatalf("Expected no error creating modified file: %v", err)
+	}
+
+	// Verify the worktree was created
+	if _, err := os.Stat(testWorktreePath); os.IsNotExist(err) {
+		t.Errorf("Expected worktree directory %s to exist", testWorktreePath)
+	}
+
+	// Remove the worktree with force flag
+	err = git.RemoveWorktree(".", testWorktreePath, true)
+	if err != nil {
+		t.Fatalf("Expected no error removing worktree with force: %v", err)
+	}
+
+	// Verify the worktree directory was removed
+	if _, err := os.Stat(testWorktreePath); !os.IsNotExist(err) {
+		t.Errorf("Expected worktree directory %s to be removed", testWorktreePath)
+	}
+
+	// Verify the worktree no longer exists in git
+	exists, err := git.WorktreeExists(".", testBranchName)
+	if err != nil {
+		t.Errorf("Expected no error checking worktree existence: %v", err)
+	}
+	if exists {
+		t.Error("Expected worktree to not exist in git after removal")
 	}
 }
 
