@@ -44,7 +44,7 @@ type Git interface {
 	WorktreeExists(repoPath, branch string) (bool, error)
 
 	// RemoveWorktree removes a worktree from Git's tracking.
-	RemoveWorktree(repoPath, worktreePath string) error
+	RemoveWorktree(repoPath, worktreePath string, force bool) error
 
 	// GetWorktreePath gets the path of a worktree for a branch.
 	GetWorktreePath(repoPath, branch string) (string, error)

@@ -365,17 +365,17 @@ func (mr *MockGitMockRecorder) RemoteExists(repoPath, remoteName any) *gomock.Ca
 }
 
 // RemoveWorktree mocks base method.
-func (m *MockGit) RemoveWorktree(repoPath, worktreePath string) error {
+func (m *MockGit) RemoveWorktree(repoPath, worktreePath string, force bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveWorktree", repoPath, worktreePath)
+	ret := m.ctrl.Call(m, "RemoveWorktree", repoPath, worktreePath, force)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // RemoveWorktree indicates an expected call of RemoveWorktree.
-func (mr *MockGitMockRecorder) RemoveWorktree(repoPath, worktreePath any) *gomock.Call {
+func (mr *MockGitMockRecorder) RemoveWorktree(repoPath, worktreePath, force any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockGit)(nil).RemoveWorktree), repoPath, worktreePath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockGit)(nil).RemoveWorktree), repoPath, worktreePath, force)
 }
 
 // Status mocks base method.
