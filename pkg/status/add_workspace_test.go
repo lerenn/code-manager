@@ -39,7 +39,7 @@ func TestAddWorkspace(t *testing.T) {
 		Repositories: make(map[string]Repository),
 		Workspaces: map[string]Workspace{
 			workspacePath: {
-				Worktree:     []string{}, // Empty initially, populated when worktrees are created
+				Worktrees:    []string{}, // Empty initially, populated when worktrees are created
 				Repositories: params.Repositories,
 			},
 		},
@@ -89,7 +89,7 @@ func TestAddWorkspace_Duplicate(t *testing.T) {
 		Repositories: make(map[string]Repository),
 		Workspaces: map[string]Workspace{
 			workspacePath: {
-				Worktree:     []string{"origin:feature-b"},
+				Worktrees:    []string{"origin:feature-b"},
 				Repositories: []string{"github.com/lerenn/other"},
 			},
 		},

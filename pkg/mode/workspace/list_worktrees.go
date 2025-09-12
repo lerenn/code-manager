@@ -7,6 +7,16 @@ import (
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
+// WorktreeInfo represents comprehensive worktree information for workspace operations.
+type WorktreeInfo struct {
+	Repository    string               // Repository URL
+	Branch        string               // Branch name
+	Remote        string               // Remote name
+	WorktreePath  string               // Path to worktree directory
+	WorkspaceFile string               // Path to worktree-specific workspace file
+	Issue         *status.WorktreeInfo // Original worktree info including issue
+}
+
 // ListWorktrees lists worktrees for workspace mode.
 func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 	w.logger.Logf("Listing worktrees for workspace mode")
@@ -32,7 +42,7 @@ func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 	}
 
 	// Get worktrees for each repository in the workspace
-	var workspaceWorktrees []status.WorktreeInfo
+	workspaceWorktrees := make([]status.WorktreeInfo, 0)
 	seenWorktrees := make(map[string]bool) // Track seen worktrees to avoid duplicates
 
 	for _, repoURL := range workspace.Repositories {

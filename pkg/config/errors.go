@@ -12,6 +12,4 @@ var (
 	ErrStatusFileEmpty      = errors.New("status_file cannot be empty")
 	// Configuration initialization errors.
 	ErrConfigNotInitialized = errors.New("CM configuration not found. Run 'cm init' to initialize")
-	// Configuration loading errors.
-	ErrFailedToLoadConfig = errors.New("failed to load configuration")
 )

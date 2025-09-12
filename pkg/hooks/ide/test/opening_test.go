@@ -30,7 +30,6 @@ func TestOpeningHook_PostExecute_Success(t *testing.T) {
 			"ideName":      "cursor",
 			"worktreePath": "/path/to/worktree",
 		},
-		CM: &simpleCM{verbose: true},
 	}
 
 	// Mock IDE opening success
@@ -50,7 +49,6 @@ func TestOpeningHook_PostExecute_MissingWorktreePath(t *testing.T) {
 			"ideName": "cursor",
 			// worktreePath is missing
 		},
-		CM: &simpleCM{verbose: true},
 	}
 
 	err := hook.PostExecute(ctx)
@@ -68,19 +66,9 @@ func TestOpeningHook_PostExecute_EmptyWorktreePath(t *testing.T) {
 			"ideName":      "cursor",
 			"worktreePath": "",
 		},
-		CM: &simpleCM{verbose: true},
 	}
 
 	err := hook.PostExecute(ctx)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ide.ErrWorktreePathEmpty)
-}
-
-// simpleCM is a minimal interface implementation for testing.
-type simpleCM struct {
-	verbose bool
-}
-
-func (s *simpleCM) IsVerbose() bool {
-	return s.verbose
 }

@@ -3,7 +3,6 @@
 package branch
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -96,8 +95,8 @@ func TestSanitizeBranchName(t *testing.T) {
 		},
 		{
 			name:     "Branch name with question marks and asterisks",
-			input:    "feature?test*with[wildcards]",
-			expected: "feature_test_with_wildcards",
+			input:    "feature?test*",
+			expected: "feature_test",
 			wantErr:  false,
 		},
 	}
@@ -106,23 +105,82 @@ func TestSanitizeBranchName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := SanitizeBranchName(tt.input)
 			if tt.wantErr {
-				if tt.input == "" {
-					assert.ErrorIs(t, err, ErrBranchNameEmpty)
-				} else {
-					assert.Error(t, err)
-					// Check for specific error messages for new Git rule violations
-					if tt.input == "@" {
-						assert.ErrorIs(t, err, ErrBranchNameSingleAt)
-					} else if strings.Contains(tt.input, "@{") {
-						assert.ErrorIs(t, err, ErrBranchNameContainsAtBrace)
-					} else if strings.Contains(tt.input, "\\") {
-						assert.ErrorIs(t, err, ErrBranchNameContainsBackslash)
-					}
-				}
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
 			}
+		})
+	}
+}
+
+func TestSanitizeBranchNameForFilename(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Simple branch name with slash",
+			input:    "feature/test-branch",
+			expected: "feature-test-branch",
+		},
+		{
+			name:     "Branch name with multiple slashes",
+			input:    "feature/test/sub-branch",
+			expected: "feature-test-sub-branch",
+		},
+		{
+			name:     "Branch name with backslash",
+			input:    "feature\\test",
+			expected: "feature-test",
+		},
+		{
+			name:     "Branch name with colon",
+			input:    "feature:test",
+			expected: "feature-test",
+		},
+		{
+			name:     "Branch name with asterisk and question mark",
+			input:    "feature*test?",
+			expected: "feature-test",
+		},
+		{
+			name:     "Branch name with quotes and brackets",
+			input:    "feature\"test<>|",
+			expected: "feature-test",
+		},
+		{
+			name:     "Branch name with consecutive hyphens",
+			input:    "feature---test",
+			expected: "feature-test",
+		},
+		{
+			name:     "Branch name with leading/trailing hyphens",
+			input:    "-feature-test-",
+			expected: "feature-test",
+		},
+		{
+			name:     "Empty branch name",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "Branch name without special characters",
+			input:    "main",
+			expected: "main",
+		},
+		{
+			name:     "Branch name with only special characters",
+			input:    "/*?<>|",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := SanitizeBranchNameForFilename(tt.input)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

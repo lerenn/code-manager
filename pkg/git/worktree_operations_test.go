@@ -46,7 +46,11 @@ func TestGit_CreateWorktree(t *testing.T) {
 	testWorktreePath := filepath.Join(".", "test-worktree-"+strings.ReplaceAll(t.Name(), "/", "-"))
 
 	// Create a test branch first
-	err := git.CreateBranch(".", testBranchName)
+	err := git.CreateBranchFrom(CreateBranchFromParams{
+		RepoPath:   ".",
+		NewBranch:  testBranchName,
+		FromBranch: "HEAD",
+	})
 	if err != nil {
 		t.Fatalf("Expected no error creating branch: %v", err)
 	}
@@ -97,7 +101,11 @@ func TestGit_RemoveWorktree(t *testing.T) {
 	testWorktreePath := filepath.Join(".", "test-remove-worktree-"+strings.ReplaceAll(t.Name(), "/", "-"))
 
 	// Create a test branch first
-	err := git.CreateBranch(".", testBranchName)
+	err := git.CreateBranchFrom(CreateBranchFromParams{
+		RepoPath:   ".",
+		NewBranch:  testBranchName,
+		FromBranch: "HEAD",
+	})
 	if err != nil {
 		t.Fatalf("Expected no error creating branch: %v", err)
 	}
@@ -114,7 +122,7 @@ func TestGit_RemoveWorktree(t *testing.T) {
 	}
 
 	// Remove the worktree
-	err = git.RemoveWorktree(".", testWorktreePath)
+	err = git.RemoveWorktree(".", testWorktreePath, false)
 	if err != nil {
 		t.Fatalf("Expected no error removing worktree: %v", err)
 	}
@@ -134,13 +142,13 @@ func TestGit_RemoveWorktree(t *testing.T) {
 	}
 
 	// Test removing non-existent worktree
-	err = git.RemoveWorktree(".", "/non/existent/worktree")
+	err = git.RemoveWorktree(".", "/non/existent/worktree", false)
 	if err == nil {
 		t.Error("Expected error when removing non-existent worktree")
 	}
 
 	// Test in non-existent directory
-	err = git.RemoveWorktree("/non/existent/directory", "/tmp/test-worktree")
+	err = git.RemoveWorktree("/non/existent/directory", "/tmp/test-worktree", false)
 	if err == nil {
 		t.Error("Expected error for non-existent directory")
 	}
@@ -156,7 +164,11 @@ func TestGit_GetWorktreePath(t *testing.T) {
 	testWorktreePath := filepath.Join(".", "test-get-path-"+strings.ReplaceAll(t.Name(), "/", "-"))
 
 	// Create a test branch first
-	err := git.CreateBranch(".", testBranchName)
+	err := git.CreateBranchFrom(CreateBranchFromParams{
+		RepoPath:   ".",
+		NewBranch:  testBranchName,
+		FromBranch: "HEAD",
+	})
 	if err != nil {
 		t.Fatalf("Expected no error creating branch: %v", err)
 	}

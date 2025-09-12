@@ -81,7 +81,11 @@ func TestGit_BranchExistsOnRemote(t *testing.T) {
 
 	// Create a test branch
 	testBranchName := "test-remote-branch"
-	err := git.CreateBranch(".", testBranchName)
+	err := git.CreateBranchFrom(CreateBranchFromParams{
+		RepoPath:   ".",
+		NewBranch:  testBranchName,
+		FromBranch: "HEAD",
+	})
 	if err != nil {
 		t.Fatalf("Expected no error creating branch: %v", err)
 	}

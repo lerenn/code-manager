@@ -97,3 +97,40 @@ func SanitizeBranchName(branchName string) (string, error) {
 
 	return sanitized, nil
 }
+
+// SanitizeBranchNameForFilename sanitizes a branch name for use in filenames.
+// This replaces filesystem-unsafe characters (like /) with safe alternatives.
+func SanitizeBranchNameForFilename(branchName string) string {
+	if branchName == "" {
+		return ""
+	}
+
+	// Replace slashes with hyphens for filesystem compatibility
+	sanitized := strings.ReplaceAll(branchName, "/", "-")
+
+	// Replace other potentially problematic characters
+	sanitized = strings.ReplaceAll(sanitized, "\\", "-")
+	sanitized = strings.ReplaceAll(sanitized, ":", "-")
+	sanitized = strings.ReplaceAll(sanitized, "*", "-")
+	sanitized = strings.ReplaceAll(sanitized, "?", "-")
+	sanitized = strings.ReplaceAll(sanitized, "\"", "-")
+	sanitized = strings.ReplaceAll(sanitized, "<", "-")
+	sanitized = strings.ReplaceAll(sanitized, ">", "-")
+	sanitized = strings.ReplaceAll(sanitized, "|", "-")
+
+	// Replace multiple consecutive hyphens with single hyphen
+	consecutiveHyphens := regexp.MustCompile(`-+`)
+	sanitized = consecutiveHyphens.ReplaceAllString(sanitized, "-")
+
+	// Trim leading and trailing hyphens
+	sanitized = strings.Trim(sanitized, "-")
+
+	// Limit length to 255 characters (filesystem limit)
+	if len(sanitized) > 255 {
+		sanitized = sanitized[:255]
+		// Ensure we don't end with a hyphen
+		sanitized = strings.TrimRight(sanitized, "-")
+	}
+
+	return sanitized
+}

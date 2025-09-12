@@ -12,10 +12,6 @@ import (
 
 // Error definitions for workspace package.
 var (
-	// Workspace file errors.
-	ErrFailedToCheckWorkspaceFiles = errors.New("failed to check for workspace files")
-	ErrWorkspaceFileNotFound       = errors.New("workspace file not found")
-
 	// Worktree errors.
 	ErrWorktreeExists      = errors.New("worktree already exists")
 	ErrWorktreeNotInStatus = errors.New("worktree not found in status")

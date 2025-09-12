@@ -136,19 +136,6 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	return nil
 }
 
-// RemoveWorktreeFromStatus removes a worktree from the status file.
-func (r *realRepository) RemoveWorktreeFromStatus(repoURL, branch string) error {
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              r.fs,
-		Git:             r.git,
-		StatusManager:   r.statusManager,
-		Logger:          r.logger,
-		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
-	})
-	return worktreeInstance.RemoveFromStatus(repoURL, branch)
-}
-
 // CleanupWorktreeDirectory cleans up the worktree directory.
 func (r *realRepository) CleanupWorktreeDirectory(worktreePath string) {
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
@@ -161,23 +148,5 @@ func (r *realRepository) CleanupWorktreeDirectory(worktreePath string) {
 	})
 	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
 		r.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
-	}
-}
-
-// CleanupOnWorktreeCreationFailure cleans up on worktree creation failure.
-func (r *realRepository) CleanupOnWorktreeCreationFailure(repoURL, branch, worktreePath string) {
-	if cleanupErr := r.statusManager.RemoveWorktree(repoURL, branch); cleanupErr != nil {
-		r.logger.Logf("Warning: failed to remove worktree from status after creation failure: %v", cleanupErr)
-	}
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              r.fs,
-		Git:             r.git,
-		StatusManager:   r.statusManager,
-		Logger:          r.logger,
-		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
-	})
-	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-		r.logger.Logf("Warning: failed to clean up directory after worktree creation failure: %v", cleanupErr)
 	}
 }

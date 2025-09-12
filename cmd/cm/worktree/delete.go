@@ -9,8 +9,9 @@ import (
 
 func createDeleteCmd() *cobra.Command {
 	var force bool
+	var workspaceName string
 	deleteCmd := &cobra.Command{
-		Use:   "delete <branch> [branch2] [branch3] ... [--force/-f]",
+		Use:   "delete <branch> [branch2] [branch3] ... [--force/-f] [--workspace/-w]",
 		Short: "Delete worktrees for the specified branches",
 		Long: `Delete worktrees for the specified branches.
 
@@ -20,6 +21,8 @@ Examples:
   cm worktree delete feature-branch
   cm wt delete feature-branch --force
   cm w delete feature-branch --force
+  cm wt delete feature-branch --workspace my-workspace
+  cm wt delete feature-branch -w my-workspace --force
   cm worktree delete branch1 branch2 branch3
   cm wt delete branch1 branch2 --force`,
 		Args: cobra.MinimumNArgs(1),
@@ -42,12 +45,33 @@ Examples:
 				cmManager.SetLogger(logger.NewVerboseLogger())
 			}
 
+			// Create options struct
+			var opts []cm.DeleteWorktreeOpts
+			if workspaceName != "" {
+				opts = append(opts, cm.DeleteWorktreeOpts{
+					WorkspaceName: workspaceName,
+				})
+			}
+
+			// If workspace is specified, use single worktree deletion for each branch
+			if workspaceName != "" {
+				for _, branch := range args {
+					if err := cmManager.DeleteWorkTree(branch, force, opts...); err != nil {
+						return err
+					}
+				}
+				return nil
+			}
+
+			// Otherwise use bulk deletion
 			return cmManager.DeleteWorkTrees(args, force)
 		},
 	}
 
-	// Add force flag
+	// Add flags
 	deleteCmd.Flags().BoolVarP(&force, "force", "f", false, "Skip confirmation prompts")
+	deleteCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
+		"Name of the workspace to delete worktree from (optional)")
 
 	return deleteCmd
 }

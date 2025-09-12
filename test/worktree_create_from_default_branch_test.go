@@ -92,7 +92,7 @@ func TestCreateWorktreeRepoModeFromDefaultBranch(t *testing.T) {
 		"New branch should not be based on feature-branch")
 
 	// Verify that the worktree was created and added to status
-	worktrees, _, err := cmInstance.ListWorktrees(false)
+	worktrees, err := cmInstance.ListWorktrees()
 	require.NoError(t, err)
 
 	found := false

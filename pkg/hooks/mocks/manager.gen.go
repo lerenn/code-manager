@@ -40,34 +40,6 @@ func (m *MockHookManagerInterface) EXPECT() *MockHookManagerInterfaceMockRecorde
 	return m.recorder
 }
 
-// DisableHook mocks base method.
-func (m *MockHookManagerInterface) DisableHook(operation, hookName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DisableHook", operation, hookName)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DisableHook indicates an expected call of DisableHook.
-func (mr *MockHookManagerInterfaceMockRecorder) DisableHook(operation, hookName any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DisableHook", reflect.TypeOf((*MockHookManagerInterface)(nil).DisableHook), operation, hookName)
-}
-
-// EnableHook mocks base method.
-func (m *MockHookManagerInterface) EnableHook(operation, hookName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnableHook", operation, hookName)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// EnableHook indicates an expected call of EnableHook.
-func (mr *MockHookManagerInterfaceMockRecorder) EnableHook(operation, hookName any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableHook", reflect.TypeOf((*MockHookManagerInterface)(nil).EnableHook), operation, hookName)
-}
-
 // ExecuteErrorHooks mocks base method.
 func (m *MockHookManagerInterface) ExecuteErrorHooks(operation string, ctx *hooks.HookContext) error {
 	m.ctrl.T.Helper()
@@ -124,35 +96,6 @@ func (mr *MockHookManagerInterfaceMockRecorder) ExecuteWorktreeCheckoutHooks(ope
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteWorktreeCheckoutHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecuteWorktreeCheckoutHooks), operation, ctx)
 }
 
-// ListHooks mocks base method.
-func (m *MockHookManagerInterface) ListHooks(operation string) ([]hooks.Hook, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListHooks", operation)
-	ret0, _ := ret[0].([]hooks.Hook)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListHooks indicates an expected call of ListHooks.
-func (mr *MockHookManagerInterfaceMockRecorder) ListHooks(operation any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ListHooks), operation)
-}
-
-// RegisterErrorHook mocks base method.
-func (m *MockHookManagerInterface) RegisterErrorHook(operation string, hook hooks.ErrorHook) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterErrorHook", operation, hook)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RegisterErrorHook indicates an expected call of RegisterErrorHook.
-func (mr *MockHookManagerInterfaceMockRecorder) RegisterErrorHook(operation, hook any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterErrorHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterErrorHook), operation, hook)
-}
-
 // RegisterPostHook mocks base method.
 func (m *MockHookManagerInterface) RegisterPostHook(operation string, hook hooks.PostHook) error {
 	m.ctrl.T.Helper()
@@ -167,20 +110,6 @@ func (mr *MockHookManagerInterfaceMockRecorder) RegisterPostHook(operation, hook
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterPostHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterPostHook), operation, hook)
 }
 
-// RegisterPreHook mocks base method.
-func (m *MockHookManagerInterface) RegisterPreHook(operation string, hook hooks.PreHook) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterPreHook", operation, hook)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RegisterPreHook indicates an expected call of RegisterPreHook.
-func (mr *MockHookManagerInterfaceMockRecorder) RegisterPreHook(operation, hook any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterPreHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterPreHook), operation, hook)
-}
-
 // RegisterWorktreeCheckoutHook mocks base method.
 func (m *MockHookManagerInterface) RegisterWorktreeCheckoutHook(operation string, hook hooks.WorktreeCheckoutHook) error {
 	m.ctrl.T.Helper()
@@ -193,18 +122,4 @@ func (m *MockHookManagerInterface) RegisterWorktreeCheckoutHook(operation string
 func (mr *MockHookManagerInterfaceMockRecorder) RegisterWorktreeCheckoutHook(operation, hook any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterWorktreeCheckoutHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterWorktreeCheckoutHook), operation, hook)
-}
-
-// RemoveHook mocks base method.
-func (m *MockHookManagerInterface) RemoveHook(operation, hookName string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RemoveHook", operation, hookName)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// RemoveHook indicates an expected call of RemoveHook.
-func (mr *MockHookManagerInterfaceMockRecorder) RemoveHook(operation, hookName any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RemoveHook), operation, hookName)
 }

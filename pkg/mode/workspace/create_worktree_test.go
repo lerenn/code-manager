@@ -78,8 +78,15 @@ func TestCreateWorktree_Success(t *testing.T) {
 
 	// Mock workspace status update
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{
+		Worktrees:    []string{},
 		Repositories: repositories,
 	}, nil)
+	// Mock UpdateWorkspace call - should contain the branch name in worktrees
+	mockStatus.EXPECT().UpdateWorkspace(workspaceName, gomock.Any()).DoAndReturn(func(name string, workspace status.Workspace) error {
+		// Verify that the worktree array contains just the branch name
+		assert.Contains(t, workspace.Worktrees, branch)
+		return nil
+	})
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},

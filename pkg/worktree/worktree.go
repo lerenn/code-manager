@@ -50,9 +50,6 @@ type Worktree interface {
 	// Exists checks if a worktree exists for the specified branch.
 	Exists(repoPath, branch string) (bool, error)
 
-	// GetPath gets the path of a worktree for a branch.
-	GetPath(repoPath, branch string) (string, error)
-
 	// SetLogger sets the logger for this worktree instance.
 	SetLogger(logger logger.Logger)
 }
@@ -218,7 +215,7 @@ func (w *realWorktree) Delete(params DeleteParams) error {
 	}
 
 	// Remove worktree from Git tracking first
-	if err := w.git.RemoveWorktree(params.RepoPath, params.WorktreePath); err != nil {
+	if err := w.git.RemoveWorktree(params.RepoPath, params.WorktreePath, params.Force); err != nil {
 		return fmt.Errorf("failed to remove worktree from Git: %w", err)
 	}
 
@@ -419,11 +416,6 @@ func (w *realWorktree) CleanupDirectory(worktreePath string) error {
 // Exists checks if a worktree exists for the specified branch.
 func (w *realWorktree) Exists(repoPath, branch string) (bool, error) {
 	return w.git.WorktreeExists(repoPath, branch)
-}
-
-// GetPath gets the path of a worktree for a branch.
-func (w *realWorktree) GetPath(repoPath, branch string) (string, error) {
-	return w.git.GetWorktreePath(repoPath, branch)
 }
 
 // SetLogger sets the logger for this worktree instance.

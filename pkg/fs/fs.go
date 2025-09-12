@@ -42,11 +42,11 @@ type FS interface {
 	// FileLock acquires a file lock and returns an unlock function.
 	FileLock(filename string) (func(), error)
 
-	// CreateFileIfNotExists creates a file with initial content if it doesn't exist.
-	CreateFileIfNotExists(filename string, initialContent []byte, perm os.FileMode) error
-
 	// RemoveAll removes a file or directory and all its contents.
 	RemoveAll(path string) error
+
+	// Remove removes a file or empty directory.
+	Remove(path string) error
 
 	// Which finds the executable path for a command using the system's PATH.
 	Which(command string) (string, error)
@@ -59,9 +59,6 @@ type FS interface {
 
 	// CreateFileWithContent creates a file with content.
 	CreateFileWithContent(path string, content []byte, perm os.FileMode) error
-
-	// IsDirectoryWritable checks if a directory is writable.
-	IsDirectoryWritable(path string) (bool, error)
 
 	// ExpandPath expands ~ to user's home directory.
 	ExpandPath(path string) (string, error)
@@ -206,28 +203,6 @@ func (f *realFS) CreateFileWithContent(path string, content []byte, perm os.File
 	return f.WriteFileAtomic(path, content, perm)
 }
 
-// IsDirectoryWritable checks if a directory is writable.
-func (f *realFS) IsDirectoryWritable(path string) (bool, error) {
-	// Try to create a temporary file to test write permissions
-	testFile := filepath.Join(path, ".cm_test_write")
-	file, err := os.Create(testFile)
-	if err != nil {
-		return false, err
-	}
-	// Clean up test file
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil {
-			// Log the error but don't fail the test
-			fmt.Printf("Warning: failed to close test file: %v\n", closeErr)
-		}
-		if removeErr := os.Remove(testFile); removeErr != nil {
-			// Log the error but don't fail the test
-			fmt.Printf("Warning: failed to remove test file: %v\n", removeErr)
-		}
-	}()
-	return true, nil
-}
-
 // ExpandPath expands ~ to user's home directory.
 func (f *realFS) ExpandPath(path string) (string, error) {
 	if !strings.HasPrefix(path, "~") {
@@ -242,31 +217,14 @@ func (f *realFS) ExpandPath(path string) (string, error) {
 	return filepath.Join(homeDir, strings.TrimPrefix(path, "~")), nil
 }
 
-// CreateFileIfNotExists creates a file with initial content if it doesn't exist.
-func (f *realFS) CreateFileIfNotExists(filename string, initialContent []byte, perm os.FileMode) error {
-	// Check if file already exists
-	exists, err := f.Exists(filename)
-	if err != nil {
-		return err
-	}
-
-	if exists {
-		return nil // File already exists, nothing to do
-	}
-
-	// Create parent directories if they don't exist
-	dir := filepath.Dir(filename)
-	if err := f.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-
-	// Create file with initial content
-	return f.WriteFileAtomic(filename, initialContent, perm)
-}
-
 // RemoveAll removes a file or directory and all its contents.
 func (f *realFS) RemoveAll(path string) error {
 	return os.RemoveAll(path)
+}
+
+// Remove removes a file or empty directory.
+func (f *realFS) Remove(path string) error {
+	return os.Remove(path)
 }
 
 // Which finds the executable path for a command using the system's PATH.

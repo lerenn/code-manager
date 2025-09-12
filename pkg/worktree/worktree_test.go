@@ -263,7 +263,7 @@ func TestWorktree_Delete_Success(t *testing.T) {
 
 	// Mock expectations
 	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(existingWorktree, nil)
-	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath).Return(nil)
+	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath, params.Force).Return(nil)
 	mockFS.EXPECT().RemoveAll(params.WorktreePath).Return(nil)
 	mockStatus.EXPECT().RemoveWorktree(params.RepoURL, params.Branch).Return(nil)
 
@@ -340,7 +340,7 @@ func TestWorktree_Delete_WithConfirmation(t *testing.T) {
 	// Mock expectations
 	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(existingWorktree, nil)
 	mockPrompt.EXPECT().PromptForConfirmation(gomock.Any(), false).Return(true, nil)
-	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath).Return(nil)
+	mockGit.EXPECT().RemoveWorktree(params.RepoPath, params.WorktreePath, params.Force).Return(nil)
 	mockFS.EXPECT().RemoveAll(params.WorktreePath).Return(nil)
 	mockStatus.EXPECT().RemoveWorktree(params.RepoURL, params.Branch).Return(nil)
 
@@ -752,37 +752,6 @@ func TestWorktree_Exists_Success(t *testing.T) {
 	exists, err := worktree.Exists(repoPath, branch)
 	assert.NoError(t, err)
 	assert.True(t, exists)
-}
-
-func TestWorktree_GetPath_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fsmocks.NewMockFS(ctrl)
-	mockGit := gitmocks.NewMockGit(ctrl)
-	mockStatus := statusmocks.NewMockManager(ctrl)
-
-	mockPrompt := promptmocks.NewMockPrompter(ctrl)
-
-	worktree := &realWorktree{
-		fs:            mockFS,
-		git:           mockGit,
-		statusManager: mockStatus,
-
-		prompt:          mockPrompt,
-		repositoriesDir: "/test/base",
-	}
-
-	repoPath := "/test/repo"
-	branch := "feature-branch"
-	expectedPath := "/test/worktree/path"
-
-	// Mock expectations
-	mockGit.EXPECT().GetWorktreePath(repoPath, branch).Return(expectedPath, nil)
-
-	path, err := worktree.GetPath(repoPath, branch)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedPath, path)
 }
 
 func TestWorktree_CleanupDirectory_Success(t *testing.T) {

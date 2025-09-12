@@ -147,35 +147,6 @@ func TestRepository_AddWorktreeToStatus_Success(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestRepository_RemoveWorktreeFromStatus_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockFS := fsmocks.NewMockFS(ctrl)
-	mockGit := gitmocks.NewMockGit(ctrl)
-	mockStatus := statusmocks.NewMockManager(ctrl)
-
-	mockPrompt := promptmocks.NewMockPrompter(ctrl)
-	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
-
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-
-		Prompt: mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
-			return mockWorktree
-		},
-	})
-
-	mockWorktree.EXPECT().RemoveFromStatus("github.com/octocat/Hello-World", "test-branch").Return(nil)
-
-	err := repo.RemoveWorktreeFromStatus("github.com/octocat/Hello-World", "test-branch")
-	assert.NoError(t, err)
-}
-
 func TestRepository_AutoAddRepositoryToStatus_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()

@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/code-manager/configs"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,7 +29,6 @@ type Manager interface {
 	ValidateRepositoriesDir(repositoriesDir string) error
 	ValidateWorkspacesDir(workspacesDir string) error
 	ValidateStatusFile(statusFile string) error
-	EnsureConfigFile(configPath string) (Config, bool, error)
 }
 
 type realManager struct {
@@ -301,32 +299,4 @@ func LoadConfigWithFallback(configPath string) (Config, error) {
 
 	// Fallback to default configuration
 	return manager.DefaultConfig(), nil
-}
-
-// EnsureConfigFile ensures the config file exists at path, creating it from embedded defaults if missing.
-// Returns the loaded config and a boolean indicating whether the file already existed.
-func (c *realManager) EnsureConfigFile(configPath string) (Config, bool, error) {
-	if _, err := os.Stat(configPath); err == nil {
-		cfg, err := c.LoadConfig(configPath)
-		if err != nil {
-			return Config{}, true, err
-		}
-		return cfg, true, nil
-	} else if !os.IsNotExist(err) {
-		return Config{}, false, fmt.Errorf("failed to stat config file: %w", err)
-	}
-
-	if err := c.CreateConfigDirectory(configPath); err != nil {
-		return Config{}, false, fmt.Errorf("failed to create config directory: %w", err)
-	}
-
-	if err := os.WriteFile(configPath, configs.DefaultConfigYAML, 0644); err != nil {
-		return Config{}, false, fmt.Errorf("failed to write default config: %w", err)
-	}
-
-	cfg, err := c.LoadConfig(configPath)
-	if err != nil {
-		return Config{}, false, err
-	}
-	return cfg, false, nil
 }

@@ -12,7 +12,6 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +37,7 @@ func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	worktrees, _, err := cmInstance.ListWorktrees(false)
+	worktrees, err := cmInstance.ListWorktrees()
 	return worktrees, err
 }
 
@@ -77,32 +76,24 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	defer os.Chdir(originalDir)
 
 	// Call ListWorktrees directly
-	worktrees, projectType, err := cmInstance.ListWorktrees(false)
+	worktrees, err := cmInstance.ListWorktrees()
 	if err != nil {
 		return err.Error(), err
 	}
 
-	// Format output similar to CLI output
+	// Format output similar to CLI output (repository mode)
 	var output strings.Builder
 
-	switch projectType {
-	case mode.ModeSingleRepo:
-		if len(worktrees) == 0 {
-			output.WriteString("No worktrees found for current repository\n")
-		} else {
-			output.WriteString("Worktrees for current repository:\n")
-			for _, wt := range worktrees {
-				output.WriteString(fmt.Sprintf("  %s\n", wt.Branch))
+	if len(worktrees) == 0 {
+		output.WriteString("No worktrees found for current repository\n")
+	} else {
+		output.WriteString("Worktrees for current repository:\n")
+		for _, wt := range worktrees {
+			remote := wt.Remote
+			if remote == "" {
+				remote = "origin"
 			}
-		}
-	case mode.ModeWorkspace:
-		if len(worktrees) == 0 {
-			output.WriteString("No worktrees found for current workspace\n")
-		} else {
-			output.WriteString("Worktrees for workspace:\n")
-			for _, wt := range worktrees {
-				output.WriteString(fmt.Sprintf("  %s [%s]\n", wt.Branch, wt.Remote))
-			}
+			output.WriteString(fmt.Sprintf("  %s [%s]\n", wt.Branch, remote))
 		}
 	}
 

@@ -29,8 +29,6 @@ type Forge interface {
 
 // ManagerInterface defines the interface for forge management.
 type ManagerInterface interface {
-	// GetForge returns the forge implementation for the given name
-	GetForge(name string) (Forge, error)
 	// GetForgeForRepository returns the appropriate forge for the given repository
 	GetForgeForRepository(repoPath string) (Forge, error)
 }
@@ -59,15 +57,6 @@ func (m *Manager) registerForges() {
 	// Register GitHub forge
 	github := NewGitHub()
 	m.forges[github.Name()] = github
-}
-
-// GetForge returns the forge implementation for the given name.
-func (m *Manager) GetForge(name string) (Forge, error) {
-	forge, exists := m.forges[name]
-	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrUnsupportedForge, name)
-	}
-	return forge, nil
 }
 
 // GetForgeForRepository returns the appropriate forge for the given repository.

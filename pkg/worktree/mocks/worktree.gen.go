@@ -154,21 +154,6 @@ func (mr *MockWorktreeMockRecorder) Exists(repoPath, branch any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exists", reflect.TypeOf((*MockWorktree)(nil).Exists), repoPath, branch)
 }
 
-// GetPath mocks base method.
-func (m *MockWorktree) GetPath(repoPath, branch string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPath", repoPath, branch)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetPath indicates an expected call of GetPath.
-func (mr *MockWorktreeMockRecorder) GetPath(repoPath, branch any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPath", reflect.TypeOf((*MockWorktree)(nil).GetPath), repoPath, branch)
-}
-
 // RemoveFromStatus mocks base method.
 func (m *MockWorktree) RemoveFromStatus(repoURL, branch string) error {
 	m.ctrl.T.Helper()
