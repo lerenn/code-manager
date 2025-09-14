@@ -110,36 +110,81 @@ func (c *realCM) performWorkspaceDeletion(
 func (c *realCM) showDeletionConfirmation(
 	workspaceName string,
 	workspace *status.Workspace,
-	worktrees []status.WorktreeInfo,
+	_ []status.WorktreeInfo, // Unused parameter - worktree info is derived from workspace
 ) error {
 	// Group worktrees by repository for better display
+	repoWorktrees := c.groupWorktreesByRepository(workspace)
+
+	// Count unique worktree references (not total worktrees across all repos)
+	uniqueWorktrees := len(workspace.Worktrees)
+
+	// Build confirmation message
+	message := c.buildDeletionConfirmationMessage(workspaceName, uniqueWorktrees, repoWorktrees)
+
+	// Get user confirmation
+	confirmed, err := c.prompt.PromptForConfirmation(message, false)
+	if err != nil {
+		return fmt.Errorf("failed to get user confirmation: %w", err)
+	}
+
+	if !confirmed {
+		return fmt.Errorf("deletion cancelled by user")
+	}
+
+	return nil
+}
+
+// groupWorktreesByRepository groups worktrees by repository for display purposes.
+func (c *realCM) groupWorktreesByRepository(workspace *status.Workspace) map[string][]string {
 	repoWorktrees := make(map[string][]string)
 
-	// Process each repository in the workspace
+	// Process each repository in the workspace to get accurate counts
 	for _, repoURL := range workspace.Repositories {
-		// Get repository to check its worktrees
-		repo, err := c.statusManager.GetRepository(repoURL)
-		if err != nil {
-			continue
+		repoBranches := c.findWorktreesForRepository(workspace, repoURL)
+		if len(repoBranches) > 0 {
+			repoWorktrees[repoURL] = repoBranches
 		}
+	}
 
-		// Find worktrees for this repository
-		for _, worktree := range worktrees {
-			// Check if this worktree belongs to this repository
-			worktreeKey := fmt.Sprintf("%s:%s", worktree.Remote, worktree.Branch)
-			if _, exists := repo.Worktrees[worktreeKey]; exists {
-				repoWorktrees[repoURL] = append(repoWorktrees[repoURL], worktree.Branch)
+	return repoWorktrees
+}
+
+// findWorktreesForRepository finds worktrees for a specific repository.
+func (c *realCM) findWorktreesForRepository(workspace *status.Workspace, repoURL string) []string {
+	// Get repository to check its worktrees
+	repo, err := c.statusManager.GetRepository(repoURL)
+	if err != nil {
+		return nil
+	}
+
+	// Find worktrees for this repository that match workspace worktree references
+	var repoBranches []string
+	for _, worktreeRef := range workspace.Worktrees {
+		// Look for worktrees in this repository that match the workspace worktree reference
+		for worktreeKey, worktree := range repo.Worktrees {
+			if worktree.Branch == worktreeRef {
+				repoBranches = append(repoBranches, worktree.Branch)
+				c.VerbosePrint("    Found worktree %s in repository %s (key: %s)", worktree.Branch, repoURL, worktreeKey)
+				break // Found this worktree reference in this repository, move to next reference
 			}
 		}
 	}
 
-	// Build confirmation message
+	return repoBranches
+}
+
+// buildDeletionConfirmationMessage builds the confirmation message for workspace deletion.
+func (c *realCM) buildDeletionConfirmationMessage(
+	workspaceName string,
+	uniqueWorktrees int,
+	repoWorktrees map[string][]string,
+) string {
 	var message strings.Builder
 	message.WriteString(fmt.Sprintf("Are you sure you want to delete workspace '%s'?\n\n", workspaceName))
 	message.WriteString("This will delete:\n")
 
-	if len(worktrees) > 0 {
-		message.WriteString(fmt.Sprintf("- %d worktrees across %d repositories:\n", len(worktrees), len(repoWorktrees)))
+	if uniqueWorktrees > 0 {
+		message.WriteString(fmt.Sprintf("- %d worktree(s) across %d repositories:\n", uniqueWorktrees, len(repoWorktrees)))
 		for repoURL, branches := range repoWorktrees {
 			message.WriteString(fmt.Sprintf("  * %s: %s\n", repoURL, strings.Join(branches, ", ")))
 		}
@@ -150,24 +195,9 @@ func (c *realCM) showDeletionConfirmation(
 	// Add workspace file information
 	workspaceFile := c.getWorkspaceFilePath(workspaceName)
 	message.WriteString(fmt.Sprintf("- Workspace file: %s\n", workspaceFile))
-
-	if len(worktrees) > 0 {
-		message.WriteString(fmt.Sprintf("- %d worktree-specific workspace files\n", len(worktrees)))
-	}
-
 	message.WriteString("\nType 'yes' to confirm deletion: ")
 
-	// Get user confirmation
-	confirmed, err := c.prompt.PromptForConfirmation(message.String(), false)
-	if err != nil {
-		return fmt.Errorf("failed to get user confirmation: %w", err)
-	}
-
-	if !confirmed {
-		return fmt.Errorf("deletion cancelled by user")
-	}
-
-	return nil
+	return message.String()
 }
 
 // deleteWorkspaceWorktrees deletes all worktrees associated with a workspace.
