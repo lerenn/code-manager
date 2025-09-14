@@ -171,6 +171,20 @@ func (mr *MockManagerMockRecorder) ListWorkspaces() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkspaces", reflect.TypeOf((*MockManager)(nil).ListWorkspaces))
 }
 
+// RemoveRepository mocks base method.
+func (m *MockManager) RemoveRepository(repoURL string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveRepository", repoURL)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveRepository indicates an expected call of RemoveRepository.
+func (mr *MockManagerMockRecorder) RemoveRepository(repoURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveRepository", reflect.TypeOf((*MockManager)(nil).RemoveRepository), repoURL)
+}
+
 // RemoveWorkspace mocks base method.
 func (m *MockManager) RemoveWorkspace(workspaceName string) error {
 	m.ctrl.T.Helper()

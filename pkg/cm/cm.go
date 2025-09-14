@@ -48,6 +48,8 @@ type CM interface {
 	Clone(repoURL string, opts ...CloneOpts) error
 	// ListRepositories lists all repositories from the status file with base path validation.
 	ListRepositories() ([]RepositoryInfo, error)
+	// DeleteRepository deletes a repository and all associated resources.
+	DeleteRepository(params DeleteRepositoryParams) error
 	// CreateWorkspace creates a new workspace with repository selection.
 	CreateWorkspace(params CreateWorkspaceParams) error
 	// DeleteWorkspace deletes a workspace and all associated resources.

@@ -14,6 +14,7 @@ const (
 	// Repository operations.
 	CloneRepository  = "CloneRepository"
 	ListRepositories = "ListRepositories"
+	DeleteRepository = "DeleteRepository"
 	Clone            = "Clone" // Legacy name for backward compatibility
 
 	// Workspace operations.

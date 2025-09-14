@@ -57,6 +57,9 @@ var (
 	ErrRepositoryAddition     = errors.New("failed to add repository to status file")
 	ErrPathResolution         = errors.New("path resolution failed")
 
+	// Repository deletion errors.
+	ErrInvalidRepositoryName = errors.New("invalid repository name")
+
 	// Workspace deletion errors.
 	ErrWorkspaceNotFound = errors.New("workspace not found")
 )
