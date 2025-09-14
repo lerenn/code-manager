@@ -8,6 +8,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/worktree"
@@ -51,29 +52,34 @@ type Workspace interface {
 // WorktreeProvider is a function type that creates worktree instances.
 type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
 
+// RepositoryProvider is a function type that creates repository instances.
+type RepositoryProvider func(params repository.NewRepositoryParams) repository.Repository
+
 // realWorkspace represents a workspace and provides methods for workspace operations.
 type realWorkspace struct {
-	fs               fs.FS
-	git              git.Git
-	config           config.Config
-	statusManager    status.Manager
-	logger           logger.Logger
-	prompt           prompt.Prompter
-	worktreeProvider WorktreeProvider
-	hookManager      hooks.HookManagerInterface
-	file             string
+	fs                 fs.FS
+	git                git.Git
+	config             config.Config
+	statusManager      status.Manager
+	logger             logger.Logger
+	prompt             prompt.Prompter
+	worktreeProvider   WorktreeProvider
+	repositoryProvider RepositoryProvider
+	hookManager        hooks.HookManagerInterface
+	file               string
 }
 
 // NewWorkspaceParams contains parameters for creating a new Workspace instance.
 type NewWorkspaceParams struct {
-	FS               fs.FS
-	Git              git.Git
-	Config           config.Config
-	StatusManager    status.Manager
-	Logger           logger.Logger
-	Prompt           prompt.Prompter
-	WorktreeProvider WorktreeProvider
-	HookManager      hooks.HookManagerInterface
+	FS                 fs.FS
+	Git                git.Git
+	Config             config.Config
+	StatusManager      status.Manager
+	Logger             logger.Logger
+	Prompt             prompt.Prompter
+	WorktreeProvider   WorktreeProvider
+	RepositoryProvider RepositoryProvider
+	HookManager        hooks.HookManagerInterface
 }
 
 // NewWorkspace creates a new Workspace instance.
@@ -84,13 +90,14 @@ func NewWorkspace(params NewWorkspaceParams) Workspace {
 	}
 
 	return &realWorkspace{
-		fs:               params.FS,
-		git:              params.Git,
-		config:           params.Config,
-		statusManager:    params.StatusManager,
-		logger:           l,
-		prompt:           params.Prompt,
-		worktreeProvider: params.WorktreeProvider,
-		hookManager:      params.HookManager,
+		fs:                 params.FS,
+		git:                params.Git,
+		config:             params.Config,
+		statusManager:      params.StatusManager,
+		logger:             l,
+		prompt:             params.Prompt,
+		worktreeProvider:   params.WorktreeProvider,
+		repositoryProvider: params.RepositoryProvider,
+		hookManager:        params.HookManager,
 	}
 }

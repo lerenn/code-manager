@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/lerenn/code-manager/pkg/branch"
-	"github.com/lerenn/code-manager/pkg/worktree"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
 )
 
 // CreateWorktree creates worktrees from workspace definition in status.yaml.
@@ -101,7 +101,7 @@ func (w *realWorkspace) createSingleRepositoryWorktree(repoURL, workspaceName, b
 	}
 
 	// Create worktree using worktree package directly
-	worktreePath, err := w.createWorktreeForRepository(repoURL, repoPath, branch)
+	worktreePath, err := w.createWorktreeForRepository(repoPath, branch)
 	if err != nil {
 		return "", fmt.Errorf("failed to create worktree in repository '%s': %w", repoURL, err)
 	}
@@ -173,65 +173,27 @@ func (w *realWorkspace) validateRepositoryPath(repoPath string) error {
 	return nil
 }
 
-// createWorktreeForRepository creates a worktree for a specific repository.
-func (w *realWorkspace) createWorktreeForRepository(repoURL, repoPath, branch string) (string, error) {
-	// Create worktree instance
-	worktreeInstance := w.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              w.fs,
-		Git:             w.git,
-		StatusManager:   w.statusManager,
-		Logger:          w.logger,
-		Prompt:          w.prompt,
-		RepositoriesDir: w.config.RepositoriesDir,
+// createWorktreeForRepository creates a worktree for a specific repository using repositoryProvider.
+func (w *realWorkspace) createWorktreeForRepository(repoPath, branch string) (string, error) {
+	// Create repository instance using repositoryProvider
+	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
+		FS:               w.fs,
+		Git:              w.git,
+		Config:           w.config,
+		StatusManager:    w.statusManager,
+		Logger:           w.logger,
+		Prompt:           w.prompt,
+		WorktreeProvider: repository.WorktreeProvider(w.worktreeProvider),
+		HookManager:      w.hookManager,
+		RepositoryName:   repoPath,
 	})
 
-	// Build worktree path
-	worktreePath := worktreeInstance.BuildPath(repoURL, "origin", branch)
-	w.logger.Logf("Worktree path: %s", worktreePath)
-
-	// Validate creation
-	if err := worktreeInstance.ValidateCreation(worktree.ValidateCreationParams{
-		RepoURL:      repoURL,
-		Branch:       branch,
-		WorktreePath: worktreePath,
-		RepoPath:     repoPath,
-	}); err != nil {
-		return "", fmt.Errorf("failed to validate worktree creation: %w", err)
-	}
-
-	// Create the worktree
-	if err := worktreeInstance.Create(worktree.CreateParams{
-		RepoURL:      repoURL,
-		Branch:       branch,
-		WorktreePath: worktreePath,
-		RepoPath:     repoPath,
-		Remote:       "origin",
-		Force:        false,
-	}); err != nil {
-		return "", fmt.Errorf("failed to create worktree: %w", err)
-	}
-
-	// Checkout the branch in the worktree
-	if err := worktreeInstance.CheckoutBranch(worktreePath, branch); err != nil {
-		// Cleanup failed worktree
-		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-			w.logger.Logf("Warning: failed to clean up worktree directory after checkout failure: %v", cleanupErr)
-		}
-		return "", fmt.Errorf("failed to checkout branch in worktree: %w", err)
-	}
-
-	// Set upstream branch tracking to enable push without specifying remote/branch
-	if err := w.git.SetUpstreamBranch(worktreePath, "origin", branch); err != nil {
-		// Cleanup failed worktree
-		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-			w.logger.Logf("Warning: failed to clean up worktree directory after upstream setup failure: %v", cleanupErr)
-		}
-		return "", fmt.Errorf("failed to set upstream branch tracking: %w", err)
-	}
-
-	// Add to status file
-	if err := w.addWorktreeToStatus(worktreeInstance, repoURL, branch, worktreePath, repoPath, nil); err != nil {
-		return "", fmt.Errorf("failed to add worktree to status: %w", err)
+	// Use repository's CreateWorktree method
+	worktreePath, err := repoInstance.CreateWorktree(branch, repository.CreateWorktreeOpts{
+		Remote: "origin",
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create worktree using repository: %w", err)
 	}
 
 	return worktreePath, nil

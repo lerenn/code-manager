@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/lerenn/code-manager/pkg/issue"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // Error definitions for workspace package.
@@ -21,25 +20,6 @@ var (
 	// User interaction errors.
 	ErrDeletionCancelled = errors.New("deletion cancelled by user")
 )
-
-// addWorktreeToStatus adds the worktree to the status file with proper error handling.
-func (w *realWorkspace) addWorktreeToStatus(
-	_ worktree.Worktree,
-	repoURL, branch, worktreePath, workspaceDir string,
-	issueInfo *issue.Info,
-) error {
-	if err := w.statusManager.AddWorktree(status.AddWorktreeParams{
-		RepoURL:       repoURL,
-		Branch:        branch,
-		WorktreePath:  worktreePath,
-		WorkspacePath: workspaceDir,
-		Remote:        "origin",
-		IssueInfo:     issueInfo,
-	}); err != nil {
-		return fmt.Errorf("failed to add worktree to status: %w", err)
-	}
-	return nil
-}
 
 // getWorkspaceWorktrees gets all worktrees for the workspace.
 func (w *realWorkspace) getWorkspaceWorktrees(branch string) ([]status.WorktreeInfo, error) {
@@ -81,19 +61,9 @@ func (w *realWorkspace) deleteWorktreeRepositories(worktrees []status.WorktreeIn
 		return fmt.Errorf("failed to get workspace from status: %w", err)
 	}
 
-	// Create worktree instance using provider
-	worktreeInstance := w.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              w.fs,
-		Git:             w.git,
-		StatusManager:   w.statusManager,
-		Logger:          w.logger,
-		Prompt:          w.prompt,
-		RepositoriesDir: w.config.RepositoriesDir,
-	})
-
 	var errors []error
 	for _, worktreeInfo := range worktrees {
-		if err := w.deleteSingleWorkspaceWorktree(worktreeInfo, workspace, worktreeInstance, force); err != nil {
+		if err := w.deleteSingleWorkspaceWorktree(worktreeInfo, workspace, force); err != nil {
 			errors = append(errors, err)
 		}
 	}
@@ -158,11 +128,10 @@ func (w *realWorkspace) getWorkspacePath() string {
 	return filepath.Dir(w.file)
 }
 
-// deleteSingleWorkspaceWorktree deletes a single worktree in workspace mode.
+// deleteSingleWorkspaceWorktree deletes a single worktree in workspace mode using repositoryProvider.
 func (w *realWorkspace) deleteSingleWorkspaceWorktree(
 	worktreeInfo status.WorktreeInfo,
 	workspace *status.Workspace,
-	worktreeInstance worktree.Worktree,
 	force bool,
 ) error {
 	w.logger.Logf("Deleting worktree for branch: %s", worktreeInfo.Branch)
@@ -174,31 +143,24 @@ func (w *realWorkspace) deleteSingleWorkspaceWorktree(
 		return nil
 	}
 
-	// Try to get worktree path from Git
+	// Get repository path
 	repoPath := filepath.Join(w.config.RepositoriesDir, repoURL)
-	gitWorktreePath, err := w.git.GetWorktreePath(repoPath, worktreeInfo.Branch)
-	if err != nil {
-		w.logger.Logf("Failed to get worktree path for branch %s (worktree may not exist in Git): %v",
-			worktreeInfo.Branch, err)
-		// If worktree doesn't exist in Git, just remove from status
-		if err := worktreeInstance.RemoveFromStatus(repoURL, worktreeInfo.Branch); err != nil {
-			w.logger.Logf("Failed to remove worktree from status for branch %s: %v", worktreeInfo.Branch, err)
-			return fmt.Errorf("failed to remove worktree from status for branch %s: %w",
-				worktreeInfo.Branch, err)
-		}
-		w.logger.Logf("Successfully removed worktree from status for branch %s (worktree did not exist in Git)",
-			worktreeInfo.Branch)
-		return nil
-	}
 
-	// Delete the worktree
-	if err := worktreeInstance.Delete(worktree.DeleteParams{
-		RepoURL:      repoURL,
-		Branch:       worktreeInfo.Branch,
-		WorktreePath: gitWorktreePath,
-		RepoPath:     repoPath,
-		Force:        force,
-	}); err != nil {
+	// Create repository instance using repositoryProvider
+	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
+		FS:               w.fs,
+		Git:              w.git,
+		Config:           w.config,
+		StatusManager:    w.statusManager,
+		Logger:           w.logger,
+		Prompt:           w.prompt,
+		WorktreeProvider: repository.WorktreeProvider(w.worktreeProvider),
+		HookManager:      w.hookManager,
+		RepositoryName:   repoPath,
+	})
+
+	// Use repository's DeleteWorktree method
+	if err := repoInstance.DeleteWorktree(worktreeInfo.Branch, force); err != nil {
 		w.logger.Logf("Failed to delete worktree for branch %s: %v", worktreeInfo.Branch, err)
 		return fmt.Errorf("failed to delete worktree for branch %s: %w", worktreeInfo.Branch, err)
 	}

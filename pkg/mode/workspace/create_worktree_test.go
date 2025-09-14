@@ -11,6 +11,8 @@ import (
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	repositorymocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
 	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
@@ -28,15 +30,16 @@ func TestCreateWorktree_Success(t *testing.T) {
 	mockGit := gitmocks.NewMockGit(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
-	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
+	mockRepository := repositorymocks.NewMockRepository(ctrl)
 
 	workspace := &realWorkspace{
-		fs:               mockFS,
-		git:              mockGit,
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		fs:                 mockFS,
+		git:                mockGit,
+		statusManager:      mockStatus,
+		logger:             logger.NewNoopLogger(),
+		prompt:             mockPrompt,
+		worktreeProvider:   func(_ worktree.NewWorktreeParams) worktree.Worktree { return worktreemocks.NewMockWorktree(ctrl) },
+		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository },
 		config: config.Config{
 			RepositoriesDir: "/test/repos",
 			WorkspacesDir:   "/test/workspaces",
@@ -61,16 +64,10 @@ func TestCreateWorktree_Success(t *testing.T) {
 		mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
 	}
 
-	// Mock worktree creation for each repository
+	// Mock repository worktree creation for each repository
 	for _, repoURL := range repositories {
 		worktreePath := filepath.Join("/test/repos", repoURL, "worktrees", "origin", branch)
-
-		mockWorktree.EXPECT().BuildPath(repoURL, "origin", branch).Return(worktreePath)
-		mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
-		mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
-		mockWorktree.EXPECT().CheckoutBranch(worktreePath, branch).Return(nil)
-		mockGit.EXPECT().SetUpstreamBranch(worktreePath, "origin", branch).Return(nil)
-		mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
+		mockRepository.EXPECT().CreateWorktree(branch, gomock.Any()).Return(worktreePath, nil)
 	}
 
 	// Mock workspace file creation
@@ -265,6 +262,9 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository {
+			return repositorymocks.NewMockRepository(ctrl)
+		},
 		config: config.Config{
 			RepositoriesDir: "/test/repos",
 		},
@@ -285,10 +285,10 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 	mockFS.EXPECT().Exists(repoPath).Return(true, nil)
 	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
 
-	// Mock worktree validation failure
-	worktreePath := filepath.Join("/test/repos", repositories[0], "worktrees", "origin", "feature-branch")
-	mockWorktree.EXPECT().BuildPath(repositories[0], "origin", "feature-branch").Return(worktreePath)
-	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(errors.New("validation failed"))
+	// Mock repository worktree creation failure
+	mockRepository := repositorymocks.NewMockRepository(ctrl)
+	workspace.repositoryProvider = func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository }
+	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("validation failed"))
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},
@@ -297,7 +297,7 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 	_, err := workspace.CreateWorktree("feature-branch", opts...)
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to validate worktree creation")
+	assert.Contains(t, err.Error(), "failed to create worktree using repository")
 }
 
 func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
@@ -313,6 +313,9 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository {
+			return repositorymocks.NewMockRepository(ctrl)
+		},
 		config: config.Config{
 			RepositoriesDir: "/test/repos",
 		},
@@ -333,11 +336,10 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 	mockFS.EXPECT().Exists(repoPath).Return(true, nil)
 	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
 
-	// Mock worktree validation success but creation failure
-	worktreePath := filepath.Join("/test/repos", repositories[0], "worktrees", "origin", "feature-branch")
-	mockWorktree.EXPECT().BuildPath(repositories[0], "origin", "feature-branch").Return(worktreePath)
-	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
-	mockWorktree.EXPECT().Create(gomock.Any()).Return(errors.New("creation failed"))
+	// Mock repository worktree creation failure
+	mockRepository := repositorymocks.NewMockRepository(ctrl)
+	workspace.repositoryProvider = func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository }
+	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("creation failed"))
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},
@@ -358,12 +360,14 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
+	mockRepository := repositorymocks.NewMockRepository(ctrl)
 	workspace := &realWorkspace{
-		fs:               mockFS,
-		git:              mockGit,
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		fs:                 mockFS,
+		git:                mockGit,
+		statusManager:      mockStatus,
+		logger:             logger.NewNoopLogger(),
+		worktreeProvider:   func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository },
 		config: config.Config{
 			RepositoriesDir: "/test/repos",
 			WorkspacesDir:   "/test/workspaces",
@@ -385,15 +389,9 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	mockFS.EXPECT().Exists(repoPath).Return(true, nil)
 	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
 
-	// Mock worktree creation success
+	// Mock repository worktree creation success
 	worktreePath := filepath.Join("/test/repos", repositories[0], "worktrees", "origin", "feature-branch")
-	mockWorktree.EXPECT().BuildPath(repositories[0], "origin", "feature-branch").Return(worktreePath)
-	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
-	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
-	mockWorktree.EXPECT().CheckoutBranch(worktreePath, "feature-branch").Return(nil)
-	mockGit.EXPECT().SetUpstreamBranch(worktreePath, "origin", "feature-branch").Return(nil)
-
-	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
+	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return(worktreePath, nil)
 
 	// Mock workspace file creation failure
 	mockFS.EXPECT().MkdirAll("/test/workspaces", gomock.Any()).Return(errors.New("mkdir failed"))
