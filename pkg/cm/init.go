@@ -257,6 +257,12 @@ func (c *realCM) updateConfiguration(expandedRepositoriesDir, expandedWorkspaces
 
 // getConfigPath returns the config file path.
 func (c *realCM) getConfigPath() string {
+	// If a custom config path was provided, use it
+	if c.configPath != "" {
+		return c.configPath
+	}
+
+	// Otherwise, use the default global path
 	homeDir, err := c.fs.GetHomeDir()
 	if err != nil {
 		// Fallback to default path if home directory cannot be determined

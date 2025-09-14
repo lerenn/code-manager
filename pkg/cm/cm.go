@@ -64,6 +64,7 @@ type NewCMParams struct {
 	WorkspaceProvider  WorkspaceProvider
 	WorktreeProvider   WorktreeProvider
 	Config             config.Config
+	ConfigPath         string // Path to the config file (used for saving config)
 	Hooks              hooks.HookManagerInterface
 	Status             status.Manager
 	FS                 fs.FS
@@ -76,6 +77,7 @@ type realCM struct {
 	fs                 fs.FS
 	git                git.Git
 	config             config.Config
+	configPath         string // Path to the config file (used for saving config)
 	statusManager      status.Manager
 	logger             logger.Logger
 	prompt             prompt.Prompter
@@ -94,6 +96,7 @@ func NewCM(params NewCMParams) (CM, error) {
 		fs:                 instances.fs,
 		git:                instances.git,
 		config:             params.Config,
+		configPath:         params.ConfigPath,
 		statusManager:      instances.status,
 		logger:             instances.logger,
 		prompt:             instances.prompt,

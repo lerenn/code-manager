@@ -117,10 +117,10 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	// Get remotes information
 	remotes := make(map[string]status.Remote)
 
-	// Check for origin remote
-	originURL, err := r.git.GetRemoteURL(absPath, "origin")
+	// Check for origin remote (default remote)
+	originURL, err := r.git.GetRemoteURL(absPath, DefaultRemote)
 	if err == nil && originURL != "" {
-		remotes["origin"] = status.Remote{
+		remotes[DefaultRemote] = status.Remote{
 			DefaultBranch: "main", // Default to main, could be enhanced to detect actual default branch
 		}
 	}

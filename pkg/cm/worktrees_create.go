@@ -21,6 +21,7 @@ type CreateWorkTreeOpts struct {
 	WorkspaceName  string
 	RepositoryName string
 	Force          bool
+	Remote         string // Remote name to use (defaults to "origin" if empty)
 }
 
 // CreateWorkTree executes the main application logic.
@@ -70,8 +71,15 @@ func (c *realCM) CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 		}
 
 		// 2. Then handle creation based on mode and flags
-		worktreePath, err = c.handleWorktreeCreation(
-			projectType, sanitizedBranch, options.IssueRef, options.WorkspaceName, options.RepositoryName, opts...)
+		worktreePath, err = c.handleWorktreeCreation(handleWorktreeCreationParams{
+			ProjectType:     projectType,
+			SanitizedBranch: sanitizedBranch,
+			IssueRef:        options.IssueRef,
+			WorkspaceName:   options.WorkspaceName,
+			RepositoryName:  options.RepositoryName,
+			Options:         options,
+			Opts:            opts,
+		})
 		if err != nil {
 			return err
 		}
@@ -109,27 +117,34 @@ func (c *realCM) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts) CreateW
 	return result
 }
 
+// handleWorktreeCreationParams contains parameters for handleWorktreeCreation.
+type handleWorktreeCreationParams struct {
+	ProjectType     mode.Mode
+	SanitizedBranch string
+	IssueRef        string
+	WorkspaceName   string
+	RepositoryName  string
+	Options         CreateWorkTreeOpts
+	Opts            []CreateWorkTreeOpts
+}
+
 // handleWorktreeCreation handles worktree creation based on project type and flags.
-func (c *realCM) handleWorktreeCreation(
-	projectType mode.Mode,
-	sanitizedBranch, issueRef, workspaceName, repositoryName string,
-	opts ...CreateWorkTreeOpts,
-) (string, error) {
-	switch projectType {
+func (c *realCM) handleWorktreeCreation(params handleWorktreeCreationParams) (string, error) {
+	switch params.ProjectType {
 	case mode.ModeWorkspace:
-		if issueRef != "" {
+		if params.IssueRef != "" {
 			// Workspace mode with issue-based creation
-			return c.createWorkTreeFromIssueForWorkspace(&sanitizedBranch, issueRef, repositoryName)
+			return c.createWorkTreeFromIssueForWorkspace(&params.SanitizedBranch, params.IssueRef, params.RepositoryName)
 		}
 		// Workspace mode with specific workspace name
-		return c.createWorkTreeFromWorkspace(workspaceName, sanitizedBranch, opts...)
+		return c.createWorkTreeFromWorkspace(params.WorkspaceName, params.SanitizedBranch, params.Opts...)
 	case mode.ModeSingleRepo:
-		if issueRef != "" {
+		if params.IssueRef != "" {
 			// Repository mode with issue-based creation
-			return c.createWorkTreeFromIssueForSingleRepo(&sanitizedBranch, issueRef, repositoryName)
+			return c.createWorkTreeFromIssueForSingleRepo(&params.SanitizedBranch, params.IssueRef, params.RepositoryName, params.Options.Remote)
 		}
 		// Repository mode with regular creation
-		return c.handleRepositoryMode(sanitizedBranch, repositoryName)
+		return c.handleRepositoryMode(params.SanitizedBranch, params.RepositoryName, params.Options.Remote)
 	case mode.ModeNone:
 		return "", ErrNoGitRepositoryOrWorkspaceFound
 	default:
@@ -172,7 +187,7 @@ func (c *realCM) createWorkTreeFromWorkspace(workspaceName, branch string, opts 
 }
 
 // handleRepositoryMode handles repository mode: validation and worktree creation.
-func (c *realCM) handleRepositoryMode(branch, repositoryName string) (string, error) {
+func (c *realCM) handleRepositoryMode(branch, repositoryName, remote string) (string, error) {
 	c.VerbosePrint("Handling repository mode")
 
 	// Create repository instance - let repositoryProvider handle repository name resolution
@@ -194,7 +209,7 @@ func (c *realCM) handleRepositoryMode(branch, repositoryName string) (string, er
 	}
 
 	// 2. Create worktree for single repository
-	worktreePath, err := repoInstance.CreateWorktree(branch, repo.CreateWorktreeOpts{})
+	worktreePath, err := repoInstance.CreateWorktree(branch, repo.CreateWorktreeOpts{Remote: remote})
 	if err != nil {
 		return "", c.translateRepositoryError(err)
 	}
@@ -234,7 +249,7 @@ func (c *realCM) translateRepositoryError(err error) error {
 // createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.
 func (c *realCM) createWorkTreeFromIssueForSingleRepo(
 	branchName *string,
-	issueRef, repositoryName string,
+	issueRef, repositoryName, remote string,
 ) (string, error) {
 	c.VerbosePrint("Creating worktree from issue for single repository mode")
 
@@ -271,7 +286,7 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(
 		HookManager:      c.hookManager,
 		RepositoryName:   repositoryName,
 	})
-	worktreePath, err := repoInstance.CreateWorktree(*branchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo})
+	worktreePath, err := repoInstance.CreateWorktree(*branchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo, Remote: remote})
 	if err != nil {
 		return "", err
 	}

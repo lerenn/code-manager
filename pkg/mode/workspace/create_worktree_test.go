@@ -68,7 +68,8 @@ func TestCreateWorktree_Success(t *testing.T) {
 		mockWorktree.EXPECT().BuildPath(repoURL, "origin", branch).Return(worktreePath)
 		mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 		mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
-		// Mock AddWorktree call from addWorktreeToStatus
+		mockWorktree.EXPECT().CheckoutBranch(worktreePath, branch).Return(nil)
+		mockGit.EXPECT().SetUpstreamBranch(worktreePath, "origin", branch).Return(nil)
 		mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 	}
 
@@ -353,11 +354,13 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	workspace := &realWorkspace{
 		fs:               mockFS,
+		git:              mockGit,
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
@@ -387,7 +390,9 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	mockWorktree.EXPECT().BuildPath(repositories[0], "origin", "feature-branch").Return(worktreePath)
 	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
-	// Mock AddWorktree call from addWorktreeToStatus
+	mockWorktree.EXPECT().CheckoutBranch(worktreePath, "feature-branch").Return(nil)
+	mockGit.EXPECT().SetUpstreamBranch(worktreePath, "origin", "feature-branch").Return(nil)
+
 	mockStatus.EXPECT().AddWorktree(gomock.Any()).Return(nil)
 
 	// Mock workspace file creation failure

@@ -14,6 +14,7 @@ import (
 type LoadWorktreeOpts struct {
 	IDEName        string
 	RepositoryName string
+	Remote         string // Remote name to use (defaults to "origin" if empty)
 }
 
 // LoadWorktree loads a branch from a remote source and creates a worktree.
@@ -52,6 +53,11 @@ func (c *realCM) executeLoadWorktreeLogic(
 	remoteSource, branchName, err := c.parseBranchArg(branchArg)
 	if err != nil {
 		return err
+	}
+
+	// Override remote from options if provided
+	if options.Remote != "" {
+		remoteSource = options.Remote
 	}
 
 	c.VerbosePrint("Parsed: remote=%s, branch=%s", remoteSource, branchName)
@@ -214,6 +220,9 @@ func (c *realCM) extractLoadWorktreeOptions(opts []LoadWorktreeOpts) LoadWorktre
 		}
 		if opt.RepositoryName != "" {
 			result.RepositoryName = opt.RepositoryName
+		}
+		if opt.Remote != "" {
+			result.Remote = opt.Remote
 		}
 	}
 

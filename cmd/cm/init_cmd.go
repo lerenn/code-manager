@@ -63,7 +63,8 @@ func runInitCommand() error {
 
 	// Create CM manager
 	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
+		Config:     cfg,
+		ConfigPath: path, // Pass the custom config path
 	})
 	if err != nil {
 		return err

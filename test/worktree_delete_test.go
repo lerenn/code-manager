@@ -477,54 +477,6 @@ func TestDeleteWorktreeWithModifiedFiles(t *testing.T) {
 	assert.NotContains(t, worktrees, "feature/test-modified-files", "Worktree should not be in Git's tracking")
 }
 
-// findWorktreePath finds the actual path of a worktree by searching the directory structure
-func findWorktreePath(t *testing.T, setup *TestSetup, branch string) string {
-	t.Helper()
-
-	// For branches with slashes, construct the expected path directly
-	// The structure is: .cm/github.com/octocat/Hello-World/origin/<branch>
-	expectedPath := filepath.Join(setup.CmPath, "github.com", "octocat", "Hello-World", "origin", branch)
-	if _, err := os.Stat(expectedPath); err == nil {
-		return expectedPath
-	}
-
-	// Search in the worktrees directory first
-	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
-	if _, err := os.Stat(worktreesDir); err == nil {
-		// For worktrees directory, the structure is: worktrees/github.com/octocat/Hello-World/origin/<branch>
-		expectedWorktreesPath := filepath.Join(worktreesDir, "github.com", "octocat", "Hello-World", "origin", branch)
-		if _, err := os.Stat(expectedWorktreesPath); err == nil {
-			return expectedWorktreesPath
-		}
-	}
-
-	// Fallback: recursively search for the branch directory
-	var findWorktree func(dir string) string
-	findWorktree = func(dir string) string {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return ""
-		}
-
-		for _, entry := range entries {
-			if entry.IsDir() {
-				entryPath := filepath.Join(dir, entry.Name())
-				// Check if this is the branch directory
-				if entry.Name() == branch {
-					return entryPath
-				}
-				// Recursively search subdirectories
-				if result := findWorktree(entryPath); result != "" {
-					return result
-				}
-			}
-		}
-		return ""
-	}
-
-	return findWorktree(setup.CmPath)
-}
-
 // TestWorktreeDeleteWithRepository tests deleting a worktree with RepositoryName option
 func TestWorktreeDeleteWithRepository(t *testing.T) {
 	// Setup test environment

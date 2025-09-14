@@ -35,7 +35,8 @@ Examples:
 				return err
 			}
 			cmManager, err := cm.NewCM(cm.NewCMParams{
-				Config: cfg,
+				Config:     cfg,
+				ConfigPath: config.GetConfigPath(),
 			})
 			if err != nil {
 				return err

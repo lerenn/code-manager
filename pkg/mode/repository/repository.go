@@ -29,6 +29,7 @@ type CreateWorktreeOpts struct {
 	IDEName       string
 	IssueInfo     *issue.Info
 	WorkspaceName string
+	Remote        string // Remote name to use (defaults to DefaultRemote if empty)
 }
 
 // WorktreeProvider is a function type that creates worktree instances.
@@ -150,8 +151,11 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 		return "", err
 	}
 
+	// Get remote from options
+	remote := r.extractRemote(opts)
+
 	// Create and validate worktree instance
-	worktreeInstance, worktreePath, err := r.createAndValidateWorktreeInstance(validationResult.RepoURL, branch)
+	worktreeInstance, worktreePath, err := r.createAndValidateWorktreeInstance(validationResult.RepoURL, branch, remote)
 	if err != nil {
 		return "", err
 	}
@@ -162,15 +166,12 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 		return "", fmt.Errorf("failed to get current directory: %w", err)
 	}
 
-	// Get issue info if provided
-	var issueInfo *issue.Info
-	if len(opts) > 0 && opts[0].IssueInfo != nil {
-		issueInfo = opts[0].IssueInfo
-	}
+	// Get issue info from options
+	issueInfo := r.extractIssueInfo(opts)
 
 	// Create the worktree (with --no-checkout)
 	if err := r.createWorktreeWithNoCheckout(
-		worktreeInstance, validationResult.RepoURL, branch, worktreePath, currentDir, issueInfo,
+		worktreeInstance, validationResult.RepoURL, branch, worktreePath, currentDir, issueInfo, remote,
 	); err != nil {
 		return "", err
 	}
@@ -183,13 +184,15 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 	}
 
 	// Now checkout the branch
-	if err := r.checkoutBranchInWorktree(worktreeInstance, worktreePath, branch); err != nil {
+	if err := r.checkoutBranchInWorktree(worktreeInstance, worktreePath, branch, remote); err != nil {
+		// Clean up worktree on checkout failure
+		r.cleanupWorktreeOnError(worktreeInstance, worktreePath, "checkout failure")
 		return "", err
 	}
 
 	// Add to status file with auto-repository handling
 	if err := r.addWorktreeToStatusAndHandleCleanup(
-		worktreeInstance, validationResult.RepoURL, branch, worktreePath, issueInfo,
+		worktreeInstance, validationResult.RepoURL, branch, worktreePath, issueInfo, remote,
 	); err != nil {
 		return "", err
 	}
@@ -197,6 +200,29 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 	r.logger.Logf("Successfully created worktree for branch %s at %s", branch, worktreePath)
 
 	return worktreePath, nil
+}
+
+// extractIssueInfo extracts issue info from options if provided.
+func (r *realRepository) extractIssueInfo(opts []CreateWorktreeOpts) *issue.Info {
+	if len(opts) > 0 && opts[0].IssueInfo != nil {
+		return opts[0].IssueInfo
+	}
+	return nil
+}
+
+// extractRemote extracts remote name from options if provided, otherwise returns DefaultRemote.
+func (r *realRepository) extractRemote(opts []CreateWorktreeOpts) string {
+	if len(opts) > 0 && opts[0].Remote != "" {
+		return opts[0].Remote
+	}
+	return DefaultRemote
+}
+
+// cleanupWorktreeOnError cleans up worktree directory on error with logging.
+func (r *realRepository) cleanupWorktreeOnError(worktreeInstance worktree.Worktree, worktreePath, context string) {
+	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
+		r.logger.Logf("Warning: failed to clean up worktree directory after %s: %v", context, cleanupErr)
+	}
 }
 
 // executeWorktreeCheckoutHooks executes worktree checkout hooks with proper error handling.
@@ -222,9 +248,7 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 
 	if err := r.hookManager.ExecuteWorktreeCheckoutHooks("CreateWorkTree", ctx); err != nil {
 		// Cleanup failed worktree
-		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-			r.logger.Logf("Warning: failed to clean up worktree directory after hook failure: %v", cleanupErr)
-		}
+		r.cleanupWorktreeOnError(worktreeInstance, worktreePath, "hook failure")
 		return fmt.Errorf("worktree checkout hooks failed: %w", err)
 	}
 
@@ -232,7 +256,7 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 }
 
 // createAndValidateWorktreeInstance creates and validates a worktree instance.
-func (r *realRepository) createAndValidateWorktreeInstance(repoURL, branch string) (worktree.Worktree, string, error) {
+func (r *realRepository) createAndValidateWorktreeInstance(repoURL, branch, remote string) (worktree.Worktree, string, error) {
 	// Create worktree instance using provider
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,
@@ -244,7 +268,7 @@ func (r *realRepository) createAndValidateWorktreeInstance(repoURL, branch strin
 	})
 
 	// Build worktree path
-	worktreePath := worktreeInstance.BuildPath(repoURL, "origin", branch)
+	worktreePath := worktreeInstance.BuildPath(repoURL, remote, branch)
 	r.logger.Logf("Worktree path: %s", worktreePath)
 
 	// Validate creation
@@ -265,13 +289,14 @@ func (r *realRepository) createWorktreeWithNoCheckout(
 	worktreeInstance worktree.Worktree,
 	repoURL, branch, worktreePath, currentDir string,
 	issueInfo *issue.Info,
+	remote string,
 ) error {
 	return worktreeInstance.Create(worktree.CreateParams{
 		RepoURL:      repoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
 		RepoPath:     currentDir,
-		Remote:       "origin",
+		Remote:       remote,
 		IssueInfo:    issueInfo,
 		Force:        false,
 	})
@@ -280,15 +305,17 @@ func (r *realRepository) createWorktreeWithNoCheckout(
 // checkoutBranchInWorktree checks out the branch in the worktree with proper error handling.
 func (r *realRepository) checkoutBranchInWorktree(
 	worktreeInstance worktree.Worktree,
-	worktreePath, branch string,
+	worktreePath, branch, remote string,
 ) error {
 	if err := worktreeInstance.CheckoutBranch(worktreePath, branch); err != nil {
-		// Cleanup failed worktree
-		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-			r.logger.Logf("Warning: failed to clean up worktree directory after checkout failure: %v", cleanupErr)
-		}
 		return fmt.Errorf("failed to checkout branch in worktree: %w", err)
 	}
+
+	// Set upstream branch tracking to enable push without specifying remote/branch
+	if err := r.git.SetUpstreamBranch(worktreePath, remote, branch); err != nil {
+		return fmt.Errorf("failed to set upstream branch tracking: %w", err)
+	}
+
 	return nil
 }
 
@@ -299,19 +326,18 @@ func (r *realRepository) addWorktreeToStatusAndHandleCleanup(
 	branch string,
 	worktreePath string,
 	issueInfo *issue.Info,
+	remote string,
 ) error {
 	if err := r.AddWorktreeToStatus(StatusParams{
 		RepoURL:       repoURL,
 		Branch:        branch,
 		WorktreePath:  worktreePath,
 		WorkspacePath: "",
-		Remote:        "origin",
+		Remote:        remote,
 		IssueInfo:     issueInfo,
 	}); err != nil {
 		// Clean up worktree on status failure
-		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-			r.logger.Logf("Warning: failed to clean up worktree directory after status failure: %v", cleanupErr)
-		}
+		r.cleanupWorktreeOnError(worktreeInstance, worktreePath, "status failure")
 		return err
 	}
 	return nil
@@ -469,14 +495,14 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 		return "", ErrGitRepositoryNotFound
 	}
 
-	// 2. Validate origin remote exists and is a valid Git hosting service URL
-	if err := r.ValidateOriginRemote(); err != nil {
-		return "", err
-	}
-
-	// 3. Parse remote source (default to "origin" if not specified)
+	// 2. Parse remote source (default to "origin" if not specified)
 	if remoteSource == "" {
 		remoteSource = DefaultRemote
+	}
+
+	// 3. Validate remote exists and is a valid Git hosting service URL
+	if err := r.ValidateRemote(remoteSource); err != nil {
+		return "", err
 	}
 
 	// 4. Handle remote management
@@ -511,7 +537,7 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 
 	// 7. Create worktree for the branch (using existing worktree creation logic directly)
 	r.logger.Logf("Creating worktree for branch '%s'", branchName)
-	worktreePath, err := r.CreateWorktree(branchName)
+	worktreePath, err := r.CreateWorktree(branchName, CreateWorktreeOpts{Remote: remoteSource})
 	return worktreePath, err
 }
 

@@ -84,7 +84,8 @@ func createDeleteCmdRunE(
 			return err
 		}
 		cmManager, err := cm.NewCM(cm.NewCMParams{
-			Config: cfg,
+			Config:     cfg,
+			ConfigPath: config.GetConfigPath(),
 		})
 		if err != nil {
 			return err
@@ -136,7 +137,8 @@ func initializeCM() (cm.CM, error) {
 		return nil, err
 	}
 	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
+		Config:     cfg,
+		ConfigPath: config.GetConfigPath(),
 	})
 	if err != nil {
 		return nil, err

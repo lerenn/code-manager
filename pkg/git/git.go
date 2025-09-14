@@ -78,6 +78,9 @@ type Git interface {
 
 	// GetBranchRemote gets the remote name for a branch (e.g., "origin", "justenstall").
 	GetBranchRemote(repoPath, branch string) (string, error)
+
+	// SetUpstreamBranch sets the upstream branch for the current branch.
+	SetUpstreamBranch(repoPath, remote, branch string) error
 }
 
 type realGit struct {

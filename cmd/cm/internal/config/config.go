@@ -43,6 +43,18 @@ func LoadConfig() (config.Config, error) {
 	return config, nil
 }
 
+// GetConfigPath returns the config file path that would be used by LoadConfig.
+func GetConfigPath() string {
+	if ConfigPath != "" {
+		return ConfigPath
+	}
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		homeDir = "."
+	}
+	return filepath.Join(homeDir, ".cm", "config.yaml")
+}
+
 // CheckInitialization checks if CM is initialized and returns an error if not.
 func CheckInitialization() error {
 	cfg, err := LoadConfig()
