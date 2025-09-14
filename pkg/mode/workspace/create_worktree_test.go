@@ -55,19 +55,20 @@ func TestCreateWorktree_Success(t *testing.T) {
 		Repositories: repositories,
 	}, nil)
 
-	// Mock repository path validation for each repo
+	// Mock repository path validation and worktree creation for each repo
+	// Use AnyTimes() to allow flexible ordering
 	for _, repoURL := range repositories {
 		repoPath := filepath.Join("/test/repos", repoURL)
 		// Mock GetRepository to return error (so it falls back to constructed path)
-		mockStatus.EXPECT().GetRepository(repoURL).Return(nil, errors.New("not found"))
-		mockFS.EXPECT().Exists(repoPath).Return(true, nil)
-		mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
-	}
+		mockStatus.EXPECT().GetRepository(repoURL).Return(nil, errors.New("not found")).AnyTimes()
+		mockFS.EXPECT().Exists(repoPath).Return(true, nil).AnyTimes()
+		// Mock getRepositoryURLFromPath calls - this is called by createSingleRepositoryWorktreeWithURL
+		mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil).AnyTimes()
+		mockGit.EXPECT().GetRemoteURL(repoPath, "origin").Return("https://github.com/user/"+filepath.Base(repoURL)+".git", nil).AnyTimes()
 
-	// Mock repository worktree creation for each repository
-	for _, repoURL := range repositories {
+		// Mock repository worktree creation for this repository
 		worktreePath := filepath.Join("/test/repos", repoURL, "worktrees", "origin", branch)
-		mockRepository.EXPECT().CreateWorktree(branch, gomock.Any()).Return(worktreePath, nil)
+		mockRepository.EXPECT().CreateWorktree(branch, gomock.Any()).Return(worktreePath, nil).AnyTimes()
 	}
 
 	// Mock workspace file creation
@@ -78,13 +79,16 @@ func TestCreateWorktree_Success(t *testing.T) {
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{
 		Worktrees:    []string{},
 		Repositories: repositories,
-	}, nil)
-	// Mock UpdateWorkspace call - should contain the branch name in worktrees
+	}, nil).AnyTimes()
+	// Mock UpdateWorkspace call - should contain the branch name in worktrees and actual repository URLs
 	mockStatus.EXPECT().UpdateWorkspace(workspaceName, gomock.Any()).DoAndReturn(func(name string, workspace status.Workspace) error {
 		// Verify that the worktree array contains just the branch name
 		assert.Contains(t, workspace.Worktrees, branch)
+		// Verify that the repositories array contains the extracted repository URLs
+		expectedRepos := []string{"github.com/user/repo1", "github.com/user/repo2"}
+		assert.Equal(t, expectedRepos, workspace.Repositories)
 		return nil
-	})
+	}).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},
@@ -256,9 +260,11 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
 
 	workspace := &realWorkspace{
 		fs:               mockFS,
+		git:              mockGit,
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
@@ -281,14 +287,16 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 	// Mock repository path validation
 	repoPath := filepath.Join("/test/repos", repositories[0])
 	// Mock GetRepository to return error (so it falls back to constructed path)
-	mockStatus.EXPECT().GetRepository(repositories[0]).Return(nil, errors.New("not found"))
-	mockFS.EXPECT().Exists(repoPath).Return(true, nil)
-	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
+	mockStatus.EXPECT().GetRepository(repositories[0]).Return(nil, errors.New("not found")).AnyTimes()
+	mockFS.EXPECT().Exists(repoPath).Return(true, nil).AnyTimes()
+	// Mock getRepositoryURLFromPath calls
+	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil).AnyTimes()
+	mockGit.EXPECT().GetRemoteURL(repoPath, "origin").Return("https://github.com/user/repo1.git", nil).AnyTimes()
 
 	// Mock repository worktree creation failure
 	mockRepository := repositorymocks.NewMockRepository(ctrl)
 	workspace.repositoryProvider = func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository }
-	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("validation failed"))
+	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("validation failed")).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},
@@ -307,9 +315,11 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
 
 	workspace := &realWorkspace{
 		fs:               mockFS,
+		git:              mockGit,
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
@@ -332,14 +342,16 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 	// Mock repository path validation
 	repoPath := filepath.Join("/test/repos", repositories[0])
 	// Mock GetRepository to return error (so it falls back to constructed path)
-	mockStatus.EXPECT().GetRepository(repositories[0]).Return(nil, errors.New("not found"))
-	mockFS.EXPECT().Exists(repoPath).Return(true, nil)
-	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
+	mockStatus.EXPECT().GetRepository(repositories[0]).Return(nil, errors.New("not found")).AnyTimes()
+	mockFS.EXPECT().Exists(repoPath).Return(true, nil).AnyTimes()
+	// Mock getRepositoryURLFromPath calls
+	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil).AnyTimes()
+	mockGit.EXPECT().GetRemoteURL(repoPath, "origin").Return("https://github.com/user/repo1.git", nil).AnyTimes()
 
 	// Mock repository worktree creation failure
 	mockRepository := repositorymocks.NewMockRepository(ctrl)
 	workspace.repositoryProvider = func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository }
-	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("creation failed"))
+	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("creation failed")).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},
@@ -385,16 +397,18 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	// Mock repository path validation
 	repoPath := filepath.Join("/test/repos", repositories[0])
 	// Mock GetRepository to return error (so it falls back to constructed path)
-	mockStatus.EXPECT().GetRepository(repositories[0]).Return(nil, errors.New("not found"))
-	mockFS.EXPECT().Exists(repoPath).Return(true, nil)
-	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil)
+	mockStatus.EXPECT().GetRepository(repositories[0]).Return(nil, errors.New("not found")).AnyTimes()
+	mockFS.EXPECT().Exists(repoPath).Return(true, nil).AnyTimes()
+	// Mock getRepositoryURLFromPath calls
+	mockFS.EXPECT().Exists(filepath.Join(repoPath, ".git")).Return(true, nil).AnyTimes()
+	mockGit.EXPECT().GetRemoteURL(repoPath, "origin").Return("https://github.com/user/repo1.git", nil).AnyTimes()
 
 	// Mock repository worktree creation success
 	worktreePath := filepath.Join("/test/repos", repositories[0], "worktrees", "origin", "feature-branch")
-	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return(worktreePath, nil)
+	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return(worktreePath, nil).AnyTimes()
 
 	// Mock workspace file creation failure
-	mockFS.EXPECT().MkdirAll("/test/workspaces", gomock.Any()).Return(errors.New("mkdir failed"))
+	mockFS.EXPECT().MkdirAll("/test/workspaces", gomock.Any()).Return(errors.New("mkdir failed")).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},
