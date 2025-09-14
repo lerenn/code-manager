@@ -154,7 +154,7 @@ func (w *realWorkspace) deleteSingleWorkspaceWorktree(
 		StatusManager:    w.statusManager,
 		Logger:           w.logger,
 		Prompt:           w.prompt,
-		WorktreeProvider: repository.WorktreeProvider(w.worktreeProvider),
+		WorktreeProvider: w.safeWorktreeProvider(),
 		HookManager:      w.hookManager,
 		RepositoryName:   repoPath,
 	})

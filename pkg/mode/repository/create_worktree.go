@@ -127,6 +127,11 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 func (r *realRepository) createAndValidateWorktreeInstance(
 	repoURL, branch, remote string,
 ) (worktree.Worktree, string, error) {
+	// Check if worktree provider is nil
+	if r.worktreeProvider == nil {
+		return nil, "", fmt.Errorf("worktree provider is nil")
+	}
+
 	// Create worktree instance using provider
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,

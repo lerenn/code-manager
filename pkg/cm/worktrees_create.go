@@ -163,14 +163,15 @@ func (c *realCM) createWorkTreeFromWorkspace(workspaceName, branch string, opts 
 
 	// Create workspace instance
 	workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
-		FS:               c.fs,
-		Git:              c.git,
-		Config:           c.config,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
+		FS:                 c.fs,
+		Git:                c.git,
+		Config:             c.config,
+		StatusManager:      c.statusManager,
+		Logger:             c.logger,
+		Prompt:             c.prompt,
+		WorktreeProvider:   worktree.NewWorktree,
+		RepositoryProvider: c.safeRepositoryProvider(),
+		HookManager:        c.hookManager,
 	})
 
 	// Convert CM options to workspace options
@@ -336,14 +337,15 @@ func (c *realCM) createWorkTreeFromIssueForWorkspace(
 
 	// Create workspace instance
 	workspace := c.workspaceProvider(ws.NewWorkspaceParams{
-		FS:               c.fs,
-		Git:              c.git,
-		Config:           c.config,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
+		FS:                 c.fs,
+		Git:                c.git,
+		Config:             c.config,
+		StatusManager:      c.statusManager,
+		Logger:             c.logger,
+		Prompt:             c.prompt,
+		WorktreeProvider:   worktree.NewWorktree,
+		RepositoryProvider: c.safeRepositoryProvider(),
+		HookManager:        c.hookManager,
 	})
 	worktreePath, err := workspace.CreateWorktree(*branchName)
 	if err != nil {
@@ -370,4 +372,12 @@ func (c *realCM) translateIssueError(err error) error {
 
 	// Return the original error if no translation is needed
 	return err
+}
+
+// safeRepositoryProvider safely converts the CM repository provider to workspace repository provider.
+func (c *realCM) safeRepositoryProvider() ws.RepositoryProvider {
+	if c.repositoryProvider == nil {
+		return nil
+	}
+	return ws.RepositoryProvider(c.repositoryProvider)
 }
