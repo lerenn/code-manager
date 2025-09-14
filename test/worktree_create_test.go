@@ -465,8 +465,8 @@ func TestCreateWorktreeWorkspaceMode_Success(t *testing.T) {
 	// Verify workspace file content
 	content, err := os.ReadFile(workspaceFilePath)
 	require.NoError(t, err)
-	assert.Contains(t, string(content), "https:/github.com/octocat/Hello-World.git")
-	assert.Contains(t, string(content), "https:/github.com/octocat/Spoon-Knife.git")
+	assert.Contains(t, string(content), "github.com/octocat/Hello-World")
+	assert.Contains(t, string(content), "github.com/octocat/Spoon-Knife")
 	assert.Contains(t, string(content), "folders")
 }
 

@@ -1,4 +1,3 @@
-// Package repository provides Git repository management functionality for CM.
 package repository
 
 import (
@@ -99,46 +98,5 @@ func (r *realRepository) validateRepositoryState(currentDir string) error {
 	if !isClean {
 		return fmt.Errorf("%w: repository is not in a clean state", ErrRepositoryNotClean)
 	}
-	return nil
-}
-
-// ValidateWorktreeExists validates that a worktree exists in the status file.
-func (r *realRepository) ValidateWorktreeExists(repoURL, branch string) error {
-	existingWorktree, err := r.statusManager.GetWorktree(repoURL, branch)
-	if err != nil || existingWorktree == nil {
-		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotInStatus, repoURL, branch)
-	}
-	return nil
-}
-
-// ValidateOriginRemote validates that the origin remote exists and is a valid Git hosting service URL.
-func (r *realRepository) ValidateOriginRemote() error {
-	return r.ValidateRemote(DefaultRemote)
-}
-
-// ValidateRemote validates that the specified remote exists and has a valid URL.
-func (r *realRepository) ValidateRemote(remote string) error {
-	r.logger.Logf("Validating remote: %s", remote)
-
-	// Check if remote exists
-	exists, err := r.git.RemoteExists(r.repositoryPath, remote)
-	if err != nil {
-		return fmt.Errorf("failed to check remote %s: %w", remote, err)
-	}
-	if !exists {
-		return fmt.Errorf("%w: remote '%s' not found", ErrOriginRemoteNotFound, remote)
-	}
-
-	// Get remote URL
-	remoteURL, err := r.git.GetRemoteURL(r.repositoryPath, remote)
-	if err != nil {
-		return fmt.Errorf("failed to get remote %s URL: %w", remote, err)
-	}
-
-	// Validate that it's a valid Git hosting service URL
-	if r.ExtractHostFromURL(remoteURL) == "" {
-		return fmt.Errorf("%w: remote '%s' has invalid URL", ErrOriginRemoteInvalidURL, remote)
-	}
-
 	return nil
 }
