@@ -1,4 +1,3 @@
-// Package repository provides Git repository management functionality for CM.
 package repository
 
 import (
@@ -17,17 +16,17 @@ func (r *realRepository) HandleRemoteManagement(remoteSource string) error {
 	}
 
 	// Check if remote already exists and handle existing remote
-	if err := r.HandleExistingRemote(remoteSource); err != nil {
+	if err := r.handleExistingRemote(remoteSource); err != nil {
 		// Remote doesn't exist, add it
-		return r.AddNewRemote(remoteSource)
+		return r.addNewRemote(remoteSource)
 	}
 
 	// Remote exists, no need to add it
 	return nil
 }
 
-// HandleExistingRemote checks if remote exists and handles it appropriately.
-func (r *realRepository) HandleExistingRemote(remoteSource string) error {
+// handleExistingRemote checks if remote exists and handles it appropriately.
+func (r *realRepository) handleExistingRemote(remoteSource string) error {
 	exists, err := r.git.RemoteExists(r.repositoryPath, remoteSource)
 	if err != nil {
 		return fmt.Errorf("failed to check if remote '%s' exists: %w", remoteSource, err)
@@ -47,8 +46,8 @@ func (r *realRepository) HandleExistingRemote(remoteSource string) error {
 	return fmt.Errorf("remote '%s' does not exist", remoteSource)
 }
 
-// AddNewRemote adds a new remote for the given remote source.
-func (r *realRepository) AddNewRemote(remoteSource string) error {
+// addNewRemote adds a new remote for the given remote source.
+func (r *realRepository) addNewRemote(remoteSource string) error {
 	r.logger.Logf("Adding new remote '%s'", remoteSource)
 
 	// Get repository information

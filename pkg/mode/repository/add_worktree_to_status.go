@@ -1,4 +1,3 @@
-// Package repository provides Git repository management functionality for CM.
 package repository
 
 import (
@@ -41,25 +40,25 @@ func (r *realRepository) AddWorktreeToStatus(params StatusParams) error {
 		Remote:        params.Remote,
 		IssueInfo:     params.IssueInfo,
 	}); err != nil {
-		return r.HandleStatusAddError(err, params)
+		return r.handleStatusAddError(err, params)
 	}
 	return nil
 }
 
-// HandleStatusAddError handles errors when adding worktree to status.
-func (r *realRepository) HandleStatusAddError(err error, params StatusParams) error {
+// handleStatusAddError handles errors when adding worktree to status.
+func (r *realRepository) handleStatusAddError(err error, params StatusParams) error {
 	// Check if the error is due to repository not found, and auto-add it
 	if errors.Is(err, status.ErrRepositoryNotFound) {
-		return r.HandleRepositoryNotFoundError(params)
+		return r.handleRepositoryNotFoundError(params)
 	}
 
 	// Clean up created directory on status update failure
-	r.CleanupWorktreeDirectory(params.WorktreePath)
+	r.cleanupWorktreeDirectory(params.WorktreePath)
 	return fmt.Errorf("failed to add worktree to status: %w", err)
 }
 
-// HandleRepositoryNotFoundError handles the case when repository is not found in status.
-func (r *realRepository) HandleRepositoryNotFoundError(params StatusParams) error {
+// handleRepositoryNotFoundError handles the case when repository is not found in status.
+func (r *realRepository) handleRepositoryNotFoundError(params StatusParams) error {
 	currentDir, err := filepath.Abs(r.repositoryPath)
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -67,7 +66,7 @@ func (r *realRepository) HandleRepositoryNotFoundError(params StatusParams) erro
 
 	if addErr := r.AutoAddRepositoryToStatus(params.RepoURL, currentDir); addErr != nil {
 		// Clean up created directory on status update failure
-		r.CleanupWorktreeDirectory(params.WorktreePath)
+		r.cleanupWorktreeDirectory(params.WorktreePath)
 		return fmt.Errorf("failed to auto-add repository to status: %w", addErr)
 	}
 
@@ -90,7 +89,7 @@ func (r *realRepository) HandleRepositoryNotFoundError(params StatusParams) erro
 		IssueInfo:     params.IssueInfo,
 	}); err != nil {
 		// Clean up created directory on status update failure
-		r.CleanupWorktreeDirectory(params.WorktreePath)
+		r.cleanupWorktreeDirectory(params.WorktreePath)
 		return fmt.Errorf("failed to add worktree to status: %w", err)
 	}
 
@@ -136,8 +135,8 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	return nil
 }
 
-// CleanupWorktreeDirectory cleans up the worktree directory.
-func (r *realRepository) CleanupWorktreeDirectory(worktreePath string) {
+// cleanupWorktreeDirectory cleans up the worktree directory.
+func (r *realRepository) cleanupWorktreeDirectory(worktreePath string) {
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,
 		Git:             r.git,

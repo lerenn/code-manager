@@ -12,7 +12,6 @@ package mocks
 import (
 	reflect "reflect"
 
-	logger "github.com/lerenn/code-manager/pkg/logger"
 	repository "github.com/lerenn/code-manager/pkg/mode/repository"
 	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
@@ -232,18 +231,6 @@ func (m *MockRepository) LoadWorktree(remoteSource, branchName string) (string, 
 func (mr *MockRepositoryMockRecorder) LoadWorktree(remoteSource, branchName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadWorktree", reflect.TypeOf((*MockRepository)(nil).LoadWorktree), remoteSource, branchName)
-}
-
-// SetLogger mocks base method.
-func (m *MockRepository) SetLogger(arg0 logger.Logger) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "SetLogger", arg0)
-}
-
-// SetLogger indicates an expected call of SetLogger.
-func (mr *MockRepositoryMockRecorder) SetLogger(arg0 any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockRepository)(nil).SetLogger), arg0)
 }
 
 // Validate mocks base method.
