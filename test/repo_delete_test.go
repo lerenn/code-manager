@@ -3,12 +3,16 @@
 package test
 
 import (
+	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/logger"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -164,4 +168,166 @@ func TestRepositoryDeleteNonexistent(t *testing.T) {
 	err = cmInstance.DeleteRepository(params)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "repository not found")
+}
+
+func TestRepositoryDeleteOutsideBaseDirectory(t *testing.T) {
+	// Create a temporary directory for the test
+	tempDir, err := os.MkdirTemp("", "cm-e2e-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// Create a repository outside the base directory
+	outsideRepoPath := filepath.Join(tempDir, "outside-repo")
+	err = os.MkdirAll(outsideRepoPath, 0755)
+	require.NoError(t, err)
+
+	// Initialize git repository
+	err = exec.Command("git", "init", outsideRepoPath).Run()
+	require.NoError(t, err)
+
+	// Create a CM instance with a different base directory
+	cmDir := filepath.Join(tempDir, ".cm")
+	config := config.Config{
+		RepositoriesDir: cmDir,
+		StatusFile:      filepath.Join(cmDir, "status.yaml"),
+	}
+
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config:     config,
+		ConfigPath: "",
+	})
+	require.NoError(t, err)
+
+	// Manually add the repository to status (simulating a repository outside base dir)
+	// We'll use the status manager directly to add a repository with a path outside the base directory
+	statusManager := status.NewManager(fs.NewFS(), config)
+
+	// Create initial status
+	err = statusManager.CreateInitialStatus()
+	require.NoError(t, err)
+
+	// Add repository with path outside base directory
+	repoName := "outside-repo"
+	addParams := status.AddRepositoryParams{
+		Path: outsideRepoPath,
+		Remotes: map[string]status.Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+	}
+	err = statusManager.AddRepository(repoName, addParams)
+	require.NoError(t, err)
+
+	// Verify the repository was added
+	repositories, err := cmInstance.ListRepositories()
+	require.NoError(t, err)
+	require.Len(t, repositories, 1)
+	require.Equal(t, repoName, repositories[0].Name)
+	require.False(t, repositories[0].InRepositoriesDir) // Should be false since it's outside base dir
+
+	// Delete the repository
+	params := cm.DeleteRepositoryParams{
+		RepositoryName: repoName,
+		Force:          true,
+	}
+	err = cmInstance.DeleteRepository(params)
+	require.NoError(t, err)
+
+	// Verify the repository was removed from status
+	repositories, err = cmInstance.ListRepositories()
+	require.NoError(t, err)
+	require.Len(t, repositories, 0)
+
+	// Verify the directory still exists (should not be deleted since it's outside base dir)
+	_, err = os.Stat(outsideRepoPath)
+	require.NoError(t, err, "Repository directory should still exist since it's outside base directory")
+}
+
+func TestRepositoryDeleteWithEmptyParentCleanup(t *testing.T) {
+	// Create a temporary directory for the test
+	tempDir, err := os.MkdirTemp("", "cm-e2e-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	// Create a CM instance with a specific base directory
+	cmDir := filepath.Join(tempDir, ".cm")
+	config := config.Config{
+		RepositoriesDir: cmDir,
+		StatusFile:      filepath.Join(cmDir, "status.yaml"),
+	}
+
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config:     config,
+		ConfigPath: "",
+	})
+	require.NoError(t, err)
+
+	// Create a repository with nested directory structure
+	// This will create: cmDir/github.com/user/repo/origin/main
+	repoName := "github.com/user/repo"
+	repoPath := filepath.Join(cmDir, "github.com", "user", "repo", "origin", "main")
+
+	// Create the nested directory structure
+	err = os.MkdirAll(repoPath, 0755)
+	require.NoError(t, err)
+
+	// Initialize git repository
+	err = exec.Command("git", "init", repoPath).Run()
+	require.NoError(t, err)
+
+	// Add repository to status
+	statusManager := status.NewManager(fs.NewFS(), config)
+	err = statusManager.CreateInitialStatus()
+	require.NoError(t, err)
+
+	addParams := status.AddRepositoryParams{
+		Path: repoPath,
+		Remotes: map[string]status.Remote{
+			"origin": {
+				DefaultBranch: "main",
+			},
+		},
+	}
+	err = statusManager.AddRepository(repoName, addParams)
+	require.NoError(t, err)
+
+	// Verify the repository was added
+	repositories, err := cmInstance.ListRepositories()
+	require.NoError(t, err)
+	require.Len(t, repositories, 1)
+	require.Equal(t, repoName, repositories[0].Name)
+
+	// Verify the nested directory structure exists
+	require.DirExists(t, filepath.Join(cmDir, "github.com"))
+	require.DirExists(t, filepath.Join(cmDir, "github.com", "user"))
+	require.DirExists(t, filepath.Join(cmDir, "github.com", "user", "repo"))
+	require.DirExists(t, filepath.Join(cmDir, "github.com", "user", "repo", "origin"))
+	require.DirExists(t, filepath.Join(cmDir, "github.com", "user", "repo", "origin", "main"))
+
+	// Delete the repository
+	params := cm.DeleteRepositoryParams{
+		RepositoryName: repoName,
+		Force:          true,
+	}
+	err = cmInstance.DeleteRepository(params)
+	require.NoError(t, err)
+
+	// Verify the repository was removed from status
+	repositories, err = cmInstance.ListRepositories()
+	require.NoError(t, err)
+	require.Len(t, repositories, 0)
+
+	// Verify the repository directory was deleted
+	require.NoDirExists(t, repoPath)
+
+	// Verify that empty parent directories were cleaned up
+	// The entire nested structure should be removed since it's now empty
+	require.NoDirExists(t, filepath.Join(cmDir, "github.com", "user", "repo", "origin"))
+	require.NoDirExists(t, filepath.Join(cmDir, "github.com", "user", "repo"))
+	require.NoDirExists(t, filepath.Join(cmDir, "github.com", "user"))
+	require.NoDirExists(t, filepath.Join(cmDir, "github.com"))
+
+	// Verify that the base repositories directory still exists
+	require.DirExists(t, cmDir)
 }

@@ -3,8 +3,12 @@
 package cm
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/lerenn/code-manager/pkg/config"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
@@ -157,3 +161,265 @@ func TestValidateRepositoryNotInWorkspace(t *testing.T) {
 		})
 	}
 }
+
+func TestCleanupEmptyParentDirectories(t *testing.T) {
+	tests := []struct {
+		name              string
+		repositoryPath    string
+		repositoriesDir   string
+		directoryExists   map[string]bool
+		directoryContents map[string][]os.DirEntry
+		expectedRemovals  []string
+		expectedError     string
+	}{
+		{
+			name:            "cleanup all empty parent directories",
+			repositoryPath:  "/base/github.com/user/repo/origin/main",
+			repositoriesDir: "/base",
+			directoryExists: map[string]bool{
+				"/base/github.com/user/repo/origin": true,
+				"/base/github.com/user/repo":        true,
+				"/base/github.com/user":             true,
+				"/base/github.com":                  true,
+			},
+			directoryContents: map[string][]os.DirEntry{
+				"/base/github.com/user/repo/origin": {},
+				"/base/github.com/user/repo":        {},
+				"/base/github.com/user":             {},
+				"/base/github.com":                  {},
+			},
+			expectedRemovals: []string{
+				"/base/github.com/user/repo/origin",
+				"/base/github.com/user/repo",
+				"/base/github.com/user",
+				"/base/github.com",
+			},
+			expectedError: "",
+		},
+		{
+			name:            "stop at non-empty directory",
+			repositoryPath:  "/base/github.com/user/repo/origin/main",
+			repositoriesDir: "/base",
+			directoryExists: map[string]bool{
+				"/base/github.com/user/repo/origin": true,
+				"/base/github.com/user/repo":        true,
+				"/base/github.com/user":             true,
+				"/base/github.com":                  true,
+			},
+			directoryContents: map[string][]os.DirEntry{
+				"/base/github.com/user/repo/origin": {},
+				"/base/github.com/user/repo":        {},
+				"/base/github.com/user":             {&mockDirEntry{name: "other-repo"}},
+				"/base/github.com":                  {},
+			},
+			expectedRemovals: []string{
+				"/base/github.com/user/repo/origin",
+				"/base/github.com/user/repo",
+			},
+			expectedError: "",
+		},
+		{
+			name:            "stop at repositories directory",
+			repositoryPath:  "/base/github.com/user/repo/origin/main",
+			repositoriesDir: "/base",
+			directoryExists: map[string]bool{
+				"/base/github.com/user/repo/origin": true,
+				"/base/github.com/user/repo":        true,
+				"/base/github.com/user":             true,
+				"/base/github.com":                  true,
+			},
+			directoryContents: map[string][]os.DirEntry{
+				"/base/github.com/user/repo/origin": {},
+				"/base/github.com/user/repo":        {},
+				"/base/github.com/user":             {},
+				"/base/github.com":                  {},
+			},
+			expectedRemovals: []string{
+				"/base/github.com/user/repo/origin",
+				"/base/github.com/user/repo",
+				"/base/github.com/user",
+				"/base/github.com",
+			},
+			expectedError: "",
+		},
+		{
+			name:            "handle non-existent directories",
+			repositoryPath:  "/base/github.com/user/repo/origin/main",
+			repositoriesDir: "/base",
+			directoryExists: map[string]bool{
+				"/base/github.com/user/repo/origin": true,
+				"/base/github.com/user/repo":        false, // doesn't exist
+				"/base/github.com/user":             true,
+				"/base/github.com":                  true,
+			},
+			directoryContents: map[string][]os.DirEntry{
+				"/base/github.com/user/repo/origin": {},
+				"/base/github.com/user":             {},
+				"/base/github.com":                  {},
+			},
+			expectedRemovals: []string{
+				"/base/github.com/user/repo/origin",
+				"/base/github.com/user",
+				"/base/github.com",
+			},
+			expectedError: "",
+		},
+		{
+			name:            "handle read directory error",
+			repositoryPath:  "/base/github.com/user/repo/origin/main",
+			repositoriesDir: "/base",
+			directoryExists: map[string]bool{
+				"/base/github.com/user/repo/origin": true,
+				"/base/github.com/user/repo":        true,
+			},
+			directoryContents: map[string][]os.DirEntry{
+				"/base/github.com/user/repo/origin": {},
+			},
+			expectedRemovals: []string{},
+			expectedError:    "failed to check if directory is empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// Create file system mock
+			fsMock := fsmocks.NewMockFS(ctrl)
+
+			// Setup mock expectations
+			parentDir := filepath.Dir(tt.repositoryPath)
+			removalCount := 0
+
+			for parentDir != tt.repositoriesDir && parentDir != filepath.Dir(parentDir) {
+				// Mock Exists call
+				exists := tt.directoryExists[parentDir]
+				fsMock.EXPECT().Exists(parentDir).Return(exists, nil)
+
+				if exists {
+					// Mock ReadDir call
+					contents, hasContents := tt.directoryContents[parentDir]
+					if hasContents {
+						fsMock.EXPECT().ReadDir(parentDir).Return(contents, nil)
+					} else {
+						// This will cause the error case
+						fsMock.EXPECT().ReadDir(parentDir).Return(nil, os.ErrPermission)
+						break
+					}
+
+					// If directory is empty, mock Remove call
+					if len(contents) == 0 {
+						fsMock.EXPECT().Remove(parentDir).Return(nil)
+						removalCount++
+					} else {
+						// Directory not empty, stop cleanup
+						break
+					}
+				}
+
+				// Move up to next parent
+				parentDir = filepath.Dir(parentDir)
+			}
+
+			// Create CM instance
+			cmInstance := &realCM{
+				fs:     fsMock,
+				logger: logger.NewNoopLogger(),
+				config: config.Config{
+					RepositoriesDir: tt.repositoriesDir,
+				},
+			}
+
+			// Execute test
+			err := cmInstance.cleanupEmptyParentDirectories(tt.repositoryPath)
+
+			// Assert results
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestIsDirectoryEmpty(t *testing.T) {
+	tests := []struct {
+		name          string
+		dirPath       string
+		readDirResult []os.DirEntry
+		readDirError  error
+		expectedEmpty bool
+		expectedError string
+	}{
+		{
+			name:          "empty directory",
+			dirPath:       "/test/empty",
+			readDirResult: []os.DirEntry{},
+			readDirError:  nil,
+			expectedEmpty: true,
+			expectedError: "",
+		},
+		{
+			name:    "non-empty directory",
+			dirPath: "/test/non-empty",
+			readDirResult: []os.DirEntry{
+				&mockDirEntry{name: "file1"},
+				&mockDirEntry{name: "file2"},
+			},
+			readDirError:  nil,
+			expectedEmpty: false,
+			expectedError: "",
+		},
+		{
+			name:          "read directory error",
+			dirPath:       "/test/error",
+			readDirResult: nil,
+			readDirError:  os.ErrPermission,
+			expectedEmpty: false,
+			expectedError: "failed to read directory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			// Create file system mock
+			fsMock := fsmocks.NewMockFS(ctrl)
+			fsMock.EXPECT().ReadDir(tt.dirPath).Return(tt.readDirResult, tt.readDirError)
+
+			// Create CM instance
+			cmInstance := &realCM{
+				fs:     fsMock,
+				logger: logger.NewNoopLogger(),
+			}
+
+			// Execute test
+			isEmpty, err := cmInstance.isDirectoryEmpty(tt.dirPath)
+
+			// Assert results
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				assert.False(t, isEmpty)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedEmpty, isEmpty)
+			}
+		})
+	}
+}
+
+// mockDirEntry is a simple implementation of fs.DirEntry for testing
+type mockDirEntry struct {
+	name string
+}
+
+func (m *mockDirEntry) Name() string               { return m.name }
+func (m *mockDirEntry) IsDir() bool                { return false }
+func (m *mockDirEntry) Type() os.FileMode          { return 0 }
+func (m *mockDirEntry) Info() (os.FileInfo, error) { return nil, nil }

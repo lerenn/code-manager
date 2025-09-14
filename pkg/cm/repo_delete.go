@@ -2,6 +2,7 @@ package cm
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
@@ -92,6 +93,18 @@ func (c *realCM) showRepositoryDeletionConfirmation(
 	message.WriteString(fmt.Sprintf("  • Repository path: %s\n", repository.Path))
 	message.WriteString(fmt.Sprintf("  • %d worktree(s)\n", len(worktrees)))
 
+	// Check if repository directory will be deleted
+	inBasePath, err := c.fs.IsPathWithinBase(c.config.RepositoriesDir, repository.Path)
+	switch {
+	case err != nil:
+		// If we can't determine, show a warning
+		message.WriteString("  • Repository directory (validation failed)\n")
+	case inBasePath:
+		message.WriteString("  • Repository directory\n")
+	default:
+		message.WriteString("  • Repository directory (outside base path - will be skipped)\n")
+	}
+
 	if len(worktrees) > 0 {
 		message.WriteString("  • Worktrees:\n")
 		for _, worktree := range worktrees {
@@ -168,9 +181,16 @@ func (c *realCM) deleteRepositoryWorktrees(repositoryName string, worktrees []st
 // deleteRepositoryDirectory deletes the repository directory if it's within the base path.
 func (c *realCM) deleteRepositoryDirectory(repositoryPath string) error {
 	// Check if the repository path is within the configured base path
-	basePath := c.config.RepositoriesDir
-	if !strings.HasPrefix(repositoryPath, basePath) {
-		c.VerbosePrint("Repository path %s is not within base path %s, skipping directory deletion", repositoryPath, basePath)
+	inBasePath, err := c.fs.IsPathWithinBase(c.config.RepositoriesDir, repositoryPath)
+	if err != nil {
+		c.VerbosePrint("Warning: failed to validate base path for repository %s: %v", repositoryPath, err)
+		// Default to not deleting if validation fails
+		return nil
+	}
+
+	if !inBasePath {
+		c.VerbosePrint("Repository path %s is not within base path %s, skipping directory deletion",
+			repositoryPath, c.config.RepositoriesDir)
 		return nil
 	}
 
@@ -191,7 +211,67 @@ func (c *realCM) deleteRepositoryDirectory(repositoryPath string) error {
 		return fmt.Errorf("failed to delete repository directory: %w", err)
 	}
 
+	// Clean up empty parent directories up to the repositories directory
+	if err := c.cleanupEmptyParentDirectories(repositoryPath); err != nil {
+		c.VerbosePrint("Warning: failed to cleanup empty parent directories: %v", err)
+		// Don't fail the entire operation if cleanup fails
+	}
+
 	return nil
+}
+
+// cleanupEmptyParentDirectories removes empty parent directories up to the repositories directory.
+func (c *realCM) cleanupEmptyParentDirectories(repositoryPath string) error {
+	// Get the parent directory of the repository
+	parentDir := filepath.Dir(repositoryPath)
+
+	// Keep cleaning up parent directories until we reach the repositories directory
+	for parentDir != c.config.RepositoriesDir && parentDir != filepath.Dir(parentDir) {
+		// Check if the directory exists
+		exists, err := c.fs.Exists(parentDir)
+		if err != nil {
+			return fmt.Errorf("failed to check if parent directory exists: %w", err)
+		}
+
+		if !exists {
+			// Directory doesn't exist, move up to next parent
+			parentDir = filepath.Dir(parentDir)
+			continue
+		}
+
+		// Check if the directory is empty
+		isEmpty, err := c.isDirectoryEmpty(parentDir)
+		if err != nil {
+			return fmt.Errorf("failed to check if directory is empty: %w", err)
+		}
+
+		if !isEmpty {
+			// Directory is not empty, stop cleanup
+			c.VerbosePrint("Parent directory %s is not empty, stopping cleanup", parentDir)
+			break
+		}
+
+		// Directory is empty, remove it
+		c.VerbosePrint("Removing empty parent directory: %s", parentDir)
+		if err := c.fs.Remove(parentDir); err != nil {
+			return fmt.Errorf("failed to remove empty parent directory %s: %w", parentDir, err)
+		}
+
+		// Move up to next parent
+		parentDir = filepath.Dir(parentDir)
+	}
+
+	return nil
+}
+
+// isDirectoryEmpty checks if a directory is empty.
+func (c *realCM) isDirectoryEmpty(dirPath string) (bool, error) {
+	entries, err := c.fs.ReadDir(dirPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	return len(entries) == 0, nil
 }
 
 // validateRepositoryName validates the repository name.
