@@ -65,9 +65,11 @@ func TestListWorktrees_Success(t *testing.T) {
 			"origin:feature-2": worktrees[1],
 		},
 	}
-	// The new logic will search for feature-1 in repo1 first, then feature-2 in repo1 (not found), then repo2
+	// The logic searches for each worktree reference in all repositories
+	// For feature-1: check repo1 (found), then repo2 (not found, but still called)
+	// For feature-2: check repo1 (not found), then repo2 (found)
 	mockStatus.EXPECT().GetRepository("repo1").Return(repo1, nil).Times(2) // Called for both feature-1 and feature-2
-	mockStatus.EXPECT().GetRepository("repo2").Return(repo2, nil).Times(1) // Called for feature-2
+	mockStatus.EXPECT().GetRepository("repo2").Return(repo2, nil).Times(2) // Called for both feature-1 and feature-2
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
@@ -202,8 +204,9 @@ func TestListWorktrees_RepositoryNotFound(t *testing.T) {
 			"origin:feature-1": worktrees[0],
 		},
 	}
-	// The new logic will search for feature-1 in repo1 first (found), so it won't check nonexistent-repo
+	// The logic searches for feature-1 in all repositories: repo1 (found), then nonexistent-repo (not found)
 	mockStatus.EXPECT().GetRepository("repo1").Return(repo1, nil)
+	mockStatus.EXPECT().GetRepository("nonexistent-repo").Return(nil, errors.New("repository not found"))
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)

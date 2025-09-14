@@ -62,6 +62,20 @@ func (mr *MockWorkspaceMockRecorder) CreateWorktree(branch any, opts ...any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWorktree", reflect.TypeOf((*MockWorkspace)(nil).CreateWorktree), varargs...)
 }
 
+// DeleteAllWorktrees mocks base method.
+func (m *MockWorkspace) DeleteAllWorktrees(force bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAllWorktrees", force)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAllWorktrees indicates an expected call of DeleteAllWorktrees.
+func (mr *MockWorkspaceMockRecorder) DeleteAllWorktrees(force any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllWorktrees", reflect.TypeOf((*MockWorkspace)(nil).DeleteAllWorktrees), force)
+}
+
 // DeleteWorktree mocks base method.
 func (m *MockWorkspace) DeleteWorktree(branch string, force bool) error {
 	m.ctrl.T.Helper()

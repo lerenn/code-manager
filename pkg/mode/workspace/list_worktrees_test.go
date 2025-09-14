@@ -33,14 +33,14 @@ func TestListWorktrees(t *testing.T) {
 				repo1 := &status.Repository{
 					Path: "/repos/repo1",
 					Worktrees: map[string]status.WorktreeInfo{
-						"feature-branch-1": {Remote: "origin", Branch: "feature-branch-1"},
-						"feature-branch-2": {Remote: "origin", Branch: "feature-branch-2"},
+						"origin:feature-branch-1": {Remote: "origin", Branch: "feature-branch-1"},
+						"origin:feature-branch-2": {Remote: "origin", Branch: "feature-branch-2"},
 					},
 				}
 				repo2 := &status.Repository{
 					Path: "/repos/repo2",
 					Worktrees: map[string]status.WorktreeInfo{
-						"feature-branch-3": {Remote: "origin", Branch: "feature-branch-3"},
+						"origin:feature-branch-3": {Remote: "origin", Branch: "feature-branch-3"},
 					},
 				}
 				statusMock.EXPECT().GetRepository("https://github.com/user/repo1").Return(repo1, nil)

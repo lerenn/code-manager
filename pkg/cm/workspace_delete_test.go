@@ -9,6 +9,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/config"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
+	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
 	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -26,6 +27,7 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 	mockGit := gitmocks.NewMockGit(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	cfg := config.Config{
 		RepositoriesDir: "/test/base/path",
@@ -40,12 +42,17 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 		statusManager: mockStatus,
 		logger:        logger.NewNoopLogger(),
 		prompt:        mockPrompt,
+		hookManager:   mockHookManager,
 	}
 
 	params := DeleteWorkspaceParams{
 		WorkspaceName: "test-workspace",
 		Force:         false,
 	}
+
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks("delete_workspace", gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks("delete_workspace", gomock.Any()).Return(nil)
 
 	// Mock workspace exists
 	workspace := &status.Workspace{
@@ -92,8 +99,8 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
 	// Mock status updates for worktree removal
-	mockStatus.EXPECT().RemoveWorktree("repo1", "origin:feature-1").Return(nil)
-	mockStatus.EXPECT().RemoveWorktree("repo2", "origin:feature-2").Return(nil)
+	mockStatus.EXPECT().RemoveWorktree("repo1", "feature-1").Return(nil)
+	mockStatus.EXPECT().RemoveWorktree("repo2", "feature-2").Return(nil)
 
 	// Mock workspace update (for removeWorktreesFromWorkspaceStatus)
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
@@ -172,7 +179,7 @@ func TestDeleteWorkspace_Force(t *testing.T) {
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock status updates for worktree removal
-	mockStatus.EXPECT().RemoveWorktree("repo1", "origin:feature-1").Return(nil)
+	mockStatus.EXPECT().RemoveWorktree("repo1", "feature-1").Return(nil)
 
 	// Mock workspace update (for removeWorktreesFromWorkspaceStatus)
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
@@ -455,7 +462,7 @@ func TestDeleteWorkspace_FileDeletionFailure(t *testing.T) {
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock status updates for worktree removal
-	mockStatus.EXPECT().RemoveWorktree("repo1", "origin:feature-1").Return(nil)
+	mockStatus.EXPECT().RemoveWorktree("repo1", "feature-1").Return(nil)
 
 	// Mock workspace update (for removeWorktreesFromWorkspaceStatus)
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
@@ -526,7 +533,7 @@ func TestDeleteWorkspace_StatusRemovalFailure(t *testing.T) {
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock status updates for worktree removal
-	mockStatus.EXPECT().RemoveWorktree("repo1", "origin:feature-1").Return(nil)
+	mockStatus.EXPECT().RemoveWorktree("repo1", "feature-1").Return(nil)
 
 	// Mock workspace update (for removeWorktreesFromWorkspaceStatus)
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
@@ -732,7 +739,7 @@ func TestDeleteWorkspace_WorktreeStatusRemovalFailure(t *testing.T) {
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock status updates for worktree removal failure
-	mockStatus.EXPECT().RemoveWorktree("repo1", "origin:feature-1").Return(errors.New("status removal failed"))
+	mockStatus.EXPECT().RemoveWorktree("repo1", "feature-1").Return(errors.New("status removal failed"))
 
 	// Execute
 	err := cm.DeleteWorkspace(params)
@@ -750,6 +757,7 @@ func TestDeleteWorkspace_MultipleRepositories(t *testing.T) {
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	cfg := config.Config{
 		RepositoriesDir: "/test/base/path",
@@ -763,12 +771,17 @@ func TestDeleteWorkspace_MultipleRepositories(t *testing.T) {
 		config:        cfg,
 		statusManager: mockStatus,
 		logger:        logger.NewNoopLogger(),
+		hookManager:   mockHookManager,
 	}
 
 	params := DeleteWorkspaceParams{
 		WorkspaceName: "multi-repo-workspace",
 		Force:         true,
 	}
+
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks("delete_workspace", gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks("delete_workspace", gomock.Any()).Return(nil)
 
 	// Mock workspace exists with multiple repositories
 	workspace := &status.Workspace{
@@ -812,8 +825,8 @@ func TestDeleteWorkspace_MultipleRepositories(t *testing.T) {
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
 	// Mock status updates for worktree removal
-	mockStatus.EXPECT().RemoveWorktree("repo1", "origin:feature-1").Return(nil)
-	mockStatus.EXPECT().RemoveWorktree("repo2", "origin:feature-2").Return(nil)
+	mockStatus.EXPECT().RemoveWorktree("repo1", "feature-1").Return(nil)
+	mockStatus.EXPECT().RemoveWorktree("repo2", "feature-2").Return(nil)
 
 	// Mock workspace update (for removeWorktreesFromWorkspaceStatus)
 	mockStatus.EXPECT().UpdateWorkspace("multi-repo-workspace", gomock.Any()).Return(nil)

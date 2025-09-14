@@ -4,11 +4,12 @@ package consts
 // Operation names for the hook system.
 const (
 	// Worktree operations.
-	CreateWorkTree = "CreateWorkTree"
-	DeleteWorkTree = "DeleteWorkTree"
-	LoadWorktree   = "LoadWorktree"
-	ListWorktrees  = "ListWorktrees"
-	OpenWorktree   = "OpenWorktree"
+	CreateWorkTree     = "CreateWorkTree"
+	DeleteWorkTree     = "DeleteWorkTree"
+	DeleteAllWorktrees = "DeleteAllWorktrees"
+	LoadWorktree       = "LoadWorktree"
+	ListWorktrees      = "ListWorktrees"
+	OpenWorktree       = "OpenWorktree"
 
 	// Repository operations.
 	CloneRepository  = "CloneRepository"
