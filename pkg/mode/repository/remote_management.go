@@ -8,11 +8,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/git"
 )
 
-// RemoteManagementParams contains parameters for remote management operations.
-type RemoteManagementParams struct {
-	RemoteSource string
-}
-
 // HandleRemoteManagement handles remote addition if the remote doesn't exist.
 func (r *realRepository) HandleRemoteManagement(remoteSource string) error {
 	// If remote source is "origin", no need to add it

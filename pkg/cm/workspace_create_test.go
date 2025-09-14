@@ -50,9 +50,6 @@ func TestCreateWorkspace_Success(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock repository exists in status (second call during addRepositoriesToStatus)
-	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
-
 	// Mock absolute path validation
 	mockFS.EXPECT().Exists("/absolute/path/repo2").Return(true, nil)
 	mockFS.EXPECT().ValidateRepositoryPath("/absolute/path/repo2").Return(true, nil)
@@ -60,11 +57,20 @@ func TestCreateWorkspace_Success(t *testing.T) {
 	// Mock repository not found in status (first call during resolution)
 	mockStatus.EXPECT().GetRepository("/absolute/path/repo2").Return(nil, errors.New("not found"))
 
-	// Mock repository not found in status (second call during addRepositoriesToStatus)
-	mockStatus.EXPECT().GetRepository("/absolute/path/repo2").Return(nil, errors.New("not found"))
-
-	// Mock adding repository to status
+	// Mock GetRemoteURL calls for both repositories (addRepositoriesToStatus calls it for all repos first)
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
 	mockGit.EXPECT().GetRemoteURL("/absolute/path/repo2", "origin").Return("github.com/user/repo2", nil)
+
+	// Mock repository exists in status check (for repo1, using the remote URL)
+	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
+
+	// Mock repository not found in status check (for repo2, using the remote URL)
+	mockStatus.EXPECT().GetRepository("github.com/user/repo2").Return(nil, errors.New("not found"))
+
+	// Mock GetRemoteURL call for repo2 again (addRepositoryToStatus calls it)
+	mockGit.EXPECT().GetRemoteURL("/absolute/path/repo2", "origin").Return("github.com/user/repo2", nil)
+
+	// Mock adding repository to status (only for repo2)
 	mockStatus.EXPECT().AddRepository("github.com/user/repo2", gomock.Any()).Return(nil)
 
 	// Mock adding workspace to status
@@ -345,11 +351,16 @@ func TestCreateWorkspace_RelativePathResolution(t *testing.T) {
 	mockFS.EXPECT().Exists("/current/dir/relative/repo").Return(true, nil)
 	mockFS.EXPECT().ValidateRepositoryPath("/current/dir/relative/repo").Return(true, nil)
 
-	// Mock repository not found in status after resolution
-	mockStatus.EXPECT().GetRepository("/current/dir/relative/repo").Return(nil, errors.New("not found"))
+	// Mock GetRemoteURL call (addRepositoriesToStatus calls it for all repos first)
+	mockGit.EXPECT().GetRemoteURL("/current/dir/relative/repo", "origin").Return("github.com/user/relative-repo", nil)
+
+	// Mock repository not found in status check (using the remote URL)
+	mockStatus.EXPECT().GetRepository("github.com/user/relative-repo").Return(nil, errors.New("not found"))
+
+	// Mock GetRemoteURL call again (addRepositoryToStatus calls it)
+	mockGit.EXPECT().GetRemoteURL("/current/dir/relative/repo", "origin").Return("github.com/user/relative-repo", nil)
 
 	// Mock adding repository to status
-	mockGit.EXPECT().GetRemoteURL("/current/dir/relative/repo", "origin").Return("github.com/user/relative-repo", nil)
 	mockStatus.EXPECT().AddRepository("github.com/user/relative-repo", gomock.Any()).Return(nil)
 
 	// Mock adding workspace to status
@@ -393,8 +404,11 @@ func TestCreateWorkspace_StatusUpdateFailure(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock repository exists in status (second call during addRepositoriesToStatus)
-	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
+	// Mock GetRemoteURL call (addRepositoriesToStatus calls it for all repos first)
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+
+	// Mock repository exists in status check (using the remote URL)
+	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
 	// Mock adding workspace to status fails
 	mockStatus.EXPECT().AddWorkspace("test-workspace", gomock.Any()).Return(errors.New("status update failed"))
@@ -437,15 +451,20 @@ func TestCreateWorkspace_RepositoryAdditionFailure(t *testing.T) {
 	// Mock repository not found in status (first call during resolution)
 	mockStatus.EXPECT().GetRepository("/new/repo").Return(nil, errors.New("not found"))
 
-	// Mock repository not found in status (second call during addRepositoriesToStatus)
-	mockStatus.EXPECT().GetRepository("/new/repo").Return(nil, errors.New("not found"))
-
 	// Mock path validation
 	mockFS.EXPECT().Exists("/new/repo").Return(true, nil)
 	mockFS.EXPECT().ValidateRepositoryPath("/new/repo").Return(true, nil)
 
-	// Mock adding repository to status fails
+	// Mock GetRemoteURL call (addRepositoriesToStatus calls it for all repos first)
 	mockGit.EXPECT().GetRemoteURL("/new/repo", "origin").Return("github.com/user/new-repo", nil)
+
+	// Mock repository not found in status check (using the remote URL)
+	mockStatus.EXPECT().GetRepository("github.com/user/new-repo").Return(nil, errors.New("not found"))
+
+	// Mock GetRemoteURL call again (addRepositoryToStatus calls it)
+	mockGit.EXPECT().GetRemoteURL("/new/repo", "origin").Return("github.com/user/new-repo", nil)
+
+	// Mock adding repository to status fails
 	mockStatus.EXPECT().AddRepository("github.com/user/new-repo", gomock.Any()).Return(errors.New("repository addition failed"))
 
 	err := cm.CreateWorkspace(params)

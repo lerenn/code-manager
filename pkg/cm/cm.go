@@ -23,20 +23,23 @@ type RepositoryProvider func(params repository.NewRepositoryParams) repository.R
 // WorkspaceProvider is a function type that creates workspace instances.
 type WorkspaceProvider func(params workspace.NewWorkspaceParams) workspace.Workspace
 
+// WorktreeProvider is a function type that creates worktree instances.
+type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
+
 // CM interface provides Git repository detection functionality.
 type CM interface {
 	// CreateWorkTree executes the main application logic.
 	CreateWorkTree(branch string, opts ...CreateWorkTreeOpts) error
 	// DeleteWorkTree deletes a worktree for the specified branch.
-	DeleteWorkTree(branch string, force bool) error
+	DeleteWorkTree(branch string, force bool, opts ...DeleteWorktreeOpts) error
 	// DeleteWorkTrees deletes multiple worktrees for the specified branches.
 	DeleteWorkTrees(branches []string, force bool) error
 	// DeleteAllWorktrees deletes all worktrees for the current repository or workspace.
 	DeleteAllWorktrees(force bool) error
 	// OpenWorktree opens an existing worktree in the specified IDE.
 	OpenWorktree(worktreeName, ideName string) error
-	// ListWorktrees lists worktrees for the current project with mode detection.
-	ListWorktrees(force bool) ([]status.WorktreeInfo, mode.Mode, error)
+	// ListWorktrees lists worktrees for a workspace or repository.
+	ListWorktrees(opts ...ListWorktreesOpts) ([]status.WorktreeInfo, error)
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
 	LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error
 	// Init initializes CM configuration.
@@ -47,17 +50,19 @@ type CM interface {
 	ListRepositories() ([]RepositoryInfo, error)
 	// CreateWorkspace creates a new workspace with repository selection.
 	CreateWorkspace(params CreateWorkspaceParams) error
+	// DeleteWorkspace deletes a workspace and all associated resources.
+	DeleteWorkspace(params DeleteWorkspaceParams) error
+	// ListWorkspaces lists all workspaces from the status file.
+	ListWorkspaces() ([]WorkspaceInfo, error)
 	// SetLogger sets the logger for this CM instance.
 	SetLogger(logger logger.Logger)
-	// Hook management methods
-	RegisterHook(operation string, hook hooks.Hook) error
-	UnregisterHook(operation, hookName string) error
 }
 
 // NewCMParams contains parameters for creating a new CM instance.
 type NewCMParams struct {
 	RepositoryProvider RepositoryProvider
 	WorkspaceProvider  WorkspaceProvider
+	WorktreeProvider   WorktreeProvider
 	Config             config.Config
 	Hooks              hooks.HookManagerInterface
 	Status             status.Manager
@@ -76,6 +81,7 @@ type realCM struct {
 	prompt             prompt.Prompter
 	repositoryProvider RepositoryProvider
 	workspaceProvider  WorkspaceProvider
+	worktreeProvider   WorktreeProvider
 	hookManager        hooks.HookManagerInterface
 }
 
@@ -93,6 +99,7 @@ func NewCM(params NewCMParams) (CM, error) {
 		prompt:             instances.prompt,
 		repositoryProvider: instances.repoProvider,
 		workspaceProvider:  instances.workspaceProvider,
+		worktreeProvider:   instances.worktreeProvider,
 		hookManager:        hookManager,
 	}, nil
 }
@@ -121,6 +128,7 @@ type cmInstances struct {
 	status            status.Manager
 	repoProvider      RepositoryProvider
 	workspaceProvider WorkspaceProvider
+	worktreeProvider  WorktreeProvider
 }
 
 // createInstances creates and initializes all required instances for CM.
@@ -160,6 +168,11 @@ func createInstances(params NewCMParams) cmInstances {
 		workspaceProvider = workspace.NewWorkspace
 	}
 
+	worktreeProvider := params.WorktreeProvider
+	if worktreeProvider == nil {
+		worktreeProvider = worktree.NewWorktree
+	}
+
 	return cmInstances{
 		fs:                fsInstance,
 		git:               gitInstance,
@@ -168,6 +181,7 @@ func createInstances(params NewCMParams) cmInstances {
 		status:            statusInstance,
 		repoProvider:      repoProvider,
 		workspaceProvider: workspaceProvider,
+		worktreeProvider:  worktreeProvider,
 	}
 }
 
@@ -184,31 +198,9 @@ func (c *realCM) SetLogger(logger logger.Logger) {
 }
 
 // BuildWorktreePath constructs a worktree path from repository URL, remote name, and branch.
-func (c *realCM) BuildWorktreePath(repoURL, _, branch string) string {
-	// For now, construct the path manually since we don't have direct access to the worktree
-	// This should be refactored to use the worktree component properly
-	return fmt.Sprintf("%s/worktrees/%s/%s", c.config.RepositoriesDir, repoURL, branch)
-}
-
-// RegisterHook registers a hook for a specific operation.
-func (c *realCM) RegisterHook(operation string, hook hooks.Hook) error {
-	// This is a simplified implementation - in practice, you'd want to determine
-	// the hook type and register it appropriately.
-	switch h := hook.(type) {
-	case hooks.PostHook:
-		return c.hookManager.RegisterPostHook(operation, h)
-	case hooks.PreHook:
-		return c.hookManager.RegisterPreHook(operation, h)
-	case hooks.ErrorHook:
-		return c.hookManager.RegisterErrorHook(operation, h)
-	default:
-		return fmt.Errorf("unsupported hook type")
-	}
-}
-
-// UnregisterHook removes a hook by name from a specific operation.
-func (c *realCM) UnregisterHook(operation, hookName string) error {
-	return c.hookManager.RemoveHook(operation, hookName)
+func (c *realCM) BuildWorktreePath(repoURL, remoteName, branch string) string {
+	// Use the same path format as the worktree component
+	return fmt.Sprintf("%s/%s/%s/%s", c.config.RepositoriesDir, repoURL, remoteName, branch)
 }
 
 // executeWithHooks executes an operation with pre and post hooks.
@@ -217,7 +209,6 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 		OperationName: operationName,
 		Parameters:    params,
 		Results:       make(map[string]interface{}),
-		CM:            c,
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)
@@ -246,50 +237,6 @@ func (c *realCM) executeWithHooks(operationName string, params map[string]interf
 	return resultErr
 }
 
-// executeWithHooksAndReturnListWorktrees executes an operation with pre and post hooks
-// that returns worktrees and project type.
-func (c *realCM) executeWithHooksAndReturnListWorktrees(
-	operationName string,
-	params map[string]interface{},
-	operation func() ([]status.WorktreeInfo, mode.Mode, error),
-) ([]status.WorktreeInfo, mode.Mode, error) {
-	ctx := &hooks.HookContext{
-		OperationName: operationName,
-		Parameters:    params,
-		Results:       make(map[string]interface{}),
-		CM:            c,
-		Metadata:      make(map[string]interface{}),
-	}
-	// Execute pre-hooks (if hook manager is available)
-	if err := c.executePreHooks(operationName, ctx); err != nil {
-		return nil, mode.ModeNone, err
-	}
-	// Execute operation
-	var worktrees []status.WorktreeInfo
-	var projectType mode.Mode
-	var resultErr error
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				resultErr = fmt.Errorf("panic in %s: %v", operationName, r)
-			}
-		}()
-		worktrees, projectType, resultErr = operation()
-	}()
-	// Update context with results
-	ctx.Error = resultErr
-	if resultErr == nil {
-		ctx.Results["worktrees"] = worktrees
-		ctx.Results["projectType"] = projectType
-		ctx.Results["success"] = true
-	}
-	// Execute post-hooks or error-hooks (if hook manager is available)
-	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
-		return nil, mode.ModeNone, hookErr
-	}
-	return worktrees, projectType, resultErr
-}
-
 // executeWithHooksAndReturnRepositories executes an operation with pre and post hooks that returns repositories.
 func (c *realCM) executeWithHooksAndReturnRepositories(
 	operationName string,
@@ -300,7 +247,6 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 		OperationName: operationName,
 		Parameters:    params,
 		Results:       make(map[string]interface{}),
-		CM:            c,
 		Metadata:      make(map[string]interface{}),
 	}
 	// Execute pre-hooks (if hook manager is available)
@@ -329,6 +275,46 @@ func (c *realCM) executeWithHooksAndReturnRepositories(
 		return nil, hookErr
 	}
 	return repositories, resultErr
+}
+
+// executeWithHooksAndReturnWorkspaces executes an operation with pre and post hooks that returns workspaces.
+func (c *realCM) executeWithHooksAndReturnWorkspaces(
+	operationName string,
+	params map[string]interface{},
+	operation func() ([]WorkspaceInfo, error),
+) ([]WorkspaceInfo, error) {
+	ctx := &hooks.HookContext{
+		OperationName: operationName,
+		Parameters:    params,
+		Results:       make(map[string]interface{}),
+		Metadata:      make(map[string]interface{}),
+	}
+	// Execute pre-hooks (if hook manager is available)
+	if err := c.executePreHooks(operationName, ctx); err != nil {
+		return nil, err
+	}
+	// Execute operation
+	var workspaces []WorkspaceInfo
+	var resultErr error
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				resultErr = fmt.Errorf("panic in %s: %v", operationName, r)
+			}
+		}()
+		workspaces, resultErr = operation()
+	}()
+	// Update context with results
+	ctx.Error = resultErr
+	if resultErr == nil {
+		ctx.Results["workspaces"] = workspaces
+		ctx.Results["success"] = true
+	}
+	// Execute post-hooks or error-hooks (if hook manager is available)
+	if hookErr := c.executeHooks(operationName, ctx, resultErr); hookErr != nil {
+		return nil, hookErr
+	}
+	return workspaces, resultErr
 }
 
 // executeHooks executes pre-hooks, post-hooks, or error-hooks based on the operation result.

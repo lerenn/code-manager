@@ -104,21 +104,6 @@ func (mr *MockWorkspaceMockRecorder) GetName(config, filename any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockWorkspace)(nil).GetName), config, filename)
 }
 
-// HandleMultipleFiles mocks base method.
-func (m *MockWorkspace) HandleMultipleFiles(workspaceFiles []string, force bool) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "HandleMultipleFiles", workspaceFiles, force)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// HandleMultipleFiles indicates an expected call of HandleMultipleFiles.
-func (mr *MockWorkspaceMockRecorder) HandleMultipleFiles(workspaceFiles, force any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleMultipleFiles", reflect.TypeOf((*MockWorkspace)(nil).HandleMultipleFiles), workspaceFiles, force)
-}
-
 // ListWorktrees mocks base method.
 func (m *MockWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 	m.ctrl.T.Helper()

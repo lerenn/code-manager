@@ -5,8 +5,5 @@ import "errors"
 
 // Error definitions for prompt package.
 var (
-	// User input errors.
-	ErrInvalidInput             = errors.New("invalid user input")
-	ErrUserCancelled            = errors.New("user cancelled operation")
 	ErrInvalidConfirmationInput = errors.New("invalid input: please enter 'y' or 'n'")
 )

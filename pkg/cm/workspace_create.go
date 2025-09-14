@@ -15,6 +15,17 @@ type CreateWorkspaceParams struct {
 	Repositories  []string // Repository identifiers (names, paths, URLs)
 }
 
+// DeleteWorkspaceParams contains parameters for DeleteWorkspace.
+type DeleteWorkspaceParams struct {
+	WorkspaceName string // Name of the workspace to delete
+	Force         bool   // Skip confirmation prompts
+}
+
+// ListWorktreesOpts contains options for ListWorktrees.
+type ListWorktreesOpts struct {
+	WorkspaceName string // Name of the workspace to list worktrees for (optional)
+}
+
 // CreateWorkspace creates a new workspace with repository selection.
 func (c *realCM) CreateWorkspace(params CreateWorkspaceParams) error {
 	return c.executeWithHooks("create_workspace", map[string]interface{}{
@@ -162,16 +173,32 @@ func (c *realCM) validateRepositoryPath(path string) (string, error) {
 // addRepositoriesToStatus adds new repositories to status file and returns final repository URLs.
 func (c *realCM) addRepositoriesToStatus(repositories []string) ([]string, error) {
 	var finalRepos []string
+	seenURLs := make(map[string]bool)
 
 	for _, repo := range repositories {
-		// Check if repository already exists in status
-		if existingRepo, err := c.statusManager.GetRepository(repo); err == nil && existingRepo != nil {
-			finalRepos = append(finalRepos, repo)
+		// Get repository URL from Git remote origin
+		repoURL, err := c.git.GetRemoteURL(repo, "origin")
+		if err != nil {
+			// If no origin remote, use the path as the identifier
+			repoURL = repo
+		}
+
+		// Check for duplicate remote URLs within this workspace
+		if seenURLs[repoURL] {
+			return nil, fmt.Errorf("%w: repository with URL '%s' already exists in this workspace",
+				ErrDuplicateRepository, repoURL)
+		}
+		seenURLs[repoURL] = true
+
+		// Check if repository already exists in status using the remote URL
+		if existingRepo, err := c.statusManager.GetRepository(repoURL); err == nil && existingRepo != nil {
+			finalRepos = append(finalRepos, repoURL)
+			c.VerbosePrint("  ✓ %s (already exists in status)", repo)
 			continue
 		}
 
 		// Add new repository to status file
-		repoURL, err := c.addRepositoryToStatus(repo)
+		repoURL, err = c.addRepositoryToStatus(repo)
 		if err != nil {
 			return nil, fmt.Errorf("%w: failed to add repository '%s': %w", ErrRepositoryAddition, repo, err)
 		}

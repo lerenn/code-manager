@@ -68,22 +68,6 @@ func (mr *MockManagerMockRecorder) DefaultConfig() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultConfig", reflect.TypeOf((*MockManager)(nil).DefaultConfig))
 }
 
-// EnsureConfigFile mocks base method.
-func (m *MockManager) EnsureConfigFile(configPath string) (config.Config, bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureConfigFile", configPath)
-	ret0, _ := ret[0].(config.Config)
-	ret1, _ := ret[1].(bool)
-	ret2, _ := ret[2].(error)
-	return ret0, ret1, ret2
-}
-
-// EnsureConfigFile indicates an expected call of EnsureConfigFile.
-func (mr *MockManagerMockRecorder) EnsureConfigFile(configPath any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureConfigFile", reflect.TypeOf((*MockManager)(nil).EnsureConfigFile), configPath)
-}
-
 // LoadConfig mocks base method.
 func (m *MockManager) LoadConfig(configPath string) (config.Config, error) {
 	m.ctrl.T.Helper()

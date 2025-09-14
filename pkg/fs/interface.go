@@ -41,6 +41,9 @@ type FS interface {
 	// CreateFileIfNotExists creates a file with initial content if it doesn't exist.
 	CreateFileIfNotExists(filename string, initialContent []byte, perm os.FileMode) error
 
+	// Remove removes a file or empty directory.
+	Remove(path string) error
+
 	// RemoveAll removes a file or directory and all its contents.
 	RemoveAll(path string) error
 

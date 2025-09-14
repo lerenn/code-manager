@@ -8,22 +8,40 @@ import (
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
 	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
+	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
+// DeleteWorktreeOpts contains optional parameters for DeleteWorkTree.
+type DeleteWorktreeOpts struct {
+	WorkspaceName string
+}
+
 // DeleteWorkTree deletes a worktree for the specified branch.
-func (c *realCM) DeleteWorkTree(branch string, force bool) error {
+func (c *realCM) DeleteWorkTree(branch string, force bool, opts ...DeleteWorktreeOpts) error {
+	// Parse options
+	var options DeleteWorktreeOpts
+	if len(opts) > 0 {
+		options = opts[0]
+	}
+
 	// Prepare parameters for hooks
 	params := map[string]interface{}{
-		"branch": branch,
-		"force":  force,
+		"branch":         branch,
+		"force":          force,
+		"workspace_name": options.WorkspaceName,
 	}
 
 	// Execute with hooks
 	return c.executeWithHooks(consts.DeleteWorkTree, params, func() error {
 		c.VerbosePrint("Deleting worktree for branch: %s (force: %t)", branch, force)
 
-		// Detect project mode
+		// If workspace name is provided, delete workspace worktree
+		if options.WorkspaceName != "" {
+			return c.deleteWorkspaceWorktree(options.WorkspaceName, branch, force)
+		}
+
+		// Otherwise, detect project mode and delete accordingly
 		projectType, err := c.detectProjectMode("")
 		if err != nil {
 			return fmt.Errorf("failed to detect project mode: %w", err)
@@ -149,3 +167,129 @@ func (c *realCM) translateWorkspaceError(err error) error {
 	// Return the original error if no translation is needed
 	return err
 }
+
+// deleteWorkspaceWorktree deletes a worktree from a specific workspace.
+func (c *realCM) deleteWorkspaceWorktree(workspaceName, branch string, force bool) error {
+	c.VerbosePrint("Deleting worktree '%s' from workspace '%s'", branch, workspaceName)
+
+	// Get workspace from status
+	workspace, err := c.statusManager.GetWorkspace(workspaceName)
+	if err != nil {
+		return fmt.Errorf("failed to get workspace: %w", err)
+	}
+
+	// Validate worktree exists in workspace
+	if err := c.validateWorktreeInWorkspace(workspace, branch); err != nil {
+		return err
+	}
+
+	// Find and delete the worktree from repositories
+	if err := c.findAndDeleteWorktreeFromRepositories(workspace, branch, force); err != nil {
+		return err
+	}
+
+	// Remove the worktree from the workspace's worktrees list
+	if err := c.removeWorktreeFromWorkspace(workspaceName, branch); err != nil {
+		return fmt.Errorf("failed to remove worktree from workspace: %w", err)
+	}
+
+	c.VerbosePrint("Successfully deleted worktree '%s' from workspace '%s'", branch, workspaceName)
+	return nil
+}
+
+// validateWorktreeInWorkspace validates that a worktree exists in the workspace.
+func (c *realCM) validateWorktreeInWorkspace(workspace *status.Workspace, branch string) error {
+	for _, worktreeRef := range workspace.Worktrees {
+		if worktreeRef == branch {
+			return nil
+		}
+	}
+	return fmt.Errorf("worktree '%s' not found in workspace", branch)
+}
+
+// findAndDeleteWorktreeFromRepositories finds and deletes a worktree from workspace repositories.
+func (c *realCM) findAndDeleteWorktreeFromRepositories(workspace *status.Workspace, branch string, force bool) error {
+	for _, repoURL := range workspace.Repositories {
+		// Get repository to check its worktrees
+		repo, err := c.statusManager.GetRepository(repoURL)
+		if err != nil {
+			c.VerbosePrint("  ⚠ Skipping repository %s: %v", repoURL, err)
+			continue // Skip if repository not found
+		}
+
+		// Look for the worktree reference in this repository's worktrees
+		for worktreeKey, worktree := range repo.Worktrees {
+			if worktree.Branch == branch {
+				// Found the worktree, now delete it
+				if err := c.deleteWorktreeFromRepository(repoURL, worktreeKey, worktree, force); err != nil {
+					return fmt.Errorf("failed to delete worktree from repository %s: %w", repoURL, err)
+				}
+				return nil
+			}
+		}
+	}
+	return fmt.Errorf("worktree '%s' not found in any repository of workspace", branch)
+}
+
+// deleteWorktreeFromRepository deletes a worktree from a specific repository.
+func (c *realCM) deleteWorktreeFromRepository(repoURL, _ string, worktreeInfo status.WorktreeInfo, force bool) error {
+	c.VerbosePrint("Deleting worktree from repository: %s", repoURL)
+
+	// Get repository path from status
+	repo, err := c.statusManager.GetRepository(repoURL)
+	if err != nil {
+		return fmt.Errorf("failed to get repository: %w", err)
+	}
+
+	// Create worktree instance for deletion
+	worktreeInstance := c.worktreeProvider(worktree.NewWorktreeParams{
+		FS:              c.fs,
+		Git:             c.git,
+		StatusManager:   c.statusManager,
+		Logger:          c.logger,
+		Prompt:          c.prompt,
+		RepositoriesDir: c.config.RepositoriesDir,
+	})
+
+	// Build worktree path
+	worktreePath := worktreeInstance.BuildPath(repoURL, worktreeInfo.Remote, worktreeInfo.Branch)
+
+	// Delete the worktree
+	if err := worktreeInstance.Delete(worktree.DeleteParams{
+		RepoURL:      repoURL,
+		Branch:       worktreeInfo.Branch,
+		WorktreePath: worktreePath,
+		RepoPath:     repo.Path,
+		Force:        force,
+	}); err != nil {
+		return fmt.Errorf("failed to delete worktree: %w", err)
+	}
+
+	return nil
+}
+
+// removeWorktreeFromWorkspace removes a worktree reference from a workspace.
+func (c *realCM) removeWorktreeFromWorkspace(workspaceName, branch string) error {
+	// Get current workspace
+	workspace, err := c.statusManager.GetWorkspace(workspaceName)
+	if err != nil {
+		return fmt.Errorf("failed to get workspace: %w", err)
+	}
+
+	// Remove the worktree from the list
+	newWorktrees := make([]string, 0, len(workspace.Worktrees))
+	for _, worktreeRef := range workspace.Worktrees {
+		if worktreeRef != branch {
+			newWorktrees = append(newWorktrees, worktreeRef)
+		}
+	}
+	workspace.Worktrees = newWorktrees
+
+	// Update workspace in status file
+	if err := c.statusManager.UpdateWorkspace(workspaceName, *workspace); err != nil {
+		return fmt.Errorf("failed to update workspace status: %w", err)
+	}
+
+	return nil
+}
+

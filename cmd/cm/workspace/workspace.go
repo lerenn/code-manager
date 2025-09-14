@@ -17,5 +17,11 @@ func CreateWorkspaceCmd() *cobra.Command {
 	createCmd := createCreateCmd()
 	workspaceCmd.AddCommand(createCmd)
 
+	listCmd := createListCmd()
+	workspaceCmd.AddCommand(listCmd)
+
+	deleteCmd := createDeleteCmd()
+	workspaceCmd.AddCommand(deleteCmd)
+
 	return workspaceCmd
 }

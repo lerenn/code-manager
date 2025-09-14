@@ -16,6 +16,9 @@ const (
 	ListRepositories = "ListRepositories"
 	Clone            = "Clone" // Legacy name for backward compatibility
 
+	// Workspace operations.
+	ListWorkspaces = "ListWorkspaces"
+
 	// Initialization operations.
 	Init = "Init"
 )

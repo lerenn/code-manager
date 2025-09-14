@@ -31,9 +31,6 @@ type Git interface {
 	// BranchExists checks if a branch exists locally or remotely.
 	BranchExists(repoPath, branch string) (bool, error)
 
-	// CreateBranch creates a new branch from the current branch.
-	CreateBranch(repoPath, branch string) error
-
 	// CreateBranchFrom creates a new branch from a specific branch.
 	CreateBranchFrom(params CreateBranchFromParams) error
 
@@ -64,20 +61,23 @@ type Git interface {
 	// RemoteExists checks if a remote exists.
 	RemoteExists(repoPath, remoteName string) (bool, error)
 
-	// GetBranchRemote gets the remote name for a branch (e.g., "origin", "justenstall").
-	GetBranchRemote(repoPath, branch string) (string, error)
-
-	// Add adds files to the Git staging area.
-	Add(repoPath string, files ...string) error
-
-	// Commit creates a new commit with the specified message.
-	Commit(repoPath, message string) error
-
 	// Clone clones a repository to the specified path.
 	Clone(params CloneParams) error
 
 	// GetDefaultBranch gets the default branch name from a remote repository.
 	GetDefaultBranch(remoteURL string) (string, error)
+
+	// Add adds files to the Git staging area.
+	Add(repoPath string, files ...string) error
+
+	// CreateBranch creates a new branch from the current branch.
+	CreateBranch(repoPath, branch string) error
+
+	// Commit creates a new commit with the specified message.
+	Commit(repoPath, message string) error
+
+	// GetBranchRemote gets the remote name for a branch (e.g., "origin", "justenstall").
+	GetBranchRemote(repoPath, branch string) (string, error)
 }
 
 type realGit struct {

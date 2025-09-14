@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/lerenn/code-manager/pkg/branch"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
@@ -219,9 +220,12 @@ func (w *realWorkspace) createWorktreeForRepository(repoURL, repoPath, branch st
 }
 
 // createWorkspaceFile creates a .code-workspace file in the workspaces directory.
-func (w *realWorkspace) createWorkspaceFile(workspaceName, branch string, repositories []string) (string, error) {
+func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, repositories []string) (string, error) {
+	// Sanitize branch name for filename (replace / with -)
+	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
+
 	// Create workspace file path
-	workspaceFileName := fmt.Sprintf("%s-%s.code-workspace", workspaceName, branch)
+	workspaceFileName := fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename)
 	workspaceFilePath := filepath.Join(w.config.WorkspacesDir, workspaceFileName)
 
 	// Ensure workspaces directory exists
@@ -280,15 +284,15 @@ func (w *realWorkspace) updateWorkspaceStatus(workspaceName, branch string) erro
 		return fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	// Add worktree name to existing worktree array
-	worktreeName := fmt.Sprintf("%s-%s", workspaceName, branch)
-	workspace.Worktree = append(workspace.Worktree, worktreeName)
+	// Add worktree name to existing worktree array (just the branch name)
+	workspace.Worktrees = append(workspace.Worktrees, branch)
 
-	// Update workspace in status
-	// Note: This is a simplified approach - in practice, you might want to add a proper UpdateWorkspace method
-	// For now, we'll skip this update and let the individual repository worktree creation handle status updates
-	w.logger.Logf("Workspace status will be updated by individual repository worktree creation")
+	// Update workspace in status file
+	if err := w.statusManager.UpdateWorkspace(workspaceName, *workspace); err != nil {
+		return fmt.Errorf("failed to update workspace status: %w", err)
+	}
 
+	w.logger.Logf("Updated workspace '%s' with worktree: %s", workspaceName, branch)
 	return nil
 }
 

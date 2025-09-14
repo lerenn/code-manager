@@ -45,7 +45,6 @@ type Workspace interface {
 	Load() error
 	ParseFile(filename string) (Config, error)
 	GetName(config Config, filename string) string
-	HandleMultipleFiles(workspaceFiles []string, force bool) (string, error)
 	ValidateWorkspaceReferences() error
 }
 

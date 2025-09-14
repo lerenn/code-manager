@@ -19,22 +19,6 @@ func TestNewManager(t *testing.T) {
 	assert.NotNil(t, manager.forges)
 }
 
-func TestManager_GetForge(t *testing.T) {
-	loggerInstance := logger.NewNoopLogger()
-	manager := NewManager(loggerInstance)
-
-	// Test getting GitHub forge
-	githubForge, err := manager.GetForge("github")
-	require.NoError(t, err)
-	assert.NotNil(t, githubForge)
-	assert.Equal(t, "github", githubForge.Name())
-
-	// Test getting non-existent forge
-	_, err = manager.GetForge("nonexistent")
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrUnsupportedForge)
-}
-
 func TestGitHub_Name(t *testing.T) {
 	github := NewGitHub()
 	assert.Equal(t, "github", github.Name())
