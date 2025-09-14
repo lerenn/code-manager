@@ -91,14 +91,11 @@ func (w *realWorkspace) createWorkspaceWorktrees(workspaceName, branch string, r
 	return workspaceFilePath, nil
 }
 
-// createSingleRepositoryWorktree creates a worktree for a single repository.
-func (w *realWorkspace) createSingleRepositoryWorktree(repoURL, workspaceName, branch string) (string, error) {
-	worktreePath, _, err := w.createSingleRepositoryWorktreeWithURL(repoURL, workspaceName, branch)
-	return worktreePath, err
-}
-
-// createSingleRepositoryWorktreeWithURL creates a worktree for a single repository and returns both the worktree path and actual repository URL.
-func (w *realWorkspace) createSingleRepositoryWorktreeWithURL(repoURL, workspaceName, branch string) (string, string, error) {
+// createSingleRepositoryWorktreeWithURL creates a worktree for a single repository and returns both the
+// worktree path and actual repository URL.
+func (w *realWorkspace) createSingleRepositoryWorktreeWithURL(
+	repoURL, workspaceName, branch string,
+) (string, string, error) {
 	w.logger.Logf("Creating worktree in repository: %s", repoURL)
 
 	// Get repository path from status or construct it
@@ -230,34 +227,11 @@ func (w *realWorkspace) validateRepositoryPath(repoPath string) error {
 	return nil
 }
 
-// createWorktreeForRepository creates a worktree for a specific repository using repositoryProvider.
-func (w *realWorkspace) createWorktreeForRepository(repoURL, branch string) (string, error) {
-	// Create repository instance using repositoryProvider
-	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
-		FS:               w.fs,
-		Git:              w.git,
-		Config:           w.config,
-		StatusManager:    w.statusManager,
-		Logger:           w.logger,
-		Prompt:           w.prompt,
-		WorktreeProvider: w.safeWorktreeProvider(),
-		HookManager:      w.hookManager,
-		RepositoryName:   repoURL,
-	})
-
-	// Use repository's CreateWorktree method
-	worktreePath, err := repoInstance.CreateWorktree(branch, repository.CreateWorktreeOpts{
-		Remote: "origin",
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to create worktree using repository: %w", err)
-	}
-
-	return worktreePath, nil
-}
-
-// createWorktreeForRepositoryWithPath creates a worktree for a specific repository using repositoryProvider with explicit path.
-func (w *realWorkspace) createWorktreeForRepositoryWithPath(repoURL, repoPath, branch string) (string, error) {
+// createWorktreeForRepositoryWithPath creates a worktree for a specific repository using repositoryProvider
+// with explicit path.
+func (w *realWorkspace) createWorktreeForRepositoryWithPath(
+	_, repoPath, branch string,
+) (string, error) {
 	// Create repository instance using repositoryProvider with explicit path
 	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
 		FS:               w.fs,
@@ -358,7 +332,8 @@ func (w *realWorkspace) updateWorkspaceStatus(workspaceName, branch string, actu
 		return fmt.Errorf("failed to update workspace status: %w", err)
 	}
 
-	w.logger.Logf("Updated workspace '%s' with worktree: %s and repositories: %v", workspaceName, branch, actualRepositoryURLs)
+	w.logger.Logf("Updated workspace '%s' with worktree: %s and repositories: %v",
+		workspaceName, branch, actualRepositoryURLs)
 	return nil
 }
 
