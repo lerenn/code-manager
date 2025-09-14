@@ -161,7 +161,7 @@ func TestWorktreeOpenWithRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// Open worktree using RepositoryName option (this will fail in test environment but should not error on validation)
-	err = cmInstance.OpenWorktree("feature-branch", "cursor", cm.OpenWorktreeOpts{
+	err = cmInstance.OpenWorktree("feature-branch", "dummy", cm.OpenWorktreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	// We expect this to fail because IDE opening won't work in test environment

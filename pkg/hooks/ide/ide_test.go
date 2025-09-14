@@ -122,7 +122,12 @@ func TestManager_OpenIDE(t *testing.T) {
 				mockFS.EXPECT().Which(gomock.Any()).Return("", errors.New("not found"))
 			} else {
 				mockFS.EXPECT().Which(gomock.Any()).Return("/usr/bin/ide", nil)
-				mockFS.EXPECT().ExecuteCommand(gomock.Any(), tt.path).Return(nil)
+				// All IDEs expect path with trailing slash
+				expectedPath := tt.path
+				if expectedPath[len(expectedPath)-1] != '/' {
+					expectedPath += "/"
+				}
+				mockFS.EXPECT().ExecuteCommand(gomock.Any(), expectedPath).Return(nil)
 			}
 
 			err := manager.OpenIDE(tt.ideName, tt.path)
@@ -199,10 +204,16 @@ func TestVSCode_OpenRepository(t *testing.T) {
 
 			mockFS := fsmocks.NewMockFS(ctrl)
 
+			// VS Code expects path with trailing slash
+			expectedPath := tt.path
+			if expectedPath[len(expectedPath)-1] != '/' {
+				expectedPath += "/"
+			}
+
 			if tt.expectError {
-				mockFS.EXPECT().ExecuteCommand(VSCodeCommand, tt.path).Return(errors.New("command failed"))
+				mockFS.EXPECT().ExecuteCommand(VSCodeCommand, expectedPath).Return(errors.New("command failed"))
 			} else {
-				mockFS.EXPECT().ExecuteCommand(VSCodeCommand, tt.path).Return(nil)
+				mockFS.EXPECT().ExecuteCommand(VSCodeCommand, expectedPath).Return(nil)
 			}
 
 			vscode := NewVSCode(mockFS)
@@ -280,10 +291,16 @@ func TestCursor_OpenRepository(t *testing.T) {
 
 			mockFS := fsmocks.NewMockFS(ctrl)
 
+			// Cursor expects path with trailing slash
+			expectedPath := tt.path
+			if expectedPath[len(expectedPath)-1] != '/' {
+				expectedPath += "/"
+			}
+
 			if tt.expectError {
-				mockFS.EXPECT().ExecuteCommand(CursorCommand, tt.path).Return(errors.New("command failed"))
+				mockFS.EXPECT().ExecuteCommand(CursorCommand, expectedPath).Return(errors.New("command failed"))
 			} else {
-				mockFS.EXPECT().ExecuteCommand(CursorCommand, tt.path).Return(nil)
+				mockFS.EXPECT().ExecuteCommand(CursorCommand, expectedPath).Return(nil)
 			}
 
 			cursor := NewCursor(mockFS)
