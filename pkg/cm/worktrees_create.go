@@ -141,7 +141,12 @@ func (c *realCM) handleWorktreeCreation(params handleWorktreeCreationParams) (st
 	case mode.ModeSingleRepo:
 		if params.IssueRef != "" {
 			// Repository mode with issue-based creation
-			return c.createWorkTreeFromIssueForSingleRepo(&params.SanitizedBranch, params.IssueRef, params.RepositoryName, params.Options.Remote)
+			return c.createWorkTreeFromIssueForSingleRepo(createWorkTreeFromIssueForSingleRepoParams{
+				BranchName:     &params.SanitizedBranch,
+				IssueRef:       params.IssueRef,
+				RepositoryName: params.RepositoryName,
+				Remote:         params.Options.Remote,
+			})
 		}
 		// Repository mode with regular creation
 		return c.handleRepositoryMode(params.SanitizedBranch, params.RepositoryName, params.Options.Remote)
@@ -246,10 +251,17 @@ func (c *realCM) translateRepositoryError(err error) error {
 	return err
 }
 
+// createWorkTreeFromIssueForSingleRepoParams contains parameters for createWorkTreeFromIssueForSingleRepo.
+type createWorkTreeFromIssueForSingleRepoParams struct {
+	BranchName     *string
+	IssueRef       string
+	RepositoryName string
+	Remote         string
+}
+
 // createWorkTreeFromIssueForSingleRepo creates a worktree from issue for single repository.
 func (c *realCM) createWorkTreeFromIssueForSingleRepo(
-	branchName *string,
-	issueRef, repositoryName, remote string,
+	params createWorkTreeFromIssueForSingleRepoParams,
 ) (string, error) {
 	c.VerbosePrint("Creating worktree from issue for single repository mode")
 
@@ -257,21 +269,21 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(
 	forgeManager := forge.NewManager(c.logger, c.statusManager)
 
 	// Get the appropriate forge for the repository
-	selectedForge, err := forgeManager.GetForgeForRepository(repositoryName)
+	selectedForge, err := forgeManager.GetForgeForRepository(params.RepositoryName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get forge for repository: %w", err)
 	}
 
 	// Get issue information
-	issueInfo, err := selectedForge.GetIssueInfo(issueRef)
+	issueInfo, err := selectedForge.GetIssueInfo(params.IssueRef)
 	if err != nil {
 		return "", c.translateIssueError(err)
 	}
 
 	// Generate branch name if not provided
-	if branchName == nil || *branchName == "" {
+	if params.BranchName == nil || *params.BranchName == "" {
 		generatedBranchName := selectedForge.GenerateBranchName(issueInfo)
-		branchName = &generatedBranchName
+		params.BranchName = &generatedBranchName
 	}
 
 	// Create worktree using existing logic
@@ -284,9 +296,10 @@ func (c *realCM) createWorkTreeFromIssueForSingleRepo(
 		Prompt:           c.prompt,
 		WorktreeProvider: worktree.NewWorktree,
 		HookManager:      c.hookManager,
-		RepositoryName:   repositoryName,
+		RepositoryName:   params.RepositoryName,
 	})
-	worktreePath, err := repoInstance.CreateWorktree(*branchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo, Remote: remote})
+	worktreePath, err := repoInstance.CreateWorktree(
+		*params.BranchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo, Remote: params.Remote})
 	if err != nil {
 		return "", err
 	}

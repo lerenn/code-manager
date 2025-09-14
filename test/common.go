@@ -395,71 +395,13 @@ func findWorktreePath(t *testing.T, setup *TestSetup, branch string) string {
 	t.Helper()
 
 	// The worktree should be created in the .cm directory with repo name and branch structure
-	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
+	// Structure: $repositoriesDir/<repo_url>/<remote_name>/<branch>
 
-	// First check if worktrees directory exists
-	if _, err := os.Stat(worktreesDir); os.IsNotExist(err) {
-		// If worktrees directory doesn't exist, search in the .cm directory itself
-		// This handles the case where worktrees are created directly in .cm/github.com/...
-		var worktreePath string
-
-		// List the contents of the .cm directory to see what's there
-		cmEntries, err := os.ReadDir(setup.CmPath)
-		if err != nil {
-			t.Fatalf("Worktree directory should exist for branch %s", branch)
-		}
-
-		// Function to recursively search for worktree in directory structure
-		var findWorktree func(dir string) string
-		findWorktree = func(dir string) string {
-			// Check if this directory has origin/branch structure
-			originDir := filepath.Join(dir, "origin")
-			if _, err := os.Stat(originDir); err == nil {
-				branchDir := filepath.Join(originDir, branch)
-				if _, err := os.Stat(branchDir); err == nil {
-					return branchDir
-				}
-			}
-
-			// If not, recursively check subdirectories
-			entries, err := os.ReadDir(dir)
-			if err != nil {
-				return ""
-			}
-
-			for _, entry := range entries {
-				if entry.IsDir() {
-					subDir := filepath.Join(dir, entry.Name())
-					if result := findWorktree(subDir); result != "" {
-						return result
-					}
-				}
-			}
-
-			return ""
-		}
-
-		// Search for worktree in each top-level directory in .cm
-		for _, entry := range cmEntries {
-			if entry.IsDir() {
-				repositoriesDir := filepath.Join(setup.CmPath, entry.Name())
-				if result := findWorktree(repositoriesDir); result != "" {
-					worktreePath = result
-					break
-				}
-			}
-		}
-
-		if worktreePath != "" {
-			return worktreePath
-		}
+	// List the contents of the .cm directory to see what's there
+	cmEntries, err := os.ReadDir(setup.CmPath)
+	if err != nil {
+		t.Fatalf("Failed to read .cm directory: %v", err)
 	}
-
-	// If worktrees directory exists, use the original logic
-	entries, err := os.ReadDir(worktreesDir)
-	require.NoError(t, err)
-
-	var worktreePath string
 
 	// Function to recursively search for worktree in directory structure
 	var findWorktree func(dir string) string
@@ -491,18 +433,37 @@ func findWorktreePath(t *testing.T, setup *TestSetup, branch string) string {
 		return ""
 	}
 
-	// Search for worktree in each top-level directory
-	for _, entry := range entries {
+	// Search for worktree in each top-level directory in .cm
+	for _, entry := range cmEntries {
 		if entry.IsDir() {
-			repositoriesDir := filepath.Join(worktreesDir, entry.Name())
+			repositoriesDir := filepath.Join(setup.CmPath, entry.Name())
 			if result := findWorktree(repositoriesDir); result != "" {
-				worktreePath = result
-				break
+				return result
 			}
 		}
 	}
 
-	return worktreePath
+	// If not found, check if there's a worktrees subdirectory (legacy structure)
+	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
+	if _, err := os.Stat(worktreesDir); err == nil {
+		entries, err := os.ReadDir(worktreesDir)
+		if err != nil {
+			t.Fatalf("Failed to read worktrees directory: %v", err)
+		}
+
+		// Search for worktree in each top-level directory in worktrees
+		for _, entry := range entries {
+			if entry.IsDir() {
+				repositoriesDir := filepath.Join(worktreesDir, entry.Name())
+				if result := findWorktree(repositoriesDir); result != "" {
+					return result
+				}
+			}
+		}
+	}
+
+	// If still not found, return empty string (worktree doesn't exist)
+	return ""
 }
 
 // assertWorktreeInRepo checks that the worktree is properly linked in the original repository

@@ -256,7 +256,9 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 }
 
 // createAndValidateWorktreeInstance creates and validates a worktree instance.
-func (r *realRepository) createAndValidateWorktreeInstance(repoURL, branch, remote string) (worktree.Worktree, string, error) {
+func (r *realRepository) createAndValidateWorktreeInstance(
+	repoURL, branch, remote string,
+) (worktree.Worktree, string, error) {
 	// Create worktree instance using provider
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,

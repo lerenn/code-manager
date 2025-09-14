@@ -460,6 +460,7 @@ func TestWorktreeListWithRepository(t *testing.T) {
 			RepositoriesDir: setup.CmPath,
 			StatusFile:      setup.StatusPath,
 		},
+		ConfigPath: setup.ConfigPath,
 	})
 	require.NoError(t, err)
 

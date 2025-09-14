@@ -21,6 +21,7 @@ func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 			RepositoriesDir: setup.CmPath,
 			StatusFile:      setup.StatusPath,
 		},
+		ConfigPath: setup.ConfigPath,
 	})
 
 	require.NoError(t, err)
@@ -108,10 +109,11 @@ func TestLoadWorktreeRepoModeWithNewRemote(t *testing.T) {
 	merge = refs/heads/main
 `), 0644))
 
-	// Test loading from a new remote (this will fail in real scenario but tests the parsing)
+	// Test loading from a new remote (this will fail because remote doesn't exist)
 	t.Run("LoadFromNewRemote", func(t *testing.T) {
 		err := loadWorktree(t, setup, "george-wicked:patch-1")
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "remote 'george-wicked' not found")
 	})
 }
 
@@ -130,6 +132,7 @@ func TestWorktreeLoadWithRepository(t *testing.T) {
 			RepositoriesDir: setup.CmPath,
 			StatusFile:      setup.StatusPath,
 		},
+		ConfigPath: setup.ConfigPath,
 	})
 	require.NoError(t, err)
 
