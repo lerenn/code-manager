@@ -21,6 +21,7 @@ func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 			RepositoriesDir: setup.CmPath,
 			StatusFile:      setup.StatusPath,
 		},
+		ConfigPath: setup.ConfigPath,
 	})
 
 	require.NoError(t, err)
@@ -108,9 +109,54 @@ func TestLoadWorktreeRepoModeWithNewRemote(t *testing.T) {
 	merge = refs/heads/main
 `), 0644))
 
-	// Test loading from a new remote (this will fail in real scenario but tests the parsing)
+	// Test loading from a new remote (this will fail because remote doesn't exist)
 	t.Run("LoadFromNewRemote", func(t *testing.T) {
 		err := loadWorktree(t, setup, "george-wicked:patch-1")
-		assert.NoError(t, err)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "remote 'george-wicked' not found")
 	})
+}
+
+// TestWorktreeLoadWithRepository tests loading a worktree with RepositoryName option
+func TestWorktreeLoadWithRepository(t *testing.T) {
+	// Setup test environment
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Initialize CM in the repository
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+		},
+		ConfigPath: setup.ConfigPath,
+	})
+	require.NoError(t, err)
+
+	// Initialize CM from within the repository
+	restore := safeChdir(t, setup.RepoPath)
+	err = cmInstance.Init(cm.InitOpts{
+		NonInteractive:  true,
+		RepositoriesDir: setup.CmPath,
+		StatusFile:      setup.StatusPath,
+	})
+	restore()
+	require.NoError(t, err)
+
+	// Load worktree using RepositoryName option (use a branch that exists)
+	err = cmInstance.LoadWorktree("test", cm.LoadWorktreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// Verify worktree was created
+	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+	assert.Len(t, worktrees, 1)
+	assert.Equal(t, "test", worktrees[0].Branch)
 }

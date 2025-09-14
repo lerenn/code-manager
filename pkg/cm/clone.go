@@ -19,15 +19,12 @@ type CloneOpts struct {
 // Clone clones a repository and initializes it in CM.
 func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 	// Extract and validate options
-	recursive := true // default to true
-	if len(opts) > 0 {
-		recursive = opts[0].Recursive
-	}
+	options := c.extractCloneOptions(opts)
 
 	// Prepare parameters for hooks
 	params := map[string]interface{}{
 		"repoURL":   repoURL,
-		"recursive": recursive,
+		"recursive": options.Recursive,
 	}
 
 	// Execute with hooks
@@ -70,7 +67,7 @@ func (c *realCM) Clone(repoURL string, opts ...CloneOpts) error {
 		if err := c.git.Clone(git.CloneParams{
 			RepoURL:    repoURL,
 			TargetPath: targetPath,
-			Recursive:  recursive,
+			Recursive:  options.Recursive,
 		}); err != nil {
 			return fmt.Errorf("%w: %w", ErrFailedToCloneRepository, err)
 		}
@@ -162,4 +159,18 @@ func (c *realCM) initializeRepositoryInCM(normalizedURL, targetPath, defaultBran
 	}
 
 	return nil
+}
+
+// extractCloneOptions extracts and merges options from the variadic parameter.
+func (c *realCM) extractCloneOptions(opts []CloneOpts) CloneOpts {
+	result := CloneOpts{
+		Recursive: true, // default to true
+	}
+
+	// Merge all provided options, with later options overriding earlier ones
+	for _, opt := range opts {
+		result.Recursive = opt.Recursive
+	}
+
+	return result
 }

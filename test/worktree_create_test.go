@@ -720,3 +720,60 @@ func TestCreateWorktreeWorkspaceMode_RollbackOnFailure(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "path does not contain a Git repository")
 }
+
+// TestWorktreeCreateWithRepository tests creating a worktree with RepositoryName option
+func TestWorktreeCreateWithRepository(t *testing.T) {
+	// Setup test environment
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Initialize CM in the repository
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+		},
+		ConfigPath: setup.ConfigPath,
+	})
+	require.NoError(t, err)
+
+	// Initialize CM from within the repository
+	restore := safeChdir(t, setup.RepoPath)
+	err = cmInstance.Init(cm.InitOpts{
+		NonInteractive:  true,
+		RepositoriesDir: setup.CmPath,
+		StatusFile:      setup.StatusPath,
+	})
+	restore()
+	require.NoError(t, err)
+
+	// Create another directory to run CM commands from (not in the repo)
+	workDir := filepath.Join(setup.TempDir, "work-dir")
+	err = os.MkdirAll(workDir, 0755)
+	require.NoError(t, err)
+
+	// Test creating worktree with RepositoryName option from outside the repo
+	err = cmInstance.CreateWorkTree("feature-branch", cm.CreateWorkTreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// Verify worktree was created in the correct repository
+	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+	assert.Len(t, worktrees, 1)
+	assert.Equal(t, "feature-branch", worktrees[0].Branch)
+
+	// Test that we can't use WorkspaceName and RepositoryName together
+	err = cmInstance.CreateWorkTree("another-branch", cm.CreateWorkTreeOpts{
+		RepositoryName: setup.RepoPath,
+		WorkspaceName:  "test-workspace",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot specify both WorkspaceName and RepositoryName")
+}

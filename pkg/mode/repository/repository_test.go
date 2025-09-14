@@ -3,6 +3,7 @@
 package repository
 
 import (
+	"fmt"
 	"testing"
 
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
@@ -51,6 +52,7 @@ func TestRepository_CreateWorktree_Success(t *testing.T) {
 	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().CheckoutBranch("/test/path/github.com/octocat/Hello-World/origin/test-branch", "test-branch").Return(nil)
+	mockGit.EXPECT().SetUpstreamBranch("/test/path/github.com/octocat/Hello-World/origin/test-branch", "origin", "test-branch").Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	worktreePath, err := repo.CreateWorktree("test-branch")
@@ -262,9 +264,114 @@ func TestRepository_LoadWorktree_Success(t *testing.T) {
 	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
 	mockWorktree.EXPECT().CheckoutBranch("/test/path/github.com/octocat/Hello-World/origin/feature-branch", "feature-branch").Return(nil)
+	mockGit.EXPECT().SetUpstreamBranch("/test/path/github.com/octocat/Hello-World/origin/feature-branch", "origin", "feature-branch").Return(nil)
 	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
 
 	worktreePath, err := repo.LoadWorktree("origin", "feature-branch")
 	assert.NoError(t, err)
 	assert.NotEmpty(t, worktreePath)
+}
+
+func TestRepository_CreateWorktree_SetUpstreamBranch_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
+
+	repo := NewRepository(NewRepositoryParams{
+		FS:            mockFS,
+		Git:           mockGit,
+		Config:        createTestConfig(),
+		StatusManager: mockStatus,
+		Prompt:        mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
+	})
+
+	// Mock repository validation
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock worktree creation
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockWorktree.EXPECT().BuildPath("github.com/octocat/Hello-World", "origin", "test-branch").Return("/test/path/github.com/octocat/Hello-World/origin/test-branch")
+	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().CheckoutBranch("/test/path/github.com/octocat/Hello-World/origin/test-branch", "test-branch").Return(nil)
+
+	// Mock successful upstream setup
+	mockGit.EXPECT().
+		SetUpstreamBranch("/test/path/github.com/octocat/Hello-World/origin/test-branch", "origin", "test-branch").
+		Return(nil)
+
+	mockWorktree.EXPECT().AddToStatus(gomock.Any()).Return(nil)
+
+	// Call the method
+	worktreePath, err := repo.CreateWorktree("test-branch")
+
+	// Verify no error
+	assert.NoError(t, err)
+	assert.NotEmpty(t, worktreePath)
+}
+
+func TestRepository_CreateWorktree_SetUpstreamBranch_Failure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
+
+	repo := NewRepository(NewRepositoryParams{
+		FS:            mockFS,
+		Git:           mockGit,
+		Config:        createTestConfig(),
+		StatusManager: mockStatus,
+		Prompt:        mockPrompt,
+		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return mockWorktree
+		},
+	})
+
+	// Mock repository validation
+	mockFS.EXPECT().Exists(".git").Return(true, nil).AnyTimes()
+	mockFS.EXPECT().IsDir(".git").Return(true, nil).AnyTimes()
+	mockGit.EXPECT().Status(".").Return("On branch main", nil).AnyTimes()
+
+	// Mock worktree creation
+	mockGit.EXPECT().GetRepositoryName(gomock.Any()).Return("github.com/octocat/Hello-World", nil)
+	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().IsClean(gomock.Any()).Return(true, nil)
+	mockWorktree.EXPECT().BuildPath("github.com/octocat/Hello-World", "origin", "test-branch").Return("/test/path/github.com/octocat/Hello-World/origin/test-branch")
+	mockWorktree.EXPECT().ValidateCreation(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().Create(gomock.Any()).Return(nil)
+	mockWorktree.EXPECT().CheckoutBranch("/test/path/github.com/octocat/Hello-World/origin/test-branch", "test-branch").Return(nil)
+
+	// Mock failed upstream setup
+	expectedError := "git branch --set-upstream-to failed: exit status 128"
+	mockGit.EXPECT().
+		SetUpstreamBranch("/test/path/github.com/octocat/Hello-World/origin/test-branch", "origin", "test-branch").
+		Return(fmt.Errorf("%s", expectedError))
+
+	// Mock cleanup on failure
+	mockWorktree.EXPECT().CleanupDirectory("/test/path/github.com/octocat/Hello-World/origin/test-branch").Return(nil)
+
+	// Call the method
+	worktreePath, err := repo.CreateWorktree("test-branch")
+
+	// Verify error is returned
+	assert.Error(t, err)
+	assert.Empty(t, worktreePath)
+	assert.Contains(t, err.Error(), "failed to set upstream branch tracking")
+	assert.Contains(t, err.Error(), expectedError)
 }

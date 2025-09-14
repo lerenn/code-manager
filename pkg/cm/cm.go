@@ -35,9 +35,9 @@ type CM interface {
 	// DeleteWorkTrees deletes multiple worktrees for the specified branches.
 	DeleteWorkTrees(branches []string, force bool) error
 	// DeleteAllWorktrees deletes all worktrees for the current repository or workspace.
-	DeleteAllWorktrees(force bool) error
+	DeleteAllWorktrees(force bool, opts ...DeleteAllWorktreesOpts) error
 	// OpenWorktree opens an existing worktree in the specified IDE.
-	OpenWorktree(worktreeName, ideName string) error
+	OpenWorktree(worktreeName, ideName string, opts ...OpenWorktreeOpts) error
 	// ListWorktrees lists worktrees for a workspace or repository.
 	ListWorktrees(opts ...ListWorktreesOpts) ([]status.WorktreeInfo, error)
 	// LoadWorktree loads a branch from a remote source and creates a worktree.
@@ -64,6 +64,7 @@ type NewCMParams struct {
 	WorkspaceProvider  WorkspaceProvider
 	WorktreeProvider   WorktreeProvider
 	Config             config.Config
+	ConfigPath         string // Path to the config file (used for saving config)
 	Hooks              hooks.HookManagerInterface
 	Status             status.Manager
 	FS                 fs.FS
@@ -76,6 +77,7 @@ type realCM struct {
 	fs                 fs.FS
 	git                git.Git
 	config             config.Config
+	configPath         string // Path to the config file (used for saving config)
 	statusManager      status.Manager
 	logger             logger.Logger
 	prompt             prompt.Prompter
@@ -94,6 +96,7 @@ func NewCM(params NewCMParams) (CM, error) {
 		fs:                 instances.fs,
 		git:                instances.git,
 		config:             params.Config,
+		configPath:         params.ConfigPath,
 		statusManager:      instances.status,
 		logger:             instances.logger,
 		prompt:             instances.prompt,
@@ -338,7 +341,7 @@ func (c *realCM) executePreHooks(operationName string, ctx *hooks.HookContext) e
 }
 
 // detectProjectMode detects the type of project (single repository or workspace).
-func (c *realCM) detectProjectMode(workspaceName string) (mode.Mode, error) {
+func (c *realCM) detectProjectMode(workspaceName, repositoryName string) (mode.Mode, error) {
 	c.VerbosePrint("Detecting project mode...")
 
 	// If workspaceName is provided, return workspace mode
@@ -346,6 +349,15 @@ func (c *realCM) detectProjectMode(workspaceName string) (mode.Mode, error) {
 		c.VerbosePrint("Workspace mode detected (workspace: %s)", workspaceName)
 		return mode.ModeWorkspace, nil
 	}
+
+	// If repositoryName is provided, return single repository mode
+	if repositoryName != "" {
+		c.VerbosePrint("Repository mode detected (repository: %s)", repositoryName)
+		return mode.ModeSingleRepo, nil
+	}
+
+	// Neither workspace nor repository specified, detect from current directory
+	c.VerbosePrint("No specific workspace or repository provided, detecting from current directory")
 
 	// Create repository instance to check if we're in a Git repository
 	repoInstance := c.repositoryProvider(repository.NewRepositoryParams{

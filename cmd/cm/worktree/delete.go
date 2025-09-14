@@ -12,17 +12,18 @@ import (
 func createDeleteCmd() *cobra.Command {
 	var force bool
 	var workspaceName string
+	var repositoryName string
 	var all bool
 
 	deleteCmd := &cobra.Command{
-		Use:   "delete <branch> [branch2] [branch3] ... [--force/-f] [--workspace/-w] [--all/-a]",
+		Use:   "delete <branch> [branch2] [branch3] ... [--force/-f] [--workspace/-w] [--repository/-r] [--all/-a]",
 		Short: "Delete worktrees for the specified branches or all worktrees",
 		Long:  getDeleteCmdLongDescription(),
-		Args:  createDeleteCmdArgsValidator(&all),
-		RunE:  createDeleteCmdRunE(&all, &force, &workspaceName),
+		Args:  createDeleteCmdArgsValidator(&all, &workspaceName, &repositoryName),
+		RunE:  createDeleteCmdRunE(&all, &force, &workspaceName, &repositoryName),
 	}
 
-	addDeleteCmdFlags(deleteCmd, &force, &workspaceName, &all)
+	addDeleteCmdFlags(deleteCmd, &force, &workspaceName, &repositoryName, &all)
 	return deleteCmd
 }
 
@@ -41,11 +42,22 @@ Examples:
   cm worktree delete branch1 branch2 branch3
   cm wt delete branch1 branch2 --force
   cm worktree delete --all
-  cm wt delete --all --force`
+  cm wt delete --all --force
+  cm worktree delete feature-branch --repository my-repo
+  cm wt delete feature-branch --repository /path/to/repo --force`
 }
 
-func createDeleteCmdArgsValidator(all *bool) func(*cobra.Command, []string) error {
+func createDeleteCmdArgsValidator(
+	all *bool,
+	workspaceName *string,
+	repositoryName *string,
+) func(*cobra.Command, []string) error {
 	return func(_ *cobra.Command, args []string) error {
+		// Validate that workspace and repository are not both specified
+		if *workspaceName != "" && *repositoryName != "" {
+			return fmt.Errorf("cannot specify both --workspace and --repository flags")
+		}
+
 		if *all && len(args) > 0 {
 			return fmt.Errorf("cannot specify both --all flag and branch names")
 		}
@@ -56,7 +68,12 @@ func createDeleteCmdArgsValidator(all *bool) func(*cobra.Command, []string) erro
 	}
 }
 
-func createDeleteCmdRunE(all *bool, force *bool, workspaceName *string) func(*cobra.Command, []string) error {
+func createDeleteCmdRunE(
+	all *bool,
+	force *bool,
+	workspaceName *string,
+	repositoryName *string,
+) func(*cobra.Command, []string) error {
 	return func(_ *cobra.Command, args []string) error {
 		if err := config.CheckInitialization(); err != nil {
 			return err
@@ -67,7 +84,8 @@ func createDeleteCmdRunE(all *bool, force *bool, workspaceName *string) func(*co
 			return err
 		}
 		cmManager, err := cm.NewCM(cm.NewCMParams{
-			Config: cfg,
+			Config:     cfg,
+			ConfigPath: config.GetConfigPath(),
 		})
 		if err != nil {
 			return err
@@ -79,54 +97,78 @@ func createDeleteCmdRunE(all *bool, force *bool, workspaceName *string) func(*co
 		if *all {
 			return cmManager.DeleteAllWorktrees(*force)
 		}
-		return runDeleteWorktree(args, *force, *workspaceName)
+		return runDeleteWorktree(args, *force, *workspaceName, *repositoryName)
 	}
 }
 
-func addDeleteCmdFlags(cmd *cobra.Command, force *bool, workspaceName *string, all *bool) {
+func addDeleteCmdFlags(cmd *cobra.Command, force *bool, workspaceName *string, repositoryName *string, all *bool) {
 	cmd.Flags().BoolVarP(force, "force", "f", false, "Skip confirmation prompts")
 	cmd.Flags().StringVarP(workspaceName, "workspace", "w", "",
 		"Name of the workspace to delete worktree from (optional)")
+	cmd.Flags().StringVarP(repositoryName, "repository", "r", "",
+		"Name of the repository to delete worktree from (optional)")
 	cmd.Flags().BoolVarP(all, "all", "a", false, "Delete all worktrees")
 }
 
-func runDeleteWorktree(args []string, force bool, workspaceName string) error {
-	if err := config.CheckInitialization(); err != nil {
+func runDeleteWorktree(args []string, force bool, workspaceName string, repositoryName string) error {
+	cmManager, err := initializeCM()
+	if err != nil {
 		return err
+	}
+
+	opts := buildDeleteWorktreeOptions(workspaceName, repositoryName)
+
+	// If workspace or repository is specified, use single worktree deletion for each branch
+	if workspaceName != "" || repositoryName != "" {
+		return deleteWorktreesIndividually(cmManager, args, force, opts)
+	}
+
+	// Otherwise use bulk deletion
+	return cmManager.DeleteWorkTrees(args, force)
+}
+
+func initializeCM() (cm.CM, error) {
+	if err := config.CheckInitialization(); err != nil {
+		return nil, err
 	}
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
+		Config:     cfg,
+		ConfigPath: config.GetConfigPath(),
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if config.Verbose {
 		cmManager.SetLogger(logger.NewVerboseLogger())
 	}
+	return cmManager, nil
+}
 
-	// Create options struct
+func buildDeleteWorktreeOptions(workspaceName, repositoryName string) []cm.DeleteWorktreeOpts {
 	var opts []cm.DeleteWorktreeOpts
 	if workspaceName != "" {
 		opts = append(opts, cm.DeleteWorktreeOpts{
 			WorkspaceName: workspaceName,
 		})
 	}
-
-	// If workspace is specified, use single worktree deletion for each branch
-	if workspaceName != "" {
-		for _, branch := range args {
-			if err := cmManager.DeleteWorkTree(branch, force, opts...); err != nil {
-				return err
-			}
-		}
-		return nil
+	if repositoryName != "" {
+		opts = append(opts, cm.DeleteWorktreeOpts{
+			RepositoryName: repositoryName,
+		})
 	}
+	return opts
+}
 
-	// Otherwise use bulk deletion
-	return cmManager.DeleteWorkTrees(args, force)
+func deleteWorktreesIndividually(cmManager cm.CM, args []string, force bool, opts []cm.DeleteWorktreeOpts) error {
+	for _, branch := range args {
+		if err := cmManager.DeleteWorkTree(branch, force, opts...); err != nil {
+			return err
+		}
+	}
+	return nil
 }

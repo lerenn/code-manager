@@ -2,6 +2,7 @@ package ide
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/lerenn/code-manager/pkg/fs"
 )
@@ -38,8 +39,19 @@ func (v *VSCode) IsInstalled() bool {
 
 // OpenRepository opens VS Code with the specified repository path.
 func (v *VSCode) OpenRepository(path string) error {
-	// Execute code command with the repository path
-	if err := v.fs.ExecuteCommand(VSCodeCommand, path); err != nil {
+	// Ensure the path is absolute and has a trailing slash for new window
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Add trailing slash to ensure VS Code opens a new window
+	if absPath[len(absPath)-1] != '/' {
+		absPath += "/"
+	}
+
+	// Execute code command with the absolute path
+	if err := v.fs.ExecuteCommand(VSCodeCommand, absPath); err != nil {
 		return fmt.Errorf("%w: %s", ErrIDEExecutionFailed, VSCodeCommand)
 	}
 	return nil

@@ -11,17 +11,26 @@ import (
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
+// ListWorktreesOpts contains options for ListWorktrees.
+type ListWorktreesOpts struct {
+	WorkspaceName  string // Name of the workspace to list worktrees for (optional)
+	RepositoryName string // Name of the repository to list worktrees for (optional)
+}
+
 // ListWorktrees lists worktrees for a workspace or repository.
 func (c *realCM) ListWorktrees(opts ...ListWorktreesOpts) ([]status.WorktreeInfo, error) {
 	// Parse options
-	var options ListWorktreesOpts
-	if len(opts) > 0 {
-		options = opts[0]
+	options := c.extractListWorktreesOptions(opts)
+
+	// Validate that workspace and repository are not both specified
+	if options.WorkspaceName != "" && options.RepositoryName != "" {
+		return nil, fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
 	}
 
 	// Prepare parameters for hooks
 	params := map[string]interface{}{
-		"workspace_name": options.WorkspaceName,
+		"workspace_name":  options.WorkspaceName,
+		"repository_name": options.RepositoryName,
 	}
 
 	// Execute with hooks
@@ -30,21 +39,19 @@ func (c *realCM) ListWorktrees(opts ...ListWorktreesOpts) ([]status.WorktreeInfo
 		var err error
 		c.VerbosePrint("Listing worktrees")
 
-		// If workspace name is provided, list workspace worktrees
-		if options.WorkspaceName != "" {
-			result, err = c.listWorkspaceWorktrees(options.WorkspaceName)
-			return err
-		}
-
-		// Otherwise, detect project mode and list accordingly
-		projectType, err := c.detectProjectMode("")
+		// Detect project mode and list accordingly
+		projectType, err := c.detectProjectMode(options.WorkspaceName, options.RepositoryName)
 		if err != nil {
 			return fmt.Errorf("failed to detect project mode: %w", err)
 		}
 
 		switch projectType {
 		case mode.ModeSingleRepo:
-			// Create repository instance
+			if options.RepositoryName != "" {
+				result, err = c.listRepositoryWorktrees(options.RepositoryName)
+				return err
+			}
+			// Create repository instance for current directory
 			repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
 				FS:               c.fs,
 				Git:              c.git,
@@ -54,12 +61,14 @@ func (c *realCM) ListWorktrees(opts ...ListWorktreesOpts) ([]status.WorktreeInfo
 				Prompt:           c.prompt,
 				WorktreeProvider: worktree.NewWorktree,
 				HookManager:      c.hookManager,
+				RepositoryName:   ".",
 			})
 			worktrees, err := repoInstance.ListWorktrees()
 			result = worktrees
 			return c.translateListError(err)
 		case mode.ModeWorkspace:
-			return fmt.Errorf("workspace mode detected but no workspace name provided")
+			result, err = c.listWorkspaceWorktrees(options.WorkspaceName)
+			return err
 		case mode.ModeNone:
 			return ErrNoGitRepositoryOrWorkspaceFound
 		default:
@@ -134,4 +143,47 @@ func (c *realCM) translateListError(err error) error {
 
 	// Return the original error if no translation is needed
 	return err
+}
+
+// listRepositoryWorktrees lists worktrees for a specific repository.
+func (c *realCM) listRepositoryWorktrees(repositoryName string) ([]status.WorktreeInfo, error) {
+	c.VerbosePrint("Listing worktrees for repository: %s", repositoryName)
+
+	// Create repository instance - let repositoryProvider handle repository name resolution
+	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
+		FS:               c.fs,
+		Git:              c.git,
+		Config:           c.config,
+		StatusManager:    c.statusManager,
+		Logger:           c.logger,
+		Prompt:           c.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      c.hookManager,
+		RepositoryName:   repositoryName, // Pass repository name directly, let provider handle resolution
+	})
+
+	// List worktrees
+	worktrees, err := repoInstance.ListWorktrees()
+	if err != nil {
+		return nil, c.translateListError(err)
+	}
+
+	return worktrees, nil
+}
+
+// extractListWorktreesOptions extracts and merges options from the variadic parameter.
+func (c *realCM) extractListWorktreesOptions(opts []ListWorktreesOpts) ListWorktreesOpts {
+	var result ListWorktreesOpts
+
+	// Merge all provided options, with later options overriding earlier ones
+	for _, opt := range opts {
+		if opt.WorkspaceName != "" {
+			result.WorkspaceName = opt.WorkspaceName
+		}
+		if opt.RepositoryName != "" {
+			result.RepositoryName = opt.RepositoryName
+		}
+	}
+
+	return result
 }

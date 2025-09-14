@@ -211,6 +211,24 @@ func (w *realWorkspace) createWorktreeForRepository(repoURL, repoPath, branch st
 		return "", fmt.Errorf("failed to create worktree: %w", err)
 	}
 
+	// Checkout the branch in the worktree
+	if err := worktreeInstance.CheckoutBranch(worktreePath, branch); err != nil {
+		// Cleanup failed worktree
+		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
+			w.logger.Logf("Warning: failed to clean up worktree directory after checkout failure: %v", cleanupErr)
+		}
+		return "", fmt.Errorf("failed to checkout branch in worktree: %w", err)
+	}
+
+	// Set upstream branch tracking to enable push without specifying remote/branch
+	if err := w.git.SetUpstreamBranch(worktreePath, "origin", branch); err != nil {
+		// Cleanup failed worktree
+		if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
+			w.logger.Logf("Warning: failed to clean up worktree directory after upstream setup failure: %v", cleanupErr)
+		}
+		return "", fmt.Errorf("failed to set upstream branch tracking: %w", err)
+	}
+
 	// Add to status file
 	if err := w.addWorktreeToStatus(worktreeInstance, repoURL, branch, worktreePath, repoPath, nil); err != nil {
 		return "", fmt.Errorf("failed to add worktree to status: %w", err)

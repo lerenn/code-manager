@@ -477,50 +477,51 @@ func TestDeleteWorktreeWithModifiedFiles(t *testing.T) {
 	assert.NotContains(t, worktrees, "feature/test-modified-files", "Worktree should not be in Git's tracking")
 }
 
-// findWorktreePath finds the actual path of a worktree by searching the directory structure
-func findWorktreePath(t *testing.T, setup *TestSetup, branch string) string {
-	t.Helper()
+// TestWorktreeDeleteWithRepository tests deleting a worktree with RepositoryName option
+func TestWorktreeDeleteWithRepository(t *testing.T) {
+	// Setup test environment
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
 
-	// For branches with slashes, construct the expected path directly
-	// The structure is: .cm/github.com/octocat/Hello-World/origin/<branch>
-	expectedPath := filepath.Join(setup.CmPath, "github.com", "octocat", "Hello-World", "origin", branch)
-	if _, err := os.Stat(expectedPath); err == nil {
-		return expectedPath
-	}
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
 
-	// Search in the worktrees directory first
-	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
-	if _, err := os.Stat(worktreesDir); err == nil {
-		// For worktrees directory, the structure is: worktrees/github.com/octocat/Hello-World/origin/<branch>
-		expectedWorktreesPath := filepath.Join(worktreesDir, "github.com", "octocat", "Hello-World", "origin", branch)
-		if _, err := os.Stat(expectedWorktreesPath); err == nil {
-			return expectedWorktreesPath
-		}
-	}
+	// Initialize CM in the repository
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+		},
+		ConfigPath: setup.ConfigPath,
+	})
+	require.NoError(t, err)
 
-	// Fallback: recursively search for the branch directory
-	var findWorktree func(dir string) string
-	findWorktree = func(dir string) string {
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			return ""
-		}
+	// Initialize CM from within the repository
+	restore := safeChdir(t, setup.RepoPath)
+	err = cmInstance.Init(cm.InitOpts{
+		NonInteractive:  true,
+		RepositoriesDir: setup.CmPath,
+		StatusFile:      setup.StatusPath,
+	})
+	restore()
+	require.NoError(t, err)
 
-		for _, entry := range entries {
-			if entry.IsDir() {
-				entryPath := filepath.Join(dir, entry.Name())
-				// Check if this is the branch directory
-				if entry.Name() == branch {
-					return entryPath
-				}
-				// Recursively search subdirectories
-				if result := findWorktree(entryPath); result != "" {
-					return result
-				}
-			}
-		}
-		return ""
-	}
+	// Create a worktree first
+	err = cmInstance.CreateWorkTree("feature-branch", cm.CreateWorkTreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
 
-	return findWorktree(setup.CmPath)
+	// Delete worktree using RepositoryName option
+	err = cmInstance.DeleteWorkTree("feature-branch", true, cm.DeleteWorktreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// Verify worktree was deleted
+	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+	assert.Len(t, worktrees, 0)
 }

@@ -3,6 +3,7 @@ package ide
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/lerenn/code-manager/pkg/fs"
 )
@@ -39,8 +40,19 @@ func (c *Cursor) IsInstalled() bool {
 
 // OpenRepository opens Cursor with the specified repository path.
 func (c *Cursor) OpenRepository(path string) error {
-	// Execute cursor command with the repository path
-	if err := c.fs.ExecuteCommand(CursorCommand, path); err != nil {
+	// Ensure the path is absolute and has a trailing slash for new window
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Add trailing slash to ensure Cursor opens a new window
+	if absPath[len(absPath)-1] != '/' {
+		absPath += "/"
+	}
+
+	// Execute cursor command with the absolute path
+	if err := c.fs.ExecuteCommand(CursorCommand, absPath); err != nil {
 		return fmt.Errorf("%w: %s", ErrIDEExecutionFailed, CursorCommand)
 	}
 	return nil

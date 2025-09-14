@@ -125,3 +125,55 @@ func TestOpenWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	assert.Error(t, err, "Opening with unsupported IDE should fail")
 	assert.ErrorIs(t, err, ide.ErrUnsupportedIDE, "Error should mention unsupported IDE")
 }
+
+// TestWorktreeOpenWithRepository tests opening a worktree with RepositoryName option
+func TestWorktreeOpenWithRepository(t *testing.T) {
+	// Setup test environment
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Initialize CM in the repository
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+		},
+		ConfigPath: setup.ConfigPath,
+	})
+	require.NoError(t, err)
+
+	// Initialize CM from within the repository
+	restore := safeChdir(t, setup.RepoPath)
+	err = cmInstance.Init(cm.InitOpts{
+		NonInteractive:  true,
+		RepositoriesDir: setup.CmPath,
+		StatusFile:      setup.StatusPath,
+	})
+	restore()
+	require.NoError(t, err)
+
+	// Create a worktree first
+	err = cmInstance.CreateWorkTree("feature-branch", cm.CreateWorkTreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// Open worktree using RepositoryName option (this will fail in test environment but should not error on validation)
+	err = cmInstance.OpenWorktree("feature-branch", "dummy", cm.OpenWorktreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	// We expect this to fail because IDE opening won't work in test environment
+	// but the important thing is that it doesn't fail on repository resolution
+	if err != nil {
+		// The error should be related to IDE opening, not repository resolution
+		// We expect the error to be about IDE opening, not about repository not found
+		assert.NotContains(t, err.Error(), "no Git repository or workspace found")
+	} else {
+		// If no error, that's also fine - it means the repository resolution worked
+		// and the IDE opening succeeded (which can happen in test environment)
+		t.Log("OpenWorktree succeeded - repository resolution worked correctly")
+	}
+}

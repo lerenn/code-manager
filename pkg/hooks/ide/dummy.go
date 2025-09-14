@@ -2,6 +2,7 @@ package ide
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"github.com/lerenn/code-manager/pkg/fs"
 )
@@ -35,8 +36,19 @@ func (d *Dummy) IsInstalled() bool {
 
 // OpenRepository does nothing but returns success.
 func (d *Dummy) OpenRepository(path string) error {
+	// Ensure the path is absolute and has a trailing slash for consistency
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	// Add trailing slash for consistency with other IDEs
+	if absPath[len(absPath)-1] != '/' {
+		absPath += "/"
+	}
+
 	// Dummy IDE prints the path for testing purposes
-	fmt.Println("DUMMY_IDE_PATH:", path)
+	fmt.Println("DUMMY_IDE_PATH:", absPath)
 	// Dummy IDE does nothing, just returns success
 	return nil
 }

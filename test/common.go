@@ -390,6 +390,82 @@ func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 	assert.Equal(t, branch, strings.TrimSpace(string(output)), "Worktree should be on the correct branch")
 }
 
+// findWorktreePath finds the worktree path for the given branch
+func findWorktreePath(t *testing.T, setup *TestSetup, branch string) string {
+	t.Helper()
+
+	// The worktree should be created in the .cm directory with repo name and branch structure
+	// Structure: $repositoriesDir/<repo_url>/<remote_name>/<branch>
+
+	// List the contents of the .cm directory to see what's there
+	cmEntries, err := os.ReadDir(setup.CmPath)
+	if err != nil {
+		t.Fatalf("Failed to read .cm directory: %v", err)
+	}
+
+	// Function to recursively search for worktree in directory structure
+	var findWorktree func(dir string) string
+	findWorktree = func(dir string) string {
+		// Check if this directory has origin/branch structure
+		originDir := filepath.Join(dir, "origin")
+		if _, err := os.Stat(originDir); err == nil {
+			branchDir := filepath.Join(originDir, branch)
+			if _, err := os.Stat(branchDir); err == nil {
+				return branchDir
+			}
+		}
+
+		// If not, recursively check subdirectories
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return ""
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				subDir := filepath.Join(dir, entry.Name())
+				if result := findWorktree(subDir); result != "" {
+					return result
+				}
+			}
+		}
+
+		return ""
+	}
+
+	// Search for worktree in each top-level directory in .cm
+	for _, entry := range cmEntries {
+		if entry.IsDir() {
+			repositoriesDir := filepath.Join(setup.CmPath, entry.Name())
+			if result := findWorktree(repositoriesDir); result != "" {
+				return result
+			}
+		}
+	}
+
+	// If not found, check if there's a worktrees subdirectory (legacy structure)
+	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
+	if _, err := os.Stat(worktreesDir); err == nil {
+		entries, err := os.ReadDir(worktreesDir)
+		if err != nil {
+			t.Fatalf("Failed to read worktrees directory: %v", err)
+		}
+
+		// Search for worktree in each top-level directory in worktrees
+		for _, entry := range entries {
+			if entry.IsDir() {
+				repositoriesDir := filepath.Join(worktreesDir, entry.Name())
+				if result := findWorktree(repositoriesDir); result != "" {
+					return result
+				}
+			}
+		}
+	}
+
+	// If still not found, return empty string (worktree doesn't exist)
+	return ""
+}
+
 // assertWorktreeInRepo checks that the worktree is properly linked in the original repository
 func assertWorktreeInRepo(t *testing.T, setup *TestSetup, branch string) {
 	t.Helper()

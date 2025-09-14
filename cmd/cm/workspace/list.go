@@ -65,7 +65,8 @@ func createListCmdRunE(_ *cobra.Command, _ []string) error {
 
 	// Create CM instance
 	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config: cfg,
+		Config:     cfg,
+		ConfigPath: config.GetConfigPath(),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create CM instance: %w", err)

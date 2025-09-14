@@ -378,6 +378,20 @@ func (mr *MockGitMockRecorder) RemoveWorktree(repoPath, worktreePath, force any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockGit)(nil).RemoveWorktree), repoPath, worktreePath, force)
 }
 
+// SetUpstreamBranch mocks base method.
+func (m *MockGit) SetUpstreamBranch(repoPath, remote, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetUpstreamBranch", repoPath, remote, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetUpstreamBranch indicates an expected call of SetUpstreamBranch.
+func (mr *MockGitMockRecorder) SetUpstreamBranch(repoPath, remote, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetUpstreamBranch", reflect.TypeOf((*MockGit)(nil).SetUpstreamBranch), repoPath, remote, branch)
+}
+
 // Status mocks base method.
 func (m *MockGit) Status(workDir string) (string, error) {
 	m.ctrl.T.Helper()
