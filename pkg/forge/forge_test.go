@@ -7,13 +7,20 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
+	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestNewManager(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	loggerInstance := logger.NewNoopLogger()
-	manager := NewManager(loggerInstance)
+	statusManager := statusMocks.NewMockManager(ctrl)
+
+	manager := NewManager(loggerInstance, statusManager)
 
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.forges)

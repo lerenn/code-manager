@@ -524,3 +524,51 @@ func findWorktreePath(t *testing.T, setup *TestSetup, branch string) string {
 
 	return findWorktree(setup.CmPath)
 }
+
+// TestWorktreeDeleteWithRepository tests deleting a worktree with RepositoryName option
+func TestWorktreeDeleteWithRepository(t *testing.T) {
+	// Setup test environment
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Initialize CM in the repository
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+		},
+	})
+	require.NoError(t, err)
+
+	// Initialize CM from within the repository
+	restore := safeChdir(t, setup.RepoPath)
+	err = cmInstance.Init(cm.InitOpts{
+		NonInteractive:  true,
+		RepositoriesDir: setup.CmPath,
+		StatusFile:      setup.StatusPath,
+	})
+	restore()
+	require.NoError(t, err)
+
+	// Create a worktree first
+	err = cmInstance.CreateWorkTree("feature-branch", cm.CreateWorkTreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// Delete worktree using RepositoryName option
+	err = cmInstance.DeleteWorkTree("feature-branch", true, cm.DeleteWorktreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// Verify worktree was deleted
+	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+	assert.Len(t, worktrees, 0)
+}

@@ -138,16 +138,16 @@ func (m *MockManagerInterface) EXPECT() *MockManagerInterfaceMockRecorder {
 }
 
 // GetForgeForRepository mocks base method.
-func (m *MockManagerInterface) GetForgeForRepository(repoPath string) (forge.Forge, error) {
+func (m *MockManagerInterface) GetForgeForRepository(repoName string) (forge.Forge, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetForgeForRepository", repoPath)
+	ret := m.ctrl.Call(m, "GetForgeForRepository", repoName)
 	ret0, _ := ret[0].(forge.Forge)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetForgeForRepository indicates an expected call of GetForgeForRepository.
-func (mr *MockManagerInterfaceMockRecorder) GetForgeForRepository(repoPath any) *gomock.Call {
+func (mr *MockManagerInterfaceMockRecorder) GetForgeForRepository(repoName any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForgeForRepository", reflect.TypeOf((*MockManagerInterface)(nil).GetForgeForRepository), repoPath)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForgeForRepository", reflect.TypeOf((*MockManagerInterface)(nil).GetForgeForRepository), repoName)
 }

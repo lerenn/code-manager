@@ -4,6 +4,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -67,6 +68,7 @@ type realRepository struct {
 	prompt           prompt.Prompter
 	worktreeProvider WorktreeProvider
 	hookManager      hooks.HookManagerInterface
+	repositoryPath   string
 }
 
 // NewRepositoryParams contains parameters for creating a new Repository instance.
@@ -79,6 +81,7 @@ type NewRepositoryParams struct {
 	Prompt           prompt.Prompter
 	WorktreeProvider WorktreeProvider
 	HookManager      hooks.HookManagerInterface
+	RepositoryName   string // Name/Path of the repository (optional, defaults to current directory)
 }
 
 // NewRepository creates a new Repository instance.
@@ -86,6 +89,13 @@ func NewRepository(params NewRepositoryParams) Repository {
 	l := params.Logger
 	if l == nil {
 		l = logger.NewNoopLogger()
+	}
+
+	// Resolve repository path from repository name/path
+	repoPath, err := resolveRepositoryPath(params.RepositoryName, params.StatusManager, l)
+	if err != nil {
+		l.Logf("Warning: failed to resolve repository path '%s': %v", params.RepositoryName, err)
+		repoPath = "." // Fallback to current directory
 	}
 
 	return &realRepository{
@@ -97,12 +107,13 @@ func NewRepository(params NewRepositoryParams) Repository {
 		prompt:           params.Prompt,
 		worktreeProvider: params.WorktreeProvider,
 		hookManager:      params.HookManager,
+		repositoryPath:   repoPath,
 	}
 }
 
 // Validate validates that the current directory is a working Git repository.
 func (r *realRepository) Validate() error {
-	r.logger.Logf("Validating repository: %s", ".")
+	r.logger.Logf("Validating repository: %s", r.repositoryPath)
 
 	// Check if we're in a Git repository
 	exists, err := r.IsGitRepository()
@@ -118,7 +129,7 @@ func (r *realRepository) Validate() error {
 	}
 
 	// Validate Git configuration is functional
-	return r.ValidateGitConfiguration(".")
+	return r.ValidateGitConfiguration(r.repositoryPath)
 }
 
 // CreateWorktreeOpts contains optional parameters for CreateWorktree.
@@ -146,7 +157,7 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 	}
 
 	// Get current directory
-	currentDir, err := filepath.Abs(".")
+	currentDir, err := filepath.Abs(r.repositoryPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to get current directory: %w", err)
 	}
@@ -241,7 +252,7 @@ func (r *realRepository) createAndValidateWorktreeInstance(repoURL, branch strin
 		RepoURL:      repoURL,
 		Branch:       branch,
 		WorktreePath: worktreePath,
-		RepoPath:     ".",
+		RepoPath:     r.repositoryPath,
 	}); err != nil {
 		return nil, "", err
 	}
@@ -314,7 +325,7 @@ func (r *realRepository) ListWorktrees() ([]status.WorktreeInfo, error) {
 	// to avoid duplicate validation calls
 
 	// 1. Extract repository name from remote origin URL (fallback to local path if no remote)
-	repoName, err := r.git.GetRepositoryName(".")
+	repoName, err := r.git.GetRepositoryName(r.repositoryPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get repository name: %w", err)
 	}
@@ -345,10 +356,11 @@ func (r *realRepository) ListWorktrees() ([]status.WorktreeInfo, error) {
 
 // IsGitRepository checks if the current directory is a Git repository (including worktrees).
 func (r *realRepository) IsGitRepository() (bool, error) {
-	r.logger.Logf("Checking if current directory is a Git repository...")
+	r.logger.Logf("Checking if directory %s is a Git repository...", r.repositoryPath)
 
 	// Check if .git exists
-	exists, err := r.fs.Exists(".git")
+	gitPath := filepath.Join(r.repositoryPath, ".git")
+	exists, err := r.fs.Exists(gitPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to check .git existence: %w", err)
 	}
@@ -359,7 +371,7 @@ func (r *realRepository) IsGitRepository() (bool, error) {
 	}
 
 	// Check if .git is a directory (regular repository)
-	isDir, err := r.fs.IsDir(".git")
+	isDir, err := r.fs.IsDir(gitPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to check .git directory: %w", err)
 	}
@@ -373,7 +385,7 @@ func (r *realRepository) IsGitRepository() (bool, error) {
 	// Validate that it's actually a Git worktree file by checking for 'gitdir:' prefix
 	r.logger.Logf("Checking if .git file is a valid worktree file...")
 
-	content, err := r.fs.ReadFile(".git")
+	content, err := r.fs.ReadFile(gitPath)
 	if err != nil {
 		r.logger.Logf("Failed to read .git file: %v", err)
 		return false, nil
@@ -413,7 +425,7 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 	r.logger.Logf("Worktree path: %s", worktreePath)
 
 	// Get current directory
-	currentDir, err := filepath.Abs(".")
+	currentDir, err := filepath.Abs(r.repositoryPath)
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}
@@ -474,14 +486,14 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 
 	// 5. Fetch from the remote
 	r.logger.Logf("Fetching from remote '%s'", remoteSource)
-	if err := r.git.FetchRemote(".", remoteSource); err != nil {
+	if err := r.git.FetchRemote(r.repositoryPath, remoteSource); err != nil {
 		return "", fmt.Errorf("%w: %w", git.ErrFetchFailed, err)
 	}
 
 	// 6. Validate branch exists on remote
 	r.logger.Logf("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource)
 	exists, err := r.git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
-		RepoPath:   ".",
+		RepoPath:   r.repositoryPath,
 		RemoteName: remoteSource,
 		Branch:     branchName,
 	})
@@ -520,7 +532,7 @@ func (r *realRepository) ValidateGitConfiguration(workDir string) error {
 
 // ValidateGitStatus validates that the Git repository is in a clean state.
 func (r *realRepository) ValidateGitStatus() error {
-	status, err := r.git.Status(".")
+	status, err := r.git.Status(r.repositoryPath)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrGitRepositoryInvalid, err)
 	}
@@ -532,4 +544,32 @@ func (r *realRepository) ValidateGitStatus() error {
 	}
 
 	return nil
+}
+
+// resolveRepositoryPath resolves a repository name/path to an actual path, checking status file first.
+func resolveRepositoryPath(repoName string, statusManager status.Manager, logger logger.Logger) (string, error) {
+	// If empty, use current directory
+	if repoName == "" {
+		return ".", nil
+	}
+
+	// First, check if it's a repository name from status.yaml
+	if existingRepo, err := statusManager.GetRepository(repoName); err == nil && existingRepo != nil {
+		logger.Logf("Resolved repository '%s' from status.yaml: %s", repoName, existingRepo.Path)
+		return existingRepo.Path, nil
+	}
+
+	// Check if it's an absolute path
+	if filepath.IsAbs(repoName) {
+		return repoName, nil
+	}
+
+	// Resolve relative path from current working directory
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("failed to get current directory: %w", err)
+	}
+
+	resolvedPath := filepath.Join(currentDir, repoName)
+	return resolvedPath, nil
 }

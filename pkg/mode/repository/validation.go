@@ -22,7 +22,7 @@ type ValidationResult struct {
 func (r *realRepository) ValidateRepository(params ValidationParams) (*ValidationResult, error) {
 	// Get current working directory if not provided
 	if params.CurrentDir == "" {
-		currentDir, err := filepath.Abs(".")
+		currentDir, err := filepath.Abs(r.repositoryPath)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get current directory: %w", err)
 		}
@@ -116,7 +116,7 @@ func (r *realRepository) ValidateOriginRemote() error {
 	r.logger.Logf("Validating origin remote")
 
 	// Check if origin remote exists
-	exists, err := r.git.RemoteExists(".", "origin")
+	exists, err := r.git.RemoteExists(r.repositoryPath, "origin")
 	if err != nil {
 		return fmt.Errorf("failed to check origin remote: %w", err)
 	}
@@ -125,7 +125,7 @@ func (r *realRepository) ValidateOriginRemote() error {
 	}
 
 	// Get origin remote URL
-	originURL, err := r.git.GetRemoteURL(".", "origin")
+	originURL, err := r.git.GetRemoteURL(r.repositoryPath, "origin")
 	if err != nil {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}

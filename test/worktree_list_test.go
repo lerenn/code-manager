@@ -444,3 +444,58 @@ func listRepositories(t *testing.T, setup *TestSetup) ([]cm.RepositoryInfo, erro
 	require.NoError(t, err)
 	return cmInstance.ListRepositories()
 }
+
+// TestWorktreeListWithRepository tests listing worktrees with RepositoryName option
+func TestWorktreeListWithRepository(t *testing.T) {
+	// Setup test environment
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Initialize CM in the repository
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+		},
+	})
+	require.NoError(t, err)
+
+	// Initialize CM from within the repository
+	restore := safeChdir(t, setup.RepoPath)
+	err = cmInstance.Init(cm.InitOpts{
+		NonInteractive:  true,
+		RepositoriesDir: setup.CmPath,
+		StatusFile:      setup.StatusPath,
+	})
+	restore()
+	require.NoError(t, err)
+
+	// Create multiple worktrees
+	err = cmInstance.CreateWorkTree("feature-1", cm.CreateWorkTreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	err = cmInstance.CreateWorkTree("feature-2", cm.CreateWorkTreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// List worktrees using RepositoryName option
+	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+	assert.Len(t, worktrees, 2)
+
+	// Check that both worktrees are listed
+	branches := make([]string, len(worktrees))
+	for i, wt := range worktrees {
+		branches[i] = wt.Branch
+	}
+	assert.Contains(t, branches, "feature-1")
+	assert.Contains(t, branches, "feature-2")
+}

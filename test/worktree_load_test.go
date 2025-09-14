@@ -114,3 +114,46 @@ func TestLoadWorktreeRepoModeWithNewRemote(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+// TestWorktreeLoadWithRepository tests loading a worktree with RepositoryName option
+func TestWorktreeLoadWithRepository(t *testing.T) {
+	// Setup test environment
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Initialize CM in the repository
+	cmInstance, err := cm.NewCM(cm.NewCMParams{
+		Config: config.Config{
+			RepositoriesDir: setup.CmPath,
+			StatusFile:      setup.StatusPath,
+		},
+	})
+	require.NoError(t, err)
+
+	// Initialize CM from within the repository
+	restore := safeChdir(t, setup.RepoPath)
+	err = cmInstance.Init(cm.InitOpts{
+		NonInteractive:  true,
+		RepositoriesDir: setup.CmPath,
+		StatusFile:      setup.StatusPath,
+	})
+	restore()
+	require.NoError(t, err)
+
+	// Load worktree using RepositoryName option (use a branch that exists)
+	err = cmInstance.LoadWorktree("test", cm.LoadWorktreeOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+
+	// Verify worktree was created
+	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+		RepositoryName: setup.RepoPath,
+	})
+	require.NoError(t, err)
+	assert.Len(t, worktrees, 1)
+	assert.Equal(t, "test", worktrees[0].Branch)
+}

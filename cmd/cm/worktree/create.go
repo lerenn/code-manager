@@ -2,6 +2,8 @@
 package worktree
 
 import (
+	"fmt"
+
 	"github.com/lerenn/code-manager/cmd/cm/internal/config"
 	cm "github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/hooks/ide"
@@ -14,17 +16,20 @@ func createCreateCmd() *cobra.Command {
 	var force bool
 	var fromIssue string
 	var workspaceName string
+	var repositoryName string
 
 	createCmd := &cobra.Command{
-		Use:   "create [branch] [--from-issue <issue-reference>] [--ide <ide-name>] [--workspace <workspace-name>]",
+		Use: "create [branch] [--from-issue <issue-reference>] [--ide <ide-name>] " +
+			"[--workspace <workspace-name>] [--repository <repository-name>]",
 		Short: "Create a worktree for the specified branch or from a GitHub issue",
 		Long:  getCreateCommandLongDescription(),
-		Args:  createCreateCmdArgsValidator(&fromIssue, &workspaceName),
+		Args:  createCreateCmdArgsValidator(&fromIssue, &workspaceName, &repositoryName),
 		RunE: createCreateCmdRunE(createCreateCmdRunEParams{
-			IDEName:       &ideName,
-			Force:         &force,
-			FromIssue:     &fromIssue,
-			WorkspaceName: &workspaceName,
+			IDEName:        &ideName,
+			Force:          &force,
+			FromIssue:      &fromIssue,
+			WorkspaceName:  &workspaceName,
+			RepositoryName: &repositoryName,
 		}),
 	}
 
@@ -35,6 +40,8 @@ func createCreateCmd() *cobra.Command {
 		"Create worktree from GitHub issue (URL, number, or owner/repo#issue format)")
 	createCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
 		"Create worktrees from workspace definition in status.yaml")
+	createCmd.Flags().StringVarP(&repositoryName, "repository", "r", "",
+		"Create worktree for the specified repository (name from status.yaml or path)")
 
 	return createCmd
 }
@@ -44,6 +51,7 @@ func getCreateCommandLongDescription() string {
 	return `Create a worktree for the specified branch in the current repository or workspace.
 When using --from-issue, the branch name becomes optional and will be inferred from the issue title.
 When using --workspace, worktrees will be created in all repositories defined in the workspace.
+When using --repository, worktrees will be created in the specified repository.
 
 Issue Reference Formats:
   - GitHub issue URL: https://github.com/owner/repo/issues/123
@@ -59,18 +67,30 @@ Examples:
   cm worktree create --from-issue owner/repo#789 --ide cursor
   cm worktree create feature-branch --workspace my-workspace
   cm worktree create feature-branch --workspace my-workspace --ide cursor
-  cm worktree create --from-issue 123 --workspace my-workspace`
+  cm worktree create --from-issue 123 --workspace my-workspace
+  cm worktree create feature-branch --repository my-repo
+  cm worktree create feature-branch --repository /path/to/repo --ide cursor
+  cm worktree create --from-issue 123 --repository my-repo`
 }
 
 // createCreateCmdArgsValidator creates the argument validator for the create command.
-func createCreateCmdArgsValidator(fromIssue *string, workspaceName *string) func(*cobra.Command, []string) error {
+func createCreateCmdArgsValidator(
+	fromIssue *string,
+	workspaceName *string,
+	repositoryName *string,
+) func(*cobra.Command, []string) error {
 	return func(cmd *cobra.Command, args []string) error {
+		// Validate that workspace and repository are not both specified
+		if *workspaceName != "" && *repositoryName != "" {
+			return fmt.Errorf("cannot specify both --workspace and --repository flags")
+		}
+
 		// If --from-issue is provided, branch name is optional
 		if *fromIssue != "" {
 			return cobra.MaximumNArgs(1)(cmd, args)
 		}
-		// If --workspace is provided, branch name is required
-		if *workspaceName != "" {
+		// If --workspace or --repository is provided, branch name is required
+		if *workspaceName != "" || *repositoryName != "" {
 			return cobra.ExactArgs(1)(cmd, args)
 		}
 		// Otherwise, branch name is required
@@ -80,10 +100,11 @@ func createCreateCmdArgsValidator(fromIssue *string, workspaceName *string) func
 
 // createCreateCmdRunEParams contains parameters for createCreateCmdRunE.
 type createCreateCmdRunEParams struct {
-	IDEName       *string
-	Force         *bool
-	FromIssue     *string
-	WorkspaceName *string
+	IDEName        *string
+	Force          *bool
+	FromIssue      *string
+	WorkspaceName  *string
+	RepositoryName *string
 }
 
 // createCreateCmdRunE creates the RunE function for the create command.
@@ -122,6 +143,9 @@ func createCreateCmdRunE(params createCreateCmdRunEParams) func(*cobra.Command, 
 		}
 		if *params.WorkspaceName != "" {
 			opts.WorkspaceName = *params.WorkspaceName
+		}
+		if *params.RepositoryName != "" {
+			opts.RepositoryName = *params.RepositoryName
 		}
 		opts.Force = *params.Force
 

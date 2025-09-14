@@ -60,7 +60,7 @@ func (r *realRepository) HandleStatusAddError(err error, params StatusParams) er
 
 // HandleRepositoryNotFoundError handles the case when repository is not found in status.
 func (r *realRepository) HandleRepositoryNotFoundError(params StatusParams) error {
-	currentDir, err := filepath.Abs(".")
+	currentDir, err := filepath.Abs(r.repositoryPath)
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}

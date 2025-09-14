@@ -10,25 +10,44 @@ import (
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
+// DeleteAllWorktreesOpts contains options for DeleteAllWorktrees.
+type DeleteAllWorktreesOpts struct {
+	WorkspaceName  string // Name of the workspace to delete all worktrees for (optional)
+	RepositoryName string // Name of the repository to delete all worktrees for (optional)
+}
+
 // DeleteAllWorktrees deletes all worktrees for the current repository or workspace.
-func (c *realCM) DeleteAllWorktrees(force bool) error {
+func (c *realCM) DeleteAllWorktrees(force bool, opts ...DeleteAllWorktreesOpts) error {
+	// Parse options
+	options := c.extractDeleteAllWorktreesOptions(opts)
+
+	// Validate that workspace and repository are not both specified
+	if options.WorkspaceName != "" && options.RepositoryName != "" {
+		return fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
+	}
+
 	// Prepare parameters for hooks
 	params := map[string]interface{}{
-		"force": force,
+		"force":           force,
+		"workspace_name":  options.WorkspaceName,
+		"repository_name": options.RepositoryName,
 	}
 
 	// Execute with hooks
 	return c.executeWithHooks(consts.DeleteAllWorktrees, params, func() error {
 		c.VerbosePrint("Deleting all worktrees (force: %t)", force)
 
-		// Detect project mode
-		projectType, err := c.detectProjectMode("")
+		// Detect project mode and delete accordingly
+		projectType, err := c.detectProjectMode(options.WorkspaceName, options.RepositoryName)
 		if err != nil {
 			return fmt.Errorf("failed to detect project mode: %w", err)
 		}
 
 		switch projectType {
 		case mode.ModeSingleRepo:
+			if options.RepositoryName != "" {
+				return c.deleteAllRepositoryWorktrees(options.RepositoryName, force)
+			}
 			return c.handleRepositoryDeleteAllMode(force)
 		case mode.ModeWorkspace:
 			return c.handleWorkspaceDeleteAllMode(force)
@@ -54,6 +73,7 @@ func (c *realCM) handleRepositoryDeleteAllMode(force bool) error {
 		Prompt:           c.prompt,
 		WorktreeProvider: worktree.NewWorktree,
 		HookManager:      c.hookManager,
+		RepositoryName:   ".",
 	})
 
 	// Delete all worktrees for single repository
@@ -89,4 +109,47 @@ func (c *realCM) handleWorkspaceDeleteAllMode(force bool) error {
 
 	c.VerbosePrint("Workspace delete all worktrees completed successfully")
 	return nil
+}
+
+// deleteAllRepositoryWorktrees deletes all worktrees for a specific repository.
+func (c *realCM) deleteAllRepositoryWorktrees(repositoryName string, force bool) error {
+	c.VerbosePrint("Deleting all worktrees for repository: %s", repositoryName)
+
+	// Create repository instance - let repositoryProvider handle repository name resolution
+	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
+		FS:               c.fs,
+		Git:              c.git,
+		Config:           c.config,
+		StatusManager:    c.statusManager,
+		Logger:           c.logger,
+		Prompt:           c.prompt,
+		WorktreeProvider: worktree.NewWorktree,
+		HookManager:      c.hookManager,
+		RepositoryName:   repositoryName, // Pass repository name directly, let provider handle resolution
+	})
+
+	// Delete all worktrees
+	if err := repoInstance.DeleteAllWorktrees(force); err != nil {
+		return c.translateRepositoryError(err)
+	}
+
+	c.VerbosePrint("Repository delete all worktrees completed successfully")
+	return nil
+}
+
+// extractDeleteAllWorktreesOptions extracts and merges options from the variadic parameter.
+func (c *realCM) extractDeleteAllWorktreesOptions(opts []DeleteAllWorktreesOpts) DeleteAllWorktreesOpts {
+	var result DeleteAllWorktreesOpts
+
+	// Merge all provided options, with later options overriding earlier ones
+	for _, opt := range opts {
+		if opt.WorkspaceName != "" {
+			result.WorkspaceName = opt.WorkspaceName
+		}
+		if opt.RepositoryName != "" {
+			result.RepositoryName = opt.RepositoryName
+		}
+	}
+
+	return result
 }

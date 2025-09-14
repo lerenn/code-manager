@@ -33,7 +33,7 @@ func (r *realRepository) DeleteAllWorktrees(force bool) error {
 	r.logger.Logf("Found %d worktrees to delete", len(worktrees))
 
 	// Get current directory
-	currentDir, err := filepath.Abs(".")
+	currentDir, err := filepath.Abs(r.repositoryPath)
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
 	}

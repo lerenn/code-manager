@@ -6,14 +6,17 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/config"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
 	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	workspaceMocks "github.com/lerenn/code-manager/pkg/mode/workspace/mocks"
 	promptMocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
+	"github.com/lerenn/code-manager/pkg/status"
 	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -233,4 +236,130 @@ func TestCM_CreateWorkTree_WorkspaceModeFailure(t *testing.T) {
 	opts := CreateWorkTreeOpts{WorkspaceName: workspaceName}
 	err = cm.CreateWorkTree("feature-branch", opts)
 	assert.Error(t, err)
+}
+
+func TestCreateWorkTreeWithRepositoryName(t *testing.T) {
+	tests := []struct {
+		name          string
+		branch        string
+		opts          CreateWorkTreeOpts
+		expectedError string
+	}{
+		{
+			name:   "error when both workspace and repository specified",
+			branch: "feature-branch",
+			opts: CreateWorkTreeOpts{
+				RepositoryName: "/path/to/repo",
+				WorkspaceName:  "test-workspace",
+			},
+			expectedError: "cannot specify both WorkspaceName and RepositoryName",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFS := fsmocks.NewMockFS(ctrl)
+			mockGit := gitmocks.NewMockGit(ctrl)
+			mockStatus := statusMocks.NewMockManager(ctrl)
+			mockRepo := repositoryMocks.NewMockRepository(ctrl)
+			mockHooks := hooksMocks.NewMockHookManagerInterface(ctrl)
+
+			// Setup default mocks
+			mockHooks.EXPECT().ExecutePreHooks(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			mockHooks.EXPECT().ExecutePostHooks(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+			// Create CM instance
+			cmInstance := &realCM{
+				fs:            mockFS,
+				git:           mockGit,
+				statusManager: mockStatus,
+				logger:        logger.NewNoopLogger(),
+				repositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
+					return mockRepo
+				},
+				hookManager: mockHooks,
+				config: config.Config{
+					RepositoriesDir: "/tmp/cm",
+				},
+			}
+
+			// Execute
+			err := cmInstance.CreateWorkTree(tt.branch, tt.opts)
+
+			// Assert
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestCreateWorkTreeRepositoryResolution(t *testing.T) {
+	tests := []struct {
+		name           string
+		repositoryName string
+		expectedError  string
+		setupMocks     func(*fsmocks.MockFS, *gitmocks.MockGit, *statusMocks.MockManager)
+	}{
+		{
+			name:           "repository name from status",
+			repositoryName: "my-repo",
+			setupMocks: func(fs *fsmocks.MockFS, git *gitmocks.MockGit, statusMgr *statusMocks.MockManager) {
+				// Mock repository found in status
+				mockRepo := &status.Repository{
+					Path: "/path/to/my-repo",
+				}
+				statusMgr.EXPECT().GetRepository("my-repo").Return(mockRepo, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockFS := fsmocks.NewMockFS(ctrl)
+			mockGit := gitmocks.NewMockGit(ctrl)
+			mockStatus := statusMocks.NewMockManager(ctrl)
+			mockHooks := hooksMocks.NewMockHookManagerInterface(ctrl)
+
+			// Setup default mocks
+			mockHooks.EXPECT().ExecutePreHooks(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+			mockHooks.EXPECT().ExecutePostHooks(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockFS, mockGit, mockStatus)
+			}
+
+			// Create CM instance
+			cmInstance := &realCM{
+				fs:            mockFS,
+				git:           mockGit,
+				statusManager: mockStatus,
+				logger:        logger.NewNoopLogger(),
+				hookManager:   mockHooks,
+				config: config.Config{
+					RepositoriesDir: "/tmp/cm",
+				},
+			}
+
+			// Test repository resolution
+			_, err := cmInstance.resolveRepository(tt.repositoryName)
+
+			// Assert
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
