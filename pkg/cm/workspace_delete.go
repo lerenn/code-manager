@@ -28,19 +28,10 @@ func (c *realCM) deleteWorkspace(params DeleteWorkspaceParams) error {
 		return fmt.Errorf("%w: %w", ErrInvalidWorkspaceName, err)
 	}
 
-	// Check if workspace exists and get it
-	workspace, err := c.statusManager.GetWorkspace(params.WorkspaceName)
+	// Get workspace and worktrees
+	workspace, worktrees, err := c.getWorkspaceAndWorktrees(params.WorkspaceName)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("%w: workspace '%s' not found", ErrWorkspaceNotFound, params.WorkspaceName)
-		}
-		return fmt.Errorf("failed to check workspace existence: %w", err)
-	}
-
-	// List all worktrees associated with the workspace
-	worktrees, err := c.listWorkspaceWorktreesFromWorkspace(workspace)
-	if err != nil {
-		return fmt.Errorf("failed to list workspace worktrees: %w", err)
+		return err
 	}
 
 	// Show confirmation prompt with deletion summary (unless --force)
@@ -50,22 +41,68 @@ func (c *realCM) deleteWorkspace(params DeleteWorkspaceParams) error {
 		}
 	}
 
+	// Perform workspace deletion steps
+	if err := c.performWorkspaceDeletion(params.WorkspaceName, workspace, worktrees, params.Force); err != nil {
+		return err
+	}
+
+	c.VerbosePrint("Workspace '%s' deleted successfully", params.WorkspaceName)
+	return nil
+}
+
+// getWorkspaceAndWorktrees retrieves workspace and associated worktrees.
+func (c *realCM) getWorkspaceAndWorktrees(workspaceName string) (*status.Workspace, []status.WorktreeInfo, error) {
+	// Check if workspace exists and get it
+	workspace, err := c.statusManager.GetWorkspace(workspaceName)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			return nil, nil, fmt.Errorf("%w: workspace '%s' not found", ErrWorkspaceNotFound, workspaceName)
+		}
+		return nil, nil, fmt.Errorf("failed to check workspace existence: %w", err)
+	}
+
+	// List all worktrees associated with the workspace
+	worktrees, err := c.listWorkspaceWorktreesFromWorkspace(workspace)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list workspace worktrees: %w", err)
+	}
+
+	// Debug: Print worktrees found
+	c.VerbosePrint("Found %d worktrees for workspace %s:", len(worktrees), workspaceName)
+	for i, worktree := range worktrees {
+		c.VerbosePrint("  [%d] %s/%s", i, worktree.Remote, worktree.Branch)
+	}
+
+	return workspace, worktrees, nil
+}
+
+// performWorkspaceDeletion performs all the deletion steps for a workspace.
+func (c *realCM) performWorkspaceDeletion(
+	workspaceName string,
+	workspace *status.Workspace,
+	worktrees []status.WorktreeInfo,
+	force bool,
+) error {
 	// Delete all worktrees associated with the workspace
-	if err := c.deleteWorkspaceWorktrees(workspace, worktrees, params.Force); err != nil {
+	if err := c.deleteWorkspaceWorktrees(workspace, worktrees, force); err != nil {
 		return fmt.Errorf("failed to delete workspace worktrees: %w", err)
 	}
 
+	// Remove worktree entries from workspace status
+	if err := c.removeWorktreesFromWorkspaceStatus(workspaceName, worktrees); err != nil {
+		return fmt.Errorf("failed to remove worktrees from workspace status: %w", err)
+	}
+
 	// Delete workspace files
-	if err := c.deleteWorkspaceFiles(params.WorkspaceName, worktrees); err != nil {
+	if err := c.deleteWorkspaceFiles(workspaceName, worktrees); err != nil {
 		return fmt.Errorf("failed to delete workspace files: %w", err)
 	}
 
 	// Remove workspace entry from status file
-	if err := c.removeWorkspaceFromStatus(params.WorkspaceName); err != nil {
+	if err := c.removeWorkspaceFromStatus(workspaceName); err != nil {
 		return fmt.Errorf("failed to remove workspace from status: %w", err)
 	}
 
-	c.VerbosePrint("Workspace '%s' deleted successfully", params.WorkspaceName)
 	return nil
 }
 
@@ -89,7 +126,8 @@ func (c *realCM) showDeletionConfirmation(
 		// Find worktrees for this repository
 		for _, worktree := range worktrees {
 			// Check if this worktree belongs to this repository
-			if _, exists := repo.Worktrees[worktree.Branch]; exists {
+			worktreeKey := fmt.Sprintf("%s:%s", worktree.Remote, worktree.Branch)
+			if _, exists := repo.Worktrees[worktreeKey]; exists {
 				repoWorktrees[repoURL] = append(repoWorktrees[repoURL], worktree.Branch)
 			}
 		}
@@ -140,39 +178,104 @@ func (c *realCM) deleteWorkspaceWorktrees(
 ) error {
 	c.VerbosePrint("Deleting %d worktrees for workspace", len(worktrees))
 
-	// Process each repository in the workspace
-	for _, repoURL := range workspace.Repositories {
+	// Process each worktree directly
+	for _, worktree := range worktrees {
+		if err := c.deleteSingleWorkspaceWorktree(workspace, worktree, force); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// deleteSingleWorkspaceWorktree deletes a single worktree from a workspace.
+func (c *realCM) deleteSingleWorkspaceWorktree(
+	workspace *status.Workspace,
+	worktree status.WorktreeInfo,
+	force bool,
+) error {
+	c.VerbosePrint("  Deleting worktree: %s/%s", worktree.Remote, worktree.Branch)
+
+	// Find which repository this worktree belongs to
+	repoURL, repoPath, err := c.findWorktreeRepository(workspace, worktree)
+	if err != nil {
+		return err
+	}
+
+	// Get worktree path and remove from Git
+	worktreePath := filepath.Join(c.config.RepositoriesDir, repoURL, worktree.Remote, worktree.Branch)
+	if err := c.removeWorktreeFromGit(repoPath, worktreePath, worktree, force); err != nil {
+		return err
+	}
+
+	// Remove worktree from status
+	if err := c.removeWorktreeFromStatus(repoURL, worktree); err != nil {
+		return err
+	}
+
+	c.VerbosePrint("    ✓ Deleted worktree: %s/%s", worktree.Remote, worktree.Branch)
+	return nil
+}
+
+// findWorktreeRepository finds the repository that contains a specific worktree.
+func (c *realCM) findWorktreeRepository(
+	workspace *status.Workspace,
+	worktree status.WorktreeInfo,
+) (string, string, error) {
+	for _, currentRepoURL := range workspace.Repositories {
 		// Get repository to check its worktrees
-		repo, err := c.statusManager.GetRepository(repoURL)
+		repo, err := c.statusManager.GetRepository(currentRepoURL)
 		if err != nil {
-			c.VerbosePrint("  ⚠ Skipping repository %s: %v", repoURL, err)
+			c.VerbosePrint("    ⚠ Skipping repository %s: %v", currentRepoURL, err)
 			continue
 		}
 
-		// Find worktrees for this repository
-		for _, worktree := range worktrees {
-			// Check if this worktree belongs to this repository
-			// Worktrees are stored with key format "remote:branch"
-			worktreeKey := fmt.Sprintf("%s:%s", worktree.Remote, worktree.Branch)
-			if _, exists := repo.Worktrees[worktreeKey]; exists {
-				c.VerbosePrint("  Deleting worktree: %s/%s", worktree.Remote, worktree.Branch)
-
-				// Get worktree path
-				worktreePath := c.BuildWorktreePath(repoURL, worktree.Remote, worktree.Branch)
-
-				// Remove worktree from Git
-				if err := c.git.RemoveWorktree(repo.Path, worktreePath, force); err != nil {
-					return fmt.Errorf("failed to remove worktree %s/%s: %w", worktree.Remote, worktree.Branch, err)
-				}
-
-				// Remove worktree from status
-				if err := c.statusManager.RemoveWorktree(repoURL, worktree.Branch); err != nil {
-					return fmt.Errorf("failed to remove worktree from status %s/%s: %w", worktree.Remote, worktree.Branch, err)
-				}
-
-				c.VerbosePrint("    ✓ Deleted worktree: %s/%s", worktree.Remote, worktree.Branch)
-			}
+		// Check if this worktree belongs to this repository
+		// The worktrees are stored with "remote:branch" as the key
+		worktreeKey := fmt.Sprintf("%s:%s", worktree.Remote, worktree.Branch)
+		if _, exists := repo.Worktrees[worktreeKey]; exists {
+			return currentRepoURL, repo.Path, nil
 		}
+	}
+
+	c.VerbosePrint("    ⚠ Worktree %s/%s not found in any workspace repository", worktree.Remote, worktree.Branch)
+	return "", "", fmt.Errorf("worktree %s/%s not found in any workspace repository", worktree.Remote, worktree.Branch)
+}
+
+// removeWorktreeFromGit removes a worktree from Git.
+func (c *realCM) removeWorktreeFromGit(repoPath, worktreePath string, worktree status.WorktreeInfo, force bool) error {
+	// Debug: Print the paths
+	c.VerbosePrint("    Repository Path: %s", repoPath)
+	c.VerbosePrint("    Worktree Path: %s", worktreePath)
+
+	// Check if worktree path exists
+	if exists, err := c.fs.Exists(worktreePath); err == nil {
+		c.VerbosePrint("    Worktree path exists: %v", exists)
+	} else {
+		c.VerbosePrint("    Error checking worktree path existence: %v", err)
+	}
+
+	// Remove worktree from Git
+	if err := c.git.RemoveWorktree(repoPath, worktreePath, force); err != nil {
+		return fmt.Errorf("failed to remove worktree %s/%s: %w", worktree.Remote, worktree.Branch, err)
+	}
+
+	return nil
+}
+
+// removeWorktreeFromStatus removes a worktree from the status file.
+func (c *realCM) removeWorktreeFromStatus(repoURL string, worktree status.WorktreeInfo) error {
+	worktreeKey := fmt.Sprintf("%s:%s", worktree.Remote, worktree.Branch)
+	c.VerbosePrint("    Removing worktree from status with key: %s", worktreeKey)
+
+	// Check if worktree still exists in status before removing
+	repo, err := c.statusManager.GetRepository(repoURL)
+	if err == nil {
+		c.VerbosePrint("    Repository worktrees before removal: %v", repo.Worktrees)
+	}
+
+	if err := c.statusManager.RemoveWorktree(repoURL, worktree.Branch); err != nil {
+		return fmt.Errorf("failed to remove worktree from status %s/%s: %w", worktree.Remote, worktree.Branch, err)
 	}
 
 	return nil
@@ -213,23 +316,46 @@ func (c *realCM) deleteWorkspaceFiles(workspaceName string, worktrees []status.W
 
 // deleteWorkspaceFile deletes a single workspace file.
 func (c *realCM) deleteWorkspaceFile(filePath string) error {
-	// Check if file exists
-	exists, err := c.fs.Exists(filePath)
-	if err != nil {
-		return fmt.Errorf("failed to check if file exists: %w", err)
-	}
-
-	if !exists {
-		c.VerbosePrint("    File does not exist, skipping: %s", filePath)
-		return nil
-	}
-
-	// Delete the file
+	// Delete the file (existence was already checked by the caller)
 	if err := c.fs.Remove(filePath); err != nil {
 		return fmt.Errorf("failed to delete file: %w", err)
 	}
 
 	c.VerbosePrint("    ✓ Deleted: %s", filePath)
+	return nil
+}
+
+// removeWorktreesFromWorkspaceStatus removes worktree entries from workspace status.
+func (c *realCM) removeWorktreesFromWorkspaceStatus(workspaceName string, worktrees []status.WorktreeInfo) error {
+	c.VerbosePrint("Removing worktree entries from workspace status")
+
+	// Get current workspace
+	workspace, err := c.statusManager.GetWorkspace(workspaceName)
+	if err != nil {
+		return fmt.Errorf("failed to get workspace: %w", err)
+	}
+
+	// Create a map of worktree branches to remove for efficient lookup
+	worktreesToRemove := make(map[string]bool)
+	for _, worktree := range worktrees {
+		worktreesToRemove[worktree.Branch] = true
+	}
+
+	// Remove worktree entries from workspace
+	var remainingWorktrees []string
+	for _, worktreeRef := range workspace.Worktrees {
+		if !worktreesToRemove[worktreeRef] {
+			remainingWorktrees = append(remainingWorktrees, worktreeRef)
+		}
+	}
+
+	// Update workspace with remaining worktrees
+	workspace.Worktrees = remainingWorktrees
+	if err := c.statusManager.UpdateWorkspace(workspaceName, *workspace); err != nil {
+		return fmt.Errorf("failed to update workspace status: %w", err)
+	}
+
+	c.VerbosePrint("  ✓ Removed %d worktree entries from workspace status", len(worktrees))
 	return nil
 }
 
@@ -257,5 +383,6 @@ func (c *realCM) getWorkspaceFilePath(workspaceName string) string {
 func (c *realCM) getWorktreeWorkspaceFilePath(workspaceName, branchName string) string {
 	// Sanitize branch name for filename (replace / with -)
 	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
-	return filepath.Join(c.config.WorkspacesDir, fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename))
+	return filepath.Join(c.config.WorkspacesDir,
+		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename))
 }

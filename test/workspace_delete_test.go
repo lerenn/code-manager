@@ -10,6 +10,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/cm"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,6 +24,7 @@ func deleteWorkspace(t *testing.T, setup *TestSetup, workspaceName string, force
 			StatusFile:      setup.StatusPath,
 			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
 		},
+		Logger: logger.NewVerboseLogger(),
 	})
 	require.NoError(t, err)
 

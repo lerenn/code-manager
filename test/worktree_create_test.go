@@ -676,7 +676,7 @@ func TestCreateWorktreeWorkspaceMode_MultipleRepositories(t *testing.T) {
 	err = cmInstance.CreateWorkspace(workspaceParams)
 	// This should fail because the third repository has the same remote URL as the first one
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "repository already exists")
+	assert.Contains(t, err.Error(), "repository with URL")
 }
 
 // TestCreateWorktreeWorkspaceMode_RollbackOnFailure tests rollback behavior when worktree creation fails

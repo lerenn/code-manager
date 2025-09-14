@@ -87,33 +87,33 @@ func (c *realCM) listWorkspaceWorktreesFromWorkspace(workspace *status.Workspace
 	// Get worktrees that are specifically associated with this workspace
 	workspaceWorktrees := make([]status.WorktreeInfo, 0)
 
-	// Iterate through the worktrees listed in the workspace
+	c.VerbosePrint("Listing worktrees for workspace with %d worktree references: %v",
+		len(workspace.Worktrees), workspace.Worktrees)
+	c.VerbosePrint("Workspace has %d repositories: %v", len(workspace.Repositories), workspace.Repositories)
+
+	// For workspace deletion, we need to find worktrees in ALL repositories that match the workspace's worktree references
+	// This is because workspace creation creates worktrees in all repositories but only tracks one reference
 	for _, worktreeRef := range workspace.Worktrees {
-		// Find the worktree in the workspace's repositories
-		found := false
+		c.VerbosePrint("  Looking for worktree reference: %s", worktreeRef)
 		for _, repoURL := range workspace.Repositories {
 			// Get repository to check its worktrees
 			repo, err := c.statusManager.GetRepository(repoURL)
 			if err != nil {
-				c.VerbosePrint("  ⚠ Skipping repository %s: %v", repoURL, err)
+				c.VerbosePrint("    ⚠ Skipping repository %s: %v", repoURL, err)
 				continue // Skip if repository not found
 			}
 
+			c.VerbosePrint("    Checking repository %s with %d worktrees: %v", repoURL, len(repo.Worktrees), repo.Worktrees)
 			// Look for the worktree reference in this repository's worktrees
-			for _, worktree := range repo.Worktrees {
+			// The worktrees are stored with "remote:branch" as the key, but workspace stores just "branch"
+			// So we need to find worktrees where the branch matches
+			for worktreeKey, worktree := range repo.Worktrees {
 				if worktree.Branch == worktreeRef {
+					c.VerbosePrint("    ✓ Found worktree %s (key: %s) in repository %s", worktreeRef, worktreeKey, repoURL)
 					workspaceWorktrees = append(workspaceWorktrees, worktree)
-					found = true
-					break
+					break // Found in this repository, continue to next repository
 				}
 			}
-			if found {
-				break
-			}
-		}
-
-		if !found {
-			c.VerbosePrint("  ⚠ Worktree reference '%s' not found in workspace repositories", worktreeRef)
 		}
 	}
 

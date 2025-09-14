@@ -173,6 +173,7 @@ func (c *realCM) validateRepositoryPath(path string) (string, error) {
 // addRepositoriesToStatus adds new repositories to status file and returns final repository URLs.
 func (c *realCM) addRepositoriesToStatus(repositories []string) ([]string, error) {
 	var finalRepos []string
+	seenURLs := make(map[string]bool)
 
 	for _, repo := range repositories {
 		// Get repository URL from Git remote origin
@@ -181,6 +182,13 @@ func (c *realCM) addRepositoriesToStatus(repositories []string) ([]string, error
 			// If no origin remote, use the path as the identifier
 			repoURL = repo
 		}
+
+		// Check for duplicate remote URLs within this workspace
+		if seenURLs[repoURL] {
+			return nil, fmt.Errorf("%w: repository with URL '%s' already exists in this workspace",
+				ErrDuplicateRepository, repoURL)
+		}
+		seenURLs[repoURL] = true
 
 		// Check if repository already exists in status using the remote URL
 		if existingRepo, err := c.statusManager.GetRepository(repoURL); err == nil && existingRepo != nil {

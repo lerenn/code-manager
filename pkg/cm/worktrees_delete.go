@@ -178,21 +178,37 @@ func (c *realCM) deleteWorkspaceWorktree(workspaceName, branch string, force boo
 		return fmt.Errorf("failed to get workspace: %w", err)
 	}
 
-	// Check if the worktree exists in the workspace
-	worktreeExists := false
+	// Validate worktree exists in workspace
+	if err := c.validateWorktreeInWorkspace(workspace, branch); err != nil {
+		return err
+	}
+
+	// Find and delete the worktree from repositories
+	if err := c.findAndDeleteWorktreeFromRepositories(workspace, branch, force); err != nil {
+		return err
+	}
+
+	// Remove the worktree from the workspace's worktrees list
+	if err := c.removeWorktreeFromWorkspace(workspaceName, branch); err != nil {
+		return fmt.Errorf("failed to remove worktree from workspace: %w", err)
+	}
+
+	c.VerbosePrint("Successfully deleted worktree '%s' from workspace '%s'", branch, workspaceName)
+	return nil
+}
+
+// validateWorktreeInWorkspace validates that a worktree exists in the workspace.
+func (c *realCM) validateWorktreeInWorkspace(workspace *status.Workspace, branch string) error {
 	for _, worktreeRef := range workspace.Worktrees {
 		if worktreeRef == branch {
-			worktreeExists = true
-			break
+			return nil
 		}
 	}
+	return fmt.Errorf("worktree '%s' not found in workspace", branch)
+}
 
-	if !worktreeExists {
-		return fmt.Errorf("worktree '%s' not found in workspace '%s'", branch, workspaceName)
-	}
-
-	// Find the worktree in the workspace's repositories and delete it
-	found := false
+// findAndDeleteWorktreeFromRepositories finds and deletes a worktree from workspace repositories.
+func (c *realCM) findAndDeleteWorktreeFromRepositories(workspace *status.Workspace, branch string, force bool) error {
 	for _, repoURL := range workspace.Repositories {
 		// Get repository to check its worktrees
 		repo, err := c.statusManager.GetRepository(repoURL)
@@ -208,26 +224,11 @@ func (c *realCM) deleteWorkspaceWorktree(workspaceName, branch string, force boo
 				if err := c.deleteWorktreeFromRepository(repoURL, worktreeKey, worktree, force); err != nil {
 					return fmt.Errorf("failed to delete worktree from repository %s: %w", repoURL, err)
 				}
-				found = true
-				break
+				return nil
 			}
 		}
-		if found {
-			break
-		}
 	}
-
-	if !found {
-		return fmt.Errorf("worktree '%s' not found in any repository of workspace '%s'", branch, workspaceName)
-	}
-
-	// Remove the worktree from the workspace's worktrees list
-	if err := c.removeWorktreeFromWorkspace(workspaceName, branch); err != nil {
-		return fmt.Errorf("failed to remove worktree from workspace: %w", err)
-	}
-
-	c.VerbosePrint("Successfully deleted worktree '%s' from workspace '%s'", branch, workspaceName)
-	return nil
+	return fmt.Errorf("worktree '%s' not found in any repository of workspace", branch)
 }
 
 // deleteWorktreeFromRepository deletes a worktree from a specific repository.
@@ -291,3 +292,4 @@ func (c *realCM) removeWorktreeFromWorkspace(workspaceName, branch string) error
 
 	return nil
 }
+

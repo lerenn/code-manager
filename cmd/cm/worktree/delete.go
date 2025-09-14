@@ -27,44 +27,7 @@ Examples:
   cm wt delete branch1 branch2 --force`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			if err := config.CheckInitialization(); err != nil {
-				return err
-			}
-
-			cfg, err := config.LoadConfig()
-			if err != nil {
-				return err
-			}
-			cmManager, err := cm.NewCM(cm.NewCMParams{
-				Config: cfg,
-			})
-			if err != nil {
-				return err
-			}
-			if config.Verbose {
-				cmManager.SetLogger(logger.NewVerboseLogger())
-			}
-
-			// Create options struct
-			var opts []cm.DeleteWorktreeOpts
-			if workspaceName != "" {
-				opts = append(opts, cm.DeleteWorktreeOpts{
-					WorkspaceName: workspaceName,
-				})
-			}
-
-			// If workspace is specified, use single worktree deletion for each branch
-			if workspaceName != "" {
-				for _, branch := range args {
-					if err := cmManager.DeleteWorkTree(branch, force, opts...); err != nil {
-						return err
-					}
-				}
-				return nil
-			}
-
-			// Otherwise use bulk deletion
-			return cmManager.DeleteWorkTrees(args, force)
+			return runDeleteWorktree(args, force, workspaceName)
 		},
 	}
 
@@ -74,4 +37,45 @@ Examples:
 		"Name of the workspace to delete worktree from (optional)")
 
 	return deleteCmd
+}
+
+func runDeleteWorktree(args []string, force bool, workspaceName string) error {
+	if err := config.CheckInitialization(); err != nil {
+		return err
+	}
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		return err
+	}
+	cmManager, err := cm.NewCM(cm.NewCMParams{
+		Config: cfg,
+	})
+	if err != nil {
+		return err
+	}
+	if config.Verbose {
+		cmManager.SetLogger(logger.NewVerboseLogger())
+	}
+
+	// Create options struct
+	var opts []cm.DeleteWorktreeOpts
+	if workspaceName != "" {
+		opts = append(opts, cm.DeleteWorktreeOpts{
+			WorkspaceName: workspaceName,
+		})
+	}
+
+	// If workspace is specified, use single worktree deletion for each branch
+	if workspaceName != "" {
+		for _, branch := range args {
+			if err := cmManager.DeleteWorkTree(branch, force, opts...); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// Otherwise use bulk deletion
+	return cmManager.DeleteWorkTrees(args, force)
 }

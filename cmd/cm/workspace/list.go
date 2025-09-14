@@ -84,35 +84,42 @@ func createListCmdRunE(_ *cobra.Command, _ []string) error {
 
 	// Print results
 	if !config.Quiet {
-		if len(workspaces) == 0 {
-			fmt.Println("No workspaces found.")
-			return nil
+		return printWorkspaces(workspaces)
+	}
+
+	return nil
+}
+
+// printWorkspaces prints the list of workspaces to stdout.
+func printWorkspaces(workspaces []cm.WorkspaceInfo) error {
+	if len(workspaces) == 0 {
+		fmt.Println("No workspaces found.")
+		return nil
+	}
+
+	fmt.Printf("Found %d workspace(s):\n\n", len(workspaces))
+	for _, workspace := range workspaces {
+		fmt.Printf("Workspace: %s\n", workspace.Name)
+
+		if len(workspace.Repositories) > 0 {
+			fmt.Printf("  Repositories (%d):\n", len(workspace.Repositories))
+			for _, repo := range workspace.Repositories {
+				fmt.Printf("    - %s\n", repo)
+			}
+		} else {
+			fmt.Printf("  Repositories: none\n")
 		}
 
-		fmt.Printf("Found %d workspace(s):\n\n", len(workspaces))
-		for _, workspace := range workspaces {
-			fmt.Printf("Workspace: %s\n", workspace.Name)
-
-			if len(workspace.Repositories) > 0 {
-				fmt.Printf("  Repositories (%d):\n", len(workspace.Repositories))
-				for _, repo := range workspace.Repositories {
-					fmt.Printf("    - %s\n", repo)
-				}
-			} else {
-				fmt.Printf("  Repositories: none\n")
+		if len(workspace.Worktrees) > 0 {
+			fmt.Printf("  Worktrees (%d):\n", len(workspace.Worktrees))
+			for _, worktree := range workspace.Worktrees {
+				fmt.Printf("    - %s\n", worktree)
 			}
-
-			if len(workspace.Worktrees) > 0 {
-				fmt.Printf("  Worktrees (%d):\n", len(workspace.Worktrees))
-				for _, worktree := range workspace.Worktrees {
-					fmt.Printf("    - %s\n", worktree)
-				}
-			} else {
-				fmt.Printf("  Worktrees: none\n")
-			}
-
-			fmt.Println()
+		} else {
+			fmt.Printf("  Worktrees: none\n")
 		}
+
+		fmt.Println()
 	}
 
 	return nil
