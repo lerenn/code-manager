@@ -16,7 +16,8 @@ func CreateRepositoryCmd() *cobra.Command {
 	// Add repository subcommands
 	cloneCmd := createCloneCmd()
 	listCmd := createListCmd()
-	repositoryCmd.AddCommand(cloneCmd, listCmd)
+	deleteCmd := createDeleteCmd()
+	repositoryCmd.AddCommand(cloneCmd, listCmd, deleteCmd)
 
 	return repositoryCmd
 }

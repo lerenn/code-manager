@@ -37,6 +37,16 @@ type Workspace struct {
 	Repositories []string `yaml:"repositories"` // List of repository URLs/names
 }
 
+// HasRepository checks if the workspace contains the specified repository.
+func (w *Workspace) HasRepository(repositoryName string) bool {
+	for _, repo := range w.Repositories {
+		if repo == repositoryName {
+			return true
+		}
+	}
+	return false
+}
+
 // WorktreeInfo represents worktree information.
 type WorktreeInfo struct {
 	Remote string      `yaml:"remote"`
@@ -56,6 +66,8 @@ type Manager interface {
 	CreateInitialStatus() error
 	// AddRepository adds a repository entry to the status file.
 	AddRepository(repoURL string, params AddRepositoryParams) error
+	// RemoveRepository removes a repository entry from the status file.
+	RemoveRepository(repoURL string) error
 	// GetRepository retrieves a repository entry from the status file.
 	GetRepository(repoURL string) (*Repository, error)
 	// ListRepositories lists all repositories in the status file.
@@ -92,16 +104,6 @@ func NewManager(fs fs.FS, config config.Config) Manager {
 	return manager
 }
 
-// CreateInitialStatus creates the initial status file structure.
-func (s *realManager) CreateInitialStatus() error {
-	initialStatus := &Status{
-		Repositories: make(map[string]Repository),
-		Workspaces:   make(map[string]Workspace),
-	}
-
-	return s.saveStatus(initialStatus)
-}
-
 // initializeWorkspacesMap loads the status and computes the workspaces map.
 func (s *realManager) initializeWorkspacesMap() {
 	status, err := s.loadStatus()
@@ -133,252 +135,6 @@ type AddRepositoryParams struct {
 // AddWorkspaceParams contains parameters for AddWorkspace.
 type AddWorkspaceParams struct {
 	Repositories []string // List of repository URLs/names
-}
-
-// AddWorktree adds a worktree entry to the status file.
-func (s *realManager) AddWorktree(params AddWorktreeParams) error {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Ensure repository exists
-	if _, exists := status.Repositories[params.RepoURL]; !exists {
-		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, params.RepoURL)
-	}
-
-	// Check for duplicate worktree entry
-	worktreeKey := fmt.Sprintf("%s:%s", params.Remote, params.Branch)
-	if _, exists := status.Repositories[params.RepoURL].Worktrees[worktreeKey]; exists {
-		return fmt.Errorf("%w for repository %s worktree %s", ErrWorktreeAlreadyExists, params.RepoURL, worktreeKey)
-	}
-
-	// Create new worktree entry
-	worktreeInfo := WorktreeInfo{
-		Remote: params.Remote,
-		Branch: params.Branch,
-		Issue:  params.IssueInfo,
-	}
-
-	// Add to repository's worktrees
-	repo := status.Repositories[params.RepoURL]
-	if repo.Worktrees == nil {
-		repo.Worktrees = make(map[string]WorktreeInfo)
-	}
-	repo.Worktrees[worktreeKey] = worktreeInfo
-	status.Repositories[params.RepoURL] = repo
-
-	// Save updated status
-	if err := s.saveStatus(status); err != nil {
-		return fmt.Errorf("failed to save status: %w", err)
-	}
-
-	return nil
-}
-
-// RemoveWorktree removes a worktree entry from the status file.
-func (s *realManager) RemoveWorktree(repoURL, branch string) error {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Check if repository exists
-	repo, exists := status.Repositories[repoURL]
-	if !exists {
-		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, repoURL)
-	}
-
-	// Find and remove the worktree entry
-	found := false
-	for worktreeKey, worktree := range repo.Worktrees {
-		if worktree.Branch == branch {
-			delete(repo.Worktrees, worktreeKey)
-			found = true
-			break
-		}
-	}
-
-	if !found {
-		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoURL, branch)
-	}
-
-	// Update repository
-	status.Repositories[repoURL] = repo
-
-	// Save updated status
-	if err := s.saveStatus(status); err != nil {
-		return fmt.Errorf("failed to save status: %w", err)
-	}
-
-	return nil
-}
-
-// GetWorktree retrieves the status of a specific worktree.
-func (s *realManager) GetWorktree(repoURL, branch string) (*WorktreeInfo, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Check if repository exists
-	repo, exists := status.Repositories[repoURL]
-	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrRepositoryNotFound, repoURL)
-	}
-
-	// Find the worktree entry
-	for _, worktree := range repo.Worktrees {
-		if worktree.Branch == branch {
-			return &worktree, nil
-		}
-	}
-
-	return nil, fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoURL, branch)
-}
-
-// AddRepository adds a repository entry to the status file.
-func (s *realManager) AddRepository(repoURL string, params AddRepositoryParams) error {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Check for duplicate repository
-	if _, exists := status.Repositories[repoURL]; exists {
-		return fmt.Errorf("%w: %s", ErrRepositoryAlreadyExists, repoURL)
-	}
-
-	// Create new repository entry
-	repo := Repository{
-		Path:      params.Path,
-		Remotes:   params.Remotes,
-		Worktrees: make(map[string]WorktreeInfo),
-	}
-
-	// Add to repositories map
-	status.Repositories[repoURL] = repo
-
-	// Save updated status
-	if err := s.saveStatus(status); err != nil {
-		return fmt.Errorf("failed to save status: %w", err)
-	}
-
-	return nil
-}
-
-// RemoveRepository removes a repository entry from the status file.
-func (s *realManager) RemoveRepository(repoURL string) error {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Check if repository exists
-	if _, exists := status.Repositories[repoURL]; !exists {
-		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, repoURL)
-	}
-
-	// Remove repository from status
-	delete(status.Repositories, repoURL)
-
-	// Save updated status
-	if err := s.saveStatus(status); err != nil {
-		return fmt.Errorf("failed to save status: %w", err)
-	}
-
-	return nil
-}
-
-// GetRepository retrieves a repository entry from the status file.
-func (s *realManager) GetRepository(repoURL string) (*Repository, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Check if repository exists
-	repo, exists := status.Repositories[repoURL]
-	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrRepositoryNotFound, repoURL)
-	}
-
-	return &repo, nil
-}
-
-// ListRepositories lists all repositories in the status file.
-func (s *realManager) ListRepositories() (map[string]Repository, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	return status.Repositories, nil
-}
-
-// AddWorkspace adds a workspace entry to the status file.
-func (s *realManager) AddWorkspace(workspacePath string, params AddWorkspaceParams) error {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Check for duplicate workspace
-	if _, exists := status.Workspaces[workspacePath]; exists {
-		return fmt.Errorf("%w: %s", ErrWorkspaceAlreadyExists, workspacePath)
-	}
-
-	// Create new workspace entry
-	workspace := Workspace{
-		Worktrees:    []string{}, // Empty initially, populated when worktrees are created
-		Repositories: params.Repositories,
-	}
-
-	// Add to workspaces map
-	status.Workspaces[workspacePath] = workspace
-
-	// Save updated status
-	if err := s.saveStatus(status); err != nil {
-		return fmt.Errorf("failed to save status: %w", err)
-	}
-
-	return nil
-}
-
-// GetWorkspace retrieves a workspace entry from the status file.
-func (s *realManager) GetWorkspace(workspacePath string) (*Workspace, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	// Check if workspace exists
-	workspace, exists := status.Workspaces[workspacePath]
-	if !exists {
-		return nil, fmt.Errorf("%w: %s", ErrWorkspaceNotFound, workspacePath)
-	}
-
-	return &workspace, nil
-}
-
-// ListWorkspaces lists all workspaces in the status file.
-func (s *realManager) ListWorkspaces() (map[string]Workspace, error) {
-	// Load current status
-	status, err := s.loadStatus()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load status: %w", err)
-	}
-
-	return status.Workspaces, nil
 }
 
 // computeWorkspacesMap computes the workspaces map from the workspaces list.
