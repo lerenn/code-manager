@@ -144,13 +144,17 @@ func (w *realWorkspace) deleteSingleWorkspaceWorktree(
 	}
 
 	// Get repository path
-	repoPath := filepath.Join(w.config.RepositoriesDir, repoURL)
+	cfg, err := w.configManager.GetConfigWithFallback()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
+	repoPath := filepath.Join(cfg.RepositoriesDir, repoURL)
 
 	// Create repository instance using repositoryProvider
 	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
 		FS:               w.fs,
 		Git:              w.git,
-		Config:           w.config,
+		ConfigManager:    w.configManager,
 		StatusManager:    w.statusManager,
 		Logger:           w.logger,
 		Prompt:           w.prompt,

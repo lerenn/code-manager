@@ -59,7 +59,7 @@ type RepositoryProvider func(params repository.NewRepositoryParams) repository.R
 type realWorkspace struct {
 	fs                 fs.FS
 	git                git.Git
-	config             config.Config
+	configManager      config.Manager
 	statusManager      status.Manager
 	logger             logger.Logger
 	prompt             prompt.Prompter
@@ -73,7 +73,7 @@ type realWorkspace struct {
 type NewWorkspaceParams struct {
 	FS                 fs.FS
 	Git                git.Git
-	Config             config.Config
+	ConfigManager      config.Manager
 	StatusManager      status.Manager
 	Logger             logger.Logger
 	Prompt             prompt.Prompter
@@ -92,7 +92,7 @@ func NewWorkspace(params NewWorkspaceParams) Workspace {
 	return &realWorkspace{
 		fs:                 params.FS,
 		git:                params.Git,
-		config:             params.Config,
+		configManager:      params.ConfigManager,
 		statusManager:      params.StatusManager,
 		logger:             l,
 		prompt:             params.Prompt,

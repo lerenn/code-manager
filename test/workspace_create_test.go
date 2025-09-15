@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,15 +18,12 @@ import (
 func createWorkspace(t *testing.T, setup *TestSetup, workspaceName string, repositories []string) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
-	params := cm.CreateWorkspaceParams{
+	params := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  repositories,
 	}
@@ -96,7 +93,7 @@ func TestCreateWorkspaceDuplicateName(t *testing.T) {
 	// Try to create the same workspace again
 	err = createWorkspace(t, setup, "test-workspace", []string{setup.RepoPath})
 	assert.Error(t, err, "Second workspace creation should fail")
-	assert.ErrorIs(t, err, cm.ErrWorkspaceAlreadyExists, "Error should mention workspace already exists")
+	assert.ErrorIs(t, err, codemanager.ErrWorkspaceAlreadyExists, "Error should mention workspace already exists")
 
 	// Verify only one workspace entry exists in status file
 	status := readStatusFile(t, setup.StatusPath)
@@ -114,12 +111,12 @@ func TestCreateWorkspaceInvalidName(t *testing.T) {
 	// Test creating a workspace with empty name
 	err := createWorkspace(t, setup, "", []string{setup.RepoPath})
 	assert.Error(t, err, "Workspace creation with empty name should fail")
-	assert.ErrorIs(t, err, cm.ErrInvalidWorkspaceName, "Error should mention invalid workspace name")
+	assert.ErrorIs(t, err, codemanager.ErrInvalidWorkspaceName, "Error should mention invalid workspace name")
 
 	// Test creating a workspace with invalid characters
 	err = createWorkspace(t, setup, "invalid/name", []string{setup.RepoPath})
 	assert.Error(t, err, "Workspace creation with invalid characters should fail")
-	assert.ErrorIs(t, err, cm.ErrInvalidWorkspaceName, "Error should mention invalid workspace name")
+	assert.ErrorIs(t, err, codemanager.ErrInvalidWorkspaceName, "Error should mention invalid workspace name")
 
 	// Verify status file exists but is empty (created during CM initialization)
 	_, err = os.Stat(setup.StatusPath)
@@ -157,7 +154,7 @@ func TestCreateWorkspaceInvalidRepositories(t *testing.T) {
 	// Test creating a workspace with non-existent repository
 	err := createWorkspace(t, setup, "test-workspace", []string{"/non/existent/path"})
 	assert.Error(t, err, "Workspace creation with non-existent repository should fail")
-	assert.ErrorIs(t, err, cm.ErrRepositoryNotFound, "Error should mention repository not found")
+	assert.ErrorIs(t, err, codemanager.ErrRepositoryNotFound, "Error should mention repository not found")
 
 	// Test creating a workspace with invalid repository (not a git repo)
 	invalidRepoPath := filepath.Join(setup.TempDir, "not-a-git-repo")
@@ -167,7 +164,7 @@ func TestCreateWorkspaceInvalidRepositories(t *testing.T) {
 
 	err = createWorkspace(t, setup, "test-workspace", []string{invalidRepoPath})
 	assert.Error(t, err, "Workspace creation with invalid repository should fail")
-	assert.ErrorIs(t, err, cm.ErrInvalidRepository, "Error should mention invalid repository")
+	assert.ErrorIs(t, err, codemanager.ErrInvalidRepository, "Error should mention invalid repository")
 
 	// Verify status file exists but is empty (created during CM initialization)
 	_, err = os.Stat(setup.StatusPath)
@@ -311,7 +308,7 @@ func TestCreateWorkspaceDuplicateRepositories(t *testing.T) {
 	// Test creating a workspace with duplicate repositories
 	err := createWorkspace(t, setup, "test-workspace", []string{setup.RepoPath, setup.RepoPath})
 	assert.Error(t, err, "Workspace creation with duplicate repositories should fail")
-	assert.ErrorIs(t, err, cm.ErrDuplicateRepository, "Error should mention duplicate repository")
+	assert.ErrorIs(t, err, codemanager.ErrDuplicateRepository, "Error should mention duplicate repository")
 
 	// Verify status file exists but is empty (created during CM initialization)
 	_, err = os.Stat(setup.StatusPath)

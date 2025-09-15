@@ -30,7 +30,7 @@ func TestValidateOriginRemote_Success(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -64,7 +64,7 @@ func TestValidateOriginRemote_NotFound(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -93,7 +93,7 @@ func TestValidateOriginRemote_InvalidURL(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,

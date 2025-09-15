@@ -5,7 +5,7 @@ package test
 import (
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/hooks/ide/mocks"

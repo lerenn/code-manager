@@ -57,6 +57,7 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 	// Create test config using the config package
 	testConfig := config.Config{
 		RepositoriesDir: cmPath,
+		WorkspacesDir:   filepath.Join(cmPath, "workspaces"),
 		StatusFile:      statusPath,
 	}
 

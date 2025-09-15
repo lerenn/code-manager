@@ -34,7 +34,7 @@ func TestCreateWorktree_Success(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -78,7 +78,7 @@ func TestCreateWorktree_ValidationError(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -108,7 +108,7 @@ func TestCreateWorktree_WorktreeCreationError(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -198,7 +198,7 @@ func TestCreateWorktree_Success_FromRepository(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
@@ -240,7 +240,7 @@ func TestCreateWorktree_SetUpstreamBranch_Success(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {
@@ -290,7 +290,7 @@ func TestCreateWorktree_SetUpstreamBranch_Failure(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {

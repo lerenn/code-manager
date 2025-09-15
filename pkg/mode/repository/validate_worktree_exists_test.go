@@ -32,7 +32,7 @@ func TestValidateWorktreeExists_Success(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -63,7 +63,7 @@ func TestValidateWorktreeExists_NotFound(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -93,7 +93,7 @@ func TestValidateWorktreeExists_StatusManagerError(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -123,7 +123,7 @@ func TestValidateWorktreeExists_NilWorktree(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -154,7 +154,7 @@ func TestValidateWorktreeExists_Success_FromValidation(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 	})
@@ -177,7 +177,7 @@ func TestValidateWorktreeExists_NotFound_FromValidation(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 	})

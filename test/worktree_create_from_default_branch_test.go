@@ -9,10 +9,11 @@ import (
 	"strings"
 	"testing"
 
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestCreateWorktreeRepoModeFromDefaultBranch(t *testing.T) {
@@ -22,11 +23,26 @@ func TestCreateWorktreeRepoModeFromDefaultBranch(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	// Create CM instance with temporary config
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: tempDir,
-			StatusFile:      filepath.Join(tempDir, "status.yaml"),
-		},
+	cmPath := filepath.Join(tempDir, ".cm")
+	statusPath := filepath.Join(cmPath, "status.yaml")
+
+	// Create directories
+	require.NoError(t, os.MkdirAll(cmPath, 0755))
+
+	// Create test config
+	testConfig := config.Config{
+		RepositoriesDir: cmPath,
+		WorkspacesDir:   filepath.Join(tempDir, "workspaces"),
+		StatusFile:      statusPath,
+	}
+
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configData, err := yaml.Marshal(testConfig)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(configPath, configData, 0644))
+
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(configPath),
 	})
 
 	require.NoError(t, err)

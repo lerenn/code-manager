@@ -3,7 +3,7 @@ package ide
 import (
 	"fmt"
 
-	"github.com/lerenn/code-manager/pkg/cm/consts"
+	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/hooks"
 	"github.com/lerenn/code-manager/pkg/logger"

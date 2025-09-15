@@ -3,6 +3,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/lerenn/code-manager/pkg/status"
 )
@@ -63,6 +64,11 @@ func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 			}
 		}
 	}
+
+	// Sort worktrees by branch name for consistent ordering
+	sort.Slice(workspaceWorktrees, func(i, j int) bool {
+		return workspaceWorktrees[i].Branch < workspaceWorktrees[j].Branch
+	})
 
 	return workspaceWorktrees, nil
 }

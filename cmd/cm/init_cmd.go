@@ -1,13 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
-	pkgconfig "github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -52,24 +47,17 @@ Flags:
 
 // runInitCommand executes the init command logic.
 func runInitCommand() error {
-	// Resolve config path
-	path := getConfigPath()
-
-	// Handle config file for initialization
-	cfg, err := loadConfigForInit(path)
-	if err != nil {
-		return err
-	}
+	// Create config manager
+	configManager := cli.NewConfigManager()
 
 	// Create CM manager
-	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config:     cfg,
-		ConfigPath: path, // Pass the custom config path
+	cmManager, err := cm.NewCodeManager(cm.NewCodeManagerParams{
+		ConfigManager: configManager,
 	})
 	if err != nil {
 		return err
 	}
-	if config.Verbose {
+	if cli.Verbose {
 		cmManager.SetLogger(logger.NewVerboseLogger())
 	}
 
@@ -83,41 +71,4 @@ func runInitCommand() error {
 	}
 
 	return cmManager.Init(opts)
-}
-
-// getConfigPath resolves the configuration file path.
-func getConfigPath() string {
-	if config.ConfigPath != "" {
-		return config.ConfigPath
-	}
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		homeDir = "."
-	}
-	return filepath.Join(homeDir, ".cm", "config.yaml")
-}
-
-// loadConfigForInit loads configuration for initialization, handling invalid configs gracefully.
-func loadConfigForInit(path string) (pkgconfig.Config, error) {
-	manager := pkgconfig.NewManager()
-
-	// Check if config file exists
-	_, err := os.Stat(path)
-	if err == nil {
-		// Config file exists, try to load it
-		cfg, err := manager.LoadConfig(path)
-		if err != nil {
-			// Config file exists but is invalid - this is expected for init command
-			// We'll use default config and let the init process fix it
-			// Return the default config with no error since this is expected behavior
-			//nolint:nilerr // Intentionally ignore error - invalid config is expected for init
-			return manager.DefaultConfig(), nil
-		}
-		return cfg, nil
-	}
-	if os.IsNotExist(err) {
-		// Config file doesn't exist, use default config
-		return manager.DefaultConfig(), nil
-	}
-	return pkgconfig.Config{}, fmt.Errorf("failed to check config file: %w", err)
 }

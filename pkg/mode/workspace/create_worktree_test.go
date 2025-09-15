@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	configmocks "github.com/lerenn/code-manager/pkg/config/mocks"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -31,6 +32,7 @@ func TestCreateWorktree_Success(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 	mockRepository := repositorymocks.NewMockRepository(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
 		fs:                 mockFS,
@@ -40,15 +42,20 @@ func TestCreateWorktree_Success(t *testing.T) {
 		prompt:             mockPrompt,
 		worktreeProvider:   func(_ worktree.NewWorktreeParams) worktree.Worktree { return worktreemocks.NewMockWorktree(ctrl) },
 		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		config: config.Config{
-			RepositoriesDir: "/test/repos",
-			WorkspacesDir:   "/test/workspaces",
-		},
+		configManager:      mockConfig,
 	}
 
 	workspaceName := "test-workspace"
 	branch := "feature-branch"
 	repositories := []string{"github.com/user/repo1", "github.com/user/repo2"}
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/repos",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
 
 	// Mock workspace retrieval
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{
@@ -178,18 +185,25 @@ func TestCreateWorktree_RepositoryPathNotFound(t *testing.T) {
 
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
 		fs:            mockFS,
 		statusManager: mockStatus,
 		logger:        logger.NewNoopLogger(),
-		config: config.Config{
-			RepositoriesDir: "/test/repos",
-		},
+		configManager: mockConfig,
 	}
 
 	workspaceName := "test-workspace"
 	repositories := []string{"github.com/user/repo1"}
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/repos",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
 
 	// Mock workspace retrieval
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{
@@ -218,18 +232,25 @@ func TestCreateWorktree_InvalidGitRepository(t *testing.T) {
 
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
 		fs:            mockFS,
 		statusManager: mockStatus,
 		logger:        logger.NewNoopLogger(),
-		config: config.Config{
-			RepositoriesDir: "/test/repos",
-		},
+		configManager: mockConfig,
 	}
 
 	workspaceName := "test-workspace"
 	repositories := []string{"github.com/user/repo1"}
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/repos",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
 
 	// Mock workspace retrieval
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{
@@ -261,6 +282,7 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
 		fs:               mockFS,
@@ -271,13 +293,19 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository {
 			return repositorymocks.NewMockRepository(ctrl)
 		},
-		config: config.Config{
-			RepositoriesDir: "/test/repos",
-		},
+		configManager: mockConfig,
 	}
 
 	workspaceName := "test-workspace"
 	repositories := []string{"github.com/user/repo1"}
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/repos",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
 
 	// Mock workspace retrieval
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{
@@ -316,6 +344,7 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
 		fs:               mockFS,
@@ -326,13 +355,19 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository {
 			return repositorymocks.NewMockRepository(ctrl)
 		},
-		config: config.Config{
-			RepositoriesDir: "/test/repos",
-		},
+		configManager: mockConfig,
 	}
 
 	workspaceName := "test-workspace"
 	repositories := []string{"github.com/user/repo1"}
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/repos",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
 
 	// Mock workspace retrieval
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{
@@ -371,6 +406,7 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	mockGit := gitmocks.NewMockGit(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
 
 	mockRepository := repositorymocks.NewMockRepository(ctrl)
 	workspace := &realWorkspace{
@@ -380,14 +416,19 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 		logger:             logger.NewNoopLogger(),
 		worktreeProvider:   func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
 		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		config: config.Config{
-			RepositoriesDir: "/test/repos",
-			WorkspacesDir:   "/test/workspaces",
-		},
+		configManager:      mockConfig,
 	}
 
 	workspaceName := "test-workspace"
 	repositories := []string{"github.com/user/repo1"}
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/repos",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
 
 	// Mock workspace retrieval
 	mockStatus.EXPECT().GetWorkspace(workspaceName).Return(&status.Workspace{

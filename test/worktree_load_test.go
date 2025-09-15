@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,12 +16,8 @@ import (
 func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		ConfigPath: setup.ConfigPath,
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -73,14 +69,14 @@ func TestLoadWorktreeRepoModeWithOptionalRemote(t *testing.T) {
 	t.Run("LoadInvalidFormat", func(t *testing.T) {
 		err := loadWorktree(t, setup, "invalid:branch:format")
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, cm.ErrBranchNameContainsColon)
+		assert.ErrorIs(t, err, codemanager.ErrBranchNameContainsColon)
 	})
 
 	// Test 4: Error case - empty argument
 	t.Run("LoadEmptyArgument", func(t *testing.T) {
 		err := loadWorktree(t, setup, "")
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, cm.ErrArgumentEmpty)
+		assert.ErrorIs(t, err, codemanager.ErrArgumentEmpty)
 	})
 }
 
@@ -127,18 +123,14 @@ func TestWorktreeLoadWithRepository(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Initialize CM in the repository
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		ConfigPath: setup.ConfigPath,
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
 	// Initialize CM from within the repository
 	restore := safeChdir(t, setup.RepoPath)
-	err = cmInstance.Init(cm.InitOpts{
+	err = cmInstance.Init(codemanager.InitOpts{
 		NonInteractive:  true,
 		RepositoriesDir: setup.CmPath,
 		StatusFile:      setup.StatusPath,
@@ -147,13 +139,13 @@ func TestWorktreeLoadWithRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load worktree using RepositoryName option (use a branch that exists)
-	err = cmInstance.LoadWorktree("test", cm.LoadWorktreeOpts{
+	err = cmInstance.LoadWorktree("test", codemanager.LoadWorktreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
 
 	// Verify worktree was created
-	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)

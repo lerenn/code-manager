@@ -30,7 +30,7 @@ func TestHandleRemoteManagement_Origin(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -56,7 +56,7 @@ func TestHandleRemoteManagement_ExistingRemote(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -85,7 +85,7 @@ func TestHandleRemoteManagement_NewRemote(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -116,7 +116,7 @@ func TestExtractHostFromURL_HTTPS(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -141,7 +141,7 @@ func TestExtractHostFromURL_SSH(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -166,7 +166,7 @@ func TestDetermineProtocol_HTTPS(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -191,7 +191,7 @@ func TestDetermineProtocol_SSH(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -216,7 +216,7 @@ func TestExtractHostFromURL_Invalid(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -241,7 +241,7 @@ func TestExtractRepoNameFromFullPath_Success(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -266,7 +266,7 @@ func TestExtractRepoNameFromFullPath_SinglePart(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -291,7 +291,7 @@ func TestConstructRemoteURL_HTTPS(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -317,7 +317,7 @@ func TestConstructRemoteURL_SSH(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -343,7 +343,7 @@ func TestConstructRemoteURL_InvalidHost(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,

@@ -32,7 +32,7 @@ func TestListWorktrees_Success(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -75,7 +75,7 @@ func TestListWorktrees_RepositoryNotFound(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -107,7 +107,7 @@ func TestListWorktrees_GetRepositoryNameError(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -137,7 +137,7 @@ func TestListWorktrees_StatusManagerError(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -170,7 +170,7 @@ func TestListWorktrees_EmptyWorktrees(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,

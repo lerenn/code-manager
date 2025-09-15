@@ -4,8 +4,8 @@ package worktree
 import (
 	"fmt"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
@@ -110,22 +110,15 @@ type createCreateCmdRunEParams struct {
 // createCreateCmdRunE creates the RunE function for the create command.
 func createCreateCmdRunE(params createCreateCmdRunEParams) func(*cobra.Command, []string) error {
 	return func(_ *cobra.Command, args []string) error {
-		if err := config.CheckInitialization(); err != nil {
+		if err := cli.CheckInitialization(); err != nil {
 			return err
 		}
 
-		cfg, err := config.LoadConfig()
+		cmManager, err := cli.NewCodeManager()
 		if err != nil {
 			return err
 		}
-		cmManager, err := cm.NewCM(cm.NewCMParams{
-			Config:     cfg,
-			ConfigPath: config.GetConfigPath(),
-		})
-		if err != nil {
-			return err
-		}
-		if config.Verbose {
+		if cli.Verbose {
 			cmManager.SetLogger(logger.NewVerboseLogger())
 		}
 

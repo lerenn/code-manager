@@ -133,13 +133,17 @@ func (r *realRepository) createAndValidateWorktreeInstance(
 	}
 
 	// Create worktree instance using provider
+	cfg, err := r.configManager.GetConfigWithFallback()
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get config: %w", err)
+	}
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,
 		Git:             r.git,
 		StatusManager:   r.statusManager,
 		Logger:          r.logger,
 		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
+		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
 	// Build worktree path

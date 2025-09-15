@@ -60,7 +60,7 @@ type Repository interface {
 type realRepository struct {
 	fs               fs.FS
 	git              git.Git
-	config           config.Config
+	configManager    config.Manager
 	statusManager    status.Manager
 	logger           logger.Logger
 	prompt           prompt.Prompter
@@ -73,7 +73,7 @@ type realRepository struct {
 type NewRepositoryParams struct {
 	FS               fs.FS
 	Git              git.Git
-	Config           config.Config
+	ConfigManager    config.Manager
 	StatusManager    status.Manager
 	Logger           logger.Logger
 	Prompt           prompt.Prompter
@@ -99,7 +99,7 @@ func NewRepository(params NewRepositoryParams) Repository {
 	return &realRepository{
 		fs:               params.FS,
 		git:              params.Git,
-		config:           params.Config,
+		configManager:    params.ConfigManager,
 		statusManager:    params.StatusManager,
 		logger:           l,
 		prompt:           params.Prompt,

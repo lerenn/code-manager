@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/hooks/ide"
 	"github.com/stretchr/testify/assert"
@@ -23,11 +23,8 @@ func TestOpenWorktreeRepoModeExisting(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Create a worktree first
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -73,11 +70,8 @@ func TestOpenWorktreeRepoModeNonExistent(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test opening a non-existent worktree
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -90,7 +84,7 @@ func TestOpenWorktreeRepoModeNonExistent(t *testing.T) {
 
 	err = cmInstance.OpenWorktree("non-existent-branch", "dummy")
 	assert.Error(t, err, "Opening non-existent worktree should fail")
-	assert.ErrorIs(t, err, cm.ErrWorktreeNotInStatus, "Error should mention worktree not found")
+	assert.ErrorIs(t, err, codemanager.ErrWorktreeNotInStatus, "Error should mention worktree not found")
 }
 
 // TestOpenWorktreeWithUnsupportedIDE tests opening a worktree with unsupported IDE
@@ -102,11 +96,8 @@ func TestOpenWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Create a worktree first
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -136,18 +127,14 @@ func TestWorktreeOpenWithRepository(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Initialize CM in the repository
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		ConfigPath: setup.ConfigPath,
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
 	// Initialize CM from within the repository
 	restore := safeChdir(t, setup.RepoPath)
-	err = cmInstance.Init(cm.InitOpts{
+	err = cmInstance.Init(codemanager.InitOpts{
 		NonInteractive:  true,
 		RepositoriesDir: setup.CmPath,
 		StatusFile:      setup.StatusPath,
@@ -156,13 +143,13 @@ func TestWorktreeOpenWithRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a worktree first
-	err = cmInstance.CreateWorkTree("feature-branch", cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree("feature-branch", codemanager.CreateWorkTreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
 
 	// Open worktree using RepositoryName option (this will fail in test environment but should not error on validation)
-	err = cmInstance.OpenWorktree("feature-branch", "dummy", cm.OpenWorktreeOpts{
+	err = cmInstance.OpenWorktree("feature-branch", "dummy", codemanager.OpenWorktreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	// We expect this to fail because IDE opening won't work in test environment

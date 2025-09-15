@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lerenn/code-manager/pkg/config"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	promptMocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
@@ -33,7 +34,7 @@ func TestRealRepository_DeleteAllWorktrees_Success(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:               mockFS,
 		Git:              mockGit,
-		Config:           createTestConfig(),
+		ConfigManager:    config.NewManager("/test/config.yaml"),
 		StatusManager:    mockStatus,
 		Prompt:           mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
@@ -82,7 +83,7 @@ func TestRealRepository_DeleteAllWorktrees_NoWorktrees(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:               mockFS,
 		Git:              mockGit,
-		Config:           createTestConfig(),
+		ConfigManager:    config.NewManager("/test/config.yaml"),
 		StatusManager:    mockStatus,
 		Prompt:           mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
@@ -120,7 +121,7 @@ func TestRealRepository_DeleteAllWorktrees_ValidationError(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:               mockFS,
 		Git:              mockGit,
-		Config:           createTestConfig(),
+		ConfigManager:    config.NewManager("/test/config.yaml"),
 		StatusManager:    mockStatus,
 		Prompt:           mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return nil },
@@ -154,7 +155,7 @@ func TestRealRepository_DeleteAllWorktrees_ListWorktreesError(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:               mockFS,
 		Git:              mockGit,
-		Config:           createTestConfig(),
+		ConfigManager:    config.NewManager("/test/config.yaml"),
 		StatusManager:    mockStatus,
 		Prompt:           mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return nil },
@@ -192,7 +193,7 @@ func TestRealRepository_DeleteAllWorktrees_PartialFailure(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:               mockFS,
 		Git:              mockGit,
-		Config:           createTestConfig(),
+		ConfigManager:    config.NewManager("/test/config.yaml"),
 		StatusManager:    mockStatus,
 		Prompt:           mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
@@ -258,7 +259,7 @@ func TestRealRepository_DeleteAllWorktrees_AllFailures(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:               mockFS,
 		Git:              mockGit,
-		Config:           createTestConfig(),
+		ConfigManager:    config.NewManager("/test/config.yaml"),
 		StatusManager:    mockStatus,
 		Prompt:           mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
@@ -308,7 +309,7 @@ func TestRealRepository_DeleteAllWorktrees_GetWorktreePathError(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:               mockFS,
 		Git:              mockGit,
-		Config:           createTestConfig(),
+		ConfigManager:    config.NewManager("/test/config.yaml"),
 		StatusManager:    mockStatus,
 		Prompt:           mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },

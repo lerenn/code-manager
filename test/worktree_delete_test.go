@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,11 +24,8 @@ type deleteWorktreeParams struct {
 func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: params.Setup.CmPath,
-			StatusFile:      params.Setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(params.Setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -110,7 +107,7 @@ func TestDeleteWorktreeRepoModeNonExistentBranch(t *testing.T) {
 		Force:  true,
 	})
 	assert.Error(t, err, "Should fail when deleting non-existent worktree")
-	assert.ErrorIs(t, err, cm.ErrWorktreeNotInStatus)
+	assert.ErrorIs(t, err, codemanager.ErrWorktreeNotInStatus)
 }
 
 // TestDeleteWorktreeVerboseMode tests deleting a worktree with verbose output
@@ -126,11 +123,8 @@ func TestDeleteWorktreeRepoModeVerboseMode(t *testing.T) {
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Delete the worktree with verbose mode
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -204,11 +198,8 @@ func TestDeleteWorktreeRepoModeCLIWithVerbose(t *testing.T) {
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Delete worktree using CM instance with force flag and verbose mode
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -246,7 +237,7 @@ func TestDeleteWorktreeRepoModeCLINonExistentBranch(t *testing.T) {
 		Force:  true,
 	})
 	assert.Error(t, err, "Should fail when deleting non-existent worktree")
-	assert.ErrorIs(t, err, cm.ErrWorktreeNotInStatus)
+	assert.ErrorIs(t, err, codemanager.ErrWorktreeNotInStatus)
 }
 
 // deleteMultipleWorktreesParams contains parameters for deleteMultipleWorktrees.
@@ -260,11 +251,8 @@ type deleteMultipleWorktreesParams struct {
 func deleteMultipleWorktrees(t *testing.T, params deleteMultipleWorktreesParams) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: params.Setup.CmPath,
-			StatusFile:      params.Setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(params.Setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -487,18 +475,14 @@ func TestWorktreeDeleteWithRepository(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Initialize CM in the repository
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		ConfigPath: setup.ConfigPath,
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
 	// Initialize CM from within the repository
 	restore := safeChdir(t, setup.RepoPath)
-	err = cmInstance.Init(cm.InitOpts{
+	err = cmInstance.Init(codemanager.InitOpts{
 		NonInteractive:  true,
 		RepositoriesDir: setup.CmPath,
 		StatusFile:      setup.StatusPath,
@@ -507,19 +491,19 @@ func TestWorktreeDeleteWithRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a worktree first
-	err = cmInstance.CreateWorkTree("feature-branch", cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree("feature-branch", codemanager.CreateWorkTreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
 
 	// Delete worktree using RepositoryName option
-	err = cmInstance.DeleteWorkTree("feature-branch", true, cm.DeleteWorktreeOpts{
+	err = cmInstance.DeleteWorkTree("feature-branch", true, codemanager.DeleteWorktreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
 
 	// Verify worktree was deleted
-	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)

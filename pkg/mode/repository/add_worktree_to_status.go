@@ -23,13 +23,17 @@ type StatusParams struct {
 // AddWorktreeToStatus adds the worktree to the status file with proper error handling.
 func (r *realRepository) AddWorktreeToStatus(params StatusParams) error {
 	// Create worktree instance using provider
+	cfg, err := r.configManager.GetConfigWithFallback()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,
 		Git:             r.git,
 		StatusManager:   r.statusManager,
 		Logger:          r.logger,
 		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
+		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
 	if err := worktreeInstance.AddToStatus(worktree.AddToStatusParams{
@@ -71,13 +75,17 @@ func (r *realRepository) handleRepositoryNotFoundError(params StatusParams) erro
 	}
 
 	// Try adding the worktree again
+	cfg, err := r.configManager.GetConfigWithFallback()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,
 		Git:             r.git,
 		StatusManager:   r.statusManager,
 		Logger:          r.logger,
 		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
+		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
 	if err := worktreeInstance.AddToStatus(worktree.AddToStatusParams{
@@ -137,13 +145,18 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 
 // cleanupWorktreeDirectory cleans up the worktree directory.
 func (r *realRepository) cleanupWorktreeDirectory(worktreePath string) {
+	cfg, err := r.configManager.GetConfigWithFallback()
+	if err != nil {
+		// Fallback: still try to cleanup with default path
+		cfg = r.configManager.DefaultConfig()
+	}
 	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
 		FS:              r.fs,
 		Git:             r.git,
 		StatusManager:   r.statusManager,
 		Logger:          r.logger,
 		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
+		RepositoriesDir: cfg.RepositoriesDir,
 	})
 	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
 		r.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)

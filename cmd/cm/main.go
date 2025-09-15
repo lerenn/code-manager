@@ -4,7 +4,7 @@ package main
 import (
 	"log"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
 	"github.com/lerenn/code-manager/cmd/cm/repository"
 	"github.com/lerenn/code-manager/cmd/cm/workspace"
 	"github.com/lerenn/code-manager/cmd/cm/worktree"
@@ -20,9 +20,9 @@ func main() {
 	}
 
 	// Add global flags
-	rootCmd.PersistentFlags().BoolVarP(&config.Quiet, "quiet", "q", false, "Suppress all output except errors")
-	rootCmd.PersistentFlags().BoolVarP(&config.Verbose, "verbose", "v", false, "Enable verbose output")
-	rootCmd.PersistentFlags().StringVarP(&config.ConfigPath, "config", "c", "", "Specify a custom config file path")
+	rootCmd.PersistentFlags().BoolVarP(&cli.Quiet, "quiet", "q", false, "Suppress all output except errors")
+	rootCmd.PersistentFlags().BoolVarP(&cli.Verbose, "verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().StringVarP(&cli.ConfigPath, "config", "c", "", "Specify a custom config file path")
 
 	// Create subcommands
 	repositoryCmd := repository.CreateRepositoryCmd()

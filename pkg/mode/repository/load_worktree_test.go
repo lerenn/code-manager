@@ -32,7 +32,7 @@ func TestLoadWorktree_Success(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -87,7 +87,7 @@ func TestLoadWorktree_NotGitRepository(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -117,7 +117,7 @@ func TestLoadWorktree_RemoteNotFound(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -151,7 +151,7 @@ func TestLoadWorktree_BranchNotFoundOnRemote(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -198,7 +198,7 @@ func TestLoadWorktree_Success_FromRepository(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree {

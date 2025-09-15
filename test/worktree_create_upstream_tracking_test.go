@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -18,11 +18,8 @@ import (
 func createWorktreeForUpstreamTest(t *testing.T, setup *TestSetup, branch string) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -52,11 +49,8 @@ func TestWorktreeUpstreamTracking(t *testing.T) {
 	assert.NoError(t, err, "Worktree creation should succeed even when remote branch doesn't exist")
 
 	// Verify the worktree was created successfully by listing worktrees
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
@@ -84,11 +78,8 @@ func TestWorktreeUpstreamTrackingNewBranch(t *testing.T) {
 	assert.NoError(t, err, "Worktree creation should succeed even for new branches that don't exist on remote")
 
 	// Verify the worktree was created successfully by listing worktrees
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		ConfigManager: config.NewManager(setup.ConfigPath),
 	})
 	require.NoError(t, err)
 

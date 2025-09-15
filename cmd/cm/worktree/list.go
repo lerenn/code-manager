@@ -3,8 +3,8 @@ package worktree
 import (
 	"fmt"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/spf13/cobra"
@@ -69,23 +69,16 @@ func createListCmdRunE(workspaceName, repositoryName *string) func(*cobra.Comman
 	}
 }
 
-func initializeCMForList() (cm.CM, error) {
-	if err := config.CheckInitialization(); err != nil {
+func initializeCMForList() (cm.CodeManager, error) {
+	if err := cli.CheckInitialization(); err != nil {
 		return nil, err
 	}
 
-	cfg, err := config.LoadConfig()
+	cmManager, err := cli.NewCodeManager()
 	if err != nil {
 		return nil, err
 	}
-	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config:     cfg,
-		ConfigPath: config.GetConfigPath(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	if config.Verbose {
+	if cli.Verbose {
 		cmManager.SetLogger(logger.NewVerboseLogger())
 	}
 	return cmManager, nil

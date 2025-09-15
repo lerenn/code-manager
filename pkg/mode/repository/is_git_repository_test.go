@@ -31,7 +31,7 @@ func TestIsGitRepository_GitDirectory(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -61,7 +61,7 @@ func TestIsGitRepository_GitWorktreeFile(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -92,7 +92,7 @@ func TestIsGitRepository_NoGitDirectory(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -121,7 +121,7 @@ func TestIsGitRepository_InvalidWorktreeFile(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -152,7 +152,7 @@ func TestIsGitRepository_FileSystemError(t *testing.T) {
 	repository := &realRepository{
 		fs:               mockFS,
 		git:              mockGit,
-		config:           config.Config{},
+		configManager:    config.NewManager("/test/config.yaml"),
 		statusManager:    mockStatus,
 		logger:           logger.NewNoopLogger(),
 		prompt:           mockPrompt,
@@ -183,7 +183,7 @@ func TestIsGitRepository_Directory_FromRepository(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 	})
@@ -209,7 +209,7 @@ func TestIsGitRepository_File_FromRepository(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 	})
@@ -237,7 +237,7 @@ func TestIsGitRepository_InvalidFile_FromRepository(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 	})
@@ -265,7 +265,7 @@ func TestIsGitRepository_NotExists_FromRepository(t *testing.T) {
 	repo := NewRepository(NewRepositoryParams{
 		FS:            mockFS,
 		Git:           mockGit,
-		Config:        createTestConfig(),
+		ConfigManager: config.NewManager("/test/config.yaml"),
 		StatusManager: mockStatus,
 		Prompt:        mockPrompt,
 	})

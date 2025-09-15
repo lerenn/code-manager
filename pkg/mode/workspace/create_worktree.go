@@ -99,7 +99,10 @@ func (w *realWorkspace) createSingleRepositoryWorktreeWithURL(
 	w.logger.Logf("Creating worktree in repository: %s", repoURL)
 
 	// Get repository path from status or construct it
-	repoPath := w.getRepositoryPath(repoURL)
+	repoPath, err := w.getRepositoryPath(repoURL)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get repository path for '%s': %w", repoURL, err)
+	}
 
 	// Validate repository exists and is accessible
 	if err := w.validateRepositoryPath(repoPath); err != nil {
@@ -156,15 +159,19 @@ func (w *realWorkspace) rollbackWorkspaceWorktrees(
 }
 
 // getRepositoryPath gets the repository path from status or constructs it.
-func (w *realWorkspace) getRepositoryPath(repoURL string) string {
+func (w *realWorkspace) getRepositoryPath(repoURL string) (string, error) {
 	// Try to get repository from status first
 	repo, err := w.statusManager.GetRepository(repoURL)
 	if err == nil {
-		return repo.Path
+		return repo.Path, nil
 	}
 
 	// If not found in status, construct path using config
-	return filepath.Join(w.config.RepositoriesDir, repoURL)
+	cfg, err := w.configManager.GetConfigWithFallback()
+	if err != nil {
+		return "", fmt.Errorf("failed to get config for repository path construction: %w", err)
+	}
+	return filepath.Join(cfg.RepositoriesDir, repoURL), nil
 }
 
 // getRepositoryURLFromPath extracts the repository URL from a file system path by looking at Git remotes.
@@ -236,7 +243,7 @@ func (w *realWorkspace) createWorktreeForRepositoryWithPath(
 	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
 		FS:               w.fs,
 		Git:              w.git,
-		Config:           w.config,
+		ConfigManager:    w.configManager,
 		StatusManager:    w.statusManager,
 		Logger:           w.logger,
 		Prompt:           w.prompt,
@@ -263,7 +270,11 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 
 	// Create workspace file path
 	workspaceFileName := fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename)
-	workspaceFilePath := filepath.Join(w.config.WorkspacesDir, workspaceFileName)
+	cfg, err := w.configManager.GetConfigWithFallback()
+	if err != nil {
+		return "", fmt.Errorf("failed to get config: %w", err)
+	}
+	workspaceFilePath := filepath.Join(cfg.WorkspacesDir, workspaceFileName)
 
 	// Ensure workspaces directory exists
 	workspacesDir := filepath.Dir(workspaceFilePath)
@@ -291,9 +302,16 @@ func (w *realWorkspace) generateWorkspaceFileContent(_ string, repositories []st
 	"folders": [
 `
 
+	// Get config once before the loop
+	cfg, err := w.configManager.GetConfigWithFallback()
+	if err != nil {
+		// Fallback to a default path if config cannot be loaded
+		cfg = w.configManager.DefaultConfig()
+	}
+
 	for i, repoURL := range repositories {
 		// Convert repository URL to local path
-		repoPath := filepath.Join(w.config.RepositoriesDir, repoURL)
+		repoPath := filepath.Join(cfg.RepositoriesDir, repoURL)
 		content += fmt.Sprintf(`		{
 			"path": "%s"
 		}`, repoPath)
