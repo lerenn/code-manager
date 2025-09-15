@@ -459,7 +459,7 @@ func TestCreateWorktreeWorkspaceMode_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify workspace file was created
-	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-"+branch+".code-workspace")
+	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"/"+branch+".code-workspace")
 	assert.FileExists(t, workspaceFilePath)
 
 	// Verify workspace file content
@@ -515,7 +515,7 @@ func TestCreateWorktreeWorkspaceMode_WithIDE(t *testing.T) {
 	// The workspace file creation is sufficient to verify the functionality works
 
 	// Verify workspace file was created
-	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-"+branch+".code-workspace")
+	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"/"+branch+".code-workspace")
 	assert.FileExists(t, workspaceFilePath)
 }
 

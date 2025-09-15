@@ -52,7 +52,7 @@ func (c *realCM) DeleteWorkTree(branch string, force bool, opts ...DeleteWorktre
 			}
 			return c.handleRepositoryDeleteMode(branch, force)
 		case mode.ModeWorkspace:
-			return c.handleWorkspaceDeleteMode(branch, force)
+			return c.handleWorkspaceDeleteMode(options, branch, force)
 		case mode.ModeNone:
 			return ErrNoGitRepositoryOrWorkspaceFound
 		default:
@@ -89,23 +89,24 @@ func (c *realCM) handleRepositoryDeleteMode(branch string, force bool) error {
 }
 
 // handleWorkspaceDeleteMode handles workspace mode: validation and worktree deletion.
-func (c *realCM) handleWorkspaceDeleteMode(branch string, force bool) error {
+func (c *realCM) handleWorkspaceDeleteMode(options DeleteWorktreeOpts, branch string, force bool) error {
 	c.VerbosePrint("Handling workspace delete mode")
 
 	// Create workspace instance
 	workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
-		FS:               c.fs,
-		Git:              c.git,
-		Config:           c.config,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
+		FS:                 c.fs,
+		Git:                c.git,
+		Config:             c.config,
+		StatusManager:      c.statusManager,
+		Logger:             c.logger,
+		Prompt:             c.prompt,
+		WorktreeProvider:   worktree.NewWorktree,
+		RepositoryProvider: c.safeRepositoryProvider(),
+		HookManager:        c.hookManager,
 	})
 
 	// Delete worktree for workspace
-	if err := workspaceInstance.DeleteWorktree(branch, force); err != nil {
+	if err := workspaceInstance.DeleteWorktree(options.WorkspaceName, branch, force); err != nil {
 		return c.translateWorkspaceError(err)
 	}
 

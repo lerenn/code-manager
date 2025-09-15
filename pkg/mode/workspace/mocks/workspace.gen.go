@@ -63,31 +63,31 @@ func (mr *MockWorkspaceMockRecorder) CreateWorktree(branch any, opts ...any) *go
 }
 
 // DeleteAllWorktrees mocks base method.
-func (m *MockWorkspace) DeleteAllWorktrees(force bool) error {
+func (m *MockWorkspace) DeleteAllWorktrees(workspaceName string, force bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAllWorktrees", force)
+	ret := m.ctrl.Call(m, "DeleteAllWorktrees", workspaceName, force)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteAllWorktrees indicates an expected call of DeleteAllWorktrees.
-func (mr *MockWorkspaceMockRecorder) DeleteAllWorktrees(force any) *gomock.Call {
+func (mr *MockWorkspaceMockRecorder) DeleteAllWorktrees(workspaceName, force any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllWorktrees", reflect.TypeOf((*MockWorkspace)(nil).DeleteAllWorktrees), force)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAllWorktrees", reflect.TypeOf((*MockWorkspace)(nil).DeleteAllWorktrees), workspaceName, force)
 }
 
 // DeleteWorktree mocks base method.
-func (m *MockWorkspace) DeleteWorktree(branch string, force bool) error {
+func (m *MockWorkspace) DeleteWorktree(workspaceName, branch string, force bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteWorktree", branch, force)
+	ret := m.ctrl.Call(m, "DeleteWorktree", workspaceName, branch, force)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeleteWorktree indicates an expected call of DeleteWorktree.
-func (mr *MockWorkspaceMockRecorder) DeleteWorktree(branch, force any) *gomock.Call {
+func (mr *MockWorkspaceMockRecorder) DeleteWorktree(workspaceName, branch, force any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorktree", reflect.TypeOf((*MockWorkspace)(nil).DeleteWorktree), branch, force)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWorktree", reflect.TypeOf((*MockWorkspace)(nil).DeleteWorktree), workspaceName, branch, force)
 }
 
 // GetName mocks base method.
@@ -131,6 +131,21 @@ func (m *MockWorkspace) Load() error {
 func (mr *MockWorkspaceMockRecorder) Load() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Load", reflect.TypeOf((*MockWorkspace)(nil).Load))
+}
+
+// OpenWorktree mocks base method.
+func (m *MockWorkspace) OpenWorktree(workspaceName, branch string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OpenWorktree", workspaceName, branch)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// OpenWorktree indicates an expected call of OpenWorktree.
+func (mr *MockWorkspaceMockRecorder) OpenWorktree(workspaceName, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OpenWorktree", reflect.TypeOf((*MockWorkspace)(nil).OpenWorktree), workspaceName, branch)
 }
 
 // ParseFile mocks base method.

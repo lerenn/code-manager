@@ -72,7 +72,7 @@ func TestCreateWorktree_Success(t *testing.T) {
 	}
 
 	// Mock workspace file creation
-	mockFS.EXPECT().MkdirAll("/test/workspaces", gomock.Any()).Return(nil)
+	mockFS.EXPECT().MkdirAll("/test/workspaces/test-workspace", gomock.Any()).Return(nil)
 	mockFS.EXPECT().CreateFileWithContent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock workspace status update
@@ -97,7 +97,7 @@ func TestCreateWorktree_Success(t *testing.T) {
 	result, err := workspace.CreateWorktree(branch, opts...)
 
 	assert.NoError(t, err)
-	assert.Contains(t, result, "test-workspace-feature-branch.code-workspace")
+	assert.Contains(t, result, "test-workspace/feature-branch.code-workspace")
 }
 
 func TestCreateWorktree_MissingWorkspaceName(t *testing.T) {
@@ -408,7 +408,7 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return(worktreePath, nil).AnyTimes()
 
 	// Mock workspace file creation failure
-	mockFS.EXPECT().MkdirAll("/test/workspaces", gomock.Any()).Return(errors.New("mkdir failed")).AnyTimes()
+	mockFS.EXPECT().MkdirAll("/test/workspaces/test-workspace", gomock.Any()).Return(errors.New("mkdir failed")).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},

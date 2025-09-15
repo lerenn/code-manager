@@ -2,6 +2,10 @@
 package workspace
 
 import (
+	"fmt"
+	"path/filepath"
+
+	"github.com/lerenn/code-manager/pkg/branch"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
@@ -39,9 +43,9 @@ type Folder struct {
 type Workspace interface {
 	Validate() error
 	CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error)
-	DeleteWorktree(branch string, force bool) error
-	DeleteAllWorktrees(force bool) error
-	ListWorktrees() ([]status.WorktreeInfo, error)
+	DeleteWorktree(workspaceName, branch string, force bool) error
+	DeleteAllWorktrees(workspaceName string, force bool) error
+	OpenWorktree(workspaceName, branch string) (string, error)
 	SetLogger(logger logger.Logger)
 	Load() error
 	ParseFile(filename string) (Config, error)
@@ -100,4 +104,16 @@ func NewWorkspace(params NewWorkspaceParams) Workspace {
 		repositoryProvider: params.RepositoryProvider,
 		hookManager:        params.HookManager,
 	}
+}
+
+// buildWorkspaceFilePath constructs the workspace file path for a given workspace name and branch.
+// This is a shared utility function used by create, delete, and open operations.
+// The workspace file is named: {workspaceName}/{sanitizedBranchName}.code-workspace.
+func buildWorkspaceFilePath(workspacesDir, workspaceName, branchName string) string {
+	// Sanitize branch name for filename (replace / with -)
+	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
+
+	// Create workspace file path
+	workspaceFileName := fmt.Sprintf("%s/%s.code-workspace", workspaceName, sanitizedBranchForFilename)
+	return filepath.Join(workspacesDir, workspaceFileName)
 }

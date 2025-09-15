@@ -14,9 +14,10 @@ import (
 func createOpenCmd() *cobra.Command {
 	var ideName string
 	var repositoryName string
+	var workspaceName string
 
 	openCmd := &cobra.Command{
-		Use:   "open <branch> [--ide <ide-name>] [--repository <repository-name>]",
+		Use:   "open <branch> [--ide <ide-name>] [--workspace <workspace-name>] [--repository <repository-name>]",
 		Short: "Open a worktree in the specified IDE",
 		Long: `Open a worktree for the specified branch in the specified IDE.
 
@@ -25,16 +26,19 @@ Examples:
   cm wt open main
   cm w open feature-branch -i cursor
   cm worktree open main --ide ` + ide.DefaultIDE + `
+  cm worktree open feature-branch --workspace my-workspace
   cm worktree open feature-branch --repository my-repo
   cm wt open main --repository /path/to/repo --ide cursor`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return openWorktree(args[0], ideName, repositoryName)
+			return openWorktree(args[0], ideName, workspaceName, repositoryName)
 		},
 	}
 
-	// Add IDE and repository flags to open command
+	// Add IDE, workspace, and repository flags to open command
 	openCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE")
+	openCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
+		"Open worktree for the specified workspace (name from status.yaml)")
 	openCmd.Flags().StringVarP(&repositoryName, "repository", "r", "",
 		"Open worktree for the specified repository (name from status.yaml or path)")
 
@@ -42,7 +46,7 @@ Examples:
 }
 
 // openWorktree handles the logic for opening a worktree.
-func openWorktree(branchName, ideName, repositoryName string) error {
+func openWorktree(branchName, ideName, workspaceName, repositoryName string) error {
 	if err := config.CheckInitialization(); err != nil {
 		return err
 	}
@@ -70,6 +74,11 @@ func openWorktree(branchName, ideName, repositoryName string) error {
 
 	// Prepare options for OpenWorktree
 	var opts []cm.OpenWorktreeOpts
+	if workspaceName != "" {
+		opts = append(opts, cm.OpenWorktreeOpts{
+			WorkspaceName: workspaceName,
+		})
+	}
 	if repositoryName != "" {
 		opts = append(opts, cm.OpenWorktreeOpts{
 			RepositoryName: repositoryName,
