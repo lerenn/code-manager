@@ -14,7 +14,6 @@ import (
 
 	logger "github.com/lerenn/code-manager/pkg/logger"
 	workspace "github.com/lerenn/code-manager/pkg/mode/workspace"
-	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -102,21 +101,6 @@ func (m *MockWorkspace) GetName(config workspace.Config, filename string) string
 func (mr *MockWorkspaceMockRecorder) GetName(config, filename any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetName", reflect.TypeOf((*MockWorkspace)(nil).GetName), config, filename)
-}
-
-// ListWorktrees mocks base method.
-func (m *MockWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListWorktrees")
-	ret0, _ := ret[0].([]status.WorktreeInfo)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListWorktrees indicates an expected call of ListWorktrees.
-func (mr *MockWorkspaceMockRecorder) ListWorktrees() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorktrees", reflect.TypeOf((*MockWorkspace)(nil).ListWorktrees))
 }
 
 // Load mocks base method.

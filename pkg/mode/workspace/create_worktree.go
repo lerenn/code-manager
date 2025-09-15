@@ -267,7 +267,7 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 	}
 
 	// Create workspace file content
-	workspaceContent := w.generateWorkspaceFileContent(workspaceName, repositories)
+	workspaceContent := w.generateWorkspaceFileContent(workspaceName, branchName, repositories)
 
 	// Write workspace file
 	if err := w.fs.CreateFileWithContent(workspaceFilePath, []byte(workspaceContent), 0644); err != nil {
@@ -279,7 +279,7 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 }
 
 // generateWorkspaceFileContent generates the content for a .code-workspace file.
-func (w *realWorkspace) generateWorkspaceFileContent(_ string, repositories []string) string {
+func (w *realWorkspace) generateWorkspaceFileContent(_ string, branchName string, repositories []string) string {
 	// Create workspace file content with all repositories
 	// This is a simplified implementation - in practice, you might want to use a proper JSON library
 	content := `{
@@ -287,11 +287,12 @@ func (w *realWorkspace) generateWorkspaceFileContent(_ string, repositories []st
 `
 
 	for i, repoURL := range repositories {
-		// Convert repository URL to local path
-		repoPath := filepath.Join(w.config.RepositoriesDir, repoURL)
+		// Convert repository URL to worktree path using the worktree path structure
+		// Structure: $base_path/<repo_url>/<remote_name>/<branch>
+		worktreePath := filepath.Join(w.config.RepositoriesDir, repoURL, "origin", branchName)
 		content += fmt.Sprintf(`		{
 			"path": "%s"
-		}`, repoPath)
+		}`, worktreePath)
 		if i < len(repositories)-1 {
 			content += ","
 		}
