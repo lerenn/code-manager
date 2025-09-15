@@ -4,8 +4,7 @@ package repository
 import (
 	"fmt"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -26,22 +25,15 @@ Examples:
   cm r l`,
 		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			if err := config.CheckInitialization(); err != nil {
+			if err := cli.CheckInitialization(); err != nil {
 				return err
 			}
 
-			cfg, err := config.LoadConfig()
+			cmManager, err := cli.NewCodeManager()
 			if err != nil {
 				return err
 			}
-			cmManager, err := cm.NewCM(cm.NewCMParams{
-				Config:     cfg,
-				ConfigPath: config.GetConfigPath(),
-			})
-			if err != nil {
-				return err
-			}
-			if config.Verbose {
+			if cli.Verbose {
 				cmManager.SetLogger(logger.NewVerboseLogger())
 			}
 

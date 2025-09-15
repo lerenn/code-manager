@@ -3,8 +3,8 @@ package worktree
 import (
 	"fmt"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -75,22 +75,15 @@ func createDeleteCmdRunE(
 	repositoryName *string,
 ) func(*cobra.Command, []string) error {
 	return func(_ *cobra.Command, args []string) error {
-		if err := config.CheckInitialization(); err != nil {
+		if err := cli.CheckInitialization(); err != nil {
 			return err
 		}
 
-		cfg, err := config.LoadConfig()
+		cmManager, err := cli.NewCodeManager()
 		if err != nil {
 			return err
 		}
-		cmManager, err := cm.NewCM(cm.NewCMParams{
-			Config:     cfg,
-			ConfigPath: config.GetConfigPath(),
-		})
-		if err != nil {
-			return err
-		}
-		if config.Verbose {
+		if cli.Verbose {
 			cmManager.SetLogger(logger.NewVerboseLogger())
 		}
 
@@ -127,23 +120,16 @@ func runDeleteWorktree(args []string, force bool, workspaceName string, reposito
 	return cmManager.DeleteWorkTrees(args, force)
 }
 
-func initializeCM() (cm.CM, error) {
-	if err := config.CheckInitialization(); err != nil {
+func initializeCM() (cm.CodeManager, error) {
+	if err := cli.CheckInitialization(); err != nil {
 		return nil, err
 	}
 
-	cfg, err := config.LoadConfig()
+	cmManager, err := cli.NewCodeManager()
 	if err != nil {
 		return nil, err
 	}
-	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config:     cfg,
-		ConfigPath: config.GetConfigPath(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	if config.Verbose {
+	if cli.Verbose {
 		cmManager.SetLogger(logger.NewVerboseLogger())
 	}
 	return cmManager, nil
@@ -164,7 +150,8 @@ func buildDeleteWorktreeOptions(workspaceName, repositoryName string) []cm.Delet
 	return opts
 }
 
-func deleteWorktreesIndividually(cmManager cm.CM, args []string, force bool, opts []cm.DeleteWorktreeOpts) error {
+func deleteWorktreesIndividually(
+	cmManager cm.CodeManager, args []string, force bool, opts []cm.DeleteWorktreeOpts) error {
 	for _, branch := range args {
 		if err := cmManager.DeleteWorkTree(branch, force, opts...); err != nil {
 			return err

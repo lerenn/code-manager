@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -29,14 +30,16 @@ func TestIsGitRepository_GitDirectory(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock .git directory exists and is a directory
@@ -59,14 +62,16 @@ func TestIsGitRepository_GitWorktreeFile(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock .git file exists and is not a directory
@@ -90,14 +95,16 @@ func TestIsGitRepository_NoGitDirectory(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock .git does not exist
@@ -119,14 +126,16 @@ func TestIsGitRepository_InvalidWorktreeFile(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock .git file exists but is not a valid worktree file
@@ -150,14 +159,16 @@ func TestIsGitRepository_FileSystemError(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock filesystem error
@@ -180,13 +191,17 @@ func TestIsGitRepository_Directory_FromRepository(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Prompt:        mockPrompt,
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:            mockFS,
+			Git:           mockGit,
+			Config:        config.NewManager("/test/config.yaml"),
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+			Prompt:        mockPrompt,
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock .git exists and is a directory (regular repository)
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -206,13 +221,17 @@ func TestIsGitRepository_File_FromRepository(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Prompt:        mockPrompt,
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:            mockFS,
+			Git:           mockGit,
+			Config:        config.NewManager("/test/config.yaml"),
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+			Prompt:        mockPrompt,
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock .git exists but is not a directory (worktree case)
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -234,13 +253,17 @@ func TestIsGitRepository_InvalidFile_FromRepository(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Prompt:        mockPrompt,
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:            mockFS,
+			Git:           mockGit,
+			Config:        config.NewManager("/test/config.yaml"),
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+			Prompt:        mockPrompt,
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock .git exists but is not a directory
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -262,13 +285,17 @@ func TestIsGitRepository_NotExists_FromRepository(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
-	repo := NewRepository(NewRepositoryParams{
-		FS:            mockFS,
-		Git:           mockGit,
-		Config:        createTestConfig(),
-		StatusManager: mockStatus,
-		Prompt:        mockPrompt,
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:            mockFS,
+			Git:           mockGit,
+			Config:        config.NewManager("/test/config.yaml"),
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+			Prompt:        mockPrompt,
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock .git does not exist
 	mockFS.EXPECT().Exists(".git").Return(false, nil)

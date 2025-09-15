@@ -6,5 +6,5 @@ import (
 
 // SetLogger sets the logger for this workspace instance.
 func (w *realWorkspace) SetLogger(logger logger.Logger) {
-	w.logger = logger
+	w.deps.Logger = logger
 }

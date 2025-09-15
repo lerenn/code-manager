@@ -7,8 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/config"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,11 +22,8 @@ type deleteAllWorktreesParams struct {
 func deleteAllWorktrees(t *testing.T, params deleteAllWorktreesParams) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: params.Setup.CmPath,
-			StatusFile:      params.Setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 
 	require.NoError(t, err)

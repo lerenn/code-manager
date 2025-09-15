@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -29,14 +30,16 @@ func TestValidateGitConfiguration_Success(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock successful git configuration check
@@ -57,14 +60,16 @@ func TestValidateGitConfiguration_WithFeatureBranch(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock successful git configuration check with feature branch
@@ -85,14 +90,16 @@ func TestValidateGitConfiguration_DetachedHead(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git configuration check in detached HEAD state
@@ -113,14 +120,16 @@ func TestValidateGitConfiguration_GitNotAvailable(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git command failure - git not available
@@ -143,14 +152,16 @@ func TestValidateGitConfiguration_NotGitRepository(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git command failure - not a git repository
@@ -173,14 +184,16 @@ func TestValidateGitConfiguration_PermissionDenied(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git command failure - permission denied
@@ -203,14 +216,16 @@ func TestValidateGitConfiguration_EmptyWorkDir(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git command failure - empty work directory
@@ -233,14 +248,16 @@ func TestValidateGitConfiguration_DifferentWorkDir(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		config:           config.Config{RepositoriesDir: "/test/repos"},
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock successful git configuration check with different work directory

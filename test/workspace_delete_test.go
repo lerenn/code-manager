@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/stretchr/testify/require"
@@ -18,17 +18,14 @@ import (
 func deleteWorkspace(t *testing.T, setup *TestSetup, workspaceName string, force bool) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-		},
-		Logger: logger.NewVerboseLogger(),
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
-	params := cm.DeleteWorkspaceParams{
+	params := codemanager.DeleteWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Force:         force,
 	}
@@ -41,24 +38,21 @@ func createWorkspaceWithWorktrees(t *testing.T, setup *TestSetup, workspaceName 
 	t.Helper()
 
 	// Create workspace
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace
-	createParams := cm.CreateWorkspaceParams{
+	createParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  repositories,
 	}
 	require.NoError(t, cmInstance.CreateWorkspace(createParams))
 
 	// Create one worktree for the workspace (this will create worktrees for all repositories in the workspace)
-	worktreeOpts := cm.CreateWorkTreeOpts{
+	worktreeOpts := codemanager.CreateWorkTreeOpts{
 		WorkspaceName: workspaceName,
 	}
 	require.NoError(t, cmInstance.CreateWorkTree("feature/test-branch", worktreeOpts))
@@ -220,16 +214,13 @@ func TestDeleteWorkspaceEmptyWorkspace(t *testing.T) {
 	workspaceName := "empty-workspace"
 
 	// Create workspace without worktrees
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
-	createParams := cm.CreateWorkspaceParams{
+	createParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  []string{setup.RepoPath},
 	}
@@ -377,24 +368,21 @@ func TestDeleteWorkspaceWithSharedRepositories(t *testing.T) {
 
 	// Create second workspace sharing the same repository but with different worktrees
 	// We need to create worktrees manually for the second workspace since they can't share the same worktree
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create second workspace
-	createParams := cm.CreateWorkspaceParams{
+	createParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspace2Name,
 		Repositories:  []string{repo1Path},
 	}
 	require.NoError(t, cmInstance.CreateWorkspace(createParams))
 
 	// Create worktrees for the second workspace with different branch names
-	worktreeOpts := cm.CreateWorkTreeOpts{
+	worktreeOpts := codemanager.CreateWorkTreeOpts{
 		WorkspaceName: workspace2Name,
 	}
 	require.NoError(t, cmInstance.CreateWorkTree("feature/workspace2-branch", worktreeOpts))

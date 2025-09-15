@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +22,9 @@ import (
 func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error) {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -55,11 +53,9 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	}
 
 	// Create CM instance with the test configuration
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -215,7 +211,7 @@ func TestListWorktreesRepoModeNoRepository(t *testing.T) {
 	// Test listing worktrees when not in a Git repository
 	worktrees, err := listWorktrees(t, setup)
 	require.Error(t, err, "Should return error when not in Git repository")
-	assert.ErrorIs(t, err, cm.ErrNoGitRepositoryOrWorkspaceFound, "Should show appropriate error message")
+	assert.ErrorIs(t, err, codemanager.ErrNoGitRepositoryOrWorkspaceFound, "Should show appropriate error message")
 	assert.Nil(t, worktrees, "Should return nil worktrees")
 
 	// Test CLI command output
@@ -419,7 +415,7 @@ func TestRepositoryListCommandRepoMode(t *testing.T) {
 	assert.Len(t, repositories, 2)
 
 	// Find the outside repository
-	var outsideRepo *cm.RepositoryInfo
+	var outsideRepo *codemanager.RepositoryInfo
 	for _, repo := range repositories {
 		if repo.Name == outsideRepoURL {
 			outsideRepo = &repo
@@ -431,14 +427,12 @@ func TestRepositoryListCommandRepoMode(t *testing.T) {
 }
 
 // listRepositories lists repositories using the CM instance
-func listRepositories(t *testing.T, setup *TestSetup) ([]cm.RepositoryInfo, error) {
+func listRepositories(t *testing.T, setup *TestSetup) ([]codemanager.RepositoryInfo, error) {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -455,18 +449,15 @@ func TestWorktreeListWithRepository(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Initialize CM in the repository
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		ConfigPath: setup.ConfigPath,
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Initialize CM from within the repository
 	restore := safeChdir(t, setup.RepoPath)
-	err = cmInstance.Init(cm.InitOpts{
+	err = cmInstance.Init(codemanager.InitOpts{
 		NonInteractive:  true,
 		RepositoriesDir: setup.CmPath,
 		StatusFile:      setup.StatusPath,
@@ -475,18 +466,18 @@ func TestWorktreeListWithRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create multiple worktrees
-	err = cmInstance.CreateWorkTree("feature-1", cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree("feature-1", codemanager.CreateWorkTreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
 
-	err = cmInstance.CreateWorkTree("feature-2", cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree("feature-2", codemanager.CreateWorkTreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
 
 	// List worktrees using RepositoryName option
-	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)

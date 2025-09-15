@@ -43,3 +43,9 @@ linters:
     - usestdlibvars
     - wastedassign
     - whitespace
+
+linters-settings:
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true

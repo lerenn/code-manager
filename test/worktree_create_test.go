@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,11 +20,9 @@ import (
 func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -163,7 +161,7 @@ func TestCreateWorktreeRepoModeAlreadyExists(t *testing.T) {
 	// Try to create the same worktree again
 	err = createWorktree(t, setup, "feature/test-branch")
 	assert.Error(t, err, "Second creation should fail")
-	assert.ErrorIs(t, err, cm.ErrWorktreeExists, "Error should mention worktree already exists")
+	assert.ErrorIs(t, err, codemanager.ErrWorktreeExists, "Error should mention worktree already exists")
 
 	// Verify only one worktree entry exists in status file
 	status := readStatusFile(t, setup.StatusPath)
@@ -180,7 +178,7 @@ func TestCreateWorktreeRepoModeOutsideGitRepo(t *testing.T) {
 	// Test creating a worktree outside a Git repository
 	err := createWorktree(t, setup, "feature/test-branch")
 	assert.Error(t, err, "Command should fail outside Git repository")
-	assert.ErrorIs(t, err, cm.ErrNoGitRepositoryOrWorkspaceFound, "Error should mention no Git repository found")
+	assert.ErrorIs(t, err, codemanager.ErrNoGitRepositoryOrWorkspaceFound, "Error should mention no Git repository found")
 
 	// Verify status file exists but is empty (created during CM initialization)
 	_, err = os.Stat(setup.StatusPath)
@@ -200,11 +198,9 @@ func TestCreateWorktreeRepoModeWithVerboseFlag(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with verbose flag
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -246,11 +242,9 @@ func TestCreateWorktreeRepoModeWithIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with IDE opening
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -261,7 +255,7 @@ func TestCreateWorktreeRepoModeWithIDE(t *testing.T) {
 	ideName := "dummy"
 
 	// Create worktree with IDE (dummy IDE will print the path to stdout)
-	err = cmInstance.CreateWorkTree("feature/test-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
+	err = cmInstance.CreateWorkTree("feature/test-ide", codemanager.CreateWorkTreeOpts{IDEName: ideName})
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created
@@ -295,11 +289,9 @@ func TestCreateWorktreeRepoModeFromOriginDefaultBranch(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Clone the octocat/Hello-World repository
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -388,11 +380,9 @@ func TestCreateWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Test creating a worktree with unsupported IDE
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -401,7 +391,7 @@ func TestCreateWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	defer restore()
 
 	ideName := "unsupported-ide"
-	err = cmInstance.CreateWorkTree("feature/unsupported-ide", cm.CreateWorkTreeOpts{IDEName: ideName})
+	err = cmInstance.CreateWorkTree("feature/unsupported-ide", codemanager.CreateWorkTreeOpts{IDEName: ideName})
 	// Note: IDE opening is now handled by the hook system, so the worktree creation succeeds
 	// but the IDE opening fails. The test now verifies that the worktree is created successfully.
 	require.NoError(t, err, "Worktree creation should succeed even with unsupported IDE")
@@ -431,18 +421,15 @@ func TestCreateWorktreeWorkspaceMode_Success(t *testing.T) {
 	createTestGitRepo(t, repo2Path)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace using CM instance
 	workspaceName := "test-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  []string{repo1Path, repo2Path},
 	}
@@ -451,7 +438,7 @@ func TestCreateWorktreeWorkspaceMode_Success(t *testing.T) {
 
 	// Create worktrees from workspace
 	branch := "feature-branch"
-	err = cmInstance.CreateWorkTree(branch, cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree(branch, codemanager.CreateWorkTreeOpts{
 		WorkspaceName: workspaceName,
 	})
 	if err != nil {
@@ -486,18 +473,15 @@ func TestCreateWorktreeWorkspaceMode_WithIDE(t *testing.T) {
 	createTestGitRepo(t, repoPath)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace using CM instance
 	workspaceName := "test-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  []string{repoPath},
 	}
@@ -506,7 +490,7 @@ func TestCreateWorktreeWorkspaceMode_WithIDE(t *testing.T) {
 
 	// Create worktrees from workspace with IDE
 	branch := "feature-branch"
-	err = cmInstance.CreateWorkTree(branch, cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree(branch, codemanager.CreateWorkTreeOpts{
 		WorkspaceName: workspaceName,
 		IDEName:       "dummy",
 	})
@@ -527,18 +511,15 @@ func TestCreateWorktreeWorkspaceMode_WorkspaceNotFound(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Try to create worktrees from non-existent workspace
 	branch := "feature-branch"
-	err = cmInstance.CreateWorkTree(branch, cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree(branch, codemanager.CreateWorkTreeOpts{
 		WorkspaceName: "nonexistent-workspace",
 	})
 
@@ -554,18 +535,15 @@ func TestCreateWorktreeWorkspaceMode_EmptyRepositories(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace with no repositories (this should fail during workspace creation)
 	workspaceName := "empty-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  []string{},
 	}
@@ -581,19 +559,16 @@ func TestCreateWorktreeWorkspaceMode_RepositoryNotFound(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace with non-existent repository
 	workspaceName := "test-workspace"
 	nonexistentRepoPath := filepath.Join(setup.CmPath, "nonexistent-repo")
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  []string{nonexistentRepoPath},
 	}
@@ -615,18 +590,15 @@ func TestCreateWorktreeWorkspaceMode_InvalidGitRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace with non-Git repository
 	workspaceName := "test-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  []string{repoPath},
 	}
@@ -659,18 +631,15 @@ func TestCreateWorktreeWorkspaceMode_MultipleRepositories(t *testing.T) {
 	}
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace with multiple repositories
 	workspaceName := "multi-repo-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  repositories,
 	}
@@ -701,18 +670,15 @@ func TestCreateWorktreeWorkspaceMode_RollbackOnFailure(t *testing.T) {
 	// Don't initialize it as a Git repository to make it invalid
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Create workspace with both repositories
 	workspaceName := "mixed-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  []string{validRepoPath, invalidRepoPath},
 	}
@@ -732,18 +698,15 @@ func TestWorktreeCreateWithRepository(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Initialize CM in the repository
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		ConfigPath: setup.ConfigPath,
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
 	// Initialize CM from within the repository
 	restore := safeChdir(t, setup.RepoPath)
-	err = cmInstance.Init(cm.InitOpts{
+	err = cmInstance.Init(codemanager.InitOpts{
 		NonInteractive:  true,
 		RepositoriesDir: setup.CmPath,
 		StatusFile:      setup.StatusPath,
@@ -757,13 +720,13 @@ func TestWorktreeCreateWithRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test creating worktree with RepositoryName option from outside the repo
-	err = cmInstance.CreateWorkTree("feature-branch", cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree("feature-branch", codemanager.CreateWorkTreeOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
 
 	// Verify worktree was created in the correct repository
-	worktrees, err := cmInstance.ListWorktrees(cm.ListWorktreesOpts{
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
 		RepositoryName: setup.RepoPath,
 	})
 	require.NoError(t, err)
@@ -771,7 +734,7 @@ func TestWorktreeCreateWithRepository(t *testing.T) {
 	assert.Equal(t, "feature-branch", worktrees[0].Branch)
 
 	// Test that we can't use WorkspaceName and RepositoryName together
-	err = cmInstance.CreateWorkTree("another-branch", cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree("another-branch", codemanager.CreateWorkTreeOpts{
 		RepositoryName: setup.RepoPath,
 		WorkspaceName:  "test-workspace",
 	})
@@ -789,12 +752,9 @@ func TestCreateWorktreeWorkspaceMode_CorrectPaths(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -825,7 +785,7 @@ func TestCreateWorktreeWorkspaceMode_CorrectPaths(t *testing.T) {
 
 	// Create workspace using the cloned repository paths
 	workspaceName := "public-repos-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  repoPaths,
 	}
@@ -834,7 +794,7 @@ func TestCreateWorktreeWorkspaceMode_CorrectPaths(t *testing.T) {
 
 	// Create worktrees from the workspace
 	branchName := "feature-test-branch"
-	err = cmInstance.CreateWorkTree(branchName, cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
 		WorkspaceName: workspaceName,
 	})
 	require.NoError(t, err, "Worktree creation should succeed")
@@ -948,12 +908,9 @@ func TestCreateWorktreeWorkspaceMode_RepositoryNames(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -983,7 +940,7 @@ func TestCreateWorktreeWorkspaceMode_RepositoryNames(t *testing.T) {
 
 	// Create workspace using the cloned repository paths
 	workspaceName := "repository-names-workspace"
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repositories:  repoPaths,
 	}
@@ -992,7 +949,7 @@ func TestCreateWorktreeWorkspaceMode_RepositoryNames(t *testing.T) {
 
 	// Create worktrees from the workspace
 	branchName := "test-repository-names"
-	err = cmInstance.CreateWorkTree(branchName, cm.CreateWorkTreeOpts{
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
 		WorkspaceName: workspaceName,
 	})
 	require.NoError(t, err, "Worktree creation should succeed")

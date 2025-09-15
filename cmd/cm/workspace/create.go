@@ -3,12 +3,9 @@ package workspace
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
-	pkgconfig "github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -54,36 +51,14 @@ func createCreateCmdRunE(_ *cobra.Command, args []string) error {
 	workspaceName := args[0]
 	repositories := args[1:]
 
-	// Resolve config path
-	var path string
-	if config.ConfigPath != "" {
-		path = config.ConfigPath
-	} else {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			homeDir = "."
-		}
-		path = filepath.Join(homeDir, ".cm", "config.yaml")
-	}
-
-	// Load configuration
-	manager := pkgconfig.NewManager()
-	cfg, err := manager.LoadConfig(path)
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
 	// Create CM instance
-	cmManager, err := cm.NewCM(cm.NewCMParams{
-		Config:     cfg,
-		ConfigPath: config.GetConfigPath(),
-	})
+	cmManager, err := cli.NewCodeManager()
 	if err != nil {
 		return fmt.Errorf("failed to create CM instance: %w", err)
 	}
 
 	// Set logger based on verbosity
-	if config.Verbose {
+	if cli.Verbose {
 		cmManager.SetLogger(logger.NewVerboseLogger())
 	}
 
@@ -98,7 +73,7 @@ func createCreateCmdRunE(_ *cobra.Command, args []string) error {
 	}
 
 	// Print success message
-	if !config.Quiet {
+	if !cli.Quiet {
 		fmt.Printf("✓ Workspace '%s' created successfully\n", workspaceName)
 	}
 

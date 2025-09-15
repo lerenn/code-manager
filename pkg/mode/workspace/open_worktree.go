@@ -5,12 +5,11 @@ import (
 )
 
 // OpenWorktree opens an existing worktree in workspace mode.
-// This method works with workspace names from the status file, not workspace files.
 func (w *realWorkspace) OpenWorktree(workspaceName, branch string) (string, error) {
-	w.logger.Logf("Opening worktree in workspace mode: %s", branch)
+	w.deps.Logger.Logf("Opening worktree in workspace mode: %s", branch)
 
 	// Get workspace from status
-	workspace, err := w.statusManager.GetWorkspace(workspaceName)
+	workspace, err := w.deps.StatusManager.GetWorkspace(workspaceName)
 	if err != nil {
 		return "", fmt.Errorf("workspace '%s' not found in status.yaml: %w", workspaceName, err)
 	}
@@ -28,9 +27,15 @@ func (w *realWorkspace) OpenWorktree(workspaceName, branch string) (string, erro
 		return "", fmt.Errorf("worktree '%s' not found in workspace '%s'", branch, workspaceName)
 	}
 
-	// Use shared utility to build workspace file path
-	workspaceFilePath := buildWorkspaceFilePath(w.config.WorkspacesDir, workspaceName, branch)
+	// Get config to access WorkspacesDir
+	cfg, err := w.deps.Config.GetConfigWithFallback()
+	if err != nil {
+		return "", fmt.Errorf("failed to get config: %w", err)
+	}
 
-	w.logger.Logf("Opening workspace file: %s", workspaceFilePath)
+	// Use shared utility to build workspace file path
+	workspaceFilePath := buildWorkspaceFilePath(cfg.WorkspacesDir, workspaceName, branch)
+
+	w.deps.Logger.Logf("Opening workspace file: %s", workspaceFilePath)
 	return workspaceFilePath, nil
 }

@@ -8,13 +8,14 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestRepositoryDelete(t *testing.T) {
@@ -23,12 +24,10 @@ func TestRepositoryDelete(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		Logger: logger.NewVerboseLogger(),
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
@@ -44,7 +43,7 @@ func TestRepositoryDelete(t *testing.T) {
 	assert.Equal(t, "github.com/octocat/Hello-World", repositories[0].Name)
 
 	// Delete the repository with force flag
-	params := cm.DeleteRepositoryParams{
+	params := codemanager.DeleteRepositoryParams{
 		RepositoryName: "github.com/octocat/Hello-World",
 		Force:          true,
 	}
@@ -63,13 +62,10 @@ func TestRepositoryDeleteWithWorkspace(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-			WorkspacesDir:   filepath.Join(setup.CmPath, "workspaces"),
-		},
-		Logger: logger.NewVerboseLogger(),
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
@@ -79,7 +75,7 @@ func TestRepositoryDeleteWithWorkspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a workspace with the repository
-	workspaceParams := cm.CreateWorkspaceParams{
+	workspaceParams := codemanager.CreateWorkspaceParams{
 		WorkspaceName: "test-workspace",
 		Repositories:  []string{"github.com/octocat/Hello-World"},
 	}
@@ -87,7 +83,7 @@ func TestRepositoryDeleteWithWorkspace(t *testing.T) {
 	require.NoError(t, err)
 
 	// Try to delete the repository (should fail because it's in a workspace)
-	deleteParams := cm.DeleteRepositoryParams{
+	deleteParams := codemanager.DeleteRepositoryParams{
 		RepositoryName: "github.com/octocat/Hello-World",
 		Force:          true,
 	}
@@ -96,7 +92,7 @@ func TestRepositoryDeleteWithWorkspace(t *testing.T) {
 	assert.Contains(t, err.Error(), "is part of workspace")
 
 	// Delete the workspace first
-	workspaceDeleteParams := cm.DeleteWorkspaceParams{
+	workspaceDeleteParams := codemanager.DeleteWorkspaceParams{
 		WorkspaceName: "test-workspace",
 		Force:         true,
 	}
@@ -114,17 +110,15 @@ func TestRepositoryDeleteInvalidName(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		Logger: logger.NewVerboseLogger(),
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
 	// Try to delete with empty repository name
-	params := cm.DeleteRepositoryParams{
+	params := codemanager.DeleteRepositoryParams{
 		RepositoryName: "",
 		Force:          true,
 	}
@@ -151,17 +145,15 @@ func TestRepositoryDeleteNonexistent(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Create CM instance
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
-		Logger: logger.NewVerboseLogger(),
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
 	// Try to delete a nonexistent repository
-	params := cm.DeleteRepositoryParams{
+	params := codemanager.DeleteRepositoryParams{
 		RepositoryName: "nonexistent-repo",
 		Force:          true,
 	}
@@ -187,20 +179,26 @@ func TestRepositoryDeleteOutsideBaseDirectory(t *testing.T) {
 
 	// Create a CM instance with a different base directory
 	cmDir := filepath.Join(tempDir, ".cm")
-	config := config.Config{
+	cfg := config.Config{
 		RepositoriesDir: cmDir,
+		WorkspacesDir:   filepath.Join(tempDir, "workspaces"),
 		StatusFile:      filepath.Join(cmDir, "status.yaml"),
 	}
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config:     config,
-		ConfigPath: "",
+	// Write the config file
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configData, err := yaml.Marshal(cfg)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(configPath, configData, 0644))
+
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(configPath),
 	})
 	require.NoError(t, err)
 
 	// Manually add the repository to status (simulating a repository outside base dir)
 	// We'll use the status manager directly to add a repository with a path outside the base directory
-	statusManager := status.NewManager(fs.NewFS(), config)
+	statusManager := status.NewManager(fs.NewFS(), cfg)
 
 	// Create initial status
 	err = statusManager.CreateInitialStatus()
@@ -227,7 +225,7 @@ func TestRepositoryDeleteOutsideBaseDirectory(t *testing.T) {
 	require.False(t, repositories[0].InRepositoriesDir) // Should be false since it's outside base dir
 
 	// Delete the repository
-	params := cm.DeleteRepositoryParams{
+	params := codemanager.DeleteRepositoryParams{
 		RepositoryName: repoName,
 		Force:          true,
 	}
@@ -252,14 +250,20 @@ func TestRepositoryDeleteWithEmptyParentCleanup(t *testing.T) {
 
 	// Create a CM instance with a specific base directory
 	cmDir := filepath.Join(tempDir, ".cm")
-	config := config.Config{
+	cfg := config.Config{
 		RepositoriesDir: cmDir,
+		WorkspacesDir:   filepath.Join(tempDir, "workspaces"),
 		StatusFile:      filepath.Join(cmDir, "status.yaml"),
 	}
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config:     config,
-		ConfigPath: "",
+	// Write the config file
+	configPath := filepath.Join(tempDir, "config.yaml")
+	configData, err := yaml.Marshal(cfg)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(configPath, configData, 0644))
+
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(configPath),
 	})
 	require.NoError(t, err)
 
@@ -277,7 +281,7 @@ func TestRepositoryDeleteWithEmptyParentCleanup(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add repository to status
-	statusManager := status.NewManager(fs.NewFS(), config)
+	statusManager := status.NewManager(fs.NewFS(), cfg)
 	err = statusManager.CreateInitialStatus()
 	require.NoError(t, err)
 
@@ -306,7 +310,7 @@ func TestRepositoryDeleteWithEmptyParentCleanup(t *testing.T) {
 	require.DirExists(t, filepath.Join(cmDir, "github.com", "user", "repo", "origin", "main"))
 
 	// Delete the repository
-	params := cm.DeleteRepositoryParams{
+	params := codemanager.DeleteRepositoryParams{
 		RepositoryName: repoName,
 		Force:          true,
 	}

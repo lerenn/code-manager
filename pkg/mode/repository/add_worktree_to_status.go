@@ -5,31 +5,27 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/status"
 	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
-// StatusParams contains parameters for status operations.
-type StatusParams struct {
-	RepoURL       string
-	Branch        string
-	WorktreePath  string
-	WorkspacePath string
-	Remote        string
-	IssueInfo     *issue.Info
-}
+// StatusParams is now defined in the interfaces package
 
 // AddWorktreeToStatus adds the worktree to the status file with proper error handling.
 func (r *realRepository) AddWorktreeToStatus(params StatusParams) error {
 	// Create worktree instance using provider
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              r.fs,
-		Git:             r.git,
-		StatusManager:   r.statusManager,
-		Logger:          r.logger,
-		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
+	cfg, err := r.deps.Config.GetConfigWithFallback()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
+	worktreeProvider := r.deps.WorktreeProvider
+	worktreeInstance := worktreeProvider(worktree.NewWorktreeParams{
+		FS:              r.deps.FS,
+		Git:             r.deps.Git,
+		StatusManager:   r.deps.StatusManager,
+		Logger:          r.deps.Logger,
+		Prompt:          r.deps.Prompt,
+		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
 	if err := worktreeInstance.AddToStatus(worktree.AddToStatusParams{
@@ -71,13 +67,18 @@ func (r *realRepository) handleRepositoryNotFoundError(params StatusParams) erro
 	}
 
 	// Try adding the worktree again
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              r.fs,
-		Git:             r.git,
-		StatusManager:   r.statusManager,
-		Logger:          r.logger,
-		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
+	cfg, err := r.deps.Config.GetConfigWithFallback()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
+	worktreeProvider := r.deps.WorktreeProvider
+	worktreeInstance := worktreeProvider(worktree.NewWorktreeParams{
+		FS:              r.deps.FS,
+		Git:             r.deps.Git,
+		StatusManager:   r.deps.StatusManager,
+		Logger:          r.deps.Logger,
+		Prompt:          r.deps.Prompt,
+		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
 	if err := worktreeInstance.AddToStatus(worktree.AddToStatusParams{
@@ -105,7 +106,7 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	}
 
 	// Check if it's a Git repository
-	exists, err := r.fs.Exists(filepath.Join(absPath, ".git"))
+	exists, err := r.deps.FS.Exists(filepath.Join(absPath, ".git"))
 	if err != nil {
 		return fmt.Errorf("failed to check .git existence: %w", err)
 	}
@@ -117,7 +118,7 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	remotes := make(map[string]status.Remote)
 
 	// Check for origin remote (default remote)
-	originURL, err := r.git.GetRemoteURL(absPath, DefaultRemote)
+	originURL, err := r.deps.Git.GetRemoteURL(absPath, DefaultRemote)
 	if err == nil && originURL != "" {
 		remotes[DefaultRemote] = status.Remote{
 			DefaultBranch: "main", // Default to main, could be enhanced to detect actual default branch
@@ -125,7 +126,7 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 	}
 
 	// Add the repository to status
-	if err := r.statusManager.AddRepository(repoURL, status.AddRepositoryParams{
+	if err := r.deps.StatusManager.AddRepository(repoURL, status.AddRepositoryParams{
 		Path:    absPath,
 		Remotes: remotes,
 	}); err != nil {
@@ -137,15 +138,21 @@ func (r *realRepository) AutoAddRepositoryToStatus(repoURL, repoPath string) err
 
 // cleanupWorktreeDirectory cleans up the worktree directory.
 func (r *realRepository) cleanupWorktreeDirectory(worktreePath string) {
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              r.fs,
-		Git:             r.git,
-		StatusManager:   r.statusManager,
-		Logger:          r.logger,
-		Prompt:          r.prompt,
-		RepositoriesDir: r.config.RepositoriesDir,
+	cfg, err := r.deps.Config.GetConfigWithFallback()
+	if err != nil {
+		// Fallback: still try to cleanup with default path
+		cfg = r.deps.Config.DefaultConfig()
+	}
+	worktreeProvider := r.deps.WorktreeProvider
+	worktreeInstance := worktreeProvider(worktree.NewWorktreeParams{
+		FS:              r.deps.FS,
+		Git:             r.deps.Git,
+		StatusManager:   r.deps.StatusManager,
+		Logger:          r.deps.Logger,
+		Prompt:          r.deps.Prompt,
+		RepositoriesDir: cfg.RepositoriesDir,
 	})
 	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-		r.logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
+		r.deps.Logger.Logf("Warning: failed to clean up directory after status update failure: %v", cleanupErr)
 	}
 }

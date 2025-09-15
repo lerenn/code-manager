@@ -15,15 +15,15 @@ func (w *realWorkspace) Load() error {
 			return fmt.Errorf("failed to parse workspace file: %w", err)
 		}
 
-		w.logger.Logf("Workspace mode detected")
+		w.deps.Logger.Logf("Workspace mode detected")
 
 		workspaceName := w.GetName(workspaceConfig, w.file)
-		w.logger.Logf("Found workspace: %s", workspaceName)
+		w.deps.Logger.Logf("Found workspace: %s", workspaceName)
 
-		w.logger.Logf("Workspace configuration:")
-		w.logger.Logf("  Folders: %d", len(workspaceConfig.Folders))
+		w.deps.Logger.Logf("Workspace configuration:")
+		w.deps.Logger.Logf("  Folders: %d", len(workspaceConfig.Folders))
 		for _, folder := range workspaceConfig.Folders {
-			w.logger.Logf("    - %s: %s", folder.Name, folder.Path)
+			w.deps.Logger.Logf("    - %s: %s", folder.Name, folder.Path)
 		}
 
 		return nil

@@ -3,6 +3,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +11,13 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
+	"github.com/lerenn/code-manager/pkg/hooks"
+	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -57,6 +64,7 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 	// Create test config using the config package
 	testConfig := config.Config{
 		RepositoriesDir: cmPath,
+		WorkspacesDir:   filepath.Join(cmPath, "workspaces"),
 		StatusFile:      statusPath,
 	}
 
@@ -551,6 +559,43 @@ func createDummyCommit(t *testing.T, repoPath string) error {
 	cmd.Dir = repoPath
 	cmd.Env = gitEnv
 	return cmd.Run()
+}
+
+// createE2EDependencies creates a properly configured Dependencies instance for E2E tests
+func createE2EDependencies(configPath string) *dependencies.Dependencies {
+	configManager := config.NewManager(configPath)
+	cfg, err := configManager.GetConfigWithFallback()
+	if err != nil {
+		// If we can't get the config, use empty config as fallback
+		cfg = config.Config{}
+	}
+
+	// Create default hooks manager with IDE opening hooks
+	hookManager, err := defaulthooks.NewDefaultHooksManager()
+	if err != nil {
+		// If hooks setup fails, use empty hook manager
+		hookManager = hooks.NewHookManager()
+	}
+
+	// Create dependencies with shared FS instance
+	deps := dependencies.New().
+		WithConfig(configManager).
+		WithHookManager(hookManager).
+		WithRepositoryProvider(repository.NewRepository).
+		WithWorkspaceProvider(workspace.NewWorkspace).
+		WithWorktreeProvider(worktree.NewWorktree)
+
+	// Set status manager using the shared FS instance
+	deps = deps.WithStatusManager(status.NewManager(deps.FS, cfg))
+
+	// Validate that all dependencies are set
+	if err := deps.Validate(); err != nil {
+		// In test environment, we'll panic if dependencies are missing
+		// This helps catch configuration issues early
+		panic(fmt.Sprintf("E2E test dependencies validation failed: %v", err))
+	}
+
+	return deps
 }
 
 // sortPaths sorts a slice of file paths alphabetically

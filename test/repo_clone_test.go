@@ -8,8 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
-	"github.com/lerenn/code-manager/pkg/config"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,16 +17,13 @@ import (
 func cloneRepository(t *testing.T, setup *TestSetup, repoURL string, recursive bool) error {
 	t.Helper()
 
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
 	// Create clone options
-	opts := cm.CloneOpts{
+	opts := codemanager.CloneOpts{
 		Recursive: recursive,
 	}
 
@@ -156,7 +152,7 @@ func TestCloneRepositoryRepoModeAlreadyExists(t *testing.T) {
 	// Try to clone the same repository again
 	err = cloneRepository(t, setup, repoURL, true)
 	require.Error(t, err, "Second clone should fail")
-	assert.ErrorIs(t, err, cm.ErrRepositoryExists, "Error should indicate repository already exists")
+	assert.ErrorIs(t, err, codemanager.ErrRepositoryExists, "Error should indicate repository already exists")
 
 	// Verify only one repository entry exists
 	status := readStatusFile(t, setup.StatusPath)
@@ -171,7 +167,7 @@ func TestCloneRepositoryRepoModeInvalidURL(t *testing.T) {
 	// Try to clone with an invalid URL
 	err := cloneRepository(t, setup, "not-a-valid-url", true)
 	require.Error(t, err, "Clone should fail with invalid URL")
-	assert.ErrorIs(t, err, cm.ErrUnsupportedRepositoryURLFormat, "Error should indicate invalid URL format")
+	assert.ErrorIs(t, err, codemanager.ErrUnsupportedRepositoryURLFormat, "Error should indicate invalid URL format")
 }
 
 // TestCloneRepositoryRepoModeEmptyURL tests cloning with an empty URL
@@ -182,7 +178,7 @@ func TestCloneRepositoryRepoModeEmptyURL(t *testing.T) {
 	// Try to clone with an empty URL
 	err := cloneRepository(t, setup, "", true)
 	require.Error(t, err, "Clone should fail with empty URL")
-	assert.ErrorIs(t, err, cm.ErrRepositoryURLEmpty, "Error should indicate empty URL")
+	assert.ErrorIs(t, err, codemanager.ErrRepositoryURLEmpty, "Error should indicate empty URL")
 }
 
 // TestCloneRepositoryRepoModeHTTPSURL tests cloning with HTTPS URL format

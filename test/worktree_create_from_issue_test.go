@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/cm"
+	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,11 +40,9 @@ func TestCreateWorktreeFromIssueRepoModeStatusFileVerification(t *testing.T) {
 	createTestGitRepo(t, setup.RepoPath)
 
 	// Create a worktree manually with issue information to simulate the behavior
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -57,7 +55,7 @@ func TestCreateWorktreeFromIssueRepoModeStatusFileVerification(t *testing.T) {
 
 	// Create a worktree with issue information
 	// This will fail due to API call, but we can still verify the status file structure
-	_ = cmInstance.CreateWorkTree("test-branch", cm.CreateWorkTreeOpts{
+	_ = cmInstance.CreateWorkTree("test-branch", codemanager.CreateWorkTreeOpts{
 		IssueRef: "https://github.com/octocat/Hello-World/issues/26",
 	})
 
@@ -194,11 +192,9 @@ func TestCreateWorktreeFromIssueRepoModeNoIssueInfo(t *testing.T) {
 	addGitHubRemote(t, setup.RepoPath)
 
 	// Create a worktree without issue information
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -210,7 +206,7 @@ func TestCreateWorktreeFromIssueRepoModeNoIssueInfo(t *testing.T) {
 	defer os.Chdir(originalDir)
 
 	// Create a regular worktree (without issue information)
-	err = cmInstance.CreateWorkTree("regular-branch", cm.CreateWorkTreeOpts{})
+	err = cmInstance.CreateWorkTree("regular-branch", codemanager.CreateWorkTreeOpts{})
 	require.NoError(t, err)
 
 	// Verify that the status file doesn't have issue information for this worktree
@@ -413,11 +409,9 @@ func TestCreateWorktreeFromIssueRepoModeWithIDE(t *testing.T) {
 // Helper functions
 
 func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) error {
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: setup.CmPath,
-			StatusFile:      setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -428,15 +422,12 @@ func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) er
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return cmInstance.CreateWorkTree("", cm.CreateWorkTreeOpts{IssueRef: issueRef})
+	return cmInstance.CreateWorkTree("", codemanager.CreateWorkTreeOpts{IssueRef: issueRef})
 }
 
 func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIssueWithBranchParams) error {
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: params.Setup.CmPath,
-			StatusFile:      params.Setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
@@ -447,15 +438,12 @@ func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIs
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return cmInstance.CreateWorkTree(params.BranchName, cm.CreateWorkTreeOpts{IssueRef: params.IssueRef})
+	return cmInstance.CreateWorkTree(params.BranchName, codemanager.CreateWorkTreeOpts{IssueRef: params.IssueRef})
 }
 
 func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssueWithIDEParams) error {
-	cmInstance, err := cm.NewCM(cm.NewCMParams{
-		Config: config.Config{
-			RepositoriesDir: params.Setup.CmPath,
-			StatusFile:      params.Setup.StatusPath,
-		},
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
@@ -466,7 +454,7 @@ func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssue
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return cmInstance.CreateWorkTree("", cm.CreateWorkTreeOpts{IssueRef: params.IssueRef, IDEName: params.IDEName})
+	return cmInstance.CreateWorkTree("", codemanager.CreateWorkTreeOpts{IssueRef: params.IssueRef, IDEName: params.IDEName})
 }
 
 // addGitHubRemote adds a GitHub remote origin to the repository

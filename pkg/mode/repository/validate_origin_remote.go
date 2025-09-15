@@ -9,10 +9,10 @@ func (r *realRepository) ValidateOriginRemote() error {
 
 // validateRemote validates that the specified remote exists and has a valid URL.
 func (r *realRepository) validateRemote(remote string) error {
-	r.logger.Logf("Validating remote: %s", remote)
+	r.deps.Logger.Logf("Validating remote: %s", remote)
 
 	// Check if remote exists
-	exists, err := r.git.RemoteExists(r.repositoryPath, remote)
+	exists, err := r.deps.Git.RemoteExists(r.repositoryPath, remote)
 	if err != nil {
 		return fmt.Errorf("failed to check remote %s: %w", remote, err)
 	}
@@ -21,7 +21,7 @@ func (r *realRepository) validateRemote(remote string) error {
 	}
 
 	// Get remote URL
-	remoteURL, err := r.git.GetRemoteURL(r.repositoryPath, remote)
+	remoteURL, err := r.deps.Git.GetRemoteURL(r.repositoryPath, remote)
 	if err != nil {
 		return fmt.Errorf("failed to get remote %s URL: %w", remote, err)
 	}
