@@ -423,6 +423,7 @@ func (c *realCM) getWorkspaceFilePath(workspaceName string) string {
 func (c *realCM) getWorktreeWorkspaceFilePath(workspaceName, branchName string) string {
 	// Sanitize branch name for filename (replace / with -)
 	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
-	return filepath.Join(c.config.WorkspacesDir,
-		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename))
+	// Use the same format as workspace creation: {workspaceName}/{sanitizedBranchName}.code-workspace
+	return filepath.Join(c.config.WorkspacesDir, workspaceName,
+		fmt.Sprintf("%s.code-workspace", sanitizedBranchForFilename))
 }

@@ -653,7 +653,7 @@ func TestDeleteWorkspaceWithAlreadyDeletedWorktrees(t *testing.T) {
 	require.True(t, os.IsNotExist(err), "Main workspace file should be deleted")
 
 	// Verify worktree-specific workspace files are deleted
-	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-feature/test-branch.code-workspace")
+	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName, "feature-test-branch.code-workspace")
 	_, err = os.Stat(worktreeWorkspaceFile)
 	require.True(t, os.IsNotExist(err), "Worktree workspace file should be deleted")
 }

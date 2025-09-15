@@ -112,10 +112,10 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 	// Mock workspace file deletion - main workspace file first, then worktree-specific files
 	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-1.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-2.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-2.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-2.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-2.code-workspace").Return(nil)
 
 	// Mock workspace removal from status
 	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(nil)
@@ -194,8 +194,8 @@ func TestDeleteWorkspace_Force(t *testing.T) {
 	// Mock workspace file deletion - main workspace file first, then worktree-specific files
 	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
 
 	// Mock workspace removal from status
 	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(nil)
@@ -557,8 +557,8 @@ func TestDeleteWorkspace_StatusRemovalFailure(t *testing.T) {
 	// Mock workspace file deletion
 	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
 
 	// Mock workspace removal from status failure
 	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(errors.New("status removal failed"))
@@ -857,10 +857,10 @@ func TestDeleteWorkspace_MultipleRepositories(t *testing.T) {
 	// Mock workspace file deletion
 	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace-feature-1.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace-feature-2.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace-feature-2.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace/feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace/feature-2.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace/feature-2.code-workspace").Return(nil)
 
 	// Mock workspace removal from status
 	mockStatus.EXPECT().RemoveWorkspace("multi-repo-workspace").Return(nil)
@@ -944,8 +944,8 @@ func TestDeleteWorkspace_WorktreeNotInGit(t *testing.T) {
 	// Mock workspace file deletion - main workspace file first, then worktree-specific files
 	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
 
 	// Mock workspace removal from status
 	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(nil)
