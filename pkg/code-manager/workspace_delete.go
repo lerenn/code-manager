@@ -2,6 +2,7 @@ package codemanager
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -418,7 +419,8 @@ func (c *realCodeManager) getWorkspaceFilePath(workspaceName string) string {
 	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		// Fallback to a default path if config cannot be loaded
-		return filepath.Join("~/Code/workspaces", fmt.Sprintf("%s.code-workspace", workspaceName))
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "Code", "workspaces", fmt.Sprintf("%s.code-workspace", workspaceName))
 	}
 	return filepath.Join(cfg.WorkspacesDir, fmt.Sprintf("%s.code-workspace", workspaceName))
 }
@@ -428,8 +430,9 @@ func (c *realCodeManager) getWorktreeWorkspaceFilePath(workspaceName, branchName
 	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		// Fallback to a default path if config cannot be loaded
+		homeDir, _ := os.UserHomeDir()
 		sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
-		return filepath.Join("~/Code/workspaces",
+		return filepath.Join(homeDir, "Code", "workspaces",
 			fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename))
 	}
 

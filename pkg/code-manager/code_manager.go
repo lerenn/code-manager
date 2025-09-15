@@ -2,6 +2,8 @@ package codemanager
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/dependencies"
@@ -90,7 +92,8 @@ func (c *realCodeManager) BuildWorktreePath(repoURL, remoteName, branch string) 
 	cfg, err := c.getConfig()
 	if err != nil {
 		// Fallback to a default path if config cannot be loaded
-		return fmt.Sprintf("~/Code/repos/%s/%s/%s", repoURL, remoteName, branch)
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "Code", "repos", repoURL, remoteName, branch)
 	}
 	// Use the same path format as the worktree component
 	return fmt.Sprintf("%s/%s/%s/%s", cfg.RepositoriesDir, repoURL, remoteName, branch)

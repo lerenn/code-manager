@@ -3,6 +3,7 @@ package cli
 import (
 	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
 	"github.com/lerenn/code-manager/pkg/dependencies"
+	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -19,18 +20,19 @@ func NewCodeManager() (codemanager.CodeManager, error) {
 		return nil, err
 	}
 
+	// Create default hooks manager with IDE opening hooks
+	hookManager, err := defaulthooks.NewDefaultHooksManager()
+	if err != nil {
+		return nil, err
+	}
+
 	return codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
 		Dependencies: dependencies.New().
 			WithConfig(configManager).
 			WithStatusManager(status.NewManager(dependencies.New().FS, config)).
-			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
-				return repository.NewRepository(params)
-			}).
-			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
-				return workspace.NewWorkspace(params)
-			}).
-			WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
-				return worktree.NewWorktree(params)
-			}),
+			WithHookManager(hookManager).
+			WithRepositoryProvider(repository.NewRepository).
+			WithWorkspaceProvider(workspace.NewWorkspace).
+			WithWorktreeProvider(worktree.NewWorktree),
 	})
 }

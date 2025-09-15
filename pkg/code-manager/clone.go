@@ -3,6 +3,7 @@ package codemanager
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -140,7 +141,8 @@ func (c *realCodeManager) generateClonePath(normalizedURL, defaultBranch string)
 	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		// Fallback to a default path if config cannot be loaded
-		return filepath.Join("~/Code/repos", normalizedURL, "origin", defaultBranch)
+		homeDir, _ := os.UserHomeDir()
+		return filepath.Join(homeDir, "Code", "repos", normalizedURL, "origin", defaultBranch)
 	}
 
 	// Use the new path structure: $repositories_dir/<repo_url>/<remote_name>/<default_branch>

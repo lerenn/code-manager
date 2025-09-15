@@ -12,6 +12,8 @@ import (
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/dependencies"
 	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/hooks"
+	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -567,10 +569,18 @@ func createE2EDependencies(configPath string) *dependencies.Dependencies {
 		// If we can't get the config, use empty config as fallback
 		cfg = config.Config{}
 	}
-	
+
+	// Create default hooks manager with IDE opening hooks
+	hookManager, err := defaulthooks.NewDefaultHooksManager()
+	if err != nil {
+		// If hooks setup fails, use empty hook manager
+		hookManager = hooks.NewHookManager()
+	}
+
 	return dependencies.New().
 		WithConfig(configManager).
 		WithStatusManager(status.NewManager(fs.NewFS(), cfg)).
+		WithHookManager(hookManager).
 		WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
 			return repository.NewRepository(params)
 		}).
