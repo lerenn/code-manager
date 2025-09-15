@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lerenn/code-manager/pkg/branch"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
 )
 
@@ -258,21 +257,17 @@ func (w *realWorkspace) createWorktreeForRepositoryWithPath(
 
 // createWorkspaceFile creates a .code-workspace file in the workspaces directory.
 func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, repositories []string) (string, error) {
-	// Sanitize branch name for filename (replace / with -)
-	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
+	// Use shared utility to build workspace file path
+	workspaceFilePath := buildWorkspaceFilePath(w.config.WorkspacesDir, workspaceName, branchName)
 
-	// Create workspace file path
-	workspaceFileName := fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename)
-	workspaceFilePath := filepath.Join(w.config.WorkspacesDir, workspaceFileName)
-
-	// Ensure workspaces directory exists
-	workspacesDir := filepath.Dir(workspaceFilePath)
-	if err := w.fs.MkdirAll(workspacesDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create workspaces directory: %w", err)
+	// Ensure workspace directory exists (this will create both workspaces dir and workspace subdir)
+	workspaceDir := filepath.Dir(workspaceFilePath)
+	if err := w.fs.MkdirAll(workspaceDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create workspace directory: %w", err)
 	}
 
 	// Create workspace file content
-	workspaceContent := w.generateWorkspaceFileContent(workspaceName, repositories)
+	workspaceContent := w.generateWorkspaceFileContent(workspaceName, branchName, repositories)
 
 	// Write workspace file
 	if err := w.fs.CreateFileWithContent(workspaceFilePath, []byte(workspaceContent), 0644); err != nil {
@@ -283,8 +278,27 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 	return workspaceFilePath, nil
 }
 
+// extractRepositoryNameFromURL extracts the repository name (last part) from a Git repository URL.
+// Examples:
+// - "github.com/lerenn/home" -> "home"
+// - "github.com/kubernetes/kubernetes.io" -> "kubernetes.io"
+// - "gitlab.com/user/project-name" -> "project-name".
+func (w *realWorkspace) extractRepositoryNameFromURL(repoURL string) string {
+	// Remove any trailing slashes
+	repoURL = strings.TrimSuffix(repoURL, "/")
+
+	// Split by "/" and get the last part
+	parts := strings.Split(repoURL, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+
+	// Fallback to the original URL if we can't parse it
+	return repoURL
+}
+
 // generateWorkspaceFileContent generates the content for a .code-workspace file.
-func (w *realWorkspace) generateWorkspaceFileContent(_ string, repositories []string) string {
+func (w *realWorkspace) generateWorkspaceFileContent(_ string, branchName string, repositories []string) string {
 	// Create workspace file content with all repositories
 	// This is a simplified implementation - in practice, you might want to use a proper JSON library
 	content := `{
@@ -292,11 +306,17 @@ func (w *realWorkspace) generateWorkspaceFileContent(_ string, repositories []st
 `
 
 	for i, repoURL := range repositories {
-		// Convert repository URL to local path
-		repoPath := filepath.Join(w.config.RepositoriesDir, repoURL)
+		// Convert repository URL to worktree path using the worktree path structure
+		// Structure: $base_path/<repo_url>/<remote_name>/<branch>
+		worktreePath := filepath.Join(w.config.RepositoriesDir, repoURL, "origin", branchName)
+
+		// Extract repository name for the folder alias
+		repoName := w.extractRepositoryNameFromURL(repoURL)
+
 		content += fmt.Sprintf(`		{
-			"path": "%s"
-		}`, repoPath)
+			"path": "%s",
+			"name": "%s"
+		}`, worktreePath, repoName)
 		if i < len(repositories)-1 {
 			content += ","
 		}

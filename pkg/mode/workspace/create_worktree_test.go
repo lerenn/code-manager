@@ -72,7 +72,7 @@ func TestCreateWorktree_Success(t *testing.T) {
 	}
 
 	// Mock workspace file creation
-	mockFS.EXPECT().MkdirAll("/test/workspaces", gomock.Any()).Return(nil)
+	mockFS.EXPECT().MkdirAll("/test/workspaces/test-workspace", gomock.Any()).Return(nil)
 	mockFS.EXPECT().CreateFileWithContent(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock workspace status update
@@ -97,7 +97,7 @@ func TestCreateWorktree_Success(t *testing.T) {
 	result, err := workspace.CreateWorktree(branch, opts...)
 
 	assert.NoError(t, err)
-	assert.Contains(t, result, "test-workspace-feature-branch.code-workspace")
+	assert.Contains(t, result, "test-workspace/feature-branch.code-workspace")
 }
 
 func TestCreateWorktree_MissingWorkspaceName(t *testing.T) {
@@ -408,7 +408,7 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return(worktreePath, nil).AnyTimes()
 
 	// Mock workspace file creation failure
-	mockFS.EXPECT().MkdirAll("/test/workspaces", gomock.Any()).Return(errors.New("mkdir failed")).AnyTimes()
+	mockFS.EXPECT().MkdirAll("/test/workspaces/test-workspace", gomock.Any()).Return(errors.New("mkdir failed")).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
 		{WorkspaceName: workspaceName},
@@ -523,4 +523,57 @@ func TestValidateAndGetRepositories_EmptyRepositories(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "workspace 'empty-workspace' has no repositories defined")
+}
+
+func TestExtractRepositoryNameFromURL(t *testing.T) {
+	workspace := &realWorkspace{}
+
+	tests := []struct {
+		name     string
+		repoURL  string
+		expected string
+	}{
+		{
+			name:     "Simple GitHub repo",
+			repoURL:  "github.com/lerenn/home",
+			expected: "home",
+		},
+		{
+			name:     "Kubernetes.io repo",
+			repoURL:  "github.com/kubernetes/kubernetes.io",
+			expected: "kubernetes.io",
+		},
+		{
+			name:     "GitLab repo with project name",
+			repoURL:  "gitlab.com/user/project-name",
+			expected: "project-name",
+		},
+		{
+			name:     "Deep nested path",
+			repoURL:  "github.com/organization/subgroup/project",
+			expected: "project",
+		},
+		{
+			name:     "URL with trailing slash",
+			repoURL:  "github.com/user/repo/",
+			expected: "repo",
+		},
+		{
+			name:     "Single part URL",
+			repoURL:  "standalone-repo",
+			expected: "standalone-repo",
+		},
+		{
+			name:     "Empty URL",
+			repoURL:  "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := workspace.extractRepositoryNameFromURL(tt.repoURL)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }

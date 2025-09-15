@@ -95,6 +95,10 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
 	mockFS.EXPECT().Exists("/test/base/path/repo2/origin/feature-2").Return(true, nil)
 
+	// Mock worktree existence checks
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(true, nil)
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-2").Return(true, nil)
+
 	// Mock worktree deletion
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
@@ -108,10 +112,10 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 	// Mock workspace file deletion - main workspace file first, then worktree-specific files
 	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-1.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-2.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-2.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-2.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-2.code-workspace").Return(nil)
 
 	// Mock workspace removal from status
 	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(nil)
@@ -175,6 +179,9 @@ func TestDeleteWorkspace_Force(t *testing.T) {
 	// Mock worktree path existence check
 	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
 
+	// Mock worktree existence check
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(true, nil)
+
 	// Mock worktree deletion
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -187,8 +194,8 @@ func TestDeleteWorkspace_Force(t *testing.T) {
 	// Mock workspace file deletion - main workspace file first, then worktree-specific files
 	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
 
 	// Mock workspace removal from status
 	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(nil)
@@ -387,6 +394,9 @@ func TestDeleteWorkspace_WorktreeDeletionFailure(t *testing.T) {
 	// Mock worktree path existence check
 	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
 
+	// Mock worktree existence check
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(true, nil)
+
 	// Mock worktree deletion failure
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("deletion failed"))
 
@@ -457,6 +467,9 @@ func TestDeleteWorkspace_FileDeletionFailure(t *testing.T) {
 
 	// Mock worktree path existence check
 	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
+
+	// Mock worktree existence check
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(true, nil)
 
 	// Mock worktree deletion
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -529,6 +542,9 @@ func TestDeleteWorkspace_StatusRemovalFailure(t *testing.T) {
 	// Mock worktree path existence check
 	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
 
+	// Mock worktree existence check
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(true, nil)
+
 	// Mock worktree deletion
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -541,8 +557,8 @@ func TestDeleteWorkspace_StatusRemovalFailure(t *testing.T) {
 	// Mock workspace file deletion
 	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/test-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/test-workspace-feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
 
 	// Mock workspace removal from status failure
 	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(errors.New("status removal failed"))
@@ -735,6 +751,9 @@ func TestDeleteWorkspace_WorktreeStatusRemovalFailure(t *testing.T) {
 	// Mock worktree path existence check
 	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
 
+	// Mock worktree existence check
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(true, nil)
+
 	// Mock worktree deletion
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
@@ -821,6 +840,10 @@ func TestDeleteWorkspace_MultipleRepositories(t *testing.T) {
 	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
 	mockFS.EXPECT().Exists("/test/base/path/repo2/origin/feature-2").Return(true, nil)
 
+	// Mock worktree existence checks
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(true, nil)
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-2").Return(true, nil)
+
 	// Mock worktree deletion
 	mockGit.EXPECT().RemoveWorktree(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
@@ -834,13 +857,98 @@ func TestDeleteWorkspace_MultipleRepositories(t *testing.T) {
 	// Mock workspace file deletion
 	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace.code-workspace").Return(true, nil)
 	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace-feature-1.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace-feature-1.code-workspace").Return(nil)
-	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace-feature-2.code-workspace").Return(true, nil)
-	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace-feature-2.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace/feature-1.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/multi-repo-workspace/feature-2.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/multi-repo-workspace/feature-2.code-workspace").Return(nil)
 
 	// Mock workspace removal from status
 	mockStatus.EXPECT().RemoveWorkspace("multi-repo-workspace").Return(nil)
+
+	// Execute
+	err := cm.DeleteWorkspace(params)
+
+	// Assert
+	assert.NoError(t, err)
+}
+
+// TestDeleteWorkspace_WorktreeNotInGit tests workspace deletion when worktree doesn't exist in Git
+func TestDeleteWorkspace_WorktreeNotInGit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
+
+	cfg := config.Config{
+		RepositoriesDir: "/test/base/path",
+		StatusFile:      "/test/status.yaml",
+		WorkspacesDir:   "/test/workspaces",
+	}
+
+	cm := &realCM{
+		fs:            mockFS,
+		git:           mockGit,
+		config:        cfg,
+		statusManager: mockStatus,
+		logger:        logger.NewNoopLogger(),
+		prompt:        mockPrompt,
+		hookManager:   mockHookManager,
+	}
+
+	params := DeleteWorkspaceParams{
+		WorkspaceName: "test-workspace",
+		Force:         true,
+	}
+
+	// Mock hook execution
+	mockHookManager.EXPECT().ExecutePreHooks("delete_workspace", gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePostHooks("delete_workspace", gomock.Any()).Return(nil)
+
+	// Mock workspace exists
+	workspace := &status.Workspace{
+		Worktrees:    []string{"feature-1"},
+		Repositories: []string{"repo1"},
+	}
+	mockStatus.EXPECT().GetWorkspace("test-workspace").Return(workspace, nil).Times(2) // Once for initial check, once for removeWorktreesFromWorkspaceStatus
+
+	// Mock worktree listing
+	worktrees := []status.WorktreeInfo{
+		{Remote: "origin", Branch: "feature-1"},
+	}
+	repo1 := &status.Repository{
+		Worktrees: map[string]status.WorktreeInfo{
+			"origin:feature-1": worktrees[0],
+		},
+	}
+	// Expect GetRepository calls for listWorkspaceWorktreesFromWorkspace, deleteWorkspaceWorktrees, and removeWorktreeFromStatus (no confirmation for force)
+	mockStatus.EXPECT().GetRepository("repo1").Return(repo1, nil).Times(3) // 1 for list, 1 for deletion, 1 for removeWorktreeFromStatus
+
+	// Mock worktree path existence check
+	mockFS.EXPECT().Exists("/test/base/path/repo1/origin/feature-1").Return(true, nil)
+
+	// Mock worktree existence check - worktree doesn't exist in Git
+	mockGit.EXPECT().WorktreeExists(gomock.Any(), "feature-1").Return(false, nil)
+
+	// No RemoveWorktree call expected since worktree doesn't exist in Git
+
+	// Mock status updates for worktree removal
+	mockStatus.EXPECT().RemoveWorktree("repo1", "feature-1").Return(nil)
+
+	// Mock workspace update (for removeWorktreesFromWorkspaceStatus)
+	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
+
+	// Mock workspace file deletion - main workspace file first, then worktree-specific files
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace.code-workspace").Return(nil)
+	mockFS.EXPECT().Exists("/test/workspaces/test-workspace/feature-1.code-workspace").Return(true, nil)
+	mockFS.EXPECT().Remove("/test/workspaces/test-workspace/feature-1.code-workspace").Return(nil)
+
+	// Mock workspace removal from status
+	mockStatus.EXPECT().RemoveWorkspace("test-workspace").Return(nil)
 
 	// Execute
 	err := cm.DeleteWorkspace(params)

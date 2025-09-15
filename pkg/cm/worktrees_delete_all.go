@@ -50,7 +50,7 @@ func (c *realCM) DeleteAllWorktrees(force bool, opts ...DeleteAllWorktreesOpts) 
 			}
 			return c.handleRepositoryDeleteAllMode(force)
 		case mode.ModeWorkspace:
-			return c.handleWorkspaceDeleteAllMode(force)
+			return c.handleWorkspaceDeleteAllMode(options, force)
 		case mode.ModeNone:
 			return ErrNoGitRepositoryOrWorkspaceFound
 		default:
@@ -87,23 +87,24 @@ func (c *realCM) handleRepositoryDeleteAllMode(force bool) error {
 }
 
 // handleWorkspaceDeleteAllMode handles workspace mode: delete all worktrees.
-func (c *realCM) handleWorkspaceDeleteAllMode(force bool) error {
+func (c *realCM) handleWorkspaceDeleteAllMode(options DeleteAllWorktreesOpts, force bool) error {
 	c.VerbosePrint("Handling workspace delete all mode")
 
 	// Create workspace instance
 	workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
-		FS:               c.fs,
-		Git:              c.git,
-		Config:           c.config,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
+		FS:                 c.fs,
+		Git:                c.git,
+		Config:             c.config,
+		StatusManager:      c.statusManager,
+		Logger:             c.logger,
+		Prompt:             c.prompt,
+		WorktreeProvider:   worktree.NewWorktree,
+		RepositoryProvider: c.safeRepositoryProvider(),
+		HookManager:        c.hookManager,
 	})
 
 	// Delete all worktrees for workspace
-	if err := workspaceInstance.DeleteAllWorktrees(force); err != nil {
+	if err := workspaceInstance.DeleteAllWorktrees(options.WorkspaceName, force); err != nil {
 		return c.translateWorkspaceError(err)
 	}
 
