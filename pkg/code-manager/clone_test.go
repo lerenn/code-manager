@@ -7,6 +7,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/config"
 	configmocks "github.com/lerenn/code-manager/pkg/config/mocks"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/lerenn/code-manager/pkg/git"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
@@ -33,16 +34,17 @@ func TestRealCM_Clone_Success(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		ConfigManager: mockConfig,
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus),
 	})
 	assert.NoError(t, err)
 
@@ -102,17 +104,18 @@ func TestRealCM_Clone_ShallowSuccess(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		ConfigManager: mockConfig,
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -172,18 +175,18 @@ func TestRealCM_Clone_EmptyURL(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -204,18 +207,18 @@ func TestRealCM_Clone_RepositoryExists(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -247,18 +250,18 @@ func TestRealCM_Clone_DefaultBranchDetectionFailure(t *testing.T) {
 	mockPrompt := promptmocks.NewMockPrompter(ctrl)
 
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -288,18 +291,18 @@ func TestRealCM_Clone_CloneFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		ConfigManager: mockConfig,
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -344,18 +347,18 @@ func TestRealCM_Clone_InitializationFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		ConfigManager: mockConfig,
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 

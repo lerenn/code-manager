@@ -24,7 +24,8 @@ func TestOpenWorktreeRepoModeExisting(t *testing.T) {
 
 	// Create a worktree first
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -71,7 +72,8 @@ func TestOpenWorktreeRepoModeNonExistent(t *testing.T) {
 
 	// Test opening a non-existent worktree
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -97,7 +99,8 @@ func TestOpenWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 
 	// Create a worktree first
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -128,7 +131,8 @@ func TestWorktreeOpenWithRepository(t *testing.T) {
 
 	// Initialize CM in the repository
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 

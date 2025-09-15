@@ -11,7 +11,7 @@ import (
 
 // CreateWorktree creates a worktree for the repository with the specified branch.
 func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpts) (string, error) {
-	r.logger.Logf("Creating worktree for single repository with branch: %s", branch)
+	r.deps.Logger.Logf("Creating worktree for single repository with branch: %s", branch)
 
 	// Validate repository
 	validationResult, err := r.ValidateRepository(ValidationParams{Branch: branch})
@@ -65,7 +65,7 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 		return "", err
 	}
 
-	r.logger.Logf("Successfully created worktree for branch %s at %s", branch, worktreePath)
+	r.deps.Logger.Logf("Successfully created worktree for branch %s at %s", branch, worktreePath)
 
 	return worktreePath, nil
 }
@@ -89,7 +89,7 @@ func (r *realRepository) extractRemote(opts []CreateWorktreeOpts) string {
 // cleanupWorktreeOnError cleans up worktree directory on error with logging.
 func (r *realRepository) cleanupWorktreeOnError(worktreeInstance worktree.Worktree, worktreePath, context string) {
 	if cleanupErr := worktreeInstance.CleanupDirectory(worktreePath); cleanupErr != nil {
-		r.logger.Logf("Warning: failed to clean up worktree directory after %s: %v", context, cleanupErr)
+		r.deps.Logger.Logf("Warning: failed to clean up worktree directory after %s: %v", context, cleanupErr)
 	}
 }
 
@@ -98,7 +98,7 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 	worktreeInstance worktree.Worktree,
 	worktreePath, branch, currentDir, repoURL string,
 ) error {
-	if r.hookManager == nil {
+	if r.deps.HookManager == nil {
 		return nil
 	}
 
@@ -114,7 +114,7 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 		Metadata: make(map[string]interface{}),
 	}
 
-	if err := r.hookManager.ExecuteWorktreeCheckoutHooks("CreateWorkTree", ctx); err != nil {
+	if err := r.deps.HookManager.ExecuteWorktreeCheckoutHooks("CreateWorkTree", ctx); err != nil {
 		// Cleanup failed worktree
 		r.cleanupWorktreeOnError(worktreeInstance, worktreePath, "hook failure")
 		return fmt.Errorf("worktree checkout hooks failed: %w", err)
@@ -128,27 +128,28 @@ func (r *realRepository) createAndValidateWorktreeInstance(
 	repoURL, branch, remote string,
 ) (worktree.Worktree, string, error) {
 	// Check if worktree provider is nil
-	if r.worktreeProvider == nil {
+	worktreeProvider := r.deps.WorktreeProvider
+	if worktreeProvider == nil {
 		return nil, "", fmt.Errorf("worktree provider is nil")
 	}
 
 	// Create worktree instance using provider
-	cfg, err := r.configManager.GetConfigWithFallback()
+	cfg, err := r.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get config: %w", err)
 	}
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              r.fs,
-		Git:             r.git,
-		StatusManager:   r.statusManager,
-		Logger:          r.logger,
-		Prompt:          r.prompt,
+	worktreeInstance := worktreeProvider(worktree.NewWorktreeParams{
+		FS:              r.deps.FS,
+		Git:             r.deps.Git,
+		StatusManager:   r.deps.StatusManager,
+		Logger:          r.deps.Logger,
+		Prompt:          r.deps.Prompt,
 		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
 	// Build worktree path
 	worktreePath := worktreeInstance.BuildPath(repoURL, remote, branch)
-	r.logger.Logf("Worktree path: %s", worktreePath)
+	r.deps.Logger.Logf("Worktree path: %s", worktreePath)
 
 	// Validate creation
 	if err := worktreeInstance.ValidateCreation(worktree.ValidateCreationParams{
@@ -191,7 +192,7 @@ func (r *realRepository) checkoutBranchInWorktree(
 	}
 
 	// Set upstream branch tracking to enable push without specifying remote/branch
-	if err := r.git.SetUpstreamBranch(worktreePath, remote, branch); err != nil {
+	if err := r.deps.Git.SetUpstreamBranch(worktreePath, remote, branch); err != nil {
 		return fmt.Errorf("failed to set upstream branch tracking: %w", err)
 	}
 

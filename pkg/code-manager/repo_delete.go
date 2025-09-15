@@ -65,7 +65,7 @@ func (c *realCodeManager) deleteRepository(params DeleteRepositoryParams) error 
 func (c *realCodeManager) getRepositoryAndWorktrees(repositoryName string) (
 	*status.Repository, []status.WorktreeInfo, error) {
 	// Get repository from status
-	repository, err := c.statusManager.GetRepository(repositoryName)
+	repository, err := c.deps.StatusManager.GetRepository(repositoryName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get repository: %w", err)
 	}
@@ -95,13 +95,13 @@ func (c *realCodeManager) showRepositoryDeletionConfirmation(
 	message.WriteString(fmt.Sprintf("  • %d worktree(s)\n", len(worktrees)))
 
 	// Get config from ConfigManager
-	cfg, err := c.configManager.GetConfigWithFallback()
+	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Check if repository directory will be deleted
-	inBasePath, err := c.fs.IsPathWithinBase(cfg.RepositoriesDir, repository.Path)
+	inBasePath, err := c.deps.FS.IsPathWithinBase(cfg.RepositoriesDir, repository.Path)
 	switch {
 	case err != nil:
 		// If we can't determine, show a warning
@@ -122,7 +122,7 @@ func (c *realCodeManager) showRepositoryDeletionConfirmation(
 	message.WriteString("\nThis action cannot be undone. Type 'yes' to confirm:")
 
 	// Show confirmation prompt
-	confirmed, err := c.prompt.PromptForConfirmation(message.String(), false)
+	confirmed, err := c.deps.Prompt.PromptForConfirmation(message.String(), false)
 	if err != nil {
 		return fmt.Errorf("failed to get confirmation: %w", err)
 	}
@@ -149,7 +149,7 @@ func (c *realCodeManager) performRepositoryDeletion(
 	}
 
 	// Step 2: Remove repository from status
-	if err := c.statusManager.RemoveRepository(repositoryName); err != nil {
+	if err := c.deps.StatusManager.RemoveRepository(repositoryName); err != nil {
 		return fmt.Errorf("failed to remove repository from status: %w", err)
 	}
 
@@ -189,13 +189,13 @@ func (c *realCodeManager) deleteRepositoryWorktrees(
 // deleteRepositoryDirectory deletes the repository directory if it's within the base path.
 func (c *realCodeManager) deleteRepositoryDirectory(repositoryPath string) error {
 	// Get config from ConfigManager
-	cfg, err := c.configManager.GetConfigWithFallback()
+	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Check if the repository path is within the configured base path
-	inBasePath, err := c.fs.IsPathWithinBase(cfg.RepositoriesDir, repositoryPath)
+	inBasePath, err := c.deps.FS.IsPathWithinBase(cfg.RepositoriesDir, repositoryPath)
 	if err != nil {
 		c.VerbosePrint("Warning: failed to validate base path for repository %s: %v", repositoryPath, err)
 		// Default to not deleting if validation fails
@@ -209,7 +209,7 @@ func (c *realCodeManager) deleteRepositoryDirectory(repositoryPath string) error
 	}
 
 	// Check if directory exists
-	exists, err := c.fs.Exists(repositoryPath)
+	exists, err := c.deps.FS.Exists(repositoryPath)
 	if err != nil {
 		return fmt.Errorf("failed to check if repository directory exists: %w", err)
 	}
@@ -221,7 +221,7 @@ func (c *realCodeManager) deleteRepositoryDirectory(repositoryPath string) error
 
 	// Delete the directory
 	c.VerbosePrint("Deleting repository directory: %s", repositoryPath)
-	if err := c.fs.RemoveAll(repositoryPath); err != nil {
+	if err := c.deps.FS.RemoveAll(repositoryPath); err != nil {
 		return fmt.Errorf("failed to delete repository directory: %w", err)
 	}
 
@@ -237,7 +237,7 @@ func (c *realCodeManager) deleteRepositoryDirectory(repositoryPath string) error
 // cleanupEmptyParentDirectories removes empty parent directories up to the repositories directory.
 func (c *realCodeManager) cleanupEmptyParentDirectories(repositoryPath string) error {
 	// Get config from ConfigManager
-	cfg, err := c.configManager.GetConfigWithFallback()
+	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
@@ -248,7 +248,7 @@ func (c *realCodeManager) cleanupEmptyParentDirectories(repositoryPath string) e
 	// Keep cleaning up parent directories until we reach the repositories directory
 	for parentDir != cfg.RepositoriesDir && parentDir != filepath.Dir(parentDir) {
 		// Check if the directory exists
-		exists, err := c.fs.Exists(parentDir)
+		exists, err := c.deps.FS.Exists(parentDir)
 		if err != nil {
 			return fmt.Errorf("failed to check if parent directory exists: %w", err)
 		}
@@ -273,7 +273,7 @@ func (c *realCodeManager) cleanupEmptyParentDirectories(repositoryPath string) e
 
 		// Directory is empty, remove it
 		c.VerbosePrint("Removing empty parent directory: %s", parentDir)
-		if err := c.fs.Remove(parentDir); err != nil {
+		if err := c.deps.FS.Remove(parentDir); err != nil {
 			return fmt.Errorf("failed to remove empty parent directory %s: %w", parentDir, err)
 		}
 
@@ -286,7 +286,7 @@ func (c *realCodeManager) cleanupEmptyParentDirectories(repositoryPath string) e
 
 // isDirectoryEmpty checks if a directory is empty.
 func (c *realCodeManager) isDirectoryEmpty(dirPath string) (bool, error) {
-	entries, err := c.fs.ReadDir(dirPath)
+	entries, err := c.deps.FS.ReadDir(dirPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to read directory: %w", err)
 	}
@@ -320,7 +320,7 @@ func (c *realCodeManager) validateRepositoryName(repositoryName string) error {
 // validateRepositoryNotInWorkspace checks if the repository is part of any workspace.
 func (c *realCodeManager) validateRepositoryNotInWorkspace(repositoryName string) error {
 	// Get all workspaces
-	workspaces, err := c.statusManager.ListWorkspaces()
+	workspaces, err := c.deps.StatusManager.ListWorkspaces()
 	if err != nil {
 		return fmt.Errorf("failed to list workspaces: %w", err)
 	}

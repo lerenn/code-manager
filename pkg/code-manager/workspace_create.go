@@ -41,7 +41,7 @@ func (c *realCodeManager) createWorkspace(params CreateWorkspaceParams) error {
 	}
 
 	// Check if workspace already exists
-	existingWorkspace, err := c.statusManager.GetWorkspace(params.WorkspaceName)
+	existingWorkspace, err := c.deps.StatusManager.GetWorkspace(params.WorkspaceName)
 	if err == nil && existingWorkspace != nil {
 		return fmt.Errorf("%w: workspace '%s' already exists", ErrWorkspaceAlreadyExists, params.WorkspaceName)
 	}
@@ -62,7 +62,7 @@ func (c *realCodeManager) createWorkspace(params CreateWorkspaceParams) error {
 	workspaceParams := status.AddWorkspaceParams{
 		Repositories: finalRepos,
 	}
-	if err := c.statusManager.AddWorkspace(params.WorkspaceName, workspaceParams); err != nil {
+	if err := c.deps.StatusManager.AddWorkspace(params.WorkspaceName, workspaceParams); err != nil {
 		return fmt.Errorf("%w: %w", ErrStatusUpdate, err)
 	}
 
@@ -117,7 +117,7 @@ func (c *realCodeManager) validateAndResolveRepositories(repositories []string) 
 // resolveRepository resolves a single repository identifier.
 func (c *realCodeManager) resolveRepository(repo string) (string, error) {
 	// First, check if it's a repository name from status.yaml
-	if existingRepo, err := c.statusManager.GetRepository(repo); err == nil && existingRepo != nil {
+	if existingRepo, err := c.deps.StatusManager.GetRepository(repo); err == nil && existingRepo != nil {
 		c.VerbosePrint("  ✓ %s (from status.yaml): %s", repo, existingRepo.Path)
 		return repo, nil
 	}
@@ -133,7 +133,7 @@ func (c *realCodeManager) resolveRepository(repo string) (string, error) {
 		return "", fmt.Errorf("%w: failed to get current directory: %w", ErrPathResolution, err)
 	}
 
-	resolvedPath, err := c.fs.ResolvePath(currentDir, repo)
+	resolvedPath, err := c.deps.FS.ResolvePath(currentDir, repo)
 	if err != nil {
 		return "", fmt.Errorf("%w: failed to resolve path '%s': %w", ErrPathResolution, repo, err)
 	}
@@ -144,7 +144,7 @@ func (c *realCodeManager) resolveRepository(repo string) (string, error) {
 // validateRepositoryPath validates that a path contains a Git repository.
 func (c *realCodeManager) validateRepositoryPath(path string) (string, error) {
 	// Check if path exists
-	exists, err := c.fs.Exists(path)
+	exists, err := c.deps.FS.Exists(path)
 	if err != nil {
 		return "", fmt.Errorf("%w: failed to check if path exists: %w", ErrRepositoryNotFound, err)
 	}
@@ -153,7 +153,7 @@ func (c *realCodeManager) validateRepositoryPath(path string) (string, error) {
 	}
 
 	// Validate it's a Git repository
-	isValid, err := c.fs.ValidateRepositoryPath(path)
+	isValid, err := c.deps.FS.ValidateRepositoryPath(path)
 	if err != nil {
 		return "", fmt.Errorf("%w: failed to validate repository: %w", ErrInvalidRepository, err)
 	}
@@ -172,7 +172,7 @@ func (c *realCodeManager) addRepositoriesToStatus(repositories []string) ([]stri
 
 	for _, repo := range repositories {
 		// Get repository URL from Git remote origin
-		repoURL, err := c.git.GetRemoteURL(repo, "origin")
+		repoURL, err := c.deps.Git.GetRemoteURL(repo, "origin")
 		if err != nil {
 			// If no origin remote, use the path as the identifier
 			repoURL = repo
@@ -186,7 +186,7 @@ func (c *realCodeManager) addRepositoriesToStatus(repositories []string) ([]stri
 		seenURLs[repoURL] = true
 
 		// Check if repository already exists in status using the remote URL
-		if existingRepo, err := c.statusManager.GetRepository(repoURL); err == nil && existingRepo != nil {
+		if existingRepo, err := c.deps.StatusManager.GetRepository(repoURL); err == nil && existingRepo != nil {
 			finalRepos = append(finalRepos, repoURL)
 			c.VerbosePrint("  ✓ %s (already exists in status)", repo)
 			continue
@@ -208,7 +208,7 @@ func (c *realCodeManager) addRepositoriesToStatus(repositories []string) ([]stri
 // addRepositoryToStatus adds a new repository to the status file and returns its URL.
 func (c *realCodeManager) addRepositoryToStatus(repoPath string) (string, error) {
 	// Get repository URL from Git remote origin
-	repoURL, err := c.git.GetRemoteURL(repoPath, "origin")
+	repoURL, err := c.deps.Git.GetRemoteURL(repoPath, "origin")
 	if err != nil {
 		// If no origin remote, use the path as the identifier
 		repoURL = repoPath
@@ -218,7 +218,7 @@ func (c *realCodeManager) addRepositoryToStatus(repoPath string) (string, error)
 	repoParams := status.AddRepositoryParams{
 		Path: repoPath,
 	}
-	if err := c.statusManager.AddRepository(repoURL, repoParams); err != nil {
+	if err := c.deps.StatusManager.AddRepository(repoURL, repoParams); err != nil {
 		return "", fmt.Errorf("failed to add repository to status file: %w", err)
 	}
 

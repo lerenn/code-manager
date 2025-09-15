@@ -2,7 +2,7 @@ package workspace
 
 // ValidateWorkspaceReferences validates that workspace references point to existing worktrees and repositories.
 func (w *realWorkspace) ValidateWorkspaceReferences() error {
-	w.logger.Logf("Validating workspace references")
+	w.deps.Logger.Logf("Validating workspace references")
 
 	// TODO: Implement workspace reference validation
 	// This should validate:

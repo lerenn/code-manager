@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
@@ -94,9 +95,9 @@ func TestListWorkspaces(t *testing.T) {
 
 			// Create CM instance
 			cm := &realCodeManager{
-				statusManager: mockStatusManager,
-				hookManager:   nil, // No hooks for this test
-				configManager: config.NewConfigManager("/test/config.yaml"),
+				deps: dependencies.New().
+					WithStatusManager(mockStatusManager).
+					WithConfig(config.NewConfigManager("/test/config.yaml")),
 			}
 
 			// Execute
@@ -160,9 +161,9 @@ func TestListWorkspaces_Sorting(t *testing.T) {
 
 	// Create CM instance
 	cm := &realCodeManager{
-		statusManager: mockStatusManager,
-		hookManager:   nil, // No hooks for this test
-		configManager: config.NewConfigManager("/test/config.yaml"),
+		deps: dependencies.New().
+			WithStatusManager(mockStatusManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")),
 	}
 
 	// Execute
@@ -201,9 +202,9 @@ func TestListWorkspaces_EmptyWorkspace(t *testing.T) {
 
 	// Create CM instance
 	cm := &realCodeManager{
-		statusManager: mockStatusManager,
-		hookManager:   nil, // No hooks for this test
-		configManager: config.NewConfigManager("/test/config.yaml"),
+		deps: dependencies.New().
+			WithStatusManager(mockStatusManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")),
 	}
 
 	// Execute

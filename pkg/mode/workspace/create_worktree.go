@@ -16,7 +16,7 @@ func (w *realWorkspace) CreateWorktree(branch string, opts ...CreateWorktreeOpts
 		return "", err
 	}
 
-	w.logger.Logf("Creating worktrees from workspace status: %s", workspaceName)
+	w.deps.Logger.Logf("Creating worktrees from workspace status: %s", workspaceName)
 
 	repositories, err := w.validateAndGetRepositories(workspaceName)
 	if err != nil {
@@ -36,7 +36,7 @@ func (w *realWorkspace) extractWorkspaceName(opts []CreateWorktreeOpts) (string,
 
 // validateAndGetRepositories validates workspace and returns repository list.
 func (w *realWorkspace) validateAndGetRepositories(workspaceName string) ([]string, error) {
-	workspace, err := w.statusManager.GetWorkspace(workspaceName)
+	workspace, err := w.deps.StatusManager.GetWorkspace(workspaceName)
 	if err != nil {
 		return nil, fmt.Errorf("workspace '%s' not found in status.yaml: %w", workspaceName, err)
 	}
@@ -46,7 +46,7 @@ func (w *realWorkspace) validateAndGetRepositories(workspaceName string) ([]stri
 		return nil, fmt.Errorf("workspace '%s' has no repositories defined", workspaceName)
 	}
 
-	w.logger.Logf("Found %d repositories in workspace: %v", len(repositories), repositories)
+	w.deps.Logger.Logf("Found %d repositories in workspace: %v", len(repositories), repositories)
 	return repositories, nil
 }
 
@@ -87,7 +87,7 @@ func (w *realWorkspace) createWorkspaceWorktrees(workspaceName, branch string, r
 		return "", fmt.Errorf("failed to update workspace status: %w", err)
 	}
 
-	w.logger.Logf("Successfully created worktrees from workspace: %s", workspaceName)
+	w.deps.Logger.Logf("Successfully created worktrees from workspace: %s", workspaceName)
 	return workspaceFilePath, nil
 }
 
@@ -96,7 +96,7 @@ func (w *realWorkspace) createWorkspaceWorktrees(workspaceName, branch string, r
 func (w *realWorkspace) createSingleRepositoryWorktreeWithURL(
 	repoURL, workspaceName, branch string,
 ) (string, string, error) {
-	w.logger.Logf("Creating worktree in repository: %s", repoURL)
+	w.deps.Logger.Logf("Creating worktree in repository: %s", repoURL)
 
 	// Get repository path from status or construct it
 	repoPath, err := w.getRepositoryPath(repoURL)
@@ -117,7 +117,7 @@ func (w *realWorkspace) createSingleRepositoryWorktreeWithURL(
 			return "", "", fmt.Errorf("failed to extract repository URL from path '%s': %w", repoPath, err)
 		}
 		actualRepoURL = extractedURL
-		w.logger.Logf("Extracted repository URL '%s' from path '%s'", actualRepoURL, repoPath)
+		w.deps.Logger.Logf("Extracted repository URL '%s' from path '%s'", actualRepoURL, repoPath)
 	}
 
 	// Create worktree using worktree package directly
@@ -127,7 +127,7 @@ func (w *realWorkspace) createSingleRepositoryWorktreeWithURL(
 		return "", "", fmt.Errorf("failed to create worktree in repository '%s': %w", actualRepoURL, err)
 	}
 
-	w.logger.Logf("Created worktree: %s", worktreePath)
+	w.deps.Logger.Logf("Created worktree: %s", worktreePath)
 	return worktreePath, actualRepoURL, nil
 }
 
@@ -137,12 +137,12 @@ func (w *realWorkspace) rollbackWorkspaceWorktrees(
 	createdWorktrees []string,
 	workspaceFile string,
 ) {
-	w.logger.Logf("Rolling back workspace worktrees for: %s", workspaceName)
+	w.deps.Logger.Logf("Rolling back workspace worktrees for: %s", workspaceName)
 
 	// Remove workspace file if it was created
 	if workspaceFile != "" {
-		if err := w.fs.RemoveAll(workspaceFile); err != nil {
-			w.logger.Logf("Warning: failed to remove workspace file %s: %v", workspaceFile, err)
+		if err := w.deps.FS.RemoveAll(workspaceFile); err != nil {
+			w.deps.Logger.Logf("Warning: failed to remove workspace file %s: %v", workspaceFile, err)
 		}
 	}
 
@@ -151,7 +151,7 @@ func (w *realWorkspace) rollbackWorkspaceWorktrees(
 		// Extract repository URL from worktree path for status update
 		// This is a simplified approach - in practice, you might want to track this more precisely
 		// For now, we'll skip individual worktree deletion as it's complex to track
-		w.logger.Logf("Warning: worktree rollback not fully implemented for: %s", worktreePath)
+		w.deps.Logger.Logf("Warning: worktree rollback not fully implemented for: %s", worktreePath)
 	}
 
 	// Remove worktree entry from workspace status
@@ -161,13 +161,13 @@ func (w *realWorkspace) rollbackWorkspaceWorktrees(
 // getRepositoryPath gets the repository path from status or constructs it.
 func (w *realWorkspace) getRepositoryPath(repoURL string) (string, error) {
 	// Try to get repository from status first
-	repo, err := w.statusManager.GetRepository(repoURL)
+	repo, err := w.deps.StatusManager.GetRepository(repoURL)
 	if err == nil {
 		return repo.Path, nil
 	}
 
 	// If not found in status, construct path using config
-	cfg, err := w.configManager.GetConfigWithFallback()
+	cfg, err := w.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return "", fmt.Errorf("failed to get config for repository path construction: %w", err)
 	}
@@ -178,7 +178,7 @@ func (w *realWorkspace) getRepositoryPath(repoURL string) (string, error) {
 func (w *realWorkspace) getRepositoryURLFromPath(repoPath string) (string, error) {
 	// Check if it's a Git repository
 	gitDir := filepath.Join(repoPath, ".git")
-	exists, err := w.fs.Exists(gitDir)
+	exists, err := w.deps.FS.Exists(gitDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to check .git existence: %w", err)
 	}
@@ -187,7 +187,7 @@ func (w *realWorkspace) getRepositoryURLFromPath(repoPath string) (string, error
 	}
 
 	// Get the origin remote URL
-	originURL, err := w.git.GetRemoteURL(repoPath, "origin")
+	originURL, err := w.deps.Git.GetRemoteURL(repoPath, "origin")
 	if err != nil {
 		return "", fmt.Errorf("failed to get origin remote URL: %w", err)
 	}
@@ -213,7 +213,7 @@ func (w *realWorkspace) getRepositoryURLFromPath(repoPath string) (string, error
 // validateRepositoryPath validates that the repository path exists and is a valid Git repository.
 func (w *realWorkspace) validateRepositoryPath(repoPath string) error {
 	// Check if directory exists
-	exists, err := w.fs.Exists(repoPath)
+	exists, err := w.deps.FS.Exists(repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to check repository path: %w", err)
 	}
@@ -223,7 +223,7 @@ func (w *realWorkspace) validateRepositoryPath(repoPath string) error {
 
 	// Check if it's a Git repository by checking for .git directory
 	gitDir := filepath.Join(repoPath, ".git")
-	exists, err = w.fs.Exists(gitDir)
+	exists, err = w.deps.FS.Exists(gitDir)
 	if err != nil {
 		return fmt.Errorf("failed to check if path is Git repository: %w", err)
 	}
@@ -240,16 +240,10 @@ func (w *realWorkspace) createWorktreeForRepositoryWithPath(
 	_, repoPath, branch string,
 ) (string, error) {
 	// Create repository instance using repositoryProvider with explicit path
-	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
-		FS:               w.fs,
-		Git:              w.git,
-		ConfigManager:    w.configManager,
-		StatusManager:    w.statusManager,
-		Logger:           w.logger,
-		Prompt:           w.prompt,
-		WorktreeProvider: w.safeWorktreeProvider(),
-		HookManager:      w.hookManager,
-		RepositoryName:   repoPath, // Pass the actual repository path
+	repositoryProvider := w.deps.RepositoryProvider
+	repoInstance := repositoryProvider(repository.NewRepositoryParams{
+		Dependencies:   w.deps,
+		RepositoryName: repoPath, // Pass the actual repository path
 	})
 
 	// Use repository's CreateWorktree method
@@ -270,7 +264,7 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 
 	// Create workspace file path
 	workspaceFileName := fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename)
-	cfg, err := w.configManager.GetConfigWithFallback()
+	cfg, err := w.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return "", fmt.Errorf("failed to get config: %w", err)
 	}
@@ -278,7 +272,7 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 
 	// Ensure workspaces directory exists
 	workspacesDir := filepath.Dir(workspaceFilePath)
-	if err := w.fs.MkdirAll(workspacesDir, 0755); err != nil {
+	if err := w.deps.FS.MkdirAll(workspacesDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 
@@ -286,11 +280,11 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 	workspaceContent := w.generateWorkspaceFileContent(workspaceName, repositories)
 
 	// Write workspace file
-	if err := w.fs.CreateFileWithContent(workspaceFilePath, []byte(workspaceContent), 0644); err != nil {
+	if err := w.deps.FS.CreateFileWithContent(workspaceFilePath, []byte(workspaceContent), 0644); err != nil {
 		return "", fmt.Errorf("failed to write workspace file: %w", err)
 	}
 
-	w.logger.Logf("Created workspace file: %s", workspaceFilePath)
+	w.deps.Logger.Logf("Created workspace file: %s", workspaceFilePath)
 	return workspaceFilePath, nil
 }
 
@@ -303,10 +297,10 @@ func (w *realWorkspace) generateWorkspaceFileContent(_ string, repositories []st
 `
 
 	// Get config once before the loop
-	cfg, err := w.configManager.GetConfigWithFallback()
+	cfg, err := w.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		// Fallback to a default path if config cannot be loaded
-		cfg = w.configManager.DefaultConfig()
+		cfg = w.deps.Config.DefaultConfig()
 	}
 
 	for i, repoURL := range repositories {
@@ -334,7 +328,7 @@ func (w *realWorkspace) generateWorkspaceFileContent(_ string, repositories []st
 // updateWorkspaceStatus updates the workspace status with the new worktree and actual repository URLs.
 func (w *realWorkspace) updateWorkspaceStatus(workspaceName, branch string, actualRepositoryURLs []string) error {
 	// Get current workspace
-	workspace, err := w.statusManager.GetWorkspace(workspaceName)
+	workspace, err := w.deps.StatusManager.GetWorkspace(workspaceName)
 	if err != nil {
 		return fmt.Errorf("failed to get workspace: %w", err)
 	}
@@ -346,11 +340,11 @@ func (w *realWorkspace) updateWorkspaceStatus(workspaceName, branch string, actu
 	workspace.Repositories = actualRepositoryURLs
 
 	// Update workspace in status file
-	if err := w.statusManager.UpdateWorkspace(workspaceName, *workspace); err != nil {
+	if err := w.deps.StatusManager.UpdateWorkspace(workspaceName, *workspace); err != nil {
 		return fmt.Errorf("failed to update workspace status: %w", err)
 	}
 
-	w.logger.Logf("Updated workspace '%s' with worktree: %s and repositories: %v",
+	w.deps.Logger.Logf("Updated workspace '%s' with worktree: %s and repositories: %v",
 		workspaceName, branch, actualRepositoryURLs)
 	return nil
 }
@@ -359,13 +353,5 @@ func (w *realWorkspace) updateWorkspaceStatus(workspaceName, branch string, actu
 func (w *realWorkspace) removeWorkspaceWorktreeEntry(workspaceName, branch string) {
 	// This is a simplified implementation
 	// In practice, you might want to implement a proper RemoveWorkspaceWorktree method
-	w.logger.Logf("Removing workspace worktree entry: %s-%s", workspaceName, branch)
-}
-
-// safeWorktreeProvider safely converts the workspace worktree provider to repository worktree provider.
-func (w *realWorkspace) safeWorktreeProvider() repository.WorktreeProvider {
-	if w.worktreeProvider == nil {
-		return nil
-	}
-	return repository.WorktreeProvider(w.worktreeProvider)
+	w.deps.Logger.Logf("Removing workspace worktree entry: %s-%s", workspaceName, branch)
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
@@ -18,6 +19,8 @@ import (
 	promptMocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
+	"github.com/lerenn/code-manager/pkg/worktree"
+	worktreemocks "github.com/lerenn/code-manager/pkg/worktree/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -28,6 +31,7 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 
 	mockRepository := repositoryMocks.NewMockRepository(ctrl)
 	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
@@ -36,18 +40,23 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt).
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
+				return mockWorktree
+			}).
+			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
 
@@ -70,6 +79,7 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 
 	mockRepository := repositoryMocks.NewMockRepository(ctrl)
 	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
@@ -78,18 +88,23 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt).
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
+				return mockWorktree
+			}).
+			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
 
@@ -113,6 +128,7 @@ func TestCM_CreateWorkTree_WorkspaceMode(t *testing.T) {
 
 	mockRepository := repositoryMocks.NewMockRepository(ctrl)
 	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
@@ -121,18 +137,23 @@ func TestCM_CreateWorkTree_WorkspaceMode(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt).
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
+				return mockWorktree
+			}).
+			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
 
@@ -156,6 +177,7 @@ func TestCM_CreateWorkTree_WorkspaceModeWithIDE(t *testing.T) {
 
 	mockRepository := repositoryMocks.NewMockRepository(ctrl)
 	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
@@ -164,18 +186,23 @@ func TestCM_CreateWorkTree_WorkspaceModeWithIDE(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt).
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
+				return mockWorktree
+			}).
+			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
 
@@ -202,6 +229,7 @@ func TestCM_CreateWorkTree_WorkspaceModeFailure(t *testing.T) {
 
 	mockRepository := repositoryMocks.NewMockRepository(ctrl)
 	mockWorkspace := workspaceMocks.NewMockWorkspace(ctrl)
+	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
@@ -210,18 +238,23 @@ func TestCM_CreateWorkTree_WorkspaceModeFailure(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt).
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
+				return mockWorktree
+			}).
+			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
 
@@ -273,15 +306,16 @@ func TestCreateWorkTreeWithRepositoryName(t *testing.T) {
 
 			// Create CM instance
 			cmInstance := &realCodeManager{
-				fs:            mockFS,
-				git:           mockGit,
-				statusManager: mockStatus,
-				logger:        logger.NewNoopLogger(),
-				repositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-					return mockRepo
-				},
-				hookManager:   mockHooks,
-				configManager: config.NewConfigManager("/test/config.yaml"),
+				deps: dependencies.New().
+					WithFS(mockFS).
+					WithGit(mockGit).
+					WithStatusManager(mockStatus).
+					WithLogger(logger.NewNoopLogger()).
+					WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+						return mockRepo
+					}).
+					WithHookManager(mockHooks).
+					WithConfig(config.NewConfigManager("/test/config.yaml")),
 			}
 
 			// Execute
@@ -338,12 +372,13 @@ func TestCreateWorkTreeRepositoryResolution(t *testing.T) {
 
 			// Create CM instance
 			cmInstance := &realCodeManager{
-				fs:            mockFS,
-				git:           mockGit,
-				statusManager: mockStatus,
-				logger:        logger.NewNoopLogger(),
-				hookManager:   mockHooks,
-				configManager: config.NewConfigManager("/test/config.yaml"),
+				deps: dependencies.New().
+					WithFS(mockFS).
+					WithGit(mockGit).
+					WithStatusManager(mockStatus).
+					WithLogger(logger.NewNoopLogger()).
+					WithHookManager(mockHooks).
+					WithConfig(config.NewConfigManager("/test/config.yaml")),
 			}
 
 			// Test repository resolution

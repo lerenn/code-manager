@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -29,14 +30,16 @@ func TestValidateGitStatus_Success(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock successful git status
@@ -57,14 +60,16 @@ func TestValidateGitStatus_WithChanges(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git status with changes (still valid - method only checks for empty status)
@@ -85,14 +90,16 @@ func TestValidateGitStatus_EmptyStatus(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock empty git status
@@ -114,14 +121,16 @@ func TestValidateGitStatus_GitError(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git status error
@@ -143,14 +152,16 @@ func TestValidateGitStatus_RepositoryNotFound(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git status error for non-existent repository
@@ -172,14 +183,16 @@ func TestValidateGitStatus_WhitespaceOnlyStatus(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock git status with only whitespace (should be treated as empty)
@@ -200,14 +213,16 @@ func TestValidateGitStatus_ComplexStatus(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock complex git status with multiple changes

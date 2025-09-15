@@ -7,7 +7,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
 	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // DeleteAllWorktreesOpts contains options for DeleteAllWorktrees.
@@ -64,16 +63,10 @@ func (c *realCodeManager) handleRepositoryDeleteAllMode(force bool) error {
 	c.VerbosePrint("Handling repository delete all mode")
 
 	// Create repository instance
-	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   ".",
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repo.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: ".",
 	})
 
 	// Delete all worktrees for single repository
@@ -91,15 +84,9 @@ func (c *realCodeManager) handleWorkspaceDeleteAllMode(force bool) error {
 	c.VerbosePrint("Handling workspace delete all mode")
 
 	// Create workspace instance
-	workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
+	workspaceProvider := c.deps.WorkspaceProvider
+	workspaceInstance := workspaceProvider(ws.NewWorkspaceParams{
+		Dependencies: c.deps,
 	})
 
 	// Delete all worktrees for workspace
@@ -116,16 +103,10 @@ func (c *realCodeManager) deleteAllRepositoryWorktrees(repositoryName string, fo
 	c.VerbosePrint("Deleting all worktrees for repository: %s", repositoryName)
 
 	// Create repository instance - let repositoryProvider handle repository name resolution
-	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   repositoryName, // Pass repository name directly, let provider handle resolution
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repo.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: repositoryName, // Pass repository name directly, let provider handle resolution
 	})
 
 	// Delete all worktrees

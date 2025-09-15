@@ -7,96 +7,33 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
-	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree/interfaces"
 )
 
-//go:generate mockgen -source=worktree.go -destination=mocks/worktree.gen.go -package=mocks
-
 // Worktree interface provides worktree management capabilities.
-type Worktree interface {
-	// BuildPath constructs a worktree path from repository URL, remote name, and branch.
-	BuildPath(repoURL, remoteName, branch string) string
-
-	// Create creates a new worktree with proper validation and cleanup.
-	Create(params CreateParams) error
-
-	// CheckoutBranch checks out the branch in the worktree after hooks have been executed.
-	CheckoutBranch(worktreePath, branch string) error
-
-	// Delete deletes a worktree with proper cleanup and confirmation.
-	Delete(params DeleteParams) error
-
-	// ValidateCreation validates that worktree creation is possible.
-	ValidateCreation(params ValidateCreationParams) error
-
-	// ValidateDeletion validates that worktree deletion is possible.
-	ValidateDeletion(params ValidateDeletionParams) error
-
-	// EnsureBranchExists ensures the specified branch exists, creating it if necessary.
-	EnsureBranchExists(repoPath, branch string) error
-
-	// AddToStatus adds the worktree to the status file.
-	AddToStatus(params AddToStatusParams) error
-
-	// RemoveFromStatus removes the worktree from the status file.
-	RemoveFromStatus(repoURL, branch string) error
-
-	// CleanupDirectory removes the worktree directory.
-	CleanupDirectory(worktreePath string) error
-
-	// Exists checks if a worktree exists for the specified branch.
-	Exists(repoPath, branch string) (bool, error)
-
-	// SetLogger sets the logger for this worktree instance.
-	SetLogger(logger logger.Logger)
-}
+// This interface is now defined in pkg/worktree/interfaces to avoid circular imports.
+type Worktree = interfaces.Worktree
 
 // CreateParams contains parameters for worktree creation.
-type CreateParams struct {
-	RepoURL      string
-	Branch       string
-	WorktreePath string
-	RepoPath     string
-	Remote       string
-	IssueInfo    *issue.Info
-	Force        bool
-}
+type CreateParams = interfaces.CreateParams
 
 // DeleteParams contains parameters for worktree deletion.
-type DeleteParams struct {
-	RepoURL      string
-	Branch       string
-	WorktreePath string
-	RepoPath     string
-	Force        bool
-}
+type DeleteParams = interfaces.DeleteParams
 
 // ValidateCreationParams contains parameters for worktree creation validation.
-type ValidateCreationParams struct {
-	RepoURL      string
-	Branch       string
-	WorktreePath string
-	RepoPath     string
-}
+type ValidateCreationParams = interfaces.ValidateCreationParams
 
 // ValidateDeletionParams contains parameters for worktree deletion validation.
-type ValidateDeletionParams struct {
-	RepoURL string
-	Branch  string
-}
+type ValidateDeletionParams = interfaces.ValidateDeletionParams
 
 // AddToStatusParams contains parameters for adding worktree to status.
-type AddToStatusParams struct {
-	RepoURL       string
-	Branch        string
-	WorktreePath  string
-	WorkspacePath string
-	Remote        string
-	IssueInfo     *issue.Info
-}
+type AddToStatusParams = interfaces.AddToStatusParams
+
+// NewWorktreeParams contains parameters for creating a new Worktree instance.
+type NewWorktreeParams = interfaces.NewWorktreeParams
 
 // realWorktree provides the real implementation of the Worktree interface.
 type realWorktree struct {
@@ -108,29 +45,28 @@ type realWorktree struct {
 	repositoriesDir string
 }
 
-// NewWorktreeParams contains parameters for creating a new Worktree instance.
-type NewWorktreeParams struct {
-	FS              fs.FS
-	Git             git.Git
-	StatusManager   status.Manager
-	Logger          logger.Logger
-	Prompt          prompt.Prompter
-	RepositoriesDir string
-}
-
 // NewWorktree creates a new Worktree instance.
 func NewWorktree(params NewWorktreeParams) Worktree {
+	// Cast interface{} types to concrete types
+	fs := params.FS.(fs.FS)
+	git := params.Git.(git.Git)
+	statusManager := params.StatusManager.(status.Manager)
+	prompt := params.Prompt.(prompt.Prompter)
+
 	// Set default logger if not provided
+	var log logger.Logger
 	if params.Logger == nil {
-		params.Logger = logger.NewNoopLogger()
+		log = logger.NewNoopLogger()
+	} else {
+		log = params.Logger.(logger.Logger)
 	}
 
 	return &realWorktree{
-		fs:              params.FS,
-		git:             params.Git,
-		statusManager:   params.StatusManager,
-		logger:          params.Logger,
-		prompt:          params.Prompt,
+		fs:              fs,
+		git:             git,
+		statusManager:   statusManager,
+		logger:          log,
+		prompt:          prompt,
 		repositoriesDir: params.RepositoriesDir,
 	}
 }

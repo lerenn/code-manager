@@ -21,22 +21,22 @@ func (c *realCodeManager) ListRepositories() ([]RepositoryInfo, error) {
 
 	// Execute with hooks
 	return c.executeWithHooksAndReturnRepositories(consts.ListRepositories, params, func() ([]RepositoryInfo, error) {
-		if c.logger != nil {
-			c.logger.Logf("Loading repositories from status file")
+		if c.deps.Logger != nil {
+			c.deps.Logger.Logf("Loading repositories from status file")
 		}
 
 		// Get all repositories from status manager
-		repositories, err := c.statusManager.ListRepositories()
+		repositories, err := c.deps.StatusManager.ListRepositories()
 		if err != nil {
 			return nil, fmt.Errorf("%w: %w", ErrFailedToLoadRepositories, err)
 		}
 
-		if c.logger != nil {
-			c.logger.Logf("Validating base path for repositories")
+		if c.deps.Logger != nil {
+			c.deps.Logger.Logf("Validating base path for repositories")
 		}
 
 		// Get config from ConfigManager
-		cfg, err := c.configManager.GetConfigWithFallback()
+		cfg, err := c.deps.Config.GetConfigWithFallback()
 		if err != nil {
 			return nil, fmt.Errorf("failed to get config: %w", err)
 		}
@@ -45,11 +45,11 @@ func (c *realCodeManager) ListRepositories() ([]RepositoryInfo, error) {
 		var repoInfos []RepositoryInfo
 		for repoName, repo := range repositories {
 			// Check if repository path is within configured repositories directory
-			inRepositoriesDir, err := c.fs.IsPathWithinBase(cfg.RepositoriesDir, repo.Path)
+			inRepositoriesDir, err := c.deps.FS.IsPathWithinBase(cfg.RepositoriesDir, repo.Path)
 			if err != nil {
 				// Log warning but continue processing other repositories
-				if c.logger != nil {
-					c.logger.Logf("Failed to validate base path for repository %s: %v", repoName, err)
+				if c.deps.Logger != nil {
+					c.deps.Logger.Logf("Failed to validate base path for repository %s: %v", repoName, err)
 				}
 				// Default to false if validation fails
 				inRepositoriesDir = false
@@ -68,8 +68,8 @@ func (c *realCodeManager) ListRepositories() ([]RepositoryInfo, error) {
 			return repoInfos[i].Name < repoInfos[j].Name
 		})
 
-		if c.logger != nil {
-			c.logger.Logf("Formatting repository list")
+		if c.deps.Logger != nil {
+			c.deps.Logger.Logf("Formatting repository list")
 		}
 
 		return repoInfos, nil

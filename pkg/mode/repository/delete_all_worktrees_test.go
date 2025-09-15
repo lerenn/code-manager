@@ -8,8 +8,10 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
+	"github.com/lerenn/code-manager/pkg/logger"
 	promptMocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
@@ -31,14 +33,18 @@ func TestRealRepository_DeleteAllWorktrees_Success(t *testing.T) {
 	mockWorktree := worktreeMocks.NewMockWorktree(ctrl)
 
 	// Create repository instance
-	repo := NewRepository(NewRepositoryParams{
-		FS:               mockFS,
-		Git:              mockGit,
-		ConfigManager:    config.NewManager("/test/config.yaml"),
-		StatusManager:    mockStatus,
-		Prompt:           mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock validation - IsGitRepository calls
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -80,14 +86,18 @@ func TestRealRepository_DeleteAllWorktrees_NoWorktrees(t *testing.T) {
 	mockWorktree := worktreeMocks.NewMockWorktree(ctrl)
 
 	// Create repository instance
-	repo := NewRepository(NewRepositoryParams{
-		FS:               mockFS,
-		Git:              mockGit,
-		ConfigManager:    config.NewManager("/test/config.yaml"),
-		StatusManager:    mockStatus,
-		Prompt:           mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock validation - IsGitRepository calls
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -118,14 +128,18 @@ func TestRealRepository_DeleteAllWorktrees_ValidationError(t *testing.T) {
 	mockPrompt := promptMocks.NewMockPrompter(ctrl)
 
 	// Create repository instance
-	repo := NewRepository(NewRepositoryParams{
-		FS:               mockFS,
-		Git:              mockGit,
-		ConfigManager:    config.NewManager("/test/config.yaml"),
-		StatusManager:    mockStatus,
-		Prompt:           mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return nil },
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return nil },
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock validation failure - IsGitRepository calls
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -152,14 +166,18 @@ func TestRealRepository_DeleteAllWorktrees_ListWorktreesError(t *testing.T) {
 	mockPrompt := promptMocks.NewMockPrompter(ctrl)
 
 	// Create repository instance
-	repo := NewRepository(NewRepositoryParams{
-		FS:               mockFS,
-		Git:              mockGit,
-		ConfigManager:    config.NewManager("/test/config.yaml"),
-		StatusManager:    mockStatus,
-		Prompt:           mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return nil },
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return nil },
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock validation - IsGitRepository calls
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -190,14 +208,18 @@ func TestRealRepository_DeleteAllWorktrees_PartialFailure(t *testing.T) {
 	mockWorktree := worktreeMocks.NewMockWorktree(ctrl)
 
 	// Create repository instance
-	repo := NewRepository(NewRepositoryParams{
-		FS:               mockFS,
-		Git:              mockGit,
-		ConfigManager:    config.NewManager("/test/config.yaml"),
-		StatusManager:    mockStatus,
-		Prompt:           mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock validation - IsGitRepository calls
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -256,14 +278,18 @@ func TestRealRepository_DeleteAllWorktrees_AllFailures(t *testing.T) {
 	mockWorktree := worktreeMocks.NewMockWorktree(ctrl)
 
 	// Create repository instance
-	repo := NewRepository(NewRepositoryParams{
-		FS:               mockFS,
-		Git:              mockGit,
-		ConfigManager:    config.NewManager("/test/config.yaml"),
-		StatusManager:    mockStatus,
-		Prompt:           mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock validation - IsGitRepository calls
 	mockFS.EXPECT().Exists(".git").Return(true, nil)
@@ -306,14 +332,18 @@ func TestRealRepository_DeleteAllWorktrees_GetWorktreePathError(t *testing.T) {
 	mockWorktree := worktreeMocks.NewMockWorktree(ctrl)
 
 	// Create repository instance
-	repo := NewRepository(NewRepositoryParams{
-		FS:               mockFS,
-		Git:              mockGit,
-		ConfigManager:    config.NewManager("/test/config.yaml"),
-		StatusManager:    mockStatus,
-		Prompt:           mockPrompt,
-		WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-	})
+	repo := &realRepository{
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: ".",
+	}
 
 	// Mock validation - IsGitRepository calls
 	mockFS.EXPECT().Exists(".git").Return(true, nil)

@@ -20,7 +20,7 @@ type WorktreeInfo struct {
 
 // ListWorktrees lists worktrees for workspace mode.
 func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
-	w.logger.Logf("Listing worktrees for workspace mode")
+	w.deps.Logger.Logf("Listing worktrees for workspace mode")
 
 	// Load workspace configuration (only if not already loaded)
 	if w.file == "" {
@@ -33,7 +33,7 @@ func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 	workspacePath := w.getWorkspacePath()
 
 	// Get workspace from status
-	workspace, err := w.statusManager.GetWorkspace(workspacePath)
+	workspace, err := w.deps.StatusManager.GetWorkspace(workspacePath)
 	if err != nil {
 		// If workspace not found, return empty list with no error
 		if errors.Is(err, status.ErrWorkspaceNotFound) {
@@ -48,7 +48,7 @@ func (w *realWorkspace) ListWorktrees() ([]status.WorktreeInfo, error) {
 
 	for _, repoURL := range workspace.Repositories {
 		// Get repository to check its worktrees
-		repo, err := w.statusManager.GetRepository(repoURL)
+		repo, err := w.deps.StatusManager.GetRepository(repoURL)
 		if err != nil {
 			continue // Skip if repository not found
 		}

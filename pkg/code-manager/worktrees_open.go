@@ -6,7 +6,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // OpenWorktreeOpts contains optional parameters for OpenWorktree.
@@ -107,13 +106,13 @@ func (c *realCodeManager) handleDefaultSingleRepoOpenWorktree(
 	worktreeName string, params map[string]interface{}) error {
 	// For single repository, worktreeName is the branch name
 	// Get repository URL from local .git directory
-	repoURL, err := c.git.GetRepositoryName(".")
+	repoURL, err := c.deps.Git.GetRepositoryName(".")
 	if err != nil {
 		return fmt.Errorf("failed to get repository URL: %w", err)
 	}
 
 	// Check if the worktree exists in the status file
-	worktreeInfo, err := c.statusManager.GetWorktree(repoURL, worktreeName)
+	worktreeInfo, err := c.deps.StatusManager.GetWorktree(repoURL, worktreeName)
 	if err != nil {
 		return ErrWorktreeNotInStatus
 	}
@@ -131,16 +130,10 @@ func (c *realCodeManager) openWorktreeForRepository(repositoryName, worktreeName
 	c.VerbosePrint("Opening worktree for repository: %s, worktree: %s", repositoryName, worktreeName)
 
 	// Create repository instance - let repositoryProvider handle repository name resolution
-	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   repositoryName, // Pass repository name directly, let provider handle resolution
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repo.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: repositoryName, // Pass repository name directly, let provider handle resolution
 	})
 
 	// Validate repository and get repository URL
@@ -151,7 +144,7 @@ func (c *realCodeManager) openWorktreeForRepository(repositoryName, worktreeName
 	repoURL := validationResult.RepoURL
 
 	// Check if the worktree exists in the status file
-	worktreeInfo, err := c.statusManager.GetWorktree(repoURL, worktreeName)
+	worktreeInfo, err := c.deps.StatusManager.GetWorktree(repoURL, worktreeName)
 	if err != nil {
 		return "", ErrWorktreeNotInStatus
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/config"
 	configmocks "github.com/lerenn/code-manager/pkg/config/mocks"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
@@ -47,14 +48,14 @@ func TestRealCodeManager_Init_Success(t *testing.T) {
 	var err error
 
 	cm, err = NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		ConfigManager:      mockConfig,
-		FS:                 mockFS,
-		Git:                mockGit,
-		Status:             mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace }).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -108,14 +109,14 @@ func TestRealCodeManager_Init_InvalidRepositoriesDir(t *testing.T) {
 	var err error
 
 	cm, err = NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		ConfigManager:      config.NewConfigManager("/test/config.yaml"),
-		FS:                 mockFS,
-		Git:                mockGit,
-		Status:             mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace }).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -150,14 +151,14 @@ func TestRealCodeManager_Init_ResetSuccess(t *testing.T) {
 	var err error
 
 	cm, err = NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		ConfigManager:      mockConfig,
-		FS:                 mockFS,
-		Git:                mockGit,
-		Status:             mockStatus,
-
-		Prompt: mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace }).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 

@@ -8,7 +8,7 @@ import (
 
 // LoadWorktree loads a branch from a remote source and creates a worktree.
 func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, error) {
-	r.logger.Logf("Loading branch: remote=%s, branch=%s", remoteSource, branchName)
+	r.deps.Logger.Logf("Loading branch: remote=%s, branch=%s", remoteSource, branchName)
 
 	// 1. Validate current directory is a Git repository
 	gitExists, err := r.IsGitRepository()
@@ -35,14 +35,14 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 	}
 
 	// 5. Fetch from the remote
-	r.logger.Logf("Fetching from remote '%s'", remoteSource)
-	if err := r.git.FetchRemote(r.repositoryPath, remoteSource); err != nil {
+	r.deps.Logger.Logf("Fetching from remote '%s'", remoteSource)
+	if err := r.deps.Git.FetchRemote(r.repositoryPath, remoteSource); err != nil {
 		return "", fmt.Errorf("%w: %w", git.ErrFetchFailed, err)
 	}
 
 	// 6. Validate branch exists on remote
-	r.logger.Logf("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource)
-	exists, err := r.git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
+	r.deps.Logger.Logf("Checking if branch '%s' exists on remote '%s'", branchName, remoteSource)
+	exists, err := r.deps.Git.BranchExistsOnRemote(git.BranchExistsOnRemoteParams{
 		RepoPath:   r.repositoryPath,
 		RemoteName: remoteSource,
 		Branch:     branchName,
@@ -60,7 +60,7 @@ func (r *realRepository) LoadWorktree(remoteSource, branchName string) (string, 
 	}
 
 	// 7. Create worktree for the branch (using existing worktree creation logic directly)
-	r.logger.Logf("Creating worktree for branch '%s'", branchName)
+	r.deps.Logger.Logf("Creating worktree for branch '%s'", branchName)
 	worktreePath, err := r.CreateWorktree(branchName, CreateWorktreeOpts{Remote: remoteSource})
 	return worktreePath, err
 }

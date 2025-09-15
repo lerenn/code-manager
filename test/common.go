@@ -10,7 +10,12 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
+	"github.com/lerenn/code-manager/pkg/fs"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -552,4 +557,27 @@ func createDummyCommit(t *testing.T, repoPath string) error {
 	cmd.Dir = repoPath
 	cmd.Env = gitEnv
 	return cmd.Run()
+}
+
+// createE2EDependencies creates a properly configured Dependencies instance for E2E tests
+func createE2EDependencies(configPath string) *dependencies.Dependencies {
+	configManager := config.NewManager(configPath)
+	cfg, err := configManager.GetConfigWithFallback()
+	if err != nil {
+		// If we can't get the config, use empty config as fallback
+		cfg = config.Config{}
+	}
+	
+	return dependencies.New().
+		WithConfig(configManager).
+		WithStatusManager(status.NewManager(fs.NewFS(), cfg)).
+		WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+			return repository.NewRepository(params)
+		}).
+		WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+			return workspace.NewWorkspace(params)
+		}).
+		WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
+			return worktree.NewWorktree(params)
+		})
 }

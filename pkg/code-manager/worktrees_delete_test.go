@@ -8,6 +8,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
@@ -35,18 +36,19 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -82,18 +84,19 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -123,18 +126,19 @@ func TestCM_DeleteWorkTrees_Success(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -170,18 +174,19 @@ func TestCM_DeleteWorkTrees_EmptyBranches(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -204,18 +209,19 @@ func TestCM_DeleteWorkTrees_PartialFailure(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -259,18 +265,19 @@ func TestCM_DeleteWorkTrees_AllFailures(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
-			return mockRepository
-		},
-		WorkspaceProvider: func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return mockWorkspace
-		},
-		Hooks:         mockHookManager,
-		ConfigManager: config.NewConfigManager("/test/config.yaml"),
-		FS:            mockFS,
-		Git:           mockGit,
-		Status:        mockStatus,
-		Prompt:        mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithHookManager(mockHookManager).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 

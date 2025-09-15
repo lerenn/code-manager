@@ -4,7 +4,7 @@ import "fmt"
 
 // ValidateGitStatus validates that the Git repository is in a clean state.
 func (r *realRepository) ValidateGitStatus() error {
-	status, err := r.git.Status(r.repositoryPath)
+	status, err := r.deps.Git.Status(r.repositoryPath)
 	if err != nil {
 		return fmt.Errorf("%w: %w", ErrGitRepositoryInvalid, err)
 	}

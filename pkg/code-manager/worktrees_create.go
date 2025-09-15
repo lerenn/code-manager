@@ -11,7 +11,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
 	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // CreateWorkTreeOpts contains optional parameters for CreateWorkTree.
@@ -58,8 +57,8 @@ func (c *realCodeManager) CreateWorkTree(branch string, opts ...CreateWorkTreeOp
 		}
 
 		// Log if branch name was sanitized
-		if sanitizedBranch != branch && c.logger != nil {
-			c.logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
+		if sanitizedBranch != branch && c.deps.Logger != nil {
+			c.deps.Logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
 		}
 
 		c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
@@ -163,16 +162,9 @@ func (c *realCodeManager) createWorkTreeFromWorkspace(
 	c.VerbosePrint("Creating worktrees from workspace status: %s", workspaceName)
 
 	// Create workspace instance
-	workspaceInstance := c.workspaceProvider(ws.NewWorkspaceParams{
-		FS:                 c.fs,
-		Git:                c.git,
-		ConfigManager:      c.configManager,
-		StatusManager:      c.statusManager,
-		Logger:             c.logger,
-		Prompt:             c.prompt,
-		WorktreeProvider:   worktree.NewWorktree,
-		RepositoryProvider: c.safeRepositoryProvider(),
-		HookManager:        c.hookManager,
+	workspaceProvider := c.deps.WorkspaceProvider
+	workspaceInstance := workspaceProvider(ws.NewWorkspaceParams{
+		Dependencies: c.deps,
 	})
 
 	// Convert CM options to workspace options
@@ -198,16 +190,10 @@ func (c *realCodeManager) handleRepositoryMode(branch, repositoryName, remote st
 	c.VerbosePrint("Handling repository mode")
 
 	// Create repository instance - let repositoryProvider handle repository name resolution
-	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   repositoryName, // Pass repository name directly, let provider handle resolution
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repo.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: repositoryName, // Pass repository name directly, let provider handle resolution
 	})
 
 	// 1. Validate repository
@@ -268,7 +254,7 @@ func (c *realCodeManager) createWorkTreeFromIssueForSingleRepo(
 	c.VerbosePrint("Creating worktree from issue for single repository mode")
 
 	// Create forge manager
-	forgeManager := forge.NewManager(c.logger, c.statusManager)
+	forgeManager := forge.NewManager(c.deps.Logger, c.deps.StatusManager)
 
 	// Get the appropriate forge for the repository
 	selectedForge, err := forgeManager.GetForgeForRepository(params.RepositoryName)
@@ -289,16 +275,10 @@ func (c *realCodeManager) createWorkTreeFromIssueForSingleRepo(
 	}
 
 	// Create worktree using existing logic
-	repoInstance := repo.NewRepository(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   params.RepositoryName,
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repo.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: params.RepositoryName,
 	})
 	worktreePath, err := repoInstance.CreateWorktree(
 		*params.BranchName, repo.CreateWorktreeOpts{IssueInfo: issueInfo, Remote: params.Remote})
@@ -316,7 +296,7 @@ func (c *realCodeManager) createWorkTreeFromIssueForWorkspace(
 	c.VerbosePrint("Creating worktree from issue for workspace mode")
 
 	// Create forge manager
-	forgeManager := forge.NewManager(c.logger, c.statusManager)
+	forgeManager := forge.NewManager(c.deps.Logger, c.deps.StatusManager)
 
 	// Get the appropriate forge for the repository
 	selectedForge, err := forgeManager.GetForgeForRepository(repositoryName)
@@ -337,18 +317,11 @@ func (c *realCodeManager) createWorkTreeFromIssueForWorkspace(
 	}
 
 	// Create workspace instance
-	workspace := c.workspaceProvider(ws.NewWorkspaceParams{
-		FS:                 c.fs,
-		Git:                c.git,
-		ConfigManager:      c.configManager,
-		StatusManager:      c.statusManager,
-		Logger:             c.logger,
-		Prompt:             c.prompt,
-		WorktreeProvider:   worktree.NewWorktree,
-		RepositoryProvider: c.safeRepositoryProvider(),
-		HookManager:        c.hookManager,
+	workspaceProvider := c.deps.WorkspaceProvider
+	workspaceInstance := workspaceProvider(ws.NewWorkspaceParams{
+		Dependencies: c.deps,
 	})
-	worktreePath, err := workspace.CreateWorktree(*branchName)
+	worktreePath, err := workspaceInstance.CreateWorktree(*branchName)
 	if err != nil {
 		return "", err
 	}
@@ -373,12 +346,4 @@ func (c *realCodeManager) translateIssueError(err error) error {
 
 	// Return the original error if no translation is needed
 	return err
-}
-
-// safeRepositoryProvider safely converts the CM repository provider to workspace repository provider.
-func (c *realCodeManager) safeRepositoryProvider() ws.RepositoryProvider {
-	if c.repositoryProvider == nil {
-		return nil
-	}
-	return ws.RepositoryProvider(c.repositoryProvider)
 }

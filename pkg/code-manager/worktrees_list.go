@@ -6,9 +6,8 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
-	repo "github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // ListWorktreesOpts contains options for ListWorktrees.
@@ -52,16 +51,10 @@ func (c *realCodeManager) ListWorktrees(opts ...ListWorktreesOpts) ([]status.Wor
 				return err
 			}
 			// Create repository instance for current directory
-			repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-				FS:               c.fs,
-				Git:              c.git,
-				ConfigManager:    c.configManager,
-				StatusManager:    c.statusManager,
-				Logger:           c.logger,
-				Prompt:           c.prompt,
-				WorktreeProvider: worktree.NewWorktree,
-				HookManager:      c.hookManager,
-				RepositoryName:   ".",
+			repoProvider := c.deps.RepositoryProvider
+			repoInstance := repoProvider(repository.NewRepositoryParams{
+				Dependencies:   c.deps,
+				RepositoryName: ".",
 			})
 			worktrees, err := repoInstance.ListWorktrees()
 			result = worktrees
@@ -83,7 +76,7 @@ func (c *realCodeManager) listWorkspaceWorktrees(workspaceName string) ([]status
 	c.VerbosePrint("Listing worktrees for workspace: %s", workspaceName)
 
 	// Get workspace from status
-	workspace, err := c.statusManager.GetWorkspace(workspaceName)
+	workspace, err := c.deps.StatusManager.GetWorkspace(workspaceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get workspace: %w", err)
 	}
@@ -107,7 +100,7 @@ func (c *realCodeManager) listWorkspaceWorktreesFromWorkspace(
 		c.VerbosePrint("  Looking for worktree reference: %s", worktreeRef)
 		for _, repoURL := range workspace.Repositories {
 			// Get repository to check its worktrees
-			repo, err := c.statusManager.GetRepository(repoURL)
+			repo, err := c.deps.StatusManager.GetRepository(repoURL)
 			if err != nil {
 				c.VerbosePrint("    ⚠ Skipping repository %s: %v", repoURL, err)
 				continue // Skip if repository not found
@@ -151,16 +144,10 @@ func (c *realCodeManager) listRepositoryWorktrees(repositoryName string) ([]stat
 	c.VerbosePrint("Listing worktrees for repository: %s", repositoryName)
 
 	// Create repository instance - let repositoryProvider handle repository name resolution
-	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   repositoryName, // Pass repository name directly, let provider handle resolution
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repository.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: repositoryName, // Pass repository name directly, let provider handle resolution
 	})
 
 	// List worktrees

@@ -8,6 +8,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/config"
 	configmocks "github.com/lerenn/code-manager/pkg/config/mocks"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
@@ -32,13 +33,14 @@ func TestDeleteWorkspace_Success(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		hookManager:   mockHookManager,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -138,11 +140,12 @@ func TestDeleteWorkspace_Force(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -218,11 +221,12 @@ func TestDeleteWorkspace_NotFound(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -252,11 +256,12 @@ func TestDeleteWorkspace_InvalidName(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -284,12 +289,13 @@ func TestDeleteWorkspace_ConfirmationCancelled(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -348,11 +354,12 @@ func TestDeleteWorkspace_WorktreeDeletionFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -414,11 +421,12 @@ func TestDeleteWorkspace_FileDeletionFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -496,11 +504,12 @@ func TestDeleteWorkspace_StatusRemovalFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -576,12 +585,13 @@ func TestDeleteWorkspace_EmptyWorkspace(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -650,12 +660,13 @@ func TestDeleteWorkspace_ConfirmationPromptError(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -712,11 +723,12 @@ func TestDeleteWorkspace_WorktreeStatusRemovalFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := DeleteWorkspaceParams{
@@ -779,12 +791,13 @@ func TestDeleteWorkspace_MultipleRepositories(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: mockConfig,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		hookManager:   mockHookManager,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithHookManager(mockHookManager),
 	}
 
 	params := DeleteWorkspaceParams{

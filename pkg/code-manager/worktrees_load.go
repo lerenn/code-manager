@@ -7,7 +7,6 @@ import (
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -121,16 +120,10 @@ func (c *realCodeManager) loadWorktreeForSingleRepo(remoteSource, branchName str
 	c.VerbosePrint("Loading worktree for single repository mode")
 
 	// Create repository instance
-	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   ".",
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repo.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: ".",
 	})
 
 	worktreePath, err := repoInstance.LoadWorktree(remoteSource, branchName)
@@ -189,16 +182,10 @@ func (c *realCodeManager) loadWorktreeForRepository(repositoryName, remoteSource
 	c.VerbosePrint("Loading worktree for repository: %s", repositoryName)
 
 	// Create repository instance - let repositoryProvider handle repository name resolution
-	repoInstance := c.repositoryProvider(repo.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
-		RepositoryName:   repositoryName, // Pass repository name directly, let provider handle resolution
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repo.NewRepositoryParams{
+		Dependencies:   c.deps,
+		RepositoryName: repositoryName, // Pass repository name directly, let provider handle resolution
 	})
 
 	// Load the worktree

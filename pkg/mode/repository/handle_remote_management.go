@@ -11,7 +11,7 @@ import (
 func (r *realRepository) HandleRemoteManagement(remoteSource string) error {
 	// If remote source is "origin", no need to add it
 	if remoteSource == "origin" {
-		r.logger.Logf("Using existing origin remote")
+		r.deps.Logger.Logf("Using existing origin remote")
 		return nil
 	}
 
@@ -27,18 +27,18 @@ func (r *realRepository) HandleRemoteManagement(remoteSource string) error {
 
 // handleExistingRemote checks if remote exists and handles it appropriately.
 func (r *realRepository) handleExistingRemote(remoteSource string) error {
-	exists, err := r.git.RemoteExists(r.repositoryPath, remoteSource)
+	exists, err := r.deps.Git.RemoteExists(r.repositoryPath, remoteSource)
 	if err != nil {
 		return fmt.Errorf("failed to check if remote '%s' exists: %w", remoteSource, err)
 	}
 
 	if exists {
-		remoteURL, err := r.git.GetRemoteURL(r.repositoryPath, remoteSource)
+		remoteURL, err := r.deps.Git.GetRemoteURL(r.repositoryPath, remoteSource)
 		if err != nil {
 			return fmt.Errorf("failed to get remote URL: %w", err)
 		}
 
-		r.logger.Logf("Using existing remote '%s' with URL: %s", remoteSource, remoteURL)
+		r.deps.Logger.Logf("Using existing remote '%s' with URL: %s", remoteSource, remoteURL)
 		return nil
 	}
 
@@ -48,15 +48,15 @@ func (r *realRepository) handleExistingRemote(remoteSource string) error {
 
 // addNewRemote adds a new remote for the given remote source.
 func (r *realRepository) addNewRemote(remoteSource string) error {
-	r.logger.Logf("Adding new remote '%s'", remoteSource)
+	r.deps.Logger.Logf("Adding new remote '%s'", remoteSource)
 
 	// Get repository information
-	repoName, err := r.git.GetRepositoryName(r.repositoryPath)
+	repoName, err := r.deps.Git.GetRepositoryName(r.repositoryPath)
 	if err != nil {
 		return fmt.Errorf("failed to get repository name: %w", err)
 	}
 
-	originURL, err := r.git.GetRemoteURL(r.repositoryPath, "origin")
+	originURL, err := r.deps.Git.GetRemoteURL(r.repositoryPath, "origin")
 	if err != nil {
 		return fmt.Errorf("failed to get origin remote URL: %w", err)
 	}
@@ -67,10 +67,10 @@ func (r *realRepository) addNewRemote(remoteSource string) error {
 		return err
 	}
 
-	r.logger.Logf("Constructed remote URL: %s", remoteURL)
+	r.deps.Logger.Logf("Constructed remote URL: %s", remoteURL)
 
 	// Add the remote
-	if err := r.git.AddRemote(r.repositoryPath, remoteSource, remoteURL); err != nil {
+	if err := r.deps.Git.AddRemote(r.repositoryPath, remoteSource, remoteURL); err != nil {
 		return fmt.Errorf("%w: %w", git.ErrRemoteAddFailed, err)
 	}
 

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
-	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -24,7 +23,7 @@ func deleteAllWorktrees(t *testing.T, params deleteAllWorktreesParams) error {
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(params.Setup.ConfigPath),
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 
 	require.NoError(t, err)

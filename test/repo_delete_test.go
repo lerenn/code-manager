@@ -25,8 +25,9 @@ func TestRepositoryDelete(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
-		Logger:        logger.NewVerboseLogger(),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
@@ -62,8 +63,9 @@ func TestRepositoryDeleteWithWorkspace(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
-		Logger:        logger.NewVerboseLogger(),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
@@ -109,8 +111,9 @@ func TestRepositoryDeleteInvalidName(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
-		Logger:        logger.NewVerboseLogger(),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
@@ -143,8 +146,9 @@ func TestRepositoryDeleteNonexistent(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
-		Logger:        logger.NewVerboseLogger(),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
@@ -188,7 +192,7 @@ func TestRepositoryDeleteOutsideBaseDirectory(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, configData, 0644))
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(configPath),
+		Dependencies: createE2EDependencies(configPath),
 	})
 	require.NoError(t, err)
 
@@ -259,7 +263,7 @@ func TestRepositoryDeleteWithEmptyParentCleanup(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, configData, 0644))
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(configPath),
+		Dependencies: createE2EDependencies(configPath),
 	})
 	require.NoError(t, err)
 

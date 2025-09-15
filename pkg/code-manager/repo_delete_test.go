@@ -9,6 +9,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/config"
 	configmocks "github.com/lerenn/code-manager/pkg/config/mocks"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/status"
@@ -69,7 +70,8 @@ func TestValidateRepositoryName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create CM instance with minimal setup
 			cmInstance := &realCodeManager{
-				logger: logger.NewNoopLogger(),
+				deps: dependencies.New().
+					WithLogger(logger.NewNoopLogger()),
 			}
 
 			// Execute test
@@ -145,8 +147,9 @@ func TestValidateRepositoryNotInWorkspace(t *testing.T) {
 
 			// Create CM instance
 			cmInstance := &realCodeManager{
-				statusManager: statusMock,
-				logger:        logger.NewNoopLogger(),
+				deps: dependencies.New().
+					WithStatusManager(statusMock).
+					WithLogger(logger.NewNoopLogger()),
 			}
 
 			// Execute test
@@ -336,9 +339,10 @@ func TestCleanupEmptyParentDirectories(t *testing.T) {
 
 			// Create CM instance
 			cmInstance := &realCodeManager{
-				fs:            fsMock,
-				logger:        logger.NewNoopLogger(),
-				configManager: configMock,
+				deps: dependencies.New().
+					WithFS(fsMock).
+					WithLogger(logger.NewNoopLogger()).
+					WithConfig(configMock),
 			}
 
 			// Execute test
@@ -404,8 +408,9 @@ func TestIsDirectoryEmpty(t *testing.T) {
 
 			// Create CM instance
 			cmInstance := &realCodeManager{
-				fs:     fsMock,
-				logger: logger.NewNoopLogger(),
+				deps: dependencies.New().
+					WithFS(fsMock).
+					WithLogger(logger.NewNoopLogger()),
 			}
 
 			// Execute test

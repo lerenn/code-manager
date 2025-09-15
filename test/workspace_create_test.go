@@ -19,7 +19,8 @@ func createWorkspace(t *testing.T, setup *TestSetup, workspaceName string, repos
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 

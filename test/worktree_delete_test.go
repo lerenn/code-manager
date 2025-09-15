@@ -25,7 +25,7 @@ func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(params.Setup.ConfigPath),
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -124,7 +124,8 @@ func TestDeleteWorktreeRepoModeVerboseMode(t *testing.T) {
 
 	// Delete the worktree with verbose mode
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -199,7 +200,8 @@ func TestDeleteWorktreeRepoModeCLIWithVerbose(t *testing.T) {
 
 	// Delete worktree using CM instance with force flag and verbose mode
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -252,7 +254,7 @@ func deleteMultipleWorktrees(t *testing.T, params deleteMultipleWorktreesParams)
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(params.Setup.ConfigPath),
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 
 	require.NoError(t, err)
@@ -476,7 +478,8 @@ func TestWorktreeDeleteWithRepository(t *testing.T) {
 
 	// Initialize CM in the repository
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
@@ -34,14 +35,15 @@ func TestCM_OpenWorktree(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		Hooks:              mockHookManager,
-		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		ConfigManager:      config.NewConfigManager("/test/config.yaml"),
-		FS:                 mockFS,
-		Git:                mockGit,
-		Status:             mockStatus,
-		Prompt:             mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }).
+			WithHookManager(mockHookManager).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace }).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -81,14 +83,15 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		Hooks:              mockHookManager,
-		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		ConfigManager:      config.NewConfigManager("/test/config.yaml"),
-		FS:                 mockFS,
-		Git:                mockGit,
-		Status:             mockStatus,
-		Prompt:             mockPrompt,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }).
+			WithHookManager(mockHookManager).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace }).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
 
@@ -131,14 +134,15 @@ func TestOpenWorktree_CountsIDEOpenings(t *testing.T) {
 
 	// Create CM instance with our mock hook manager
 	cmInstance, err := NewCodeManager(NewCodeManagerParams{
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		WorkspaceProvider:  func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace },
-		ConfigManager:      config.NewConfigManager("/test/config.yaml"),
-		FS:                 mockFS,
-		Git:                mockGit,
-		Status:             mockStatus,
-		Prompt:             mockPrompt,
-		Hooks:              mockHookManager,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace { return mockWorkspace }).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
 

@@ -101,10 +101,10 @@ func (c *realCodeManager) setupDirectories(opts InitOpts) (string, string, strin
 
 // createDirectories creates the repositories and workspaces directories.
 func (c *realCodeManager) createDirectories(expandedRepositoriesDir, expandedWorkspacesDir string) error {
-	if err := c.fs.CreateDirectory(expandedRepositoriesDir, 0755); err != nil {
+	if err := c.deps.FS.CreateDirectory(expandedRepositoriesDir, 0755); err != nil {
 		return fmt.Errorf("failed to create repositories directory: %w", err)
 	}
-	if err := c.fs.CreateDirectory(expandedWorkspacesDir, 0755); err != nil {
+	if err := c.deps.FS.CreateDirectory(expandedWorkspacesDir, 0755); err != nil {
 		return fmt.Errorf("failed to create workspaces directory: %w", err)
 	}
 	return nil
@@ -112,17 +112,17 @@ func (c *realCodeManager) createDirectories(expandedRepositoriesDir, expandedWor
 
 // ensureStatusExists ensures the status file exists, creating it if necessary.
 func (c *realCodeManager) ensureStatusExists() error {
-	cfg, err := c.configManager.GetConfigWithFallback()
+	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	exists, err := c.fs.Exists(cfg.StatusFile)
+	exists, err := c.deps.FS.Exists(cfg.StatusFile)
 	if err != nil {
 		return fmt.Errorf("failed to check status existence: %w", err)
 	}
 	if !exists {
-		if err := c.statusManager.CreateInitialStatus(); err != nil {
+		if err := c.deps.StatusManager.CreateInitialStatus(); err != nil {
 			return fmt.Errorf("failed to create initial status: %w", err)
 		}
 	}
@@ -135,9 +135,9 @@ func (c *realCodeManager) printInitializationSuccess(expandedRepositoriesDir, ex
 	fmt.Printf("CM initialized successfully!\n")
 	fmt.Printf("Repositories directory: %s\n", expandedRepositoriesDir)
 	fmt.Printf("Workspaces directory: %s\n", expandedWorkspacesDir)
-	fmt.Printf("Configuration: %s\n", c.configManager.GetConfigPath())
+	fmt.Printf("Configuration: %s\n", c.deps.Config.GetConfigPath())
 
-	cfg, err := c.configManager.GetConfigWithFallback()
+	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err == nil {
 		fmt.Printf("Status file: %s\n", cfg.StatusFile)
 	}
@@ -152,7 +152,7 @@ func (c *realCodeManager) getAndValidateRepositoriesDir(
 	}
 
 	// Validate and expand repositories directory
-	expandedRepositoriesDir, err := c.fs.ExpandPath(repositoriesDir)
+	expandedRepositoriesDir, err := c.deps.FS.ExpandPath(repositoriesDir)
 	if err != nil {
 		return "", fmt.Errorf("%w: %w", ErrFailedToExpandRepositoriesDir, err)
 	}
@@ -177,7 +177,7 @@ func (c *realCodeManager) getAndValidateWorkspacesDir(
 	}
 
 	// Validate and expand workspaces directory
-	expandedWorkspacesDir, err := c.fs.ExpandPath(workspacesDir)
+	expandedWorkspacesDir, err := c.deps.FS.ExpandPath(workspacesDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to expand workspaces directory: %w", err)
 	}
@@ -207,7 +207,7 @@ func (c *realCodeManager) getWorkspacesDir(
 
 	// Interactive prompt
 	defaultWorkspacesDir := filepath.Join(filepath.Dir(expandedRepositoriesDir), "workspaces")
-	return c.prompt.PromptForWorkspacesDir(defaultWorkspacesDir)
+	return c.deps.Prompt.PromptForWorkspacesDir(defaultWorkspacesDir)
 }
 
 // getAndValidateStatusFile gets and validates the status file path.
@@ -218,13 +218,13 @@ func (c *realCodeManager) getAndValidateStatusFile(flagStatusFile string, nonInt
 	}
 
 	// Validate and expand status file path
-	expandedStatusFile, err := c.fs.ExpandPath(statusFile)
+	expandedStatusFile, err := c.deps.FS.ExpandPath(statusFile)
 	if err != nil {
 		return "", fmt.Errorf("failed to expand status file path: %w", err)
 	}
 
 	// Validate status file path
-	if err := c.configManager.ValidateStatusFile(expandedStatusFile); err != nil {
+	if err := c.deps.Config.ValidateStatusFile(expandedStatusFile); err != nil {
 		return "", fmt.Errorf("invalid status file path: %w", err)
 	}
 
@@ -237,7 +237,7 @@ func (c *realCodeManager) getStatusFile(flagStatusFile string, nonInteractive bo
 		return flagStatusFile, nil
 	}
 
-	cfg, err := c.configManager.GetConfigWithFallback()
+	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return "", fmt.Errorf("failed to get config: %w", err)
 	}
@@ -248,7 +248,7 @@ func (c *realCodeManager) getStatusFile(flagStatusFile string, nonInteractive bo
 	}
 
 	// Interactive prompt
-	return c.prompt.PromptForStatusFile(cfg.StatusFile)
+	return c.deps.Prompt.PromptForStatusFile(cfg.StatusFile)
 }
 
 // updateConfiguration updates and saves the configuration.
@@ -260,7 +260,7 @@ func (c *realCodeManager) updateConfiguration(
 		StatusFile:      expandedStatusFile,
 	}
 
-	if err := c.configManager.SaveConfig(newConfig); err != nil {
+	if err := c.deps.Config.SaveConfig(newConfig); err != nil {
 		return fmt.Errorf("failed to save configuration: %w", err)
 	}
 
@@ -270,7 +270,7 @@ func (c *realCodeManager) updateConfiguration(
 // handleReset handles the reset functionality.
 func (c *realCodeManager) handleReset(force bool) error {
 	if !force {
-		confirmed, err := c.prompt.PromptForConfirmation(
+		confirmed, err := c.deps.Prompt.PromptForConfirmation(
 			"This will reset your CM configuration and remove all existing worktrees. Are you sure?", false)
 		if err != nil {
 			return fmt.Errorf("failed to get user confirmation: %w", err)
@@ -283,7 +283,7 @@ func (c *realCodeManager) handleReset(force bool) error {
 	c.VerbosePrint("Resetting CM configuration")
 
 	// Clear status file by recreating empty structure
-	if err := c.statusManager.CreateInitialStatus(); err != nil {
+	if err := c.deps.StatusManager.CreateInitialStatus(); err != nil {
 		return fmt.Errorf("failed to reset status: %w", err)
 	}
 
@@ -296,7 +296,7 @@ func (c *realCodeManager) getRepositoriesDir(flagRepositoriesDir string, nonInte
 		return flagRepositoriesDir, nil
 	}
 
-	cfg, err := c.configManager.GetConfigWithFallback()
+	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return "", fmt.Errorf("failed to get config: %w", err)
 	}
@@ -307,5 +307,5 @@ func (c *realCodeManager) getRepositoriesDir(flagRepositoriesDir string, nonInte
 	}
 
 	// Interactive prompt
-	return c.prompt.PromptForRepositoriesDir(cfg.RepositoriesDir)
+	return c.deps.Prompt.PromptForRepositoriesDir(cfg.RepositoriesDir)
 }

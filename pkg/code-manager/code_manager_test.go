@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/stretchr/testify/assert"
@@ -28,9 +29,10 @@ func TestNewCodeManager_WithProviders(t *testing.T) {
 
 	// Test creating CodeManager with providers
 	params := NewCodeManagerParams{
-		RepositoryProvider: repoProvider,
-		WorkspaceProvider:  workspaceProvider,
-		ConfigManager:      configManager,
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(repoProvider).
+			WithWorkspaceProvider(workspaceProvider).
+			WithConfig(configManager),
 	}
 
 	cm, err := NewCodeManager(params)
@@ -44,7 +46,8 @@ func TestNewCodeManager_WithoutProviders(t *testing.T) {
 
 	// Test creating CodeManager without providers (should create defaults)
 	params := NewCodeManagerParams{
-		ConfigManager: configManager,
+		Dependencies: dependencies.New().
+			WithConfig(configManager),
 	}
 
 	cm, err := NewCodeManager(params)

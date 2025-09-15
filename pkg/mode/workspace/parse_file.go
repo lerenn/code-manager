@@ -8,7 +8,7 @@ import (
 
 // ParseFile parses a workspace configuration file.
 func (w *realWorkspace) ParseFile(filename string) (Config, error) {
-	w.logger.Logf("Parsing workspace file: %s", filename)
+	w.deps.Logger.Logf("Parsing workspace file: %s", filename)
 
 	// Read the file content
 	content, err := os.ReadFile(filename)
@@ -22,6 +22,6 @@ func (w *realWorkspace) ParseFile(filename string) (Config, error) {
 		return Config{}, fmt.Errorf("failed to parse workspace file JSON: %w", err)
 	}
 
-	w.logger.Logf("Successfully parsed workspace file with %d folders", len(workspaceConfig.Folders))
+	w.deps.Logger.Logf("Successfully parsed workspace file with %d folders", len(workspaceConfig.Folders))
 	return workspaceConfig, nil
 }

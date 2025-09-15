@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	codemanager "github.com/lerenn/code-manager/pkg/code-manager"
-	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,7 +18,7 @@ func cloneRepository(t *testing.T, setup *TestSetup, repoURL string, recursive b
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath),
 	})
 
 	require.NoError(t, err)

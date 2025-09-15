@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -28,14 +29,16 @@ func TestValidateOriginRemote_Success(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock remote existence check
@@ -62,14 +65,16 @@ func TestValidateOriginRemote_NotFound(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock remote existence check - remote not found
@@ -91,14 +96,16 @@ func TestValidateOriginRemote_InvalidURL(t *testing.T) {
 	mockWorktree := worktreemocks.NewMockWorktree(ctrl)
 
 	repository := &realRepository{
-		fs:               mockFS,
-		git:              mockGit,
-		configManager:    config.NewManager("/test/config.yaml"),
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		prompt:           mockPrompt,
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryPath:   "/test/repo",
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			Config:           config.NewManager("/test/config.yaml"),
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			Prompt:           mockPrompt,
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+		},
+		repositoryPath: "/test/repo",
 	}
 
 	// Mock remote existence check

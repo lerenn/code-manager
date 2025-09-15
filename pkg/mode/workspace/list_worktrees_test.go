@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
@@ -91,9 +92,11 @@ func TestListWorktrees(t *testing.T) {
 			tt.setupMocks(statusMock)
 
 			workspace := &realWorkspace{
-				statusManager: statusMock,
-				logger:        logger.NewNoopLogger(),
-				file:          "/path/to/workspace.code-workspace",
+				deps: &dependencies.Dependencies{
+					StatusManager: statusMock,
+					Logger:        logger.NewNoopLogger(),
+				},
+				file: "/path/to/workspace.code-workspace",
 			}
 
 			result, err := workspace.ListWorktrees()

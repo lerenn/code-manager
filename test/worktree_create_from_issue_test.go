@@ -41,7 +41,8 @@ func TestCreateWorktreeFromIssueRepoModeStatusFileVerification(t *testing.T) {
 
 	// Create a worktree manually with issue information to simulate the behavior
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -192,7 +193,8 @@ func TestCreateWorktreeFromIssueRepoModeNoIssueInfo(t *testing.T) {
 
 	// Create a worktree without issue information
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -408,7 +410,8 @@ func TestCreateWorktreeFromIssueRepoModeWithIDE(t *testing.T) {
 
 func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) error {
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -424,7 +427,7 @@ func createWorktreeFromIssue(t *testing.T, setup *TestSetup, issueRef string) er
 
 func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIssueWithBranchParams) error {
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(params.Setup.ConfigPath),
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 	require.NoError(t, err)
 
@@ -440,7 +443,7 @@ func createWorktreeFromIssueWithBranch(t *testing.T, params createWorktreeFromIs
 
 func createWorktreeFromIssueWithIDE(t *testing.T, params createWorktreeFromIssueWithIDEParams) error {
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(params.Setup.ConfigPath),
+		Dependencies: createE2EDependencies(params.Setup.ConfigPath),
 	})
 	require.NoError(t, err)
 

@@ -45,10 +45,10 @@ func (w *realWorkspace) getWorkspaceWorktrees(branch string) ([]status.WorktreeI
 
 // deleteWorktreeRepositories deletes worktrees for all repositories in the workspace.
 func (w *realWorkspace) deleteWorktreeRepositories(worktrees []status.WorktreeInfo, force bool) error {
-	w.logger.Logf("Deleting worktrees: %d worktrees, force: %v", len(worktrees), force)
+	w.deps.Logger.Logf("Deleting worktrees: %d worktrees, force: %v", len(worktrees), force)
 
 	if len(worktrees) == 0 {
-		w.logger.Logf("No worktrees to delete")
+		w.deps.Logger.Logf("No worktrees to delete")
 		return nil
 	}
 
@@ -56,7 +56,7 @@ func (w *realWorkspace) deleteWorktreeRepositories(worktrees []status.WorktreeIn
 	workspacePath := w.getWorkspacePath()
 
 	// Get workspace from status to get repository URLs
-	workspace, err := w.statusManager.GetWorkspace(workspacePath)
+	workspace, err := w.deps.StatusManager.GetWorkspace(workspacePath)
 	if err != nil {
 		return fmt.Errorf("failed to get workspace from status: %w", err)
 	}
@@ -74,20 +74,20 @@ func (w *realWorkspace) deleteWorktreeRepositories(worktrees []status.WorktreeIn
 			return fmt.Errorf("failed to delete all worktrees: %v", errors)
 		}
 		// Some deletions failed
-		w.logger.Logf("Some worktrees failed to delete: %v", errors)
+		w.deps.Logger.Logf("Some worktrees failed to delete: %v", errors)
 		return fmt.Errorf("some worktrees failed to delete: %v", errors)
 	}
 
-	w.logger.Logf("Successfully deleted all %d worktrees", len(worktrees))
+	w.deps.Logger.Logf("Successfully deleted all %d worktrees", len(worktrees))
 	return nil
 }
 
 // removeWorktreeStatusEntries removes worktree entries from status.
 func (w *realWorkspace) removeWorktreeStatusEntries(worktrees []status.WorktreeInfo, force bool) error {
-	w.logger.Logf("Removing worktree status entries: %d worktrees, force: %v", len(worktrees), force)
+	w.deps.Logger.Logf("Removing worktree status entries: %d worktrees, force: %v", len(worktrees), force)
 
 	if len(worktrees) == 0 {
-		w.logger.Logf("No worktree status entries to remove")
+		w.deps.Logger.Logf("No worktree status entries to remove")
 		return nil
 	}
 
@@ -95,7 +95,7 @@ func (w *realWorkspace) removeWorktreeStatusEntries(worktrees []status.WorktreeI
 	workspacePath := w.getWorkspacePath()
 
 	// Get workspace from status to get repository URLs
-	workspace, err := w.statusManager.GetWorkspace(workspacePath)
+	workspace, err := w.deps.StatusManager.GetWorkspace(workspacePath)
 	if err != nil {
 		return fmt.Errorf("failed to get workspace from status: %w", err)
 	}
@@ -113,11 +113,11 @@ func (w *realWorkspace) removeWorktreeStatusEntries(worktrees []status.WorktreeI
 			return fmt.Errorf("failed to remove all worktree status entries: %v", errors)
 		}
 		// Some removals failed
-		w.logger.Logf("Some worktree status entries failed to remove: %v", errors)
+		w.deps.Logger.Logf("Some worktree status entries failed to remove: %v", errors)
 		return fmt.Errorf("some worktree status entries failed to remove: %v", errors)
 	}
 
-	w.logger.Logf("Successfully removed all %d worktree status entries", len(worktrees))
+	w.deps.Logger.Logf("Successfully removed all %d worktree status entries", len(worktrees))
 	return nil
 }
 
@@ -134,42 +134,36 @@ func (w *realWorkspace) deleteSingleWorkspaceWorktree(
 	workspace *status.Workspace,
 	force bool,
 ) error {
-	w.logger.Logf("Deleting worktree for branch: %s", worktreeInfo.Branch)
+	w.deps.Logger.Logf("Deleting worktree for branch: %s", worktreeInfo.Branch)
 
 	// Find the repository URL for this worktree
 	repoURL := w.findRepositoryURLForWorktree(worktreeInfo, workspace)
 	if repoURL == "" {
-		w.logger.Logf("Could not find repository URL for worktree branch %s, skipping", worktreeInfo.Branch)
+		w.deps.Logger.Logf("Could not find repository URL for worktree branch %s, skipping", worktreeInfo.Branch)
 		return nil
 	}
 
 	// Get repository path
-	cfg, err := w.configManager.GetConfigWithFallback()
+	cfg, err := w.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 	repoPath := filepath.Join(cfg.RepositoriesDir, repoURL)
 
 	// Create repository instance using repositoryProvider
-	repoInstance := w.repositoryProvider(repository.NewRepositoryParams{
-		FS:               w.fs,
-		Git:              w.git,
-		ConfigManager:    w.configManager,
-		StatusManager:    w.statusManager,
-		Logger:           w.logger,
-		Prompt:           w.prompt,
-		WorktreeProvider: w.safeWorktreeProvider(),
-		HookManager:      w.hookManager,
-		RepositoryName:   repoPath,
+	repositoryProvider := w.deps.RepositoryProvider
+	repoInstance := repositoryProvider(repository.NewRepositoryParams{
+		Dependencies:   w.deps,
+		RepositoryName: repoPath,
 	})
 
 	// Use repository's DeleteWorktree method
 	if err := repoInstance.DeleteWorktree(worktreeInfo.Branch, force); err != nil {
-		w.logger.Logf("Failed to delete worktree for branch %s: %v", worktreeInfo.Branch, err)
+		w.deps.Logger.Logf("Failed to delete worktree for branch %s: %v", worktreeInfo.Branch, err)
 		return fmt.Errorf("failed to delete worktree for branch %s: %w", worktreeInfo.Branch, err)
 	}
 
-	w.logger.Logf("Successfully deleted worktree for branch %s", worktreeInfo.Branch)
+	w.deps.Logger.Logf("Successfully deleted worktree for branch %s", worktreeInfo.Branch)
 	return nil
 }
 
@@ -179,7 +173,7 @@ func (w *realWorkspace) findRepositoryURLForWorktree(
 	workspace *status.Workspace,
 ) string {
 	for _, repoURLCandidate := range workspace.Repositories {
-		repo, err := w.statusManager.GetRepository(repoURLCandidate)
+		repo, err := w.deps.StatusManager.GetRepository(repoURLCandidate)
 		if err != nil {
 			continue
 		}
@@ -198,21 +192,22 @@ func (w *realWorkspace) removeSingleWorktreeStatusEntry(
 	worktreeInfo status.WorktreeInfo,
 	workspace *status.Workspace,
 ) error {
-	w.logger.Logf("Removing worktree status entry for branch: %s", worktreeInfo.Branch)
+	w.deps.Logger.Logf("Removing worktree status entry for branch: %s", worktreeInfo.Branch)
 
 	// Find the repository URL for this worktree
 	repoURL := w.findRepositoryURLForWorktree(worktreeInfo, workspace)
 	if repoURL == "" {
-		w.logger.Logf("Could not find repository URL for worktree branch %s, skipping status removal", worktreeInfo.Branch)
+		w.deps.Logger.Logf("Could not find repository URL for worktree branch %s, skipping status removal",
+			worktreeInfo.Branch)
 		return nil
 	}
 
-	if err := w.statusManager.RemoveWorktree(repoURL, worktreeInfo.Branch); err != nil {
-		w.logger.Logf("Failed to remove worktree status entry for branch %s: %v", worktreeInfo.Branch, err)
+	if err := w.deps.StatusManager.RemoveWorktree(repoURL, worktreeInfo.Branch); err != nil {
+		w.deps.Logger.Logf("Failed to remove worktree status entry for branch %s: %v", worktreeInfo.Branch, err)
 		return fmt.Errorf("failed to remove worktree status entry for branch %s: %w",
 			worktreeInfo.Branch, err)
 	}
 
-	w.logger.Logf("Successfully removed worktree status entry for branch %s", worktreeInfo.Branch)
+	w.deps.Logger.Logf("Successfully removed worktree status entry for branch %s", worktreeInfo.Branch)
 	return nil
 }

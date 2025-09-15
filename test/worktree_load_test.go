@@ -17,7 +17,8 @@ func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -124,7 +125,8 @@ func TestWorktreeLoadWithRepository(t *testing.T) {
 
 	// Initialize CM in the repository
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 

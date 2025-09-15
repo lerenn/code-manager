@@ -42,7 +42,7 @@ func TestCreateWorktreeRepoModeFromDefaultBranch(t *testing.T) {
 	require.NoError(t, os.WriteFile(configPath, configData, 0644))
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(configPath),
+		Dependencies: createE2EDependencies(configPath),
 	})
 
 	require.NoError(t, err)

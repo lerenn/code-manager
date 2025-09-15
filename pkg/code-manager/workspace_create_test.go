@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -26,11 +27,12 @@ func TestCreateWorkspace_Success(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -85,11 +87,12 @@ func TestCreateWorkspace_InvalidWorkspaceName(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -112,11 +115,12 @@ func TestCreateWorkspace_WorkspaceAlreadyExists(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -143,11 +147,12 @@ func TestCreateWorkspace_EmptyRepositories(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -173,11 +178,12 @@ func TestCreateWorkspace_DuplicateRepositories(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -213,11 +219,12 @@ func TestCreateWorkspace_RepositoryNotFound(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -249,11 +256,12 @@ func TestCreateWorkspace_InvalidRepository(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -286,11 +294,12 @@ func TestCreateWorkspace_RelativePathResolution(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -340,11 +349,12 @@ func TestCreateWorkspace_StatusUpdateFailure(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{
@@ -383,11 +393,12 @@ func TestCreateWorkspace_RepositoryAdditionFailure(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
 	}
 
 	params := CreateWorkspaceParams{

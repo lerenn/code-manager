@@ -19,7 +19,8 @@ func createWorktreeForUpstreamTest(t *testing.T, setup *TestSetup, branch string
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -50,7 +51,8 @@ func TestWorktreeUpstreamTracking(t *testing.T) {
 
 	// Verify the worktree was created successfully by listing worktrees
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -79,7 +81,8 @@ func TestWorktreeUpstreamTrackingNewBranch(t *testing.T) {
 
 	// Verify the worktree was created successfully by listing worktrees
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 

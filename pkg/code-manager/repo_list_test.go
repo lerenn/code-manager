@@ -7,6 +7,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/config"
 	configmocks "github.com/lerenn/code-manager/pkg/config/mocks"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
@@ -26,9 +27,10 @@ func TestListRepositories(t *testing.T) {
 	var err error
 
 	cm, err = NewCodeManager(NewCodeManagerParams{
-		ConfigManager: mockConfig,
-		Status:        mockStatus,
-		FS:            mockFS,
+		Dependencies: dependencies.New().
+			WithConfig(mockConfig).
+			WithStatusManager(mockStatus).
+			WithFS(mockFS),
 	})
 	assert.NoError(t, err)
 
@@ -137,9 +139,10 @@ func TestListRepositories(t *testing.T) {
 		var cmNoLogger CodeManager
 
 		cmNoLogger, err = NewCodeManager(NewCodeManagerParams{
-			ConfigManager: mockConfig,
-			Status:        mockStatus,
-			FS:            mockFS,
+			Dependencies: dependencies.New().
+				WithConfig(mockConfig).
+				WithStatusManager(mockStatus).
+				WithFS(mockFS),
 		})
 
 		repositories := map[string]status.Repository{

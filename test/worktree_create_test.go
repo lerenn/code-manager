@@ -20,7 +20,8 @@ func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -197,7 +198,8 @@ func TestCreateWorktreeRepoModeWithVerboseFlag(t *testing.T) {
 
 	// Test creating a worktree with verbose flag
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -240,7 +242,8 @@ func TestCreateWorktreeRepoModeWithIDE(t *testing.T) {
 
 	// Test creating a worktree with IDE opening
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -286,7 +289,8 @@ func TestCreateWorktreeRepoModeFromOriginDefaultBranch(t *testing.T) {
 
 	// Clone the octocat/Hello-World repository
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -376,7 +380,8 @@ func TestCreateWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 
 	// Test creating a worktree with unsupported IDE
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 
 	require.NoError(t, err)
@@ -416,7 +421,8 @@ func TestCreateWorktreeWorkspaceMode_Success(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -467,7 +473,8 @@ func TestCreateWorktreeWorkspaceMode_WithIDE(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -504,7 +511,8 @@ func TestCreateWorktreeWorkspaceMode_WorkspaceNotFound(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -527,7 +535,8 @@ func TestCreateWorktreeWorkspaceMode_EmptyRepositories(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -550,7 +559,8 @@ func TestCreateWorktreeWorkspaceMode_RepositoryNotFound(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -580,7 +590,8 @@ func TestCreateWorktreeWorkspaceMode_InvalidGitRepository(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -620,7 +631,8 @@ func TestCreateWorktreeWorkspaceMode_MultipleRepositories(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -658,7 +670,8 @@ func TestCreateWorktreeWorkspaceMode_RollbackOnFailure(t *testing.T) {
 
 	// Create CM instance
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -685,7 +698,8 @@ func TestWorktreeCreateWithRepository(t *testing.T) {
 
 	// Initialize CM in the repository
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 

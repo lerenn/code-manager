@@ -5,17 +5,7 @@ import (
 	"path/filepath"
 )
 
-// ValidationParams contains parameters for repository validation.
-type ValidationParams struct {
-	CurrentDir string
-	Branch     string
-}
-
-// ValidationResult contains the result of repository validation.
-type ValidationResult struct {
-	RepoURL  string
-	RepoPath string
-}
+// ValidationParams and ValidationResult are now defined in the interfaces package
 
 // ValidateRepository validates the repository and returns repository information.
 func (r *realRepository) ValidateRepository(params ValidationParams) (*ValidationResult, error) {
@@ -72,17 +62,17 @@ func (r *realRepository) validateGitRepository() error {
 
 // getRepositoryURL gets the repository URL from remote origin URL with fallback to local path.
 func (r *realRepository) getRepositoryURL(currentDir string) (string, error) {
-	repoURL, err := r.git.GetRepositoryName(currentDir)
+	repoURL, err := r.deps.Git.GetRepositoryName(currentDir)
 	if err != nil {
 		return "", fmt.Errorf("failed to get repository URL: %w", err)
 	}
-	r.logger.Logf("Repository URL: %s", repoURL)
+	r.deps.Logger.Logf("Repository URL: %s", repoURL)
 	return repoURL, nil
 }
 
 // validateWorktreeNotExists checks if worktree already exists in status file.
 func (r *realRepository) validateWorktreeNotExists(repoURL, branch string) error {
-	existingWorktree, err := r.statusManager.GetWorktree(repoURL, branch)
+	existingWorktree, err := r.deps.StatusManager.GetWorktree(repoURL, branch)
 	if err == nil && existingWorktree != nil {
 		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeExists, repoURL, branch)
 	}
@@ -91,7 +81,7 @@ func (r *realRepository) validateWorktreeNotExists(repoURL, branch string) error
 
 // validateRepositoryState validates that the repository is in a clean state.
 func (r *realRepository) validateRepositoryState(currentDir string) error {
-	isClean, err := r.git.IsClean(currentDir)
+	isClean, err := r.deps.Git.IsClean(currentDir)
 	if err != nil {
 		return fmt.Errorf("failed to check repository state: %w", err)
 	}

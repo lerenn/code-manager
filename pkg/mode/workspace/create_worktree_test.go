@@ -9,6 +9,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/config"
 	configmocks "github.com/lerenn/code-manager/pkg/config/mocks"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	"github.com/lerenn/code-manager/pkg/logger"
@@ -35,14 +36,16 @@ func TestCreateWorktree_Success(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		fs:                 mockFS,
-		git:                mockGit,
-		statusManager:      mockStatus,
-		logger:             logger.NewNoopLogger(),
-		prompt:             mockPrompt,
-		worktreeProvider:   func(_ worktree.NewWorktreeParams) worktree.Worktree { return worktreemocks.NewMockWorktree(ctrl) },
-		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		configManager:      mockConfig,
+		deps: &dependencies.Dependencies{
+			FS:                 mockFS,
+			Git:                mockGit,
+			StatusManager:      mockStatus,
+			Logger:             logger.NewNoopLogger(),
+			Prompt:             mockPrompt,
+			WorktreeProvider:   func(params worktree.NewWorktreeParams) worktree.Worktree { return worktreemocks.NewMockWorktree(ctrl) },
+			RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
+			Config:             mockConfig,
+		},
 	}
 
 	workspaceName := "test-workspace"
@@ -112,7 +115,9 @@ func TestCreateWorktree_MissingWorkspaceName(t *testing.T) {
 	defer ctrl.Finish()
 
 	workspace := &realWorkspace{
-		logger: logger.NewNoopLogger(),
+		deps: &dependencies.Dependencies{
+			Logger: logger.NewNoopLogger(),
+		},
 	}
 
 	opts := []CreateWorktreeOpts{
@@ -132,8 +137,10 @@ func TestCreateWorktree_WorkspaceNotFound(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: &dependencies.Dependencies{
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+		},
 	}
 
 	workspaceName := "nonexistent-workspace"
@@ -158,8 +165,10 @@ func TestCreateWorktree_EmptyRepositories(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: &dependencies.Dependencies{
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+		},
 	}
 
 	workspaceName := "empty-workspace"
@@ -188,10 +197,12 @@ func TestCreateWorktree_RepositoryPathNotFound(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		fs:            mockFS,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		configManager: mockConfig,
+		deps: &dependencies.Dependencies{
+			FS:            mockFS,
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+			Config:        mockConfig,
+		},
 	}
 
 	workspaceName := "test-workspace"
@@ -235,10 +246,12 @@ func TestCreateWorktree_InvalidGitRepository(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		fs:            mockFS,
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		configManager: mockConfig,
+		deps: &dependencies.Dependencies{
+			FS:            mockFS,
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+			Config:        mockConfig,
+		},
 	}
 
 	workspaceName := "test-workspace"
@@ -285,15 +298,17 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		fs:               mockFS,
-		git:              mockGit,
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository {
-			return repositorymocks.NewMockRepository(ctrl)
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+			RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
+				return repositorymocks.NewMockRepository(ctrl)
+			},
+			Config: mockConfig,
 		},
-		configManager: mockConfig,
 	}
 
 	workspaceName := "test-workspace"
@@ -323,7 +338,7 @@ func TestCreateWorktree_WorktreeValidationFailure(t *testing.T) {
 
 	// Mock repository worktree creation failure
 	mockRepository := repositorymocks.NewMockRepository(ctrl)
-	workspace.repositoryProvider = func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository }
+	workspace.deps.RepositoryProvider = func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }
 	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("validation failed")).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
@@ -347,15 +362,17 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 	mockConfig := configmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		fs:               mockFS,
-		git:              mockGit,
-		statusManager:    mockStatus,
-		logger:           logger.NewNoopLogger(),
-		worktreeProvider: func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository {
-			return repositorymocks.NewMockRepository(ctrl)
+		deps: &dependencies.Dependencies{
+			FS:               mockFS,
+			Git:              mockGit,
+			StatusManager:    mockStatus,
+			Logger:           logger.NewNoopLogger(),
+			WorktreeProvider: func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+			RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository {
+				return repositorymocks.NewMockRepository(ctrl)
+			},
+			Config: mockConfig,
 		},
-		configManager: mockConfig,
 	}
 
 	workspaceName := "test-workspace"
@@ -385,7 +402,7 @@ func TestCreateWorktree_WorktreeCreationFailure(t *testing.T) {
 
 	// Mock repository worktree creation failure
 	mockRepository := repositorymocks.NewMockRepository(ctrl)
-	workspace.repositoryProvider = func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository }
+	workspace.deps.RepositoryProvider = func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }
 	mockRepository.EXPECT().CreateWorktree("feature-branch", gomock.Any()).Return("", errors.New("creation failed")).AnyTimes()
 
 	opts := []CreateWorktreeOpts{
@@ -410,13 +427,15 @@ func TestCreateWorktree_WorkspaceFileCreationFailure(t *testing.T) {
 
 	mockRepository := repositorymocks.NewMockRepository(ctrl)
 	workspace := &realWorkspace{
-		fs:                 mockFS,
-		git:                mockGit,
-		statusManager:      mockStatus,
-		logger:             logger.NewNoopLogger(),
-		worktreeProvider:   func(_ worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
-		repositoryProvider: func(_ repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		configManager:      mockConfig,
+		deps: &dependencies.Dependencies{
+			FS:                 mockFS,
+			Git:                mockGit,
+			StatusManager:      mockStatus,
+			Logger:             logger.NewNoopLogger(),
+			WorktreeProvider:   func(params worktree.NewWorktreeParams) worktree.Worktree { return mockWorktree },
+			RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
+			Config:             mockConfig,
+		},
 	}
 
 	workspaceName := "test-workspace"
@@ -505,8 +524,10 @@ func TestValidateAndGetRepositories_Success(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: &dependencies.Dependencies{
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+		},
 	}
 
 	workspaceName := "test-workspace"
@@ -529,8 +550,10 @@ func TestValidateAndGetRepositories_WorkspaceNotFound(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: &dependencies.Dependencies{
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+		},
 	}
 
 	workspaceName := "nonexistent-workspace"
@@ -550,8 +573,10 @@ func TestValidateAndGetRepositories_EmptyRepositories(t *testing.T) {
 	mockStatus := statusmocks.NewMockManager(ctrl)
 
 	workspace := &realWorkspace{
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
+		deps: &dependencies.Dependencies{
+			StatusManager: mockStatus,
+			Logger:        logger.NewNoopLogger(),
+		},
 	}
 
 	workspaceName := "empty-workspace"

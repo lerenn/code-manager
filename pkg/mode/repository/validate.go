@@ -2,7 +2,7 @@ package repository
 
 // Validate validates that the current directory is a working Git repository.
 func (r *realRepository) Validate() error {
-	r.logger.Logf("Validating repository: %s", r.repositoryPath)
+	r.deps.Logger.Logf("Validating repository: %s", r.repositoryPath)
 
 	// Check if we're in a Git repository
 	exists, err := r.IsGitRepository()

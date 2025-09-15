@@ -21,18 +21,18 @@ func (c *realCodeManager) ListWorkspaces() ([]WorkspaceInfo, error) {
 
 	// Execute with hooks
 	return c.executeWithHooksAndReturnWorkspaces(consts.ListWorkspaces, params, func() ([]WorkspaceInfo, error) {
-		if c.logger != nil {
-			c.logger.Logf("Loading workspaces from status file")
+		if c.deps.Logger != nil {
+			c.deps.Logger.Logf("Loading workspaces from status file")
 		}
 
 		// Get all workspaces from status manager
-		workspaces, err := c.statusManager.ListWorkspaces()
+		workspaces, err := c.deps.StatusManager.ListWorkspaces()
 		if err != nil {
 			return nil, fmt.Errorf("failed to load workspaces: %w", err)
 		}
 
-		if c.logger != nil {
-			c.logger.Logf("Formatting workspace list")
+		if c.deps.Logger != nil {
+			c.deps.Logger.Logf("Formatting workspace list")
 		}
 
 		// Convert to WorkspaceInfo slice
@@ -51,8 +51,8 @@ func (c *realCodeManager) ListWorkspaces() ([]WorkspaceInfo, error) {
 			return workspaceInfos[i].Name < workspaceInfos[j].Name
 		})
 
-		if c.logger != nil {
-			c.logger.Logf("Found %d workspaces", len(workspaceInfos))
+		if c.deps.Logger != nil {
+			c.deps.Logger.Logf("Found %d workspaces", len(workspaceInfos))
 		}
 
 		return workspaceInfos, nil

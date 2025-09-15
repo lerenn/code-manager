@@ -9,7 +9,7 @@ import (
 
 // DeleteWorktree deletes a worktree for the repository with the specified branch.
 func (r *realRepository) DeleteWorktree(branch string, force bool) error {
-	r.logger.Logf("Deleting worktree for single repository with branch: %s", branch)
+	r.deps.Logger.Logf("Deleting worktree for single repository with branch: %s", branch)
 
 	// Validate repository
 	validationResult, err := r.ValidateRepository(ValidationParams{})
@@ -23,12 +23,12 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 	}
 
 	// Get worktree path from Git
-	worktreePath, err := r.git.GetWorktreePath(validationResult.RepoPath, branch)
+	worktreePath, err := r.deps.Git.GetWorktreePath(validationResult.RepoPath, branch)
 	if err != nil {
 		return fmt.Errorf("failed to get worktree path: %w", err)
 	}
 
-	r.logger.Logf("Worktree path: %s", worktreePath)
+	r.deps.Logger.Logf("Worktree path: %s", worktreePath)
 
 	// Get current directory
 	currentDir, err := filepath.Abs(r.repositoryPath)
@@ -37,16 +37,17 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 	}
 
 	// Create worktree instance using provider
-	cfg, err := r.configManager.GetConfigWithFallback()
+	cfg, err := r.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
-	worktreeInstance := r.worktreeProvider(worktree.NewWorktreeParams{
-		FS:              r.fs,
-		Git:             r.git,
-		StatusManager:   r.statusManager,
-		Logger:          r.logger,
-		Prompt:          r.prompt,
+	worktreeProvider := r.deps.WorktreeProvider
+	worktreeInstance := worktreeProvider(worktree.NewWorktreeParams{
+		FS:              r.deps.FS,
+		Git:             r.deps.Git,
+		StatusManager:   r.deps.StatusManager,
+		Logger:          r.deps.Logger,
+		Prompt:          r.deps.Prompt,
 		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
@@ -61,7 +62,7 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 		return err
 	}
 
-	r.logger.Logf("Successfully deleted worktree for branch %s", branch)
+	r.deps.Logger.Logf("Successfully deleted worktree for branch %s", branch)
 
 	return nil
 }

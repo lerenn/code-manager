@@ -4,27 +4,13 @@ import (
 	"fmt"
 
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/fs"
-	"github.com/lerenn/code-manager/pkg/git"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	"github.com/lerenn/code-manager/pkg/hooks"
-	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
-	"github.com/lerenn/code-manager/pkg/mode/workspace"
-	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
-	"github.com/lerenn/code-manager/pkg/worktree"
 )
-
-// RepositoryProvider is a function type that creates repository instances.
-type RepositoryProvider func(params repository.NewRepositoryParams) repository.Repository
-
-// WorkspaceProvider is a function type that creates workspace instances.
-type WorkspaceProvider func(params workspace.NewWorkspaceParams) workspace.Workspace
-
-// WorktreeProvider is a function type that creates worktree instances.
-type WorktreeProvider func(params worktree.NewWorktreeParams) worktree.Worktree
 
 // CodeManager interface provides Git repository detection functionality.
 type CodeManager interface {
@@ -62,152 +48,40 @@ type CodeManager interface {
 
 // NewCodeManagerParams contains parameters for creating a new CodeManager instance.
 type NewCodeManagerParams struct {
-	RepositoryProvider RepositoryProvider
-	WorkspaceProvider  WorkspaceProvider
-	WorktreeProvider   WorktreeProvider
-	ConfigManager      config.Manager
-	Hooks              hooks.HookManagerInterface
-	Status             status.Manager
-	FS                 fs.FS
-	Git                git.Git
-	Logger             logger.Logger
-	Prompt             prompt.Prompter
+	Dependencies *dependencies.Dependencies
 }
 
 type realCodeManager struct {
-	fs                 fs.FS
-	git                git.Git
-	configManager      config.Manager
-	statusManager      status.Manager
-	logger             logger.Logger
-	prompt             prompt.Prompter
-	repositoryProvider RepositoryProvider
-	workspaceProvider  WorkspaceProvider
-	worktreeProvider   WorktreeProvider
-	hookManager        hooks.HookManagerInterface
+	deps *dependencies.Dependencies
 }
 
 // NewCodeManager creates a new CodeManager instance.
 func NewCodeManager(params NewCodeManagerParams) (CodeManager, error) {
-	instances := createInstances(params)
-	hookManager := createHookManager(params.Hooks)
+	deps := params.Dependencies
+	if deps == nil {
+		deps = dependencies.New()
+	}
 
 	return &realCodeManager{
-		fs:                 instances.fs,
-		git:                instances.git,
-		configManager:      params.ConfigManager,
-		statusManager:      instances.status,
-		logger:             instances.logger,
-		prompt:             instances.prompt,
-		repositoryProvider: instances.repoProvider,
-		workspaceProvider:  instances.workspaceProvider,
-		worktreeProvider:   instances.worktreeProvider,
-		hookManager:        hookManager,
+		deps: deps,
 	}, nil
-}
-
-// createHookManager creates a hook manager instance.
-func createHookManager(providedHookManager hooks.HookManagerInterface) hooks.HookManagerInterface {
-	if providedHookManager != nil {
-		return providedHookManager
-	}
-
-	// Use default hooks manager which includes IDE opening hooks
-	defaultHookManager, err := defaulthooks.NewDefaultHooksManager()
-	if err != nil {
-		// Fallback to basic hook manager if default hooks fail to initialize
-		return hooks.NewHookManager()
-	}
-	return defaultHookManager
-}
-
-// codeManagerInstances holds the created instances for CodeManager.
-type codeManagerInstances struct {
-	fs                fs.FS
-	git               git.Git
-	logger            logger.Logger
-	prompt            prompt.Prompter
-	status            status.Manager
-	repoProvider      RepositoryProvider
-	workspaceProvider WorkspaceProvider
-	worktreeProvider  WorktreeProvider
-}
-
-// createInstances creates and initializes all required instances for CodeManager.
-func createInstances(params NewCodeManagerParams) codeManagerInstances {
-	fsInstance := params.FS
-	if fsInstance == nil {
-		fsInstance = fs.NewFS()
-	}
-
-	gitInstance := params.Git
-	if gitInstance == nil {
-		gitInstance = git.NewGit()
-	}
-
-	loggerInstance := params.Logger
-	if loggerInstance == nil {
-		loggerInstance = logger.NewNoopLogger()
-	}
-
-	promptInstance := params.Prompt
-	if promptInstance == nil {
-		promptInstance = prompt.NewPrompt()
-	}
-
-	statusInstance := params.Status
-	if statusInstance == nil {
-		// Get config from ConfigManager for status manager
-		cfg, err := params.ConfigManager.GetConfigWithFallback()
-		if err != nil {
-			// If we can't get config, use default config
-			cfg = params.ConfigManager.DefaultConfig()
-		}
-		statusInstance = status.NewManager(fsInstance, cfg)
-	}
-
-	repoProvider := params.RepositoryProvider
-	if repoProvider == nil {
-		repoProvider = repository.NewRepository
-	}
-
-	workspaceProvider := params.WorkspaceProvider
-	if workspaceProvider == nil {
-		workspaceProvider = workspace.NewWorkspace
-	}
-
-	worktreeProvider := params.WorktreeProvider
-	if worktreeProvider == nil {
-		worktreeProvider = worktree.NewWorktree
-	}
-
-	return codeManagerInstances{
-		fs:                fsInstance,
-		git:               gitInstance,
-		logger:            loggerInstance,
-		prompt:            promptInstance,
-		status:            statusInstance,
-		repoProvider:      repoProvider,
-		workspaceProvider: workspaceProvider,
-		worktreeProvider:  worktreeProvider,
-	}
 }
 
 // VerbosePrint logs a formatted message using the current logger.
 func (c *realCodeManager) VerbosePrint(msg string, args ...interface{}) {
-	if c.logger != nil {
-		c.logger.Logf(fmt.Sprintf(msg, args...))
+	if c.deps.Logger != nil {
+		c.deps.Logger.Logf(fmt.Sprintf(msg, args...))
 	}
 }
 
 // SetLogger sets the logger for this CodeManager instance.
 func (c *realCodeManager) SetLogger(logger logger.Logger) {
-	c.logger = logger
+	c.deps.Logger = logger
 }
 
 // getConfig gets the configuration from the ConfigManager with fallback.
 func (c *realCodeManager) getConfig() (config.Config, error) {
-	return c.configManager.GetConfigWithFallback()
+	return c.deps.Config.GetConfigWithFallback()
 }
 
 // BuildWorktreePath constructs a worktree path from repository URL, remote name, and branch.
@@ -339,22 +213,22 @@ func (c *realCodeManager) executeWithHooksAndReturnWorkspaces(
 
 // executeHooks executes pre-hooks, post-hooks, or error-hooks based on the operation result.
 func (c *realCodeManager) executeHooks(operationName string, ctx *hooks.HookContext, resultErr error) error {
-	if c.hookManager == nil {
+	if c.deps.HookManager == nil {
 		return nil
 	}
 
 	if resultErr != nil {
-		return c.hookManager.ExecuteErrorHooks(operationName, ctx)
+		return c.deps.HookManager.ExecuteErrorHooks(operationName, ctx)
 	}
-	return c.hookManager.ExecutePostHooks(operationName, ctx)
+	return c.deps.HookManager.ExecutePostHooks(operationName, ctx)
 }
 
 // executePreHooks executes pre-hooks if hook manager is available.
 func (c *realCodeManager) executePreHooks(operationName string, ctx *hooks.HookContext) error {
-	if c.hookManager == nil {
+	if c.deps.HookManager == nil {
 		return nil
 	}
-	return c.hookManager.ExecutePreHooks(operationName, ctx)
+	return c.deps.HookManager.ExecutePreHooks(operationName, ctx)
 }
 
 // detectProjectMode detects the type of project (single repository or workspace).
@@ -377,15 +251,9 @@ func (c *realCodeManager) detectProjectMode(workspaceName, repositoryName string
 	c.VerbosePrint("No specific workspace or repository provided, detecting from current directory")
 
 	// Create repository instance to check if we're in a Git repository
-	repoInstance := c.repositoryProvider(repository.NewRepositoryParams{
-		FS:               c.fs,
-		Git:              c.git,
-		ConfigManager:    c.configManager,
-		StatusManager:    c.statusManager,
-		Logger:           c.logger,
-		Prompt:           c.prompt,
-		WorktreeProvider: worktree.NewWorktree,
-		HookManager:      c.hookManager,
+	repoProvider := c.deps.RepositoryProvider
+	repoInstance := repoProvider(repository.NewRepositoryParams{
+		Dependencies: c.deps,
 	})
 
 	// Check if we're in a Git repository

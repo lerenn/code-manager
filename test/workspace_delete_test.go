@@ -19,8 +19,9 @@ func deleteWorkspace(t *testing.T, setup *TestSetup, workspaceName string, force
 	t.Helper()
 
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
-		Logger:        logger.NewVerboseLogger(),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)).
+			WithLogger(logger.NewVerboseLogger()),
 	})
 	require.NoError(t, err)
 
@@ -38,7 +39,8 @@ func createWorkspaceWithWorktrees(t *testing.T, setup *TestSetup, workspaceName 
 
 	// Create workspace
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -213,7 +215,8 @@ func TestDeleteWorkspaceEmptyWorkspace(t *testing.T) {
 
 	// Create workspace without worktrees
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 
@@ -366,7 +369,8 @@ func TestDeleteWorkspaceWithSharedRepositories(t *testing.T) {
 	// Create second workspace sharing the same repository but with different worktrees
 	// We need to create worktrees manually for the second workspace since they can't share the same worktree
 	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
-		ConfigManager: config.NewManager(setup.ConfigPath),
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
 	})
 	require.NoError(t, err)
 

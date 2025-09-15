@@ -8,6 +8,7 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
@@ -33,13 +34,14 @@ func TestListWorktrees_Success(t *testing.T) {
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		hookManager:   mockHookManager,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager),
 	}
 
 	// Mock workspace exists with specific worktrees
@@ -96,13 +98,14 @@ func TestListWorktrees_NotFound(t *testing.T) {
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		hookManager:   mockHookManager,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager),
 	}
 
 	// Mock workspace doesn't exist
@@ -132,13 +135,14 @@ func TestListWorktrees_EmptyWorkspace(t *testing.T) {
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		hookManager:   mockHookManager,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager),
 	}
 
 	// Mock workspace exists but has no worktrees
@@ -172,13 +176,14 @@ func TestListWorktrees_RepositoryNotFound(t *testing.T) {
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	cm := &realCodeManager{
-		fs:            mockFS,
-		git:           mockGit,
-		configManager: config.NewConfigManager("/test/config.yaml"),
-		statusManager: mockStatus,
-		logger:        logger.NewNoopLogger(),
-		prompt:        mockPrompt,
-		hookManager:   mockHookManager,
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager),
 	}
 
 	// Mock workspace exists with worktrees
@@ -228,13 +233,14 @@ func TestListWorktrees_RepositoryFallback(t *testing.T) {
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
-		FS:                 mockFS,
-		Git:                mockGit,
-		Status:             mockStatusManager,
-		Prompt:             mockPrompt,
-		Hooks:              mockHookManager,
-		RepositoryProvider: func(params repository.NewRepositoryParams) repository.Repository { return mockRepository },
-		ConfigManager:      config.NewConfigManager("/test/config.yaml"),
+		Dependencies: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatusManager).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager).
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository { return mockRepository }).
+			WithConfig(config.NewConfigManager("/test/config.yaml")),
 	})
 	assert.NoError(t, err)
 
