@@ -162,11 +162,3 @@ func TestListRepositories(t *testing.T) {
 		assert.True(t, result[0].InRepositoriesDir)
 	})
 }
-
-// createTestConfig creates a test configuration for use in tests.
-func createTestConfig() config.Config {
-	return config.Config{
-		RepositoriesDir: "/test/base/path",
-		StatusFile:      "/test/status.yaml",
-	}
-}
