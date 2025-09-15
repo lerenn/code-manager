@@ -285,6 +285,16 @@ func (c *realCM) removeWorktreeFromGit(repoPath, worktreePath string, worktree s
 		c.VerbosePrint("    Error checking worktree path existence: %v", err)
 	}
 
+	// Check if worktree exists in Git before attempting removal
+	worktreeExists, err := c.git.WorktreeExists(repoPath, worktree.Branch)
+	if err != nil {
+		c.VerbosePrint("    Error checking worktree existence in Git: %v", err)
+		// Continue with removal attempt if we can't check existence
+	} else if !worktreeExists {
+		c.VerbosePrint("    Worktree %s/%s does not exist in Git, skipping removal", worktree.Remote, worktree.Branch)
+		return nil
+	}
+
 	// Remove worktree from Git
 	if err := c.git.RemoveWorktree(repoPath, worktreePath, force); err != nil {
 		return fmt.Errorf("failed to remove worktree %s/%s: %w", worktree.Remote, worktree.Branch, err)

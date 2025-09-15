@@ -4,6 +4,7 @@ package test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -524,4 +525,135 @@ func TestWorktreeDeleteWithRepository(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 0)
+}
+
+// TestDeleteWorktreeAlreadyDeletedFromGit tests deleting a worktree that was already manually deleted from Git
+// This test ensures the fix for the bug where workspace deletion would fail when worktrees were already deleted from Git
+func TestDeleteWorktreeAlreadyDeletedFromGit(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Create a worktree first
+	err := createWorktree(t, setup, "feature/already-deleted-test")
+	require.NoError(t, err, "Worktree creation should succeed")
+
+	// Verify the worktree was created
+	status := readStatusFile(t, setup.StatusPath)
+	require.Len(t, status.Repositories, 1, "Should have one repository entry")
+	repo := status.Repositories["github.com/octocat/Hello-World"]
+	require.Len(t, repo.Worktrees, 1, "Should have one worktree")
+
+	// Find the worktree path
+	worktreePath := findWorktreePath(t, setup, "feature/already-deleted-test")
+	require.NotEmpty(t, worktreePath, "Should be able to find worktree path")
+
+	// Manually remove the worktree from Git (simulating the scenario where it was already deleted)
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	err = os.Chdir(setup.RepoPath)
+	require.NoError(t, err)
+	defer os.Chdir(originalDir)
+
+	// Remove the worktree from Git's tracking
+	cmd := exec.Command("git", "worktree", "remove", worktreePath, "--force")
+	cmd.Dir = setup.RepoPath
+	err = cmd.Run()
+	require.NoError(t, err, "Should be able to manually remove worktree from Git")
+
+	// Verify the worktree is no longer in Git's tracking
+	worktrees := getGitWorktreeList(t, setup.RepoPath)
+	assert.NotContains(t, worktrees, "feature/already-deleted-test", "Worktree should not be in Git's tracking")
+
+	// But the worktree should still exist in the status file
+	status = readStatusFile(t, setup.StatusPath)
+	repo = status.Repositories["github.com/octocat/Hello-World"]
+	require.Len(t, repo.Worktrees, 1, "Worktree should still exist in status file")
+
+	// Now try to delete the worktree using CM - this should succeed without error
+	// This tests the fix for the bug where this would previously fail
+	err = deleteWorktree(t, deleteWorktreeParams{
+		Setup:  setup,
+		Branch: "feature/already-deleted-test",
+		Force:  true,
+	})
+	require.NoError(t, err, "Worktree deletion should succeed even when worktree was already deleted from Git")
+
+	// Verify the worktree was removed from status file
+	status = readStatusFile(t, setup.StatusPath)
+	repo = status.Repositories["github.com/octocat/Hello-World"]
+	assert.Len(t, repo.Worktrees, 0, "Repository should have no worktrees after deletion")
+
+	// Verify the worktree directory was removed (if it still existed)
+	_, err = os.Stat(worktreePath)
+	assert.True(t, os.IsNotExist(err), "Worktree directory should be removed")
+}
+
+// TestDeleteWorkspaceWithAlreadyDeletedWorktrees tests workspace deletion when worktrees were already manually deleted from Git
+// This test ensures the fix for the bug where workspace deletion would fail when worktrees were already deleted from Git
+func TestDeleteWorkspaceWithAlreadyDeletedWorktrees(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a single test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	workspaceName := "test-workspace-already-deleted"
+
+	// Create workspace with worktrees
+	createWorkspaceWithWorktrees(t, setup, workspaceName, []string{setup.RepoPath})
+
+	// Verify workspace and worktrees exist before deletion
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Workspaces)
+	require.Contains(t, status.Workspaces, workspaceName)
+
+	// Find the worktree path dynamically
+	worktreePath := findWorktreePath(t, setup, "feature/test-branch")
+	require.NotEmpty(t, worktreePath, "Should be able to find worktree path")
+
+	// Manually remove worktree from Git
+	cmd := exec.Command("git", "worktree", "remove", worktreePath, "--force")
+	cmd.Dir = setup.RepoPath
+	err := cmd.Run()
+	require.NoError(t, err, "Should be able to manually remove worktree from Git")
+
+	// Verify worktree is no longer in Git's tracking
+	worktrees := getGitWorktreeList(t, setup.RepoPath)
+	assert.NotContains(t, worktrees, "feature/test-branch", "Worktree should not be in Git tracking")
+
+	// But worktrees should still exist in the status file
+	status = readStatusFile(t, setup.StatusPath)
+	workspace := status.Workspaces[workspaceName]
+	require.Len(t, workspace.Worktrees, 1, "Workspace should still have worktrees in status file")
+
+	// Now try to delete the workspace - this should succeed without error
+	// This tests the fix for the bug where this would previously fail
+	err = deleteWorkspace(t, setup, workspaceName, true)
+	require.NoError(t, err, "Workspace deletion should succeed even when worktrees were already deleted from Git")
+
+	// Verify workspace is removed from status
+	status = readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Workspaces)
+	require.NotContains(t, status.Workspaces, workspaceName, "Workspace should be removed from status")
+
+	// Verify worktrees are removed from repositories
+	require.NotNil(t, status.Repositories)
+	for _, repoURL := range workspace.Repositories {
+		repo, exists := status.Repositories[repoURL]
+		require.True(t, exists, "Repository should still exist in status")
+		require.Empty(t, repo.Worktrees, "Repository should have no worktrees after workspace deletion")
+	}
+
+	// Verify workspace files are deleted
+	workspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName+".code-workspace")
+	_, err = os.Stat(workspaceFile)
+	require.True(t, os.IsNotExist(err), "Main workspace file should be deleted")
+
+	// Verify worktree-specific workspace files are deleted
+	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-feature/test-branch.code-workspace")
+	_, err = os.Stat(worktreeWorkspaceFile)
+	require.True(t, os.IsNotExist(err), "Worktree workspace file should be deleted")
 }
