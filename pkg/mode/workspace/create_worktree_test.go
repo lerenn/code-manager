@@ -524,3 +524,56 @@ func TestValidateAndGetRepositories_EmptyRepositories(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "workspace 'empty-workspace' has no repositories defined")
 }
+
+func TestExtractRepositoryNameFromURL(t *testing.T) {
+	workspace := &realWorkspace{}
+
+	tests := []struct {
+		name     string
+		repoURL  string
+		expected string
+	}{
+		{
+			name:     "Simple GitHub repo",
+			repoURL:  "github.com/lerenn/home",
+			expected: "home",
+		},
+		{
+			name:     "Kubernetes.io repo",
+			repoURL:  "github.com/kubernetes/kubernetes.io",
+			expected: "kubernetes.io",
+		},
+		{
+			name:     "GitLab repo with project name",
+			repoURL:  "gitlab.com/user/project-name",
+			expected: "project-name",
+		},
+		{
+			name:     "Deep nested path",
+			repoURL:  "github.com/organization/subgroup/project",
+			expected: "project",
+		},
+		{
+			name:     "URL with trailing slash",
+			repoURL:  "github.com/user/repo/",
+			expected: "repo",
+		},
+		{
+			name:     "Single part URL",
+			repoURL:  "standalone-repo",
+			expected: "standalone-repo",
+		},
+		{
+			name:     "Empty URL",
+			repoURL:  "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := workspace.extractRepositoryNameFromURL(tt.repoURL)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

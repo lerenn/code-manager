@@ -278,6 +278,25 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 	return workspaceFilePath, nil
 }
 
+// extractRepositoryNameFromURL extracts the repository name (last part) from a Git repository URL.
+// Examples:
+// - "github.com/lerenn/home" -> "home"
+// - "github.com/kubernetes/kubernetes.io" -> "kubernetes.io"
+// - "gitlab.com/user/project-name" -> "project-name".
+func (w *realWorkspace) extractRepositoryNameFromURL(repoURL string) string {
+	// Remove any trailing slashes
+	repoURL = strings.TrimSuffix(repoURL, "/")
+
+	// Split by "/" and get the last part
+	parts := strings.Split(repoURL, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+
+	// Fallback to the original URL if we can't parse it
+	return repoURL
+}
+
 // generateWorkspaceFileContent generates the content for a .code-workspace file.
 func (w *realWorkspace) generateWorkspaceFileContent(_ string, branchName string, repositories []string) string {
 	// Create workspace file content with all repositories
@@ -290,9 +309,14 @@ func (w *realWorkspace) generateWorkspaceFileContent(_ string, branchName string
 		// Convert repository URL to worktree path using the worktree path structure
 		// Structure: $base_path/<repo_url>/<remote_name>/<branch>
 		worktreePath := filepath.Join(w.config.RepositoriesDir, repoURL, "origin", branchName)
+
+		// Extract repository name for the folder alias
+		repoName := w.extractRepositoryNameFromURL(repoURL)
+
 		content += fmt.Sprintf(`		{
-			"path": "%s"
-		}`, worktreePath)
+			"path": "%s",
+			"name": "%s"
+		}`, worktreePath, repoName)
 		if i < len(repositories)-1 {
 			content += ","
 		}
