@@ -3,6 +3,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,7 +12,6 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/dependencies"
-	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/hooks"
 	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
@@ -577,17 +577,23 @@ func createE2EDependencies(configPath string) *dependencies.Dependencies {
 		hookManager = hooks.NewHookManager()
 	}
 
-	return dependencies.New().
+	// Create dependencies with shared FS instance
+	deps := dependencies.New().
 		WithConfig(configManager).
-		WithStatusManager(status.NewManager(fs.NewFS(), cfg)).
 		WithHookManager(hookManager).
-		WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
-			return repository.NewRepository(params)
-		}).
-		WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
-			return workspace.NewWorkspace(params)
-		}).
-		WithWorktreeProvider(func(params worktree.NewWorktreeParams) worktree.Worktree {
-			return worktree.NewWorktree(params)
-		})
+		WithRepositoryProvider(repository.NewRepository).
+		WithWorkspaceProvider(workspace.NewWorkspace).
+		WithWorktreeProvider(worktree.NewWorktree)
+
+	// Set status manager using the shared FS instance
+	deps = deps.WithStatusManager(status.NewManager(deps.FS, cfg))
+
+	// Validate that all dependencies are set
+	if err := deps.Validate(); err != nil {
+		// In test environment, we'll panic if dependencies are missing
+		// This helps catch configuration issues early
+		panic(fmt.Sprintf("E2E test dependencies validation failed: %v", err))
+	}
+
+	return deps
 }

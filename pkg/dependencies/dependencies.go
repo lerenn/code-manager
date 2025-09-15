@@ -4,6 +4,8 @@
 package dependencies
 
 import (
+	"errors"
+
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/git"
@@ -14,6 +16,20 @@ import (
 	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
 	worktreeinterfaces "github.com/lerenn/code-manager/pkg/worktree/interfaces"
+)
+
+// Validation errors for missing dependencies.
+var (
+	ErrFSMissing                 = errors.New("fs dependency is required but not set")
+	ErrGitMissing                = errors.New("git dependency is required but not set")
+	ErrConfigMissing             = errors.New("config dependency is required but not set")
+	ErrStatusManagerMissing      = errors.New("status manager dependency is required but not set")
+	ErrLoggerMissing             = errors.New("logger dependency is required but not set")
+	ErrPromptMissing             = errors.New("prompt dependency is required but not set")
+	ErrHookManagerMissing        = errors.New("hook manager dependency is required but not set")
+	ErrRepositoryProviderMissing = errors.New("repository provider dependency is required but not set")
+	ErrWorkspaceProviderMissing  = errors.New("workspace provider dependency is required but not set")
+	ErrWorktreeProviderMissing   = errors.New("worktree provider dependency is required but not set")
 )
 
 // Dependencies holds shared dependencies across the application.
@@ -103,4 +119,33 @@ func (d *Dependencies) WithWorkspaceProvider(wp workspaceinterfaces.WorkspacePro
 func (d *Dependencies) WithWorktreeProvider(wp worktreeinterfaces.WorktreeProvider) *Dependencies {
 	d.WorktreeProvider = wp
 	return d
+}
+
+// dependencyCheck represents a dependency validation check.
+type dependencyCheck struct {
+	dep interface{}
+	err error
+}
+
+// Validate checks that all required dependencies are set and returns an error if any are missing.
+func (d *Dependencies) Validate() error {
+	checks := []dependencyCheck{
+		{d.FS, ErrFSMissing},
+		{d.Git, ErrGitMissing},
+		{d.Config, ErrConfigMissing},
+		{d.StatusManager, ErrStatusManagerMissing},
+		{d.Logger, ErrLoggerMissing},
+		{d.Prompt, ErrPromptMissing},
+		{d.HookManager, ErrHookManagerMissing},
+		{d.RepositoryProvider, ErrRepositoryProviderMissing},
+		{d.WorkspaceProvider, ErrWorkspaceProviderMissing},
+		{d.WorktreeProvider, ErrWorktreeProviderMissing},
+	}
+
+	for _, check := range checks {
+		if check.dep == nil {
+			return check.err
+		}
+	}
+	return nil
 }
