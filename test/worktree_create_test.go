@@ -3,6 +3,7 @@
 package test
 
 import (
+	"encoding/json"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -446,7 +447,7 @@ func TestCreateWorktreeWorkspaceMode_Success(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify workspace file was created
-	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-"+branch+".code-workspace")
+	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"/"+branch+".code-workspace")
 	assert.FileExists(t, workspaceFilePath)
 
 	// Verify workspace file content
@@ -499,7 +500,7 @@ func TestCreateWorktreeWorkspaceMode_WithIDE(t *testing.T) {
 	// The workspace file creation is sufficient to verify the functionality works
 
 	// Verify workspace file was created
-	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-"+branch+".code-workspace")
+	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName+"/"+branch+".code-workspace")
 	assert.FileExists(t, workspaceFilePath)
 }
 
@@ -739,4 +740,278 @@ func TestWorktreeCreateWithRepository(t *testing.T) {
 	})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "cannot specify both WorkspaceName and RepositoryName")
+}
+
+// TestCreateWorktreeWorkspaceMode_CorrectPaths tests that workspace worktree creation
+// generates .code-workspace files with correct worktree paths (not repository root paths)
+// This test prevents regression of the bug where workspace files pointed to repository roots
+// instead of the actual worktree directories.
+func TestCreateWorktreeWorkspaceMode_CorrectPaths(t *testing.T) {
+	// Create test setup
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create CM instance
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
+	})
+	require.NoError(t, err)
+
+	// Clone public repositories that we'll use for the workspace
+	// Using octocat repositories as they are public and stable
+	repos := []string{
+		"https://github.com/octocat/Hello-World.git",
+		"https://github.com/octocat/Spoon-Knife.git",
+	}
+
+	// Clone the repositories
+	for _, repoURL := range repos {
+		err = cmInstance.Clone(repoURL)
+		require.NoError(t, err, "Should be able to clone %s", repoURL)
+	}
+
+	// Get the cloned repository paths from status
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+	require.Len(t, status.Repositories, 2, "Should have two repositories")
+
+	// Extract repository paths
+	var repoPaths []string
+	for _, repo := range status.Repositories {
+		repoPaths = append(repoPaths, repo.Path)
+	}
+	require.Len(t, repoPaths, 2, "Should have two repository paths")
+
+	// Create workspace using the cloned repository paths
+	workspaceName := "public-repos-workspace"
+	workspaceParams := codemanager.CreateWorkspaceParams{
+		WorkspaceName: workspaceName,
+		Repositories:  repoPaths,
+	}
+	err = cmInstance.CreateWorkspace(workspaceParams)
+	require.NoError(t, err, "Workspace creation should succeed")
+
+	// Create worktrees from the workspace
+	branchName := "feature-test-branch"
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		WorkspaceName: workspaceName,
+	})
+	require.NoError(t, err, "Worktree creation should succeed")
+
+	// Verify that the workspace file was created with correct paths
+	// The workspace file path structure is: {workspaceName}/{sanitizedBranchName}.code-workspace
+	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName, branchName+".code-workspace")
+	require.FileExists(t, workspaceFilePath, "Workspace file should be created")
+
+	// Read and parse the workspace file
+	workspaceFileContent, err := os.ReadFile(workspaceFilePath)
+	require.NoError(t, err)
+
+	// Parse the JSON content
+	var workspaceFile struct {
+		Folders []struct {
+			Path string `json:"path"`
+			Name string `json:"name"`
+		} `json:"folders"`
+		Settings   map[string]interface{} `json:"settings"`
+		Extensions map[string]interface{} `json:"extensions"`
+	}
+	err = json.Unmarshal(workspaceFileContent, &workspaceFile)
+	require.NoError(t, err, "Workspace file should be valid JSON")
+
+	// Verify that we have the correct number of folders
+	require.Len(t, workspaceFile.Folders, 2, "Workspace file should contain 2 folders")
+
+	// Verify that each folder path points to the worktree directory, not the repository root
+	// The expected paths should be: $cmPath/github.com/octocat/Hello-World/origin/branchName
+	// and $cmPath/github.com/octocat/Spoon-Knife/origin/branchName
+	expectedPaths := []string{
+		filepath.Join(setup.CmPath, "github.com/octocat/Hello-World", "origin", branchName),
+		filepath.Join(setup.CmPath, "github.com/octocat/Spoon-Knife", "origin", branchName),
+	}
+
+	actualPaths := make([]string, len(workspaceFile.Folders))
+	for i, folder := range workspaceFile.Folders {
+		actualPaths[i] = folder.Path
+	}
+
+	// Sort both slices to ensure order doesn't matter
+	sortPaths(expectedPaths)
+	sortPaths(actualPaths)
+
+	// Verify the paths match exactly
+	for i, expectedPath := range expectedPaths {
+		assert.Equal(t, expectedPath, actualPaths[i],
+			"Folder path %d should point to worktree directory, not repository root", i)
+	}
+
+	// Verify that the worktree directories actually exist
+	for _, expectedPath := range expectedPaths {
+		assert.DirExists(t, expectedPath, "Worktree directory should exist at %s", expectedPath)
+	}
+
+	// Verify that the paths are NOT pointing to repository roots
+	// (This is the regression test - ensure we don't go back to the old behavior)
+	incorrectPaths := []string{
+		filepath.Join(setup.CmPath, "github.com/octocat/Hello-World"),
+		filepath.Join(setup.CmPath, "github.com/octocat/Spoon-Knife"),
+	}
+
+	for _, actualPath := range actualPaths {
+		for _, incorrectPath := range incorrectPaths {
+			assert.NotEqual(t, incorrectPath, actualPath,
+				"Folder path should not point to repository root: %s", incorrectPath)
+		}
+	}
+
+	// Additional verification: check that the workspace file contains the branch name in the paths
+	for _, actualPath := range actualPaths {
+		assert.Contains(t, actualPath, branchName,
+			"Worktree path should contain the branch name: %s", branchName)
+		assert.Contains(t, actualPath, "origin",
+			"Worktree path should contain the remote name: origin")
+	}
+
+	// Verify that each folder has a name field with the correct repository alias
+	// Expected names: "Hello-World" and "Spoon-Knife" (extracted from repository URLs)
+	expectedNames := []string{"Hello-World", "Spoon-Knife"}
+	actualNames := make([]string, len(workspaceFile.Folders))
+	for i, folder := range workspaceFile.Folders {
+		actualNames[i] = folder.Name
+	}
+
+	// Sort both slices to ensure order doesn't matter
+	sortPaths(expectedNames)
+	sortPaths(actualNames)
+
+	// Verify the names match exactly
+	for i, expectedName := range expectedNames {
+		assert.Equal(t, expectedName, actualNames[i],
+			"Folder name %d should be the repository name extracted from URL", i)
+	}
+
+	// Verify that all folders have non-empty names
+	for i, folder := range workspaceFile.Folders {
+		assert.NotEmpty(t, folder.Name,
+			"Folder %d should have a non-empty name field", i)
+	}
+
+	t.Logf("Workspace file contains folders with names: %v", actualNames)
+}
+
+// TestCreateWorktreeWorkspaceMode_RepositoryNames tests that workspace files include
+// the correct repository names as folder aliases in VS Code
+func TestCreateWorktreeWorkspaceMode_RepositoryNames(t *testing.T) {
+	// Create test setup
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create CM instance
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
+	})
+	require.NoError(t, err)
+
+	// Clone repositories with different names to test name extraction
+	repos := []string{
+		"https://github.com/octocat/Hello-World.git", // Should extract "Hello-World"
+		"https://github.com/octocat/Spoon-Knife.git", // Should extract "Spoon-Knife"
+	}
+
+	// Clone the repositories
+	for _, repoURL := range repos {
+		err = cmInstance.Clone(repoURL)
+		require.NoError(t, err, "Should be able to clone %s", repoURL)
+	}
+
+	// Get the cloned repository paths from status
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+	require.Len(t, status.Repositories, 2, "Should have two repositories")
+
+	// Extract repository paths
+	var repoPaths []string
+	for _, repo := range status.Repositories {
+		repoPaths = append(repoPaths, repo.Path)
+	}
+	require.Len(t, repoPaths, 2, "Should have two repository paths")
+
+	// Create workspace using the cloned repository paths
+	workspaceName := "repository-names-workspace"
+	workspaceParams := codemanager.CreateWorkspaceParams{
+		WorkspaceName: workspaceName,
+		Repositories:  repoPaths,
+	}
+	err = cmInstance.CreateWorkspace(workspaceParams)
+	require.NoError(t, err, "Workspace creation should succeed")
+
+	// Create worktrees from the workspace
+	branchName := "test-repository-names"
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		WorkspaceName: workspaceName,
+	})
+	require.NoError(t, err, "Worktree creation should succeed")
+
+	// Verify that the workspace file was created
+	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName, branchName+".code-workspace")
+	require.FileExists(t, workspaceFilePath, "Workspace file should be created")
+
+	// Read and parse the workspace file
+	workspaceFileContent, err := os.ReadFile(workspaceFilePath)
+	require.NoError(t, err)
+
+	// Parse the JSON content
+	var workspaceFile struct {
+		Folders []struct {
+			Path string `json:"path"`
+			Name string `json:"name"`
+		} `json:"folders"`
+		Settings   map[string]interface{} `json:"settings"`
+		Extensions map[string]interface{} `json:"extensions"`
+	}
+	err = json.Unmarshal(workspaceFileContent, &workspaceFile)
+	require.NoError(t, err, "Workspace file should be valid JSON")
+
+	// Verify that we have the correct number of folders
+	require.Len(t, workspaceFile.Folders, 2, "Workspace file should contain 2 folders")
+
+	// Expected repository names (extracted from the URLs)
+	expectedNames := []string{"Hello-World", "Spoon-Knife"}
+	actualNames := make([]string, len(workspaceFile.Folders))
+	for i, folder := range workspaceFile.Folders {
+		actualNames[i] = folder.Name
+	}
+
+	// Sort both slices to ensure order doesn't matter
+	sortPaths(expectedNames)
+	sortPaths(actualNames)
+
+	// Verify the names match exactly
+	for i, expectedName := range expectedNames {
+		assert.Equal(t, expectedName, actualNames[i],
+			"Folder name %d should be the repository name extracted from URL", i)
+	}
+
+	// Verify that all folders have non-empty names
+	for i, folder := range workspaceFile.Folders {
+		assert.NotEmpty(t, folder.Name,
+			"Folder %d should have a non-empty name field", i)
+	}
+
+	// Verify that the names are different (no duplicates)
+	nameSet := make(map[string]bool)
+	for _, name := range actualNames {
+		assert.False(t, nameSet[name], "Repository names should be unique: %s", name)
+		nameSet[name] = true
+	}
+
+	t.Logf("Workspace file contains folders with names: %v", actualNames)
+	t.Logf("Expected names: %v", expectedNames)
+
+	// Additional verification: ensure the workspace file content contains the name fields
+	workspaceContentStr := string(workspaceFileContent)
+	assert.Contains(t, workspaceContentStr, `"name": "Hello-World"`, "Workspace file should contain Hello-World name")
+	assert.Contains(t, workspaceContentStr, `"name": "Spoon-Knife"`, "Workspace file should contain Spoon-Knife name")
 }

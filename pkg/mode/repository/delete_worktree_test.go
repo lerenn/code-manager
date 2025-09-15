@@ -180,10 +180,11 @@ func TestDeleteWorktree_GetWorktreePathError(t *testing.T) {
 	// Mock worktree path retrieval failure
 	mockGit.EXPECT().GetWorktreePath("/test/repo", "test-branch").Return("", errors.New("worktree not found"))
 
+	// Mock RemoveFromStatus call (new behavior when worktree doesn't exist in Git)
+	mockWorktree.EXPECT().RemoveFromStatus("github.com/test/repo", "test-branch").Return(nil)
+
 	err := repository.DeleteWorktree("test-branch", false)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get worktree path")
-	assert.Contains(t, err.Error(), "worktree not found")
+	assert.NoError(t, err) // Should succeed now since we remove from status
 }
 
 func TestDeleteWorktree_WorktreeDeleteError(t *testing.T) {

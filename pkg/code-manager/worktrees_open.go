@@ -6,6 +6,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
+	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
 )
 
 // OpenWorktreeOpts contains optional parameters for OpenWorktree.
@@ -71,7 +72,7 @@ func (c *realCodeManager) handleOpenWorktreeByProjectType(
 	case mode.ModeSingleRepo:
 		return c.handleSingleRepoOpenWorktree(worktreeName, options, params)
 	case mode.ModeWorkspace:
-		return fmt.Errorf("workspace mode open worktree not yet implemented")
+		return c.handleWorkspaceOpenWorktree(worktreeName, options, params)
 	case mode.ModeNone:
 		return ErrNoGitRepositoryOrWorkspaceFound
 	default:
@@ -170,4 +171,30 @@ func (c *realCodeManager) extractOpenWorktreeOptions(opts []OpenWorktreeOpts) Op
 	}
 
 	return result
+}
+
+// handleWorkspaceOpenWorktree handles opening worktrees in workspace mode.
+func (c *realCodeManager) handleWorkspaceOpenWorktree(
+	worktreeName string,
+	options OpenWorktreeOpts,
+	params map[string]interface{},
+) error {
+	c.VerbosePrint("Opening worktree in workspace mode: %s", worktreeName)
+
+	// Create workspace instance
+	workspaceProvider := c.deps.WorkspaceProvider
+	workspaceInstance := workspaceProvider(ws.NewWorkspaceParams{
+		Dependencies: c.deps,
+	})
+
+	// Use workspace package method to open worktree
+	workspaceFilePath, err := workspaceInstance.OpenWorktree(options.WorkspaceName, worktreeName)
+	if err != nil {
+		return fmt.Errorf("failed to open workspace worktree: %w", err)
+	}
+
+	// Set workspaceFilePath in params for the IDE opening hook
+	params["worktreePath"] = workspaceFilePath
+
+	return nil
 }

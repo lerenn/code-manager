@@ -597,3 +597,14 @@ func createE2EDependencies(configPath string) *dependencies.Dependencies {
 
 	return deps
 }
+
+// sortPaths sorts a slice of file paths alphabetically
+func sortPaths(paths []string) {
+	for i := 0; i < len(paths)-1; i++ {
+		for j := i + 1; j < len(paths); j++ {
+			if paths[i] > paths[j] {
+				paths[i], paths[j] = paths[j], paths[i]
+			}
+		}
+	}
+}

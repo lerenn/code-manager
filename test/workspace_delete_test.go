@@ -171,7 +171,7 @@ func TestDeleteWorkspaceSuccess(t *testing.T) {
 	require.True(t, os.IsNotExist(err), "Main workspace file should be deleted")
 
 	// Verify worktree-specific workspace files are deleted
-	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-feature-test-branch.code-workspace")
+	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName, "feature-test-branch.code-workspace")
 	_, err = os.Stat(worktreeWorkspaceFile)
 	require.True(t, os.IsNotExist(err), "Worktree workspace file should be deleted")
 }
@@ -431,7 +431,8 @@ func TestDeleteWorkspaceFileSystemCleanup(t *testing.T) {
 	// Verify workspace files exist
 	// Only the worktree-specific workspace file should exist
 	// The branch name "feature/test-branch" gets sanitized to "feature-test-branch" for filenames
-	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName+"-feature-test-branch.code-workspace")
+	// The workspace file path structure is: {workspaceName}/{sanitizedBranchName}.code-workspace
+	worktreeWorkspaceFile := filepath.Join(setup.CmPath, "workspaces", workspaceName, "feature-test-branch.code-workspace")
 
 	require.FileExists(t, worktreeWorkspaceFile, "Worktree workspace file should exist")
 

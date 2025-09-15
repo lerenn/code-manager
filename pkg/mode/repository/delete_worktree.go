@@ -22,14 +22,6 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 		return err
 	}
 
-	// Get worktree path from Git
-	worktreePath, err := r.deps.Git.GetWorktreePath(validationResult.RepoPath, branch)
-	if err != nil {
-		return fmt.Errorf("failed to get worktree path: %w", err)
-	}
-
-	r.deps.Logger.Logf("Worktree path: %s", worktreePath)
-
 	// Get current directory
 	currentDir, err := filepath.Abs(r.repositoryPath)
 	if err != nil {
@@ -50,6 +42,24 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 		Prompt:          r.deps.Prompt,
 		RepositoriesDir: cfg.RepositoriesDir,
 	})
+
+	// Get worktree path from Git
+	worktreePath, err := r.deps.Git.GetWorktreePath(validationResult.RepoPath, branch)
+	if err != nil {
+		r.deps.Logger.Logf("Failed to get worktree path for branch %s (worktree may not exist in Git): %v",
+			branch, err)
+		// If worktree doesn't exist in Git, just remove from status
+		if err := worktreeInstance.RemoveFromStatus(validationResult.RepoURL, branch); err != nil {
+			r.deps.Logger.Logf("Failed to remove worktree from status for branch %s: %v", branch, err)
+			return fmt.Errorf("failed to remove worktree from status for branch %s: %w",
+				branch, err)
+		}
+		r.deps.Logger.Logf("Successfully removed worktree from status for branch %s (worktree did not exist in Git)",
+			branch)
+		return nil
+	}
+
+	r.deps.Logger.Logf("Worktree path: %s", worktreePath)
 
 	// Delete the worktree
 	if err := worktreeInstance.Delete(worktree.DeleteParams{

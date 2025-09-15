@@ -3,7 +3,6 @@ package workspace
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 )
 
 // DeleteWorktree deletes worktrees for the workspace with the specified branch.
@@ -15,34 +14,30 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 		return err
 	}
 
-	// Get worktrees for this workspace and branch
-	workspaceWorktrees, err := w.getWorkspaceWorktrees(branch)
+	// Get workspace name and worktree workspace path
+	workspaceName, worktreeWorkspacePath, err := w.getWorkspaceInfo(branch)
 	if err != nil {
 		return err
 	}
 
-	if len(workspaceWorktrees) == 0 {
-		return fmt.Errorf("no worktrees found for workspace branch %s", branch)
-	}
-
-	// Get workspace name and worktree workspace path
-	_, worktreeWorkspacePath, err := w.getWorkspaceInfo(branch)
+	// Get workspace and worktrees
+	worktrees, err := w.getWorkspaceAndWorktrees(workspaceName)
 	if err != nil {
 		return err
 	}
 
 	// Delete worktrees for all repositories
-	if err := w.deleteWorktreeRepositories(workspaceWorktrees, force); err != nil {
+	if err := w.deleteWorktreeRepositories(worktrees, force); err != nil {
 		return err
 	}
 
-	// Delete worktree-specific workspace file
-	if err := w.deleteWorktreeWorkspaceFile(worktreeWorkspacePath, force); err != nil {
+	// Clean up workspace file and directory
+	if err := w.cleanupWorkspaceFileAndDirectory(worktreeWorkspacePath, force); err != nil {
 		return err
 	}
 
-	// Remove worktree entries from status file
-	if err := w.removeWorktreeStatusEntries(workspaceWorktrees, force); err != nil {
+	// Remove worktree entry from workspace status
+	if err := w.removeWorktreeFromWorkspaceStatus(workspaceName, branch); err != nil {
 		return err
 	}
 
@@ -50,38 +45,89 @@ func (w *realWorkspace) DeleteWorktree(branch string, force bool) error {
 	return nil
 }
 
-// ensureWorkspaceLoaded ensures the workspace is loaded.
-func (w *realWorkspace) ensureWorkspaceLoaded() error {
-	if w.file == "" {
-		if err := w.Load(); err != nil {
-			return fmt.Errorf("failed to load workspace: %w", err)
+// cleanupEmptyWorkspaceDirectory removes the workspace directory if it's empty.
+func (w *realWorkspace) cleanupEmptyWorkspaceDirectory(workspaceDir string) error {
+	// Check if directory exists
+	exists, err := w.deps.FS.Exists(workspaceDir)
+	if err != nil {
+		return fmt.Errorf("failed to check if workspace directory exists: %w", err)
+	}
+	if !exists {
+		return nil // Directory doesn't exist, nothing to clean up
+	}
+
+	// Check if directory is empty
+	isEmpty, err := w.isDirectoryEmpty(workspaceDir)
+	if err != nil {
+		return fmt.Errorf("failed to check if workspace directory is empty: %w", err)
+	}
+
+	if isEmpty {
+		w.deps.Logger.Logf("Removing empty workspace directory: %s", workspaceDir)
+		if err := w.deps.FS.RemoveAll(workspaceDir); err != nil {
+			return fmt.Errorf("failed to remove empty workspace directory: %w", err)
 		}
 	}
+
 	return nil
 }
 
-// getWorkspaceInfo gets workspace name and worktree workspace path.
-func (w *realWorkspace) getWorkspaceInfo(branch string) (string, string, error) {
-	// Get workspace name for worktree-specific workspace file
-	workspaceConfig, err := w.ParseFile(w.file)
+// isDirectoryEmpty checks if a directory is empty (contains no files or subdirectories).
+func (w *realWorkspace) isDirectoryEmpty(dirPath string) (bool, error) {
+	// Use the filesystem interface to read directory contents
+	entries, err := w.deps.FS.ReadDir(dirPath)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse workspace file: %w", err)
+		return false, err
 	}
-	workspaceName := w.GetName(workspaceConfig, w.file)
 
-	// Sanitize branch name for filename (replace slashes with hyphens)
-	sanitizedBranchForFilename := strings.ReplaceAll(branch, "/", "-")
+	// Directory is empty if it has no entries
+	return len(entries) == 0, nil
+}
 
-	cfg, err := w.deps.Config.GetConfigWithFallback()
+// removeWorktreeFromWorkspaceStatus removes a worktree entry from workspace status.
+func (w *realWorkspace) removeWorktreeFromWorkspaceStatus(workspaceName, branch string) error {
+	w.deps.Logger.Logf("Removing worktree '%s' from workspace '%s' status", branch, workspaceName)
+
+	// Get current workspace
+	workspace, err := w.deps.StatusManager.GetWorkspace(workspaceName)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to get config: %w", err)
+		return fmt.Errorf("failed to get workspace: %w", err)
 	}
-	worktreeWorkspacePath := filepath.Join(
-		cfg.WorkspacesDir,
-		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename),
-	)
 
-	return workspaceName, worktreeWorkspacePath, nil
+	// Remove worktree from the list
+	var updatedWorktrees []string
+	for _, worktree := range workspace.Worktrees {
+		if worktree != branch {
+			updatedWorktrees = append(updatedWorktrees, worktree)
+		}
+	}
+	workspace.Worktrees = updatedWorktrees
+
+	// Update workspace in status file
+	if err := w.deps.StatusManager.UpdateWorkspace(workspaceName, *workspace); err != nil {
+		return fmt.Errorf("failed to update workspace status: %w", err)
+	}
+
+	w.deps.Logger.Logf("Successfully removed worktree '%s' from workspace '%s' status", branch, workspaceName)
+	return nil
+}
+
+// cleanupWorkspaceFileAndDirectory removes the workspace file and cleans up the directory if empty.
+func (w *realWorkspace) cleanupWorkspaceFileAndDirectory(worktreeWorkspacePath string, force bool) error {
+	// Delete worktree-specific workspace file
+	if err := w.deleteWorktreeWorkspaceFile(worktreeWorkspacePath, force); err != nil {
+		return err
+	}
+
+	// Clean up workspace directory if it's empty
+	workspaceDir := filepath.Dir(worktreeWorkspacePath)
+	if err := w.cleanupEmptyWorkspaceDirectory(workspaceDir); err != nil {
+		if !force {
+			w.deps.Logger.Logf("Warning: failed to cleanup empty workspace directory: %v", err)
+		}
+	}
+
+	return nil
 }
 
 // deleteWorktreeWorkspaceFile deletes the worktree-specific workspace file.

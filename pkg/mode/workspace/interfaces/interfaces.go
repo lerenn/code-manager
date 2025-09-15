@@ -39,6 +39,7 @@ type Workspace interface {
 	DeleteWorktree(branch string, force bool) error
 	DeleteAllWorktrees(force bool) error
 	ListWorktrees() ([]status.WorktreeInfo, error)
+	OpenWorktree(workspaceName, branch string) (string, error)
 	SetLogger(logger logger.Logger)
 	Load() error
 	ParseFile(filename string) (Config, error)

@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/lerenn/code-manager/pkg/status"
 )
@@ -38,6 +39,11 @@ func (r *realRepository) ListWorktrees() ([]status.WorktreeInfo, error) {
 	for _, worktree := range repo.Worktrees {
 		worktrees = append(worktrees, worktree)
 	}
+
+	// 4. Sort worktrees by branch name for consistent ordering
+	sort.Slice(worktrees, func(i, j int) bool {
+		return worktrees[i].Branch < worktrees[j].Branch
+	})
 
 	r.deps.Logger.Logf("Found %d worktrees for current repository", len(worktrees))
 

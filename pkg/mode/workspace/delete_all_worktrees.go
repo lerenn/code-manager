@@ -11,16 +11,14 @@ func (w *realWorkspace) DeleteAllWorktrees(force bool) error {
 	w.deps.Logger.Logf("Deleting all worktrees for workspace")
 
 	// Load workspace configuration (only if not already loaded)
-	if w.file == "" {
-		if err := w.Load(); err != nil {
-			return fmt.Errorf("failed to load workspace: %w", err)
-		}
+	if err := w.ensureWorkspaceLoaded(); err != nil {
+		return err
 	}
 
 	// Get all worktrees for this workspace
-	allWorktrees, err := w.ListWorktrees()
+	allWorktrees, err := w.getWorkspaceWorktrees()
 	if err != nil {
-		return fmt.Errorf("failed to list worktrees: %w", err)
+		return err
 	}
 
 	if len(allWorktrees) == 0 {

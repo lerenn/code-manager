@@ -294,6 +294,16 @@ func (c *realCodeManager) removeWorktreeFromGit(
 		c.VerbosePrint("    Error checking worktree path existence: %v", err)
 	}
 
+	// Check if worktree exists in Git before attempting removal
+	worktreeExists, err := c.deps.Git.WorktreeExists(repoPath, worktree.Branch)
+	if err != nil {
+		c.VerbosePrint("    Error checking worktree existence in Git: %v", err)
+		// Continue with removal attempt if we can't check existence
+	} else if !worktreeExists {
+		c.VerbosePrint("    Worktree %s/%s does not exist in Git, skipping removal", worktree.Remote, worktree.Branch)
+		return nil
+	}
+
 	// Remove worktree from Git
 	if err := c.deps.Git.RemoveWorktree(repoPath, worktreePath, force); err != nil {
 		return fmt.Errorf("failed to remove worktree %s/%s: %w", worktree.Remote, worktree.Branch, err)
@@ -438,6 +448,7 @@ func (c *realCodeManager) getWorktreeWorkspaceFilePath(workspaceName, branchName
 
 	// Sanitize branch name for filename (replace / with -)
 	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
-	return filepath.Join(cfg.WorkspacesDir,
-		fmt.Sprintf("%s-%s.code-workspace", workspaceName, sanitizedBranchForFilename))
+	// Use the same format as workspace creation: {workspaceName}/{sanitizedBranchName}.code-workspace
+	return filepath.Join(cfg.WorkspacesDir, workspaceName,
+		fmt.Sprintf("%s.code-workspace", sanitizedBranchForFilename))
 }
