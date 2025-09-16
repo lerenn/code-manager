@@ -53,6 +53,10 @@ func (m *Manager) registerIDEs(fs fs.FS) {
 	vscode := NewVSCode(fs)
 	m.ides[vscode.Name()] = vscode
 
+	// Register VSCodium IDE
+	vscodium := NewVSCodium(fs)
+	m.ides[vscodium.Name()] = vscodium
+
 	// Register Cursor IDE
 	cursor := NewCursor(fs)
 	m.ides[cursor.Name()] = cursor
