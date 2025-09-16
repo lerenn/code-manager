@@ -50,10 +50,17 @@ func (c *realCodeManager) CreateWorkTree(branch string, opts ...CreateWorkTreeOp
 		var worktreePath string
 		var err error
 
-		// Sanitize branch name first
-		sanitizedBranch, err := branchpkg.SanitizeBranchName(branch)
-		if err != nil {
-			return err
+		// Sanitize branch name first, but skip if using --from-issue and branch is empty
+		var sanitizedBranch string
+		if options.IssueRef != "" && branch == "" {
+			// When using --from-issue with empty branch, skip sanitization
+			// The branch name will be generated from the issue
+			sanitizedBranch = branch
+		} else {
+			sanitizedBranch, err = branchpkg.SanitizeBranchName(branch)
+			if err != nil {
+				return err
+			}
 		}
 
 		// Log if branch name was sanitized
