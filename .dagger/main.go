@@ -16,10 +16,13 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"runtime"
 
 	"code-manager/dagger/internal/dagger"
 )
+
+const defaultUser = "lerenn"
 
 type CodeManager struct{}
 
@@ -30,10 +33,15 @@ func (ci *CodeManager) PublishTag(
 	user *string,
 	token *dagger.Secret,
 ) error {
+	// Set default user if not provided
+	actualUser := defaultUser
+	if user != nil {
+		actualUser = *user
+	}
 	// Create Git repo access
 	repo, err := NewGit(ctx, NewGitOptions{
 		SrcDir: sourceDir,
-		User:   user,
+		User:   &actualUser,
 		Token:  token,
 	})
 	if err != nil {
@@ -96,8 +104,8 @@ func (ci *CodeManager) IntegrationTests(sourceDir *dagger.Directory) *dagger.Con
 // EndToEndTests returns a container that runs the end-to-end tests.
 func (ci *CodeManager) EndToEndTests(sourceDir *dagger.Directory) *dagger.Container {
 	c := dag.Container().From("golang:" + goVersion() + "-alpine").
-		// Install git for end-to-end tests
-		WithExec([]string{"apk", "add", "--no-cache", "git"}).
+		// Install git and git-crypt for end-to-end tests
+		WithExec([]string{"apk", "add", "--no-cache", "git", "git-crypt"}).
 		// Configure git for testing
 		WithExec([]string{"git", "config", "--global", "user.name", "Test User"}).
 		WithExec([]string{"git", "config", "--global", "user.email", "test@example.com"})
@@ -106,6 +114,103 @@ func (ci *CodeManager) EndToEndTests(sourceDir *dagger.Directory) *dagger.Contai
 		WithExec([]string{"sh", "-c",
 			"go test -tags=e2e ./test/ -v",
 		})
+}
+
+func (ci *CodeManager) getActualUser(user *string) string {
+	if user != nil {
+		return *user
+	}
+	return defaultUser
+}
+
+// BuildForArchitecture builds a binary for a specific architecture without releasing it.
+func (ci *CodeManager) BuildForArchitecture(
+	sourceDir *dagger.Directory,
+	architecture string,
+) (*dagger.Container, error) {
+	// Validate architecture
+	runnerInfo, exists := GoImageInfo[architecture]
+	if !exists {
+		return nil, fmt.Errorf("unsupported architecture: %s", architecture)
+	}
+
+	// Build binary for this architecture
+	container, err := BuildImage(sourceDir, runnerInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return container, nil
+}
+
+// BuildAndReleaseForArchitecture builds a Docker image for a specific architecture,
+// creates a GitHub release if it doesn't exist, and uploads the binary for that architecture.
+func (ci *CodeManager) BuildAndReleaseForArchitecture(
+	ctx context.Context,
+	sourceDir *dagger.Directory,
+	architecture string,
+	user *string,
+	token *dagger.Secret,
+) error {
+	// Validate architecture
+	if _, exists := GoImageInfo[architecture]; !exists {
+		return fmt.Errorf("unsupported architecture: %s", architecture)
+	}
+
+	actualUser := ci.getActualUser(user)
+	gh := NewGitHubReleaseManager()
+
+	latestTag, releaseNotes, err := gh.getReleaseInfo(ctx, sourceDir, actualUser, token)
+	if err != nil {
+		return err
+	}
+
+	// Try to get existing release ID, create if it doesn't exist
+	releaseID, err := gh.getOrCreateRelease(ctx, actualUser, latestTag, releaseNotes, token)
+	if err != nil {
+		return err
+	}
+
+	// Check if binary for this architecture already exists in the release
+	binaryExists, err := gh.checkBinaryExists(ctx, architecture, actualUser, releaseID, token)
+	if err != nil {
+		return err
+	}
+
+	if binaryExists {
+		fmt.Printf("Binary for architecture %s already exists in release %s, "+
+			"skipping build and upload\n", architecture, latestTag)
+		return nil
+	}
+
+	// Build binary for this architecture
+	buildContainer, err := ci.BuildForArchitecture(sourceDir, architecture)
+	if err != nil {
+		return err
+	}
+
+	// Upload binary for this architecture
+	err = gh.uploadBinary(ctx, buildContainer, architecture, actualUser, releaseID, token)
+	if err != nil {
+		return err
+	}
+
+	// Create and push runtime image (only for Linux platforms)
+	runnerInfo := GoImageInfo[architecture]
+	if runtimeContainer := RuntimeImage(buildContainer, runnerInfo); runtimeContainer != nil {
+		// Push the Docker image to GitHub Container Registry with version tag
+		imageName := fmt.Sprintf("ghcr.io/%s/code-manager:%s", actualUser, latestTag)
+
+		// Push the image to GitHub Container Registry
+		// Note: In GitHub Actions, Docker authentication is handled automatically
+		// when using the GITHUB_TOKEN with appropriate permissions
+		_, err = runtimeContainer.Publish(ctx, imageName)
+		if err != nil {
+			return fmt.Errorf("failed to push Docker image for %s: %w", architecture, err)
+		}
+	}
+
+	return nil
 }
 
 func (ci *CodeManager) withGoCodeAndCacheAsWorkDirectory(

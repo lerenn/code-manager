@@ -15,7 +15,7 @@ The Code Manager (cm) needs a standardized directory structure to organize and m
 4. **Path Validation**: Ensure the base directory (`$HOME/.cm/`) can be accessed and created
 5. **Error Handling**: Provide clear error messages for directory creation failures
 6. **Integration Ready**: Return the created path in a format suitable for other features
-7. **Configuration Support**: Support configurable base path via config file
+7. *Configuration Support**: Support configurable base path via config file
 8. **Idempotent Behavior**: Allow parent directories to exist, only fail if final branch directory exists
 
 ### Non-Functional Requirements
@@ -34,14 +34,14 @@ The Code Manager (cm) needs a standardized directory structure to organize and m
 **Package Location**: `pkg/config/`
 **Key Components**:
 - `Config` struct with YAML tags
-- `LoadConfig(configPath string) (*Config, error)`: Load configuration from file
-- `DefaultConfig() *Config`: Return default configuration
+- `LoadConfig(configPath string) (Config, error)`: Load configuration from file
+- `DefaultConfig() Config`: Return default configuration
 - `Validate() error`: Validate configuration values
 
-**Config Structure**:
+*Config Structure**:
 ```go
 type Config struct {
-    BasePath string `yaml:"base_path"`
+    RepositoriesDir string `yaml:"base_path"`
     // Future configuration fields can be added here
 }
 ```
@@ -70,10 +70,10 @@ type Config struct {
 - `CreateReposDirectoryStructure(repoName, branchName string) (string, error)`: Create and return the full directory path
 - `sanitizeRepositoryName(remoteURL string) (string, error)`: Extract and sanitize repo name from Git remote
 - `sanitizeBranchName(branchName string) (string, error)`: Validate and sanitize branch name
-- `getBasePath() (string, error)`: Get the configurable base path for CM
+- `getRepositoriesDir() (string, error)`: Get the configurable base path for CM
 
 **Updated Constructor:**
-- `NewCM(config *config.Config) CM`: Accept configuration as parameter
+- `NewCM(config config.Config) CM`: Accept configuration as parameter
 
 **Implementation Structure:**
 - Extends existing CM package with directory structure management
@@ -145,9 +145,9 @@ The FS package extends with directory creation operations:
 The CM package implements directory structure management:
 
 **Key Components:**
-- Updated constructor: `NewCM(config *config.Config)`
+- Updated constructor: `NewCM(config config.Config)`
 - Public method: `CreateReposDirectoryStructure()`
-- Private helper methods: `sanitizeRepositoryName()`, `sanitizeBranchName()`, `getBasePath()`
+- Private helper methods: `sanitizeRepositoryName()`, `sanitizeBranchName()`, `getRepositoriesDir()`
 - Dependency injection of FS interface and Config
 - Error handling with wrapped errors
 - Integration with existing `Run()` method
@@ -156,7 +156,7 @@ The CM package implements directory structure management:
 - `CreateReposDirectoryStructure()` orchestrates the full directory creation process
 - `sanitizeRepositoryName()` extracts full repo path from Git remote URL and sanitizes it
 - `sanitizeBranchName()` validates and sanitizes branch names, replacing invalid characters with underscores/hyphens
-- `getBasePath()` retrieves base path from injected Config, with fallback to default
+- `getRepositoriesDir()` retrieves base path from injected Config, with fallback to default
 - Use `fmt.Errorf()` with `%w` for error wrapping
 - Provide clear user messages for different creation states
 - Support verbose mode for detailed directory creation steps
@@ -193,8 +193,8 @@ base_path: /custom/path/to/cm
 3. **InvalidRepositoryNameError**: When repository name cannot be extracted or sanitized
 4. **InvalidBranchNameError**: When branch name is invalid or cannot be sanitized
 5. **DirectoryCreationError**: When directory creation fails for other reasons
-6. **ConfigError**: When unable to read or parse configuration file
-7. **ConfigValidationError**: When configuration values are invalid
+6. *ConfigError**: When unable to read or parse configuration file
+7. *ConfigValidationError**: When configuration values are invalid
 
 #### Error Messages
 - Clear, user-friendly error messages
@@ -234,7 +234,7 @@ base_path: /custom/path/to/cm
 The `CreateReposDirectoryStructure()` method will be called from the existing `Run()` method to keep the function small and maintain separation of concerns. The integration will occur after project validation (Feature 004) and before any worktree operations.
 
 ### Integration with NewCM()
-The `NewCM()` function will be updated to accept a `*config.Config` parameter, allowing configuration to be injected at construction time. This maintains dependency injection principles and makes the code more testable.
+The `NewCM()` function will be updated to accept a `config.Config` parameter, allowing configuration to be injected at construction time. This maintains dependency injection principles and makes the code more testable.
 
 ### Repository Name Format Decision
 - **Format**: Full repository path (e.g., "github.com/lerenn/code-manager")

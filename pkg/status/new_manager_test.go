@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/fs"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -15,10 +15,10 @@ func TestNewManager(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+	mockFS := fsmocks.NewMockFS(ctrl)
+	cfg := config.Config{
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	// Mock expectations for initialization

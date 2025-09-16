@@ -1,18 +1,19 @@
 package worktree
 
 import (
-	"strings"
-
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
 func createLoadCmd() *cobra.Command {
 	var ideName string
+	var repositoryName string
 
 	loadCmd := &cobra.Command{
-		Use:   "load [remote:]<branch-name> [--ide <ide-name>]",
+		Use:   "load [remote:]<branch-name> [--ide <ide-name>] [--repository <repository-name>]",
 		Short: "Load a branch from a remote source",
 		Long: `Load a branch from a remote source and create a worktree.
 
@@ -22,40 +23,21 @@ Examples:
   cm worktree load feature-branch          # Uses origin:feature-branch
   cm wt load origin:feature-branch         # Explicitly specify remote
   cm w load upstream:main                  # Use different remote
-  cm worktree load feature-branch --ide vscode`,
+  cm worktree load feature-branch --ide ` + ide.DefaultIDE + `
+  cm worktree load feature-branch --repository my-repo
+  cm wt load origin:main --repository /path/to/repo --ide cursor`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			if err := config.CheckInitialization(); err != nil {
+			if err := cli.CheckInitialization(); err != nil {
 				return err
 			}
 
-			cfg, err := config.LoadConfig()
+			cmManager, err := cli.NewCodeManager()
 			if err != nil {
 				return err
 			}
-			cmManager := cm.NewCM(cfg)
-			cmManager.SetVerbose(config.Verbose)
-
-			// Parse remote source and branch name
-			parts := strings.SplitN(args[0], ":", 2)
-			if len(parts) != 2 {
-				return cm.ErrInvalidArgumentFormat
-			}
-
-			remoteSource := strings.TrimSpace(parts[0])
-			branchName := strings.TrimSpace(parts[1])
-
-			if remoteSource == "" {
-				return cm.ErrEmptyRemoteSource
-			}
-
-			if branchName == "" {
-				return cm.ErrEmptyBranchName
-			}
-
-			// Check if branch name contains colon (invalid)
-			if strings.Contains(branchName, ":") {
-				return cm.ErrBranchNameContainsColon
+			if cli.Verbose {
+				cmManager.SetLogger(logger.NewVerboseLogger())
 			}
 
 			// Prepare options for LoadWorktree
@@ -63,14 +45,19 @@ Examples:
 			if ideName != "" {
 				opts.IDEName = ideName
 			}
+			if repositoryName != "" {
+				opts.RepositoryName = repositoryName
+			}
 
-			// Load the worktree
+			// Load the worktree (parsing is handled by CM manager)
 			return cmManager.LoadWorktree(args[0], opts)
 		},
 	}
 
-	// Add IDE flag to load command
-	loadCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE after loading")
+	// Add IDE and repository flags to load command
+	loadCmd.Flags().StringVarP(&ideName, "ide", "i", ide.DefaultIDE, "Open in specified IDE after loading")
+	loadCmd.Flags().StringVarP(&repositoryName, "repository", "r", "",
+		"Load worktree for the specified repository (name from status.yaml or path)")
 
 	return loadCmd
 }

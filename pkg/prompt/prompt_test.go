@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRealPrompt_PromptForBasePath(t *testing.T) {
+func TestRealPrompt_PromptForRepositoriesDir(t *testing.T) {
 	tests := []struct {
 		name        string
 		defaultPath string
@@ -45,7 +45,7 @@ func TestRealPrompt_PromptForBasePath(t *testing.T) {
 			name:        "empty default uses hardcoded default",
 			defaultPath: "",
 			input:       "\n",
-			expected:    "~/Code",
+			expected:    "~/Code/repos",
 		},
 		{
 			name:        "custom default path",
@@ -62,7 +62,7 @@ func TestRealPrompt_PromptForBasePath(t *testing.T) {
 				reader: bufio.NewReader(strings.NewReader(tt.input)),
 			}
 
-			result, err := p.PromptForBasePath(tt.defaultPath)
+			result, err := p.PromptForRepositoriesDir(tt.defaultPath)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})

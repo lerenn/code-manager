@@ -4,62 +4,87 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
+	"github.com/lerenn/code-manager/pkg/hooks/ide"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
 func createOpenCmd() *cobra.Command {
 	var ideName string
+	var repositoryName string
+	var workspaceName string
 
 	openCmd := &cobra.Command{
-		Use:   "open <branch>",
+		Use:   "open <branch> [--ide <ide-name>] [--workspace <workspace-name>] [--repository <repository-name>]",
 		Short: "Open a worktree in the specified IDE",
 		Long: `Open a worktree for the specified branch in the specified IDE.
 
 Examples:
   cm worktree open feature-branch
   cm wt open main
-  cm w open feature-branch -i vscode
-  cm worktree open main --ide cursor`,
+  cm w open feature-branch -i cursor
+  cm worktree open main --ide ` + ide.DefaultIDE + `
+  cm worktree open feature-branch --workspace my-workspace
+  cm worktree open feature-branch --repository my-repo
+  cm wt open main --repository /path/to/repo --ide cursor`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return openWorktree(args[0], ideName)
+			return openWorktree(args[0], ideName, workspaceName, repositoryName)
 		},
 	}
 
-	// Add IDE flag to open command
+	// Add IDE, workspace, and repository flags to open command
 	openCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE")
+	openCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
+		"Open worktree for the specified workspace (name from status.yaml)")
+	openCmd.Flags().StringVarP(&repositoryName, "repository", "r", "",
+		"Open worktree for the specified repository (name from status.yaml or path)")
 
 	return openCmd
 }
 
 // openWorktree handles the logic for opening a worktree.
-func openWorktree(branchName, ideName string) error {
-	if err := config.CheckInitialization(); err != nil {
+func openWorktree(branchName, ideName, workspaceName, repositoryName string) error {
+	if err := cli.CheckInitialization(); err != nil {
 		return err
 	}
 
-	cfg, err := config.LoadConfig()
+	cmManager, err := cli.NewCodeManager()
 	if err != nil {
 		return err
 	}
-	cmManager := cm.NewCM(cfg)
-	cmManager.SetVerbose(config.Verbose)
+	if cli.Verbose {
+		cmManager.SetLogger(logger.NewVerboseLogger())
+	}
 
-	// Determine IDE to use (default to "cursor" if not specified)
-	ideToUse := "cursor"
+	// Determine IDE to use (default to DefaultIDE if not specified)
+	ideToUse := ide.DefaultIDE
 	if ideName != "" {
 		ideToUse = ideName
 	}
 
+	// Prepare options for OpenWorktree
+	var opts []cm.OpenWorktreeOpts
+	if workspaceName != "" {
+		opts = append(opts, cm.OpenWorktreeOpts{
+			WorkspaceName: workspaceName,
+		})
+	}
+	if repositoryName != "" {
+		opts = append(opts, cm.OpenWorktreeOpts{
+			RepositoryName: repositoryName,
+		})
+	}
+
 	// Open the worktree
-	if err := cmManager.OpenWorktree(branchName, ideToUse); err != nil {
+	if err := cmManager.OpenWorktree(branchName, ideToUse, opts...); err != nil {
 		return fmt.Errorf("failed to open worktree: %w", err)
 	}
 
 	// Only log success message in verbose mode
-	if config.Verbose {
+	if cli.Verbose {
 		log.Printf("Opened worktree for branch %s", branchName)
 	}
 	return nil

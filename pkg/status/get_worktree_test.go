@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
-	"github.com/lerenn/code-manager/pkg/fs"
+	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"gopkg.in/yaml.v3"
@@ -16,11 +16,11 @@ func TestGetWorktree(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
 
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+	cfg := config.Config{
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -76,11 +76,11 @@ func TestGetWorktree_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
 
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+	cfg := config.Config{
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	manager := &realManager{
@@ -131,11 +131,11 @@ func TestGetWorktree_RepositoryNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockFS := fs.NewMockFS(ctrl)
+	mockFS := fsmocks.NewMockFS(ctrl)
 
-	cfg := &config.Config{
-		BasePath:   "/home/user/.cm",
-		StatusFile: "/home/user/.cmstatus.yaml",
+	cfg := config.Config{
+		RepositoriesDir: "/home/user/.cm",
+		StatusFile:      "/home/user/.cmstatus.yaml",
 	}
 
 	manager := &realManager{

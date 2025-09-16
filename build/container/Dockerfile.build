@@ -1,0 +1,34 @@
+# Dockerfile.build - Build stage for cross-compilation
+# Build argument for the base image - must be declared before FROM
+ARG BUILDBASEIMAGE=golang:alpine
+
+FROM ${BUILDBASEIMAGE} AS build
+
+# Build arguments for cross-compilation
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+
+# Get all remaining code
+RUN mkdir -p /go/src/github.com/lerenn/code-manager
+COPY ./ /go/src/github.com/lerenn/code-manager
+
+# Set the workdir
+WORKDIR /go/src/github.com/lerenn/code-manager
+
+# Build everything in cmd/
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go install ./cmd/*
+
+# Ensure the binary is available at the expected cross-compilation path
+# For cross-compilation: binary is already at /go/bin/${TARGETOS}_${TARGETARCH}/cm (with .exe for Windows)
+# For native builds: binary is at /go/bin/cm or /go/bin/cm.exe (Windows), so we copy it to /go/bin/${TARGETOS}_${TARGETARCH}/cm
+RUN if [ -f /go/bin/cm ]; then \
+        mkdir -p /go/bin/${TARGETOS}_${TARGETARCH} && \
+        cp /go/bin/cm /go/bin/${TARGETOS}_${TARGETARCH}/cm; \
+    elif [ -f /go/bin/cm.exe ]; then \
+        mkdir -p /go/bin/${TARGETOS}_${TARGETARCH} && \
+        cp /go/bin/cm.exe /go/bin/${TARGETOS}_${TARGETARCH}/cm.exe; \
+    fi
+
+# The binary is now always available at /go/bin/${TARGETOS}_${TARGETARCH}/cm (with .exe for Windows)

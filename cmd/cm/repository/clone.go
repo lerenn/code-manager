@@ -2,8 +2,9 @@
 package repository
 
 import (
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
-	cm "github.com/lerenn/code-manager/pkg/cm"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
+	cm "github.com/lerenn/code-manager/pkg/code-manager"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -24,16 +25,17 @@ Examples:
   cm r clone https://github.com/octocat/Hello-World.git --shallow`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			if err := config.CheckInitialization(); err != nil {
+			if err := cli.CheckInitialization(); err != nil {
 				return err
 			}
 
-			cfg, err := config.LoadConfig()
+			cmManager, err := cli.NewCodeManager()
 			if err != nil {
 				return err
 			}
-			cmManager := cm.NewCM(cfg)
-			cmManager.SetVerbose(config.Verbose)
+			if cli.Verbose {
+				cmManager.SetLogger(logger.NewVerboseLogger())
+			}
 
 			// Create clone options
 			opts := cm.CloneOpts{

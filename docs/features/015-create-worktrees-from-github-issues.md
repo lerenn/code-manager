@@ -58,7 +58,7 @@ cm create --from-issue https://github.com/owner/repo/issues/789 -v
 6. **Remote Origin Validation**: Ensure remote origin is a supported forge repository when using issue numbers
 7. **Error Handling**: Handle various error conditions gracefully (invalid URLs, API errors, etc.)
 8. **User Feedback**: Provide clear feedback about the issue parsing and worktree creation process
-9. **Configuration Integration**: Use existing configuration for worktree management
+9. *Configuration Integration**: Use existing configuration for worktree management
 10. **IDE Integration**: Support opening created worktree in IDE with `-i` flag
 11. **Branch Name Override**: Allow custom branch name via positional argument or infer from issue title
 12. **Issue Description Integration**: Create initial commit with issue description (but do not push)

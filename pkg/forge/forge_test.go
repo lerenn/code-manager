@@ -7,32 +7,23 @@ import (
 
 	"github.com/lerenn/code-manager/pkg/issue"
 	"github.com/lerenn/code-manager/pkg/logger"
+	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/mock/gomock"
 )
 
 func TestNewManager(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
 	loggerInstance := logger.NewNoopLogger()
-	manager := NewManager(loggerInstance)
+	statusManager := statusMocks.NewMockManager(ctrl)
+
+	manager := NewManager(loggerInstance, statusManager)
 
 	assert.NotNil(t, manager)
 	assert.NotNil(t, manager.forges)
-}
-
-func TestManager_GetForge(t *testing.T) {
-	loggerInstance := logger.NewNoopLogger()
-	manager := NewManager(loggerInstance)
-
-	// Test getting GitHub forge
-	githubForge, err := manager.GetForge("github")
-	require.NoError(t, err)
-	assert.NotNil(t, githubForge)
-	assert.Equal(t, "github", githubForge.Name())
-
-	// Test getting non-existent forge
-	_, err = manager.GetForge("nonexistent")
-	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrUnsupportedForge)
 }
 
 func TestGitHub_Name(t *testing.T) {

@@ -1,0 +1,92 @@
+package repository
+
+import (
+	"fmt"
+	"path/filepath"
+)
+
+// ValidationParams and ValidationResult are now defined in the interfaces package
+
+// ValidateRepository validates the repository and returns repository information.
+func (r *realRepository) ValidateRepository(params ValidationParams) (*ValidationResult, error) {
+	// Get current working directory if not provided
+	if params.CurrentDir == "" {
+		currentDir, err := filepath.Abs(r.repositoryPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current directory: %w", err)
+		}
+		params.CurrentDir = currentDir
+	}
+
+	// Validate Git repository
+	if err := r.validateGitRepository(); err != nil {
+		return nil, err
+	}
+
+	// Get repository URL
+	repoURL, err := r.getRepositoryURL(params.CurrentDir)
+	if err != nil {
+		return nil, err
+	}
+
+	// Only perform additional validation if a branch is provided
+	if params.Branch != "" {
+		// Check if worktree already exists
+		if err := r.validateWorktreeNotExists(repoURL, params.Branch); err != nil {
+			return nil, err
+		}
+
+		// Validate repository state (only if worktree doesn't exist)
+		if err := r.validateRepositoryState(params.CurrentDir); err != nil {
+			return nil, err
+		}
+	}
+
+	return &ValidationResult{
+		RepoURL:  repoURL,
+		RepoPath: params.CurrentDir,
+	}, nil
+}
+
+// validateGitRepository validates that we're in a Git repository.
+func (r *realRepository) validateGitRepository() error {
+	isSingleRepo, err := r.IsGitRepository()
+	if err != nil {
+		return fmt.Errorf("failed to validate Git repository: %w", err)
+	}
+	if !isSingleRepo {
+		return fmt.Errorf("current directory is not a Git repository")
+	}
+	return nil
+}
+
+// getRepositoryURL gets the repository URL from remote origin URL with fallback to local path.
+func (r *realRepository) getRepositoryURL(currentDir string) (string, error) {
+	repoURL, err := r.deps.Git.GetRepositoryName(currentDir)
+	if err != nil {
+		return "", fmt.Errorf("failed to get repository URL: %w", err)
+	}
+	r.deps.Logger.Logf("Repository URL: %s", repoURL)
+	return repoURL, nil
+}
+
+// validateWorktreeNotExists checks if worktree already exists in status file.
+func (r *realRepository) validateWorktreeNotExists(repoURL, branch string) error {
+	existingWorktree, err := r.deps.StatusManager.GetWorktree(repoURL, branch)
+	if err == nil && existingWorktree != nil {
+		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeExists, repoURL, branch)
+	}
+	return nil
+}
+
+// validateRepositoryState validates that the repository is in a clean state.
+func (r *realRepository) validateRepositoryState(currentDir string) error {
+	isClean, err := r.deps.Git.IsClean(currentDir)
+	if err != nil {
+		return fmt.Errorf("failed to check repository state: %w", err)
+	}
+	if !isClean {
+		return fmt.Errorf("%w: repository is not in a clean state", ErrRepositoryNotClean)
+	}
+	return nil
+}

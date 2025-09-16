@@ -4,8 +4,9 @@ package main
 import (
 	"log"
 
-	"github.com/lerenn/code-manager/cmd/cm/internal/config"
+	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
 	"github.com/lerenn/code-manager/cmd/cm/repository"
+	"github.com/lerenn/code-manager/cmd/cm/workspace"
 	"github.com/lerenn/code-manager/cmd/cm/worktree"
 	"github.com/spf13/cobra"
 )
@@ -19,20 +20,21 @@ func main() {
 	}
 
 	// Add global flags
-	rootCmd.PersistentFlags().BoolVarP(&config.Quiet, "quiet", "q", false, "Suppress all output except errors")
-	rootCmd.PersistentFlags().BoolVarP(&config.Verbose, "verbose", "v", false, "Enable verbose output")
-	rootCmd.PersistentFlags().StringVarP(&config.ConfigPath, "config", "c", "", "Specify a custom config file path")
+	rootCmd.PersistentFlags().BoolVarP(&cli.Quiet, "quiet", "q", false, "Suppress all output except errors")
+	rootCmd.PersistentFlags().BoolVarP(&cli.Verbose, "verbose", "v", false, "Enable verbose output")
+	rootCmd.PersistentFlags().StringVarP(&cli.ConfigPath, "config", "c", "", "Specify a custom config file path")
 
 	// Create subcommands
 	repositoryCmd := repository.CreateRepositoryCmd()
 	worktreeCmd := worktree.CreateWorktreeCmd()
+	workspaceCmd := workspace.CreateWorkspaceCmd()
 	initCmd := createInitCmd()
 
 	// Add initialization check to all commands except init
 	// Note: Individual subcommands will handle their own initialization checks
 
 	// Add subcommands
-	rootCmd.AddCommand(repositoryCmd, worktreeCmd, initCmd)
+	rootCmd.AddCommand(repositoryCmd, worktreeCmd, workspaceCmd, initCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)

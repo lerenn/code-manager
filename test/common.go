@@ -3,6 +3,7 @@
 package test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,7 +11,13 @@ import (
 	"testing"
 
 	"github.com/lerenn/code-manager/pkg/config"
+	"github.com/lerenn/code-manager/pkg/dependencies"
+	"github.com/lerenn/code-manager/pkg/hooks"
+	defaulthooks "github.com/lerenn/code-manager/pkg/hooks/default"
+	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -55,9 +62,10 @@ func setupTestEnvironment(t *testing.T) *TestSetup {
 	require.NoError(t, os.MkdirAll(cmPath, 0755))
 
 	// Create test config using the config package
-	testConfig := &config.Config{
-		BasePath:   cmPath,
-		StatusFile: statusPath,
+	testConfig := config.Config{
+		RepositoriesDir: cmPath,
+		WorkspacesDir:   filepath.Join(cmPath, "workspaces"),
+		StatusFile:      statusPath,
 	}
 
 	configPath := filepath.Join(tempDir, "config.yaml")
@@ -151,11 +159,12 @@ func createTestGitRepo(t *testing.T, repoPath string) {
 	// Add a remote origin with a real public repository URL to avoid authentication issues
 	// Use different repositories for Hello-World and Spoon-Knife to simulate real workspace scenario
 	var remoteURL string
-	if dirName == "Hello-World" {
+	switch dirName {
+	case "Hello-World":
 		remoteURL = "https://github.com/octocat/Hello-World.git"
-	} else if dirName == "Spoon-Knife" {
+	case "Spoon-Knife":
 		remoteURL = "https://github.com/octocat/Spoon-Knife.git"
-	} else {
+	default:
 		// Default fallback for other test scenarios
 		remoteURL = "https://github.com/octocat/Hello-World.git"
 	}
@@ -297,8 +306,8 @@ func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 		// Search for worktree in each top-level directory in .cm
 		for _, entry := range cmEntries {
 			if entry.IsDir() {
-				repoDir := filepath.Join(setup.CmPath, entry.Name())
-				if result := findWorktree(repoDir); result != "" {
+				repositoriesDir := filepath.Join(setup.CmPath, entry.Name())
+				if result := findWorktree(repositoriesDir); result != "" {
 					worktreePath = result
 					break
 				}
@@ -366,8 +375,8 @@ func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 	// Search for worktree in each top-level directory
 	for _, entry := range entries {
 		if entry.IsDir() {
-			repoDir := filepath.Join(worktreesDir, entry.Name())
-			if result := findWorktree(repoDir); result != "" {
+			repositoriesDir := filepath.Join(worktreesDir, entry.Name())
+			if result := findWorktree(repositoriesDir); result != "" {
 				worktreePath = result
 				break
 			}
@@ -387,6 +396,82 @@ func assertWorktreeExists(t *testing.T, setup *TestSetup, branch string) {
 	output, err := cmd.Output()
 	require.NoError(t, err)
 	assert.Equal(t, branch, strings.TrimSpace(string(output)), "Worktree should be on the correct branch")
+}
+
+// findWorktreePath finds the worktree path for the given branch
+func findWorktreePath(t *testing.T, setup *TestSetup, branch string) string {
+	t.Helper()
+
+	// The worktree should be created in the .cm directory with repo name and branch structure
+	// Structure: $repositoriesDir/<repo_url>/<remote_name>/<branch>
+
+	// List the contents of the .cm directory to see what's there
+	cmEntries, err := os.ReadDir(setup.CmPath)
+	if err != nil {
+		t.Fatalf("Failed to read .cm directory: %v", err)
+	}
+
+	// Function to recursively search for worktree in directory structure
+	var findWorktree func(dir string) string
+	findWorktree = func(dir string) string {
+		// Check if this directory has origin/branch structure
+		originDir := filepath.Join(dir, "origin")
+		if _, err := os.Stat(originDir); err == nil {
+			branchDir := filepath.Join(originDir, branch)
+			if _, err := os.Stat(branchDir); err == nil {
+				return branchDir
+			}
+		}
+
+		// If not, recursively check subdirectories
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return ""
+		}
+
+		for _, entry := range entries {
+			if entry.IsDir() {
+				subDir := filepath.Join(dir, entry.Name())
+				if result := findWorktree(subDir); result != "" {
+					return result
+				}
+			}
+		}
+
+		return ""
+	}
+
+	// Search for worktree in each top-level directory in .cm
+	for _, entry := range cmEntries {
+		if entry.IsDir() {
+			repositoriesDir := filepath.Join(setup.CmPath, entry.Name())
+			if result := findWorktree(repositoriesDir); result != "" {
+				return result
+			}
+		}
+	}
+
+	// If not found, check if there's a worktrees subdirectory (legacy structure)
+	worktreesDir := filepath.Join(setup.CmPath, "worktrees")
+	if _, err := os.Stat(worktreesDir); err == nil {
+		entries, err := os.ReadDir(worktreesDir)
+		if err != nil {
+			t.Fatalf("Failed to read worktrees directory: %v", err)
+		}
+
+		// Search for worktree in each top-level directory in worktrees
+		for _, entry := range entries {
+			if entry.IsDir() {
+				repositoriesDir := filepath.Join(worktreesDir, entry.Name())
+				if result := findWorktree(repositoriesDir); result != "" {
+					return result
+				}
+			}
+		}
+	}
+
+	// If still not found, return empty string (worktree doesn't exist)
+	return ""
 }
 
 // assertWorktreeInRepo checks that the worktree is properly linked in the original repository
@@ -414,4 +499,112 @@ func getGitWorktreeList(t *testing.T, repoPath string) string {
 	output, err := cmd.Output()
 	require.NoError(t, err)
 	return string(output)
+}
+
+// getCurrentCommit gets the current commit hash of the repository
+func getCurrentCommit(t *testing.T, repoPath string) (string, error) {
+	t.Helper()
+
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// getPreviousCommit gets the previous commit hash on the current branch
+func getPreviousCommit(t *testing.T, repoPath string) (string, error) {
+	t.Helper()
+
+	cmd := exec.Command("git", "rev-parse", "HEAD~1")
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(output)), nil
+}
+
+// createDummyCommit creates a dummy commit for testing purposes
+func createDummyCommit(t *testing.T, repoPath string) error {
+	t.Helper()
+
+	// Set up Git environment variables for all commands
+	gitEnv := append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+
+	// Create a dummy file
+	dummyFile := filepath.Join(repoPath, "dummy-test-file.txt")
+	err := os.WriteFile(dummyFile, []byte("This is a dummy file for testing"), 0644)
+	if err != nil {
+		return err
+	}
+
+	// Add the file
+	cmd := exec.Command("git", "add", "dummy-test-file.txt")
+	cmd.Dir = repoPath
+	cmd.Env = gitEnv
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	// Commit the file
+	cmd = exec.Command("git", "commit", "-m", "Add dummy file for testing")
+	cmd.Dir = repoPath
+	cmd.Env = gitEnv
+	return cmd.Run()
+}
+
+// createE2EDependencies creates a properly configured Dependencies instance for E2E tests
+func createE2EDependencies(configPath string) *dependencies.Dependencies {
+	configManager := config.NewManager(configPath)
+	cfg, err := configManager.GetConfigWithFallback()
+	if err != nil {
+		// If we can't get the config, use empty config as fallback
+		cfg = config.Config{}
+	}
+
+	// Create default hooks manager with IDE opening hooks
+	hookManager, err := defaulthooks.NewDefaultHooksManager()
+	if err != nil {
+		// If hooks setup fails, use empty hook manager
+		hookManager = hooks.NewHookManager()
+	}
+
+	// Create dependencies with shared FS instance
+	deps := dependencies.New().
+		WithConfig(configManager).
+		WithHookManager(hookManager).
+		WithRepositoryProvider(repository.NewRepository).
+		WithWorkspaceProvider(workspace.NewWorkspace).
+		WithWorktreeProvider(worktree.NewWorktree)
+
+	// Set status manager using the shared FS instance
+	deps = deps.WithStatusManager(status.NewManager(deps.FS, cfg))
+
+	// Validate that all dependencies are set
+	if err := deps.Validate(); err != nil {
+		// In test environment, we'll panic if dependencies are missing
+		// This helps catch configuration issues early
+		panic(fmt.Sprintf("E2E test dependencies validation failed: %v", err))
+	}
+
+	return deps
+}
+
+// sortPaths sorts a slice of file paths alphabetically
+func sortPaths(paths []string) {
+	for i := 0; i < len(paths)-1; i++ {
+		for j := i + 1; j < len(paths); j++ {
+			if paths[i] > paths[j] {
+				paths[i], paths[j] = paths[j], paths[i]
+			}
+		}
+	}
 }
