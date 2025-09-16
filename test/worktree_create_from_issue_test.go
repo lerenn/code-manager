@@ -250,7 +250,7 @@ func TestCreateWorktreeFromIssueRepoModeInvalidIssueReference(t *testing.T) {
 	// Test with invalid issue reference
 	err := createWorktreeFromIssue(t, setup, "invalid-issue-ref")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "branch name cannot be empty")
+	assert.Contains(t, err.Error(), "invalid issue reference format")
 }
 
 func TestCreateWorktreeFromIssueRepoModeInvalidIssueNumber(t *testing.T) {
@@ -266,7 +266,7 @@ func TestCreateWorktreeFromIssueRepoModeInvalidIssueNumber(t *testing.T) {
 	// Test with invalid issue number format
 	err := createWorktreeFromIssue(t, setup, "owner/repo#abc")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "branch name cannot be empty")
+	assert.Contains(t, err.Error(), "invalid issue reference format")
 }
 
 func TestCreateWorktreeFromIssueRepoModeInvalidOwnerRepoFormat(t *testing.T) {
@@ -282,7 +282,7 @@ func TestCreateWorktreeFromIssueRepoModeInvalidOwnerRepoFormat(t *testing.T) {
 	// Test with invalid owner/repo format
 	err := createWorktreeFromIssue(t, setup, "owner#123")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "branch name cannot be empty")
+	assert.Contains(t, err.Error(), "invalid issue reference format")
 }
 
 func TestCreateWorktreeFromIssueRepoModeIssueNumberRequiresContext(t *testing.T) {

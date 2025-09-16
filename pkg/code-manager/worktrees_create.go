@@ -50,8 +50,8 @@ func (c *realCodeManager) CreateWorkTree(branch string, opts ...CreateWorkTreeOp
 		var worktreePath string
 		var err error
 
-		// Sanitize branch name first
-		sanitizedBranch, err := branchpkg.SanitizeBranchName(branch)
+		// Sanitize branch name
+		sanitizedBranch, err := c.sanitizeBranchNameForCreation(branch, options.IssueRef)
 		if err != nil {
 			return err
 		}
@@ -114,6 +114,17 @@ func (c *realCodeManager) extractCreateWorkTreeOptions(opts []CreateWorkTreeOpts
 	}
 
 	return result
+}
+
+// sanitizeBranchNameForCreation sanitizes the branch name for worktree creation.
+// It skips sanitization when using --from-issue with an empty branch name.
+func (c *realCodeManager) sanitizeBranchNameForCreation(branch, issueRef string) (string, error) {
+	if issueRef != "" && branch == "" {
+		// When using --from-issue with empty branch, skip sanitization
+		// The branch name will be generated from the issue
+		return branch, nil
+	}
+	return branchpkg.SanitizeBranchName(branch)
 }
 
 // handleWorktreeCreationParams contains parameters for handleWorktreeCreation.
