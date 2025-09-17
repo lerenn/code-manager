@@ -17,7 +17,7 @@ A powerful Go CLI tool for managing code development workflows, Git worktrees, a
 - Safe creation with collision detection
 - Automatic cleanup for ephemeral worktrees
 - Support for both single repos and multi-repo workspaces
-- Organized directory structure: `$base_path/<repo_url>/<remote_name>/<branch>`
+- Organized directory structure: `$repositories_dir/<repo_url>/<remote_name>/<branch>`
 
 ### 🚀 IDE Integration
 - Direct IDE launch with `-i` flag
@@ -41,9 +41,19 @@ A powerful Go CLI tool for managing code development workflows, Git worktrees, a
 - Automatic remote management and validation
 
 ### 🏗️ Repository Management
-- Clone repositories with automatic CM initialization
+- Clone, list, and delete repositories with automatic CM initialization
 - Organized repository structure with remote tracking
 - Default branch detection and management
+
+### 🏢 Workspace Management
+- Create, list, and delete multi-repository workspaces
+- Automatic repository addition to status tracking
+- Workspace-specific worktree management
+
+### 🔧 Extensible Hook System
+- Pre/post/error hooks for all operations
+- Custom middleware for logging, validation, and business logic
+- Plugin-like architecture for extensibility
 
 ## Installation
 
@@ -71,7 +81,10 @@ Before using CM, you need to initialize it:
 cm init
 
 # Initialize with default settings
-cm init --base-path ~/Code
+cm init --repositories-dir ~/Code/src
+
+# Initialize with custom directories
+cm init --repositories-dir ~/Projects/src --workspaces-dir ~/Projects/workspaces
 
 # Reset existing configuration
 cm init --reset
@@ -112,13 +125,13 @@ cm worktree delete <branch-name>
 #### Single Repository Mode
 Worktrees are created at:
 ```
-$base_path/<repo_url>/<remote_name>/<branch>/
+$repositories_dir/<repo_url>/<remote_name>/<branch>/
 ```
 
 #### Workspace Mode
 Worktrees are created at:
 ```
-$base_path/<repo_url>/<remote_name>/<branch>/<repo_name>/
+$repositories_dir/<repo_url>/<remote_name>/<branch>/<repo_name>/
 ```
 
 ## Command Reference
@@ -127,17 +140,22 @@ $base_path/<repo_url>/<remote_name>/<branch>/<repo_name>/
 Initializes CM configuration for first-time use.
 
 **Options:**
-- `--base-path <path>`: Set the base path for code storage directly
-- `--reset`: Reset existing CM configuration and start fresh
-- `--force`: Skip interactive confirmation when using --reset flag
+- `--repositories-dir <path>, -r`: Set the repositories directory directly
+- `--workspaces-dir <path>, -w`: Set the workspaces directory directly
+- `--status-file <path>, -s`: Set the status file location directly
+- `--reset, -R`: Reset existing CM configuration and start fresh
+- `--force, -f`: Skip interactive confirmation when using --reset flag
 
 **Examples:**
 ```bash
 # Interactive initialization
 cm init
 
-# Initialize with specific base path
-cm init --base-path ~/Projects
+# Initialize with specific repositories directory
+cm init --repositories-dir ~/Projects
+
+# Initialize with custom settings
+cm init --repositories-dir ~/Code/src --workspaces-dir ~/Code/workspaces
 
 # Reset existing configuration
 cm init --reset --force
@@ -160,6 +178,38 @@ cm repository clone git@github.com:lerenn/example.git --shallow
 # Using aliases
 cm repo clone https://github.com/octocat/Hello-World.git
 cm r clone git@github.com:lerenn/example.git
+```
+
+### `repository list [options]`
+Lists all repositories tracked by CM.
+
+**Examples:**
+```bash
+# List all repositories
+cm repository list
+
+# Using aliases
+cm repo list
+cm r list
+```
+
+### `repository delete <repository-name> [options]`
+Removes a repository from CM tracking and optionally deletes the local directory.
+
+**Options:**
+- `--force`: Force deletion without confirmation
+
+**Examples:**
+```bash
+# Delete repository with confirmation
+cm repository delete my-repo
+
+# Force delete without confirmation
+cm repository delete my-repo --force
+
+# Using aliases
+cm repo delete my-repo
+cm r delete my-repo --force
 ```
 
 ### `worktree create <branch> [options]`
@@ -272,6 +322,54 @@ cm wt delete feature-branch
 cm w delete hotfix/critical-fix --force
 ```
 
+### `workspace create <workspace-name> [repositories...] [options]`
+Creates a new workspace definition with the specified repositories.
+
+**Examples:**
+```bash
+# Create workspace with repository names from status
+cm workspace create my-workspace repo1 repo2
+
+# Create workspace with absolute paths
+cm workspace create my-workspace /path/to/repo1 /path/to/repo2
+
+# Create workspace with relative paths
+cm workspace create my-workspace ./repo1 ../repo2
+
+# Using aliases
+cm ws create my-workspace repo1 repo2
+```
+
+### `workspace list [options]`
+Lists all workspaces tracked by CM.
+
+**Examples:**
+```bash
+# List all workspaces
+cm workspace list
+
+# Using aliases
+cm ws list
+```
+
+### `workspace delete <workspace-name> [options]`
+Deletes a workspace and all associated worktrees and files.
+
+**Options:**
+- `--force`: Skip confirmation prompts
+
+**Examples:**
+```bash
+# Delete workspace with confirmation
+cm workspace delete my-workspace
+
+# Force delete without confirmation
+cm workspace delete my-workspace --force
+
+# Using aliases
+cm ws delete my-workspace
+```
+
 ## Global Options
 
 All commands support these global options:
@@ -299,16 +397,19 @@ All commands support these global options:
 
 Configuration files are stored in `$HOME/.cm/`:
 
-- `config.yaml`: Main configuration file with base path and status file location
+- `config.yaml`: Main configuration file with repositories directory and status file location
 - `status.yaml`: Status file tracking repositories, worktrees, and workspaces
 
 ### Default Configuration
 ```yaml
-# Base path for code storage
-base_path: ~/Code
+# Repositories directory
+repositories_dir: ~/Code/src
 
 # Status file path
 status_file: ~/.cm/status.yaml
+
+# Worktrees directory (computed as $repositories_dir/worktrees)
+worktrees_dir: ~/Code/src/worktrees
 ```
 
 ## Extension Integration
@@ -337,6 +438,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Roadmap
 
+- [x] Hook system for extensibility
+- [x] Workspace creation and management
+- [x] Repository management (clone, list, delete)
 - [ ] Workspace template support
 - [ ] Branch naming conventions
 - [ ] Integration with Git hooks
