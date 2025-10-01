@@ -4,7 +4,7 @@ import (
 	"os"
 )
 
-//go:generate mockgen -source=interface.go -destination=mocks/fs.gen.go -package=mocks
+//go:generate go run go.uber.org/mock/mockgen@latest  -source=interface.go -destination=mocks/fs.gen.go -package=mocks
 
 // FS interface provides file system operations for Git repository detection.
 type FS interface {

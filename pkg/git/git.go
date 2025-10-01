@@ -1,6 +1,6 @@
 package git
 
-//go:generate mockgen -source=git.go -destination=mocks/git.gen.go -package=mocks
+//go:generate go run go.uber.org/mock/mockgen@latest  -source=git.go -destination=mocks/git.gen.go -package=mocks
 
 // Git interface provides Git command execution capabilities.
 type Git interface {

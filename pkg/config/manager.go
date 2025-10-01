@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:generate mockgen -source=manager.go -destination=mocks/manager.gen.go -package=mocks
+//go:generate go run go.uber.org/mock/mockgen@latest  -source=manager.go -destination=mocks/manager.gen.go -package=mocks
 
 // Manager interface provides configuration management functionality with an embedded config path.
 type Manager interface {

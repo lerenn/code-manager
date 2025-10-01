@@ -7,7 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 )
 
-//go:generate mockgen -source=manager.go -destination=mocks/manager.gen.go -package=mocks
+//go:generate go run go.uber.org/mock/mockgen@latest  -source=manager.go -destination=mocks/manager.gen.go -package=mocks
 
 // ManagerInterface defines the interface for IDE management.
 type ManagerInterface interface {
