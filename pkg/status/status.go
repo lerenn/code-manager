@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:generate mockgen -source=status.go -destination=mocks/status.gen.go -package=mocks
+//go:generate go run go.uber.org/mock/mockgen@latest  -source=status.go -destination=mocks/status.gen.go -package=mocks
 
 // Status represents the status.yaml file structure.
 type Status struct {

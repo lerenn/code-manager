@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/lerenn/code-manager/cmd/cm/internal/cli"
 	cm "github.com/lerenn/code-manager/pkg/code-manager"
-	"github.com/lerenn/code-manager/pkg/dependencies"
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -48,14 +47,8 @@ Flags:
 
 // runInitCommand executes the init command logic.
 func runInitCommand() error {
-	// Create config manager
-	configManager := cli.NewConfigManager()
-
-	// Create CM manager
-	cmManager, err := cm.NewCodeManager(cm.NewCodeManagerParams{
-		Dependencies: dependencies.New().
-			WithConfig(configManager),
-	})
+	// Create CM manager using the existing cli helper
+	cmManager, err := cli.NewCodeManager()
 	if err != nil {
 		return err
 	}

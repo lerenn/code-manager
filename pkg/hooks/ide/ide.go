@@ -1,6 +1,6 @@
 package ide
 
-//go:generate mockgen -source=ide.go -destination=mocks/ide.gen.go -package=mocks
+//go:generate go run go.uber.org/mock/mockgen@latest  -source=ide.go -destination=mocks/ide.gen.go -package=mocks
 
 // DefaultIDE is the default IDE name used when no IDE is specified.
 const DefaultIDE = VSCodeName

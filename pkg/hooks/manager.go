@@ -6,7 +6,7 @@ import (
 	"sync"
 )
 
-//go:generate mockgen -source=manager.go -destination=mocks/manager.gen.go -package=mocks
+//go:generate go run go.uber.org/mock/mockgen@latest  -source=manager.go -destination=mocks/manager.gen.go -package=mocks
 
 // HookManager manages hook registration and execution.
 type HookManager struct {
