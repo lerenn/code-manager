@@ -16,6 +16,9 @@ type Git interface {
 	// CreateWorktreeWithNoCheckout creates a new worktree without checking out files.
 	CreateWorktreeWithNoCheckout(repoPath, worktreePath, branch string) error
 
+	// CloneToPath clones a local repository to a target path with a specific branch.
+	CloneToPath(sourceRepoPath, targetPath, branch string) error
+
 	// CheckoutBranch checks out a branch in the specified worktree.
 	CheckoutBranch(worktreePath, branch string) error
 

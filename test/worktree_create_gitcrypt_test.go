@@ -195,7 +195,7 @@ func testGitCryptHook(t *testing.T, repoPath string) {
 	require.NoError(t, cmd.Run())
 
 	// Now test the git-crypt hook
-	hook := gitcrypt.NewWorktreeCheckoutHook()
+	hook := gitcrypt.NewPostWorktreeCheckoutHook()
 
 	// Create a hook context
 	ctx := &hooks.HookContext{
@@ -210,7 +210,7 @@ func testGitCryptHook(t *testing.T, repoPath string) {
 	}
 
 	// Test the hook
-	err = hook.OnWorktreeCheckout(ctx)
+	err = hook.OnPostWorktreeCheckout(ctx)
 	require.NoError(t, err, "Git-crypt hook should succeed")
 
 	// Now checkout the branch (this is where git-crypt would normally fail without the hook)
@@ -235,7 +235,7 @@ func testGitCryptHookWithMissingKey(t *testing.T, repoPath string) {
 	defer os.RemoveAll(worktreeDir)
 
 	// Create the git-crypt hook
-	hook := gitcrypt.NewWorktreeCheckoutHook()
+	hook := gitcrypt.NewPostWorktreeCheckoutHook()
 
 	// Create a hook context
 	ctx := &hooks.HookContext{
@@ -250,7 +250,7 @@ func testGitCryptHookWithMissingKey(t *testing.T, repoPath string) {
 	}
 
 	// Test the hook - this should fail because the key is missing
-	err = hook.OnWorktreeCheckout(ctx)
+	err = hook.OnPostWorktreeCheckout(ctx)
 	require.Error(t, err, "Git-crypt hook should fail when key is missing")
 	assert.Contains(t, err.Error(), "git-crypt key not found", "Error should mention git-crypt key not found")
 }

@@ -12,8 +12,8 @@ import (
 	"github.com/lerenn/code-manager/pkg/prompt"
 )
 
-// WorktreeCheckoutHook provides git-crypt functionality as a worktree checkout hook.
-type WorktreeCheckoutHook struct {
+// PostWorktreeCheckoutHook provides git-crypt functionality as a post-worktree checkout hook.
+type PostWorktreeCheckoutHook struct {
 	fs            fs.FS
 	git           git.Git
 	prompt        prompt.Prompter
@@ -23,14 +23,14 @@ type WorktreeCheckoutHook struct {
 	worktreeSetup *WorktreeSetup
 }
 
-// NewWorktreeCheckoutHook creates a new GitCryptWorktreeCheckoutHook instance.
-func NewWorktreeCheckoutHook() *WorktreeCheckoutHook {
+// NewPostWorktreeCheckoutHook creates a new GitCryptPostWorktreeCheckoutHook instance.
+func NewPostWorktreeCheckoutHook() *PostWorktreeCheckoutHook {
 	fsInstance := fs.NewFS()
 	gitInstance := git.NewGit()
 	promptInstance := prompt.NewPrompt()
 	loggerInstance := logger.NewNoopLogger()
 
-	return &WorktreeCheckoutHook{
+	return &PostWorktreeCheckoutHook{
 		fs:            fsInstance,
 		git:           gitInstance,
 		prompt:        promptInstance,
@@ -42,8 +42,8 @@ func NewWorktreeCheckoutHook() *WorktreeCheckoutHook {
 }
 
 // RegisterForOperations registers this hook for worktree operations.
-func (h *WorktreeCheckoutHook) RegisterForOperations(
-	registerHook func(operation string, hook hooks.WorktreeCheckoutHook) error,
+func (h *PostWorktreeCheckoutHook) RegisterForOperations(
+	registerHook func(operation string, hook hooks.PostWorktreeCheckoutHook) error,
 ) error {
 	// Register for operations that create worktrees
 	if err := registerHook(consts.CreateWorkTree, h); err != nil {
@@ -58,22 +58,22 @@ func (h *WorktreeCheckoutHook) RegisterForOperations(
 }
 
 // Name returns the hook name.
-func (h *WorktreeCheckoutHook) Name() string {
+func (h *PostWorktreeCheckoutHook) Name() string {
 	return "git-crypt-worktree-checkout"
 }
 
 // Priority returns the hook priority.
-func (h *WorktreeCheckoutHook) Priority() int {
+func (h *PostWorktreeCheckoutHook) Priority() int {
 	return 50
 }
 
-// Execute is a no-op for GitCryptWorktreeCheckoutHook.
-func (h *WorktreeCheckoutHook) Execute(_ *hooks.HookContext) error {
+// Execute is a no-op for GitCryptPostWorktreeCheckoutHook.
+func (h *PostWorktreeCheckoutHook) Execute(_ *hooks.HookContext) error {
 	return nil
 }
 
-// OnWorktreeCheckout handles git-crypt setup before worktree checkout.
-func (h *WorktreeCheckoutHook) OnWorktreeCheckout(ctx *hooks.HookContext) error {
+// OnPostWorktreeCheckout handles git-crypt setup before worktree checkout.
+func (h *PostWorktreeCheckoutHook) OnPostWorktreeCheckout(ctx *hooks.HookContext) error {
 	// Get worktree path from context
 	worktreePath, ok := ctx.Parameters["worktreePath"].(string)
 	if !ok || worktreePath == "" {
@@ -108,7 +108,7 @@ func (h *WorktreeCheckoutHook) OnWorktreeCheckout(ctx *hooks.HookContext) error 
 }
 
 // setupGitCryptForWorktree sets up git-crypt in the worktree.
-func (h *WorktreeCheckoutHook) setupGitCryptForWorktree(repoPath, worktreePath, _ string) error {
+func (h *PostWorktreeCheckoutHook) setupGitCryptForWorktree(repoPath, worktreePath, _ string) error {
 	// Try to find key in repository
 	keyPath, err := h.keyManager.FindGitCryptKey(repoPath)
 	if err != nil {
@@ -137,7 +137,7 @@ func (h *WorktreeCheckoutHook) setupGitCryptForWorktree(repoPath, worktreePath, 
 }
 
 // getRepositoryPath extracts the repository path from the hook context.
-func (h *WorktreeCheckoutHook) getRepositoryPath(ctx *hooks.HookContext) (string, error) {
+func (h *PostWorktreeCheckoutHook) getRepositoryPath(ctx *hooks.HookContext) (string, error) {
 	// Try to get repository path from parameters
 	if repoPath, ok := ctx.Parameters["repoPath"].(string); ok && repoPath != "" {
 		return repoPath, nil

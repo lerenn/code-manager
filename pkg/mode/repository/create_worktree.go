@@ -37,9 +37,17 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 	// Get issue info from options
 	issueInfo := r.extractIssueInfo(opts)
 
+	// Execute pre-worktree creation hooks (for devcontainer detection, etc.)
+	detached, err := r.executePreWorktreeCreationHooks(
+		validationResult.RepoURL, branch, worktreePath, currentDir, remote, issueInfo,
+	)
+	if err != nil {
+		return "", err
+	}
+
 	// Create the worktree (with --no-checkout)
 	if err := r.createWorktreeWithNoCheckout(
-		worktreeInstance, validationResult.RepoURL, branch, worktreePath, currentDir, issueInfo, remote,
+		worktreeInstance, validationResult.RepoURL, branch, worktreePath, currentDir, issueInfo, remote, detached,
 	); err != nil {
 		return "", err
 	}
@@ -60,7 +68,7 @@ func (r *realRepository) CreateWorktree(branch string, opts ...CreateWorktreeOpt
 
 	// Add to status file with auto-repository handling
 	if err := r.addWorktreeToStatusAndHandleCleanup(
-		worktreeInstance, validationResult.RepoURL, branch, worktreePath, issueInfo, remote,
+		worktreeInstance, validationResult.RepoURL, branch, worktreePath, issueInfo, remote, detached,
 	); err != nil {
 		return "", err
 	}
@@ -93,6 +101,40 @@ func (r *realRepository) cleanupWorktreeOnError(worktreeInstance worktree.Worktr
 	}
 }
 
+// executePreWorktreeCreationHooks executes pre-worktree creation hooks and returns detached flag.
+func (r *realRepository) executePreWorktreeCreationHooks(
+	repoURL, branch, worktreePath, currentDir, remote string, issueInfo *issue.Info,
+) (bool, error) {
+	if r.deps.HookManager == nil {
+		return false, nil
+	}
+
+	ctx := &hooks.HookContext{
+		OperationName: "CreateWorkTree",
+		Parameters: map[string]interface{}{
+			"repoURL":      repoURL,
+			"branch":       branch,
+			"worktreePath": worktreePath,
+			"repoPath":     currentDir,
+			"remote":       remote,
+		},
+		Results:  make(map[string]interface{}),
+		Metadata: make(map[string]interface{}),
+	}
+
+	if issueInfo != nil {
+		ctx.Parameters["issueInfo"] = issueInfo
+	}
+
+	if err := r.deps.HookManager.ExecutePreWorktreeCreationHooks("CreateWorkTree", ctx); err != nil {
+		return false, fmt.Errorf("pre-worktree creation hooks failed: %w", err)
+	}
+
+	// Check if detached mode was requested
+	detached, _ := ctx.Metadata["detached"].(bool)
+	return detached, nil
+}
+
 // executeWorktreeCheckoutHooks executes worktree checkout hooks with proper error handling.
 func (r *realRepository) executeWorktreeCheckoutHooks(
 	worktreeInstance worktree.Worktree,
@@ -114,7 +156,7 @@ func (r *realRepository) executeWorktreeCheckoutHooks(
 		Metadata: make(map[string]interface{}),
 	}
 
-	if err := r.deps.HookManager.ExecuteWorktreeCheckoutHooks("CreateWorkTree", ctx); err != nil {
+	if err := r.deps.HookManager.ExecutePostWorktreeCheckoutHooks("CreateWorkTree", ctx); err != nil {
 		// Cleanup failed worktree
 		r.cleanupWorktreeOnError(worktreeInstance, worktreePath, "hook failure")
 		return fmt.Errorf("worktree checkout hooks failed: %w", err)
@@ -170,6 +212,7 @@ func (r *realRepository) createWorktreeWithNoCheckout(
 	repoURL, branch, worktreePath, currentDir string,
 	issueInfo *issue.Info,
 	remote string,
+	detached bool,
 ) error {
 	return worktreeInstance.Create(worktree.CreateParams{
 		RepoURL:      repoURL,
@@ -179,6 +222,7 @@ func (r *realRepository) createWorktreeWithNoCheckout(
 		Remote:       remote,
 		IssueInfo:    issueInfo,
 		Force:        false,
+		Detached:     detached,
 	})
 }
 
@@ -207,6 +251,7 @@ func (r *realRepository) addWorktreeToStatusAndHandleCleanup(
 	worktreePath string,
 	issueInfo *issue.Info,
 	remote string,
+	detached bool,
 ) error {
 	if err := r.AddWorktreeToStatus(StatusParams{
 		RepoURL:       repoURL,
@@ -215,6 +260,7 @@ func (r *realRepository) addWorktreeToStatusAndHandleCleanup(
 		WorkspacePath: "",
 		Remote:        remote,
 		IssueInfo:     issueInfo,
+		Detached:      detached,
 	}); err != nil {
 		// Clean up worktree on status failure
 		r.cleanupWorktreeOnError(worktreeInstance, worktreePath, "status failure")

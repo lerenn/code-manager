@@ -23,9 +23,10 @@ func (s *realManager) AddWorktree(params AddWorktreeParams) error {
 
 	// Create new worktree entry
 	worktreeInfo := WorktreeInfo{
-		Remote: params.Remote,
-		Branch: params.Branch,
-		Issue:  params.IssueInfo,
+		Remote:   params.Remote,
+		Branch:   params.Branch,
+		Issue:    params.IssueInfo,
+		Detached: params.Detached,
 	}
 
 	// Add to repository's worktrees

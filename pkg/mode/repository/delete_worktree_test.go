@@ -54,7 +54,7 @@ func TestDeleteWorktree_Success(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/test/repo", "test-branch").Return(&status.WorktreeInfo{
 		Remote: "origin",
 		Branch: "test-branch",
-	}, nil)
+	}, nil).Times(2)
 
 	// Mock worktree path retrieval
 	mockGit.EXPECT().GetWorktreePath("/test/repo", "test-branch").Return("/test/repos/github.com/test/repo/worktrees/origin/test-branch", nil)
@@ -175,7 +175,7 @@ func TestDeleteWorktree_GetWorktreePathError(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/test/repo", "test-branch").Return(&status.WorktreeInfo{
 		Remote: "origin",
 		Branch: "test-branch",
-	}, nil)
+	}, nil).Times(2)
 
 	// Mock worktree path retrieval failure
 	mockGit.EXPECT().GetWorktreePath("/test/repo", "test-branch").Return("", errors.New("worktree not found"))
@@ -221,7 +221,7 @@ func TestDeleteWorktree_WorktreeDeleteError(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/test/repo", "test-branch").Return(&status.WorktreeInfo{
 		Remote: "origin",
 		Branch: "test-branch",
-	}, nil)
+	}, nil).Times(2)
 
 	// Mock worktree path retrieval
 	mockGit.EXPECT().GetWorktreePath("/test/repo", "test-branch").Return("/test/repos/github.com/test/repo/worktrees/origin/test-branch", nil)
@@ -274,7 +274,7 @@ func TestDeleteWorktree_ForceDeletion(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/test/repo", "test-branch").Return(&status.WorktreeInfo{
 		Remote: "origin",
 		Branch: "test-branch",
-	}, nil)
+	}, nil).Times(2)
 
 	// Mock worktree path retrieval
 	mockGit.EXPECT().GetWorktreePath("/test/repo", "test-branch").Return("/test/repos/github.com/test/repo/worktrees/origin/test-branch", nil)
@@ -365,7 +365,7 @@ func TestDeleteWorktree_Success_FromRepository(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(&status.WorktreeInfo{
 		Remote: "origin",
 		Branch: "test-branch",
-	}, nil)
+	}, nil).Times(2)
 	mockGit.EXPECT().GetWorktreePath(gomock.Any(), "test-branch").Return("/test/path/worktree", nil)
 	mockWorktree.EXPECT().Delete(gomock.Any()).Return(nil)
 

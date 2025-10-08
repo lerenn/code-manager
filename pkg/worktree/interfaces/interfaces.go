@@ -60,6 +60,7 @@ type CreateParams struct {
 	Remote       string
 	IssueInfo    *issue.Info
 	Force        bool
+	Detached     bool // When true, creates standalone clone instead of worktree
 }
 
 // DeleteParams contains parameters for worktree deletion.
@@ -93,6 +94,7 @@ type AddToStatusParams struct {
 	WorkspacePath string
 	Remote        string
 	IssueInfo     *issue.Info
+	Detached      bool
 }
 
 // WorktreeProvider defines the function signature for creating worktree instances.

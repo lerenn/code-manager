@@ -3,6 +3,7 @@ package defaulthooks
 
 import (
 	"github.com/lerenn/code-manager/pkg/hooks"
+	"github.com/lerenn/code-manager/pkg/hooks/devcontainer"
 	"github.com/lerenn/code-manager/pkg/hooks/gitcrypt"
 	"github.com/lerenn/code-manager/pkg/hooks/ide"
 )
@@ -16,9 +17,15 @@ func NewDefaultHooksManager() (hooks.HookManagerInterface, error) {
 		return nil, err
 	}
 
-	// Register git-crypt worktree checkout hook
-	gitCryptHook := gitcrypt.NewWorktreeCheckoutHook()
-	if err := gitCryptHook.RegisterForOperations(hm.RegisterWorktreeCheckoutHook); err != nil {
+	// Register devcontainer pre-worktree creation hook
+	devcontainerHook := devcontainer.NewPreWorktreeCreationHook()
+	if err := devcontainerHook.RegisterForOperations(hm.RegisterPreWorktreeCreationHook); err != nil {
+		return nil, err
+	}
+
+	// Register git-crypt post-worktree checkout hook
+	gitCryptHook := gitcrypt.NewPostWorktreeCheckoutHook()
+	if err := gitCryptHook.RegisterForOperations(hm.RegisterPostWorktreeCheckoutHook); err != nil {
 		return nil, err
 	}
 

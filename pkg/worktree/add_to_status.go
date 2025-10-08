@@ -16,6 +16,7 @@ func (w *realWorktree) AddToStatus(params AddToStatusParams) error {
 		WorkspacePath: params.WorkspacePath,
 		Remote:        params.Remote,
 		IssueInfo:     params.IssueInfo,
+		Detached:      params.Detached,
 	}); err != nil {
 		return fmt.Errorf("failed to add worktree to status: %w", err)
 	}
