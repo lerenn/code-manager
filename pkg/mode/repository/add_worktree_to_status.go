@@ -35,6 +35,7 @@ func (r *realRepository) AddWorktreeToStatus(params StatusParams) error {
 		WorkspacePath: params.WorkspacePath,
 		Remote:        params.Remote,
 		IssueInfo:     params.IssueInfo,
+		Detached:      params.Detached,
 	}); err != nil {
 		return r.handleStatusAddError(err, params)
 	}
@@ -88,6 +89,7 @@ func (r *realRepository) handleRepositoryNotFoundError(params StatusParams) erro
 		WorkspacePath: params.WorkspacePath,
 		Remote:        params.Remote,
 		IssueInfo:     params.IssueInfo,
+		Detached:      params.Detached,
 	}); err != nil {
 		// Clean up created directory on status update failure
 		r.cleanupWorktreeDirectory(params.WorktreePath)

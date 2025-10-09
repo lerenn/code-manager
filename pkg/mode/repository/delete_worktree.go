@@ -43,23 +43,14 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 		RepositoriesDir: cfg.RepositoriesDir,
 	})
 
-	// Get worktree path from Git
-	worktreePath, err := r.deps.Git.GetWorktreePath(validationResult.RepoPath, branch)
+	// Get worktree path
+	worktreePath, shouldReturn, err := r.getWorktreePath(*validationResult, branch, worktreeInstance)
 	if err != nil {
-		r.deps.Logger.Logf("Failed to get worktree path for branch %s (worktree may not exist in Git): %v",
-			branch, err)
-		// If worktree doesn't exist in Git, just remove from status
-		if err := worktreeInstance.RemoveFromStatus(validationResult.RepoURL, branch); err != nil {
-			r.deps.Logger.Logf("Failed to remove worktree from status for branch %s: %v", branch, err)
-			return fmt.Errorf("failed to remove worktree from status for branch %s: %w",
-				branch, err)
-		}
-		r.deps.Logger.Logf("Successfully removed worktree from status for branch %s (worktree did not exist in Git)",
-			branch)
+		return err
+	}
+	if shouldReturn {
 		return nil
 	}
-
-	r.deps.Logger.Logf("Worktree path: %s", worktreePath)
 
 	// Delete the worktree
 	if err := worktreeInstance.Delete(worktree.DeleteParams{
@@ -75,4 +66,43 @@ func (r *realRepository) DeleteWorktree(branch string, force bool) error {
 	r.deps.Logger.Logf("Successfully deleted worktree for branch %s", branch)
 
 	return nil
+}
+
+// getWorktreePath resolves the worktree path based on whether it's detached or regular.
+// Returns (path, shouldReturn, error) where shouldReturn indicates if the function should return early.
+func (r *realRepository) getWorktreePath(
+	validationResult ValidationResult,
+	branch string,
+	worktreeInstance worktree.Worktree,
+) (string, bool, error) {
+	// Get worktree info from status to check if it's detached
+	worktreeInfo, err := r.deps.StatusManager.GetWorktree(validationResult.RepoURL, branch)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to get worktree info from status: %w", err)
+	}
+
+	if worktreeInfo.Detached {
+		// For detached worktrees, build the path (they're not in Git worktree list)
+		worktreePath := worktreeInstance.BuildPath(validationResult.RepoURL, "origin", branch)
+		r.deps.Logger.Logf("Detached worktree detected, using built path: %s", worktreePath)
+		return worktreePath, false, nil
+	}
+
+	// For regular worktrees, get path from Git
+	worktreePath, err := r.deps.Git.GetWorktreePath(validationResult.RepoPath, branch)
+	if err != nil {
+		r.deps.Logger.Logf("Failed to get worktree path for branch %s (worktree may not exist in Git): %v",
+			branch, err)
+		// If worktree doesn't exist in Git, just remove from status
+		if err := worktreeInstance.RemoveFromStatus(validationResult.RepoURL, branch); err != nil {
+			r.deps.Logger.Logf("Failed to remove worktree from status for branch %s: %v", branch, err)
+			return "", false, fmt.Errorf("failed to remove worktree from status for branch %s: %w",
+				branch, err)
+		}
+		r.deps.Logger.Logf("Successfully removed worktree from status for branch %s (worktree did not exist in Git)",
+			branch)
+		return "", true, nil
+	}
+	r.deps.Logger.Logf("Worktree path: %s", worktreePath)
+	return worktreePath, false, nil
 }

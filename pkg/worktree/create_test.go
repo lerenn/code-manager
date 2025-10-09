@@ -176,3 +176,42 @@ func TestWorktree_Create_BranchDoesNotExist(t *testing.T) {
 	err := worktree.Create(params)
 	assert.NoError(t, err)
 }
+
+func TestWorktree_Create_DetachedMode(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+
+	worktree := &realWorktree{
+		fs: mockFS, git: mockGit, statusManager: mockStatus, logger: logger.NewNoopLogger(), prompt: mockPrompt,
+		repositoriesDir: "/test/base",
+	}
+
+	params := CreateParams{
+		RepoURL:      "github.com/octocat/Hello-World",
+		Branch:       "feature-branch",
+		WorktreePath: "/test/base/github.com/octocat/Hello-World/origin/feature-branch",
+		RepoPath:     "/test/repo",
+		Remote:       "origin",
+		IssueInfo:    nil,
+		Force:        false,
+		Detached:     true, // Enable detached mode
+	}
+
+	// Mock expectations
+	mockFS.EXPECT().Exists(params.WorktreePath).Return(false, nil)
+	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(nil, errors.New("not found"))
+	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
+	mockGit.EXPECT().CheckReferenceConflict(params.RepoPath, params.Branch).Return(nil)
+	mockGit.EXPECT().BranchExists(params.RepoPath, params.Branch).Return(true, nil)
+	mockFS.EXPECT().MkdirAll(params.WorktreePath, gomock.Any()).Return(nil)
+	// For detached mode, should call CloneToPath instead of CreateWorktreeWithNoCheckout
+	mockGit.EXPECT().CloneToPath(params.RepoPath, params.WorktreePath, params.Branch).Return(nil)
+
+	err := worktree.Create(params)
+	assert.NoError(t, err)
+}

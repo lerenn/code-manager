@@ -16,8 +16,8 @@ func TestHookManager(t *testing.T) {
 	}
 
 	// Test registering a worktree checkout hook
-	worktreeCheckoutHook := &MockWorktreeCheckoutHook{name: "test-worktree-checkout"}
-	err = hm.RegisterWorktreeCheckoutHook("test-operation", worktreeCheckoutHook)
+	worktreeCheckoutHook := &MockPostWorktreeCheckoutHook{name: "test-worktree-checkout"}
+	err = hm.RegisterPostWorktreeCheckoutHook("test-operation", worktreeCheckoutHook)
 	if err != nil {
 		t.Errorf("Failed to register worktree checkout hook: %v", err)
 	}
@@ -43,7 +43,7 @@ func TestHookManager(t *testing.T) {
 	}
 
 	// Execute worktree checkout hooks
-	err = hm.ExecuteWorktreeCheckoutHooks("test-operation", ctx)
+	err = hm.ExecutePostWorktreeCheckoutHooks("test-operation", ctx)
 	if err != nil {
 		t.Errorf("Failed to execute worktree checkout hooks: %v", err)
 	}
@@ -70,23 +70,23 @@ func (h *MockPostHook) PostExecute(_ *HookContext) error {
 	return nil
 }
 
-// MockWorktreeCheckoutHook implements WorktreeCheckoutHook for testing.
-type MockWorktreeCheckoutHook struct {
+// MockPostWorktreeCheckoutHook implements PostWorktreeCheckoutHook for testing.
+type MockPostWorktreeCheckoutHook struct {
 	name string
 }
 
-func (h *MockWorktreeCheckoutHook) Name() string {
+func (h *MockPostWorktreeCheckoutHook) Name() string {
 	return h.name
 }
 
-func (h *MockWorktreeCheckoutHook) Priority() int {
+func (h *MockPostWorktreeCheckoutHook) Priority() int {
 	return 150
 }
 
-func (h *MockWorktreeCheckoutHook) Execute(_ *HookContext) error {
+func (h *MockPostWorktreeCheckoutHook) Execute(_ *HookContext) error {
 	return nil
 }
 
-func (h *MockWorktreeCheckoutHook) OnWorktreeCheckout(_ *HookContext) error {
+func (h *MockPostWorktreeCheckoutHook) OnPostWorktreeCheckout(_ *HookContext) error {
 	return nil
 }

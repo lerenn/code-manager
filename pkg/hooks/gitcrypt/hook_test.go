@@ -16,12 +16,12 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestGitCryptWorktreeCheckoutHook_RegisterForOperations(t *testing.T) {
-	hook := NewWorktreeCheckoutHook()
+func TestGitCryptPostWorktreeCheckoutHook_RegisterForOperations(t *testing.T) {
+	hook := NewPostWorktreeCheckoutHook()
 
 	// Mock register function
-	registeredOperations := make(map[string]hooks.WorktreeCheckoutHook)
-	registerHook := func(operation string, h hooks.WorktreeCheckoutHook) error {
+	registeredOperations := make(map[string]hooks.PostWorktreeCheckoutHook)
+	registerHook := func(operation string, h hooks.PostWorktreeCheckoutHook) error {
 		registeredOperations[operation] = h
 		return nil
 	}
@@ -37,25 +37,25 @@ func TestGitCryptWorktreeCheckoutHook_RegisterForOperations(t *testing.T) {
 	assert.Equal(t, hook, registeredOperations["LoadWorktree"])
 }
 
-func TestGitCryptWorktreeCheckoutHook_Name(t *testing.T) {
-	hook := NewWorktreeCheckoutHook()
+func TestGitCryptPostWorktreeCheckoutHook_Name(t *testing.T) {
+	hook := NewPostWorktreeCheckoutHook()
 	assert.Equal(t, "git-crypt-worktree-checkout", hook.Name())
 }
 
-func TestGitCryptWorktreeCheckoutHook_Priority(t *testing.T) {
-	hook := NewWorktreeCheckoutHook()
+func TestGitCryptPostWorktreeCheckoutHook_Priority(t *testing.T) {
+	hook := NewPostWorktreeCheckoutHook()
 	assert.Equal(t, 50, hook.Priority())
 }
 
-func TestGitCryptWorktreeCheckoutHook_Execute(t *testing.T) {
-	hook := NewWorktreeCheckoutHook()
+func TestGitCryptPostWorktreeCheckoutHook_Execute(t *testing.T) {
+	hook := NewPostWorktreeCheckoutHook()
 	ctx := &hooks.HookContext{}
 
 	err := hook.Execute(ctx)
 	assert.NoError(t, err)
 }
 
-func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_NoGitCrypt(t *testing.T) {
+func TestGitCryptPostWorktreeCheckoutHook_OnWorktreeCheckout_NoGitCrypt(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -65,7 +65,7 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_NoGitCrypt(t *testing.T
 	promptMock := promptmocks.NewMockPrompter(ctrl)
 
 	// Create hook with mocks
-	hook := &WorktreeCheckoutHook{
+	hook := &PostWorktreeCheckoutHook{
 		fs:            fsMock,
 		git:           gitMock,
 		prompt:        promptMock,
@@ -88,11 +88,11 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_NoGitCrypt(t *testing.T
 	fsMock.EXPECT().Exists("/path/to/repo/.gitattributes").Return(false, nil)
 
 	// Execute hook
-	err := hook.OnWorktreeCheckout(ctx)
+	err := hook.OnPostWorktreeCheckout(ctx)
 	assert.NoError(t, err)
 }
 
-func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_WithGitCrypt(t *testing.T) {
+func TestGitCryptPostWorktreeCheckoutHook_OnWorktreeCheckout_WithGitCrypt(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -102,7 +102,7 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_WithGitCrypt(t *testing
 	promptMock := promptmocks.NewMockPrompter(ctrl)
 
 	// Create hook with mocks
-	hook := &WorktreeCheckoutHook{
+	hook := &PostWorktreeCheckoutHook{
 		fs:            fsMock,
 		git:           gitMock,
 		prompt:        promptMock,
@@ -137,14 +137,14 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_WithGitCrypt(t *testing
 	fsMock.EXPECT().MkdirAll("/path/to/repo/.git/worktrees/worktree/git-crypt/keys", os.FileMode(0755)).Return(nil)
 
 	// Execute hook
-	err := hook.OnWorktreeCheckout(ctx)
+	err := hook.OnPostWorktreeCheckout(ctx)
 	// Expected to fail in unit tests because file copy operation can't be mocked
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to setup git-crypt in worktree")
 }
 
-func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_MissingWorktreePath(t *testing.T) {
-	hook := NewWorktreeCheckoutHook()
+func TestGitCryptPostWorktreeCheckoutHook_OnWorktreeCheckout_MissingWorktreePath(t *testing.T) {
+	hook := NewPostWorktreeCheckoutHook()
 
 	// Setup context without worktree path
 	ctx := &hooks.HookContext{
@@ -155,13 +155,13 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_MissingWorktreePath(t *
 	}
 
 	// Execute hook
-	err := hook.OnWorktreeCheckout(ctx)
+	err := hook.OnPostWorktreeCheckout(ctx)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrWorktreePathNotFound)
 }
 
-func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_MissingRepoPath(t *testing.T) {
-	hook := NewWorktreeCheckoutHook()
+func TestGitCryptPostWorktreeCheckoutHook_OnWorktreeCheckout_MissingRepoPath(t *testing.T) {
+	hook := NewPostWorktreeCheckoutHook()
 
 	// Setup context without repo path
 	ctx := &hooks.HookContext{
@@ -172,12 +172,12 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_MissingRepoPath(t *test
 	}
 
 	// Execute hook
-	err := hook.OnWorktreeCheckout(ctx)
+	err := hook.OnPostWorktreeCheckout(ctx)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrRepositoryPathNotFound)
 }
 
-func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_MissingBranch(t *testing.T) {
+func TestGitCryptPostWorktreeCheckoutHook_OnWorktreeCheckout_MissingBranch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -187,7 +187,7 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_MissingBranch(t *testin
 	promptMock := promptmocks.NewMockPrompter(ctrl)
 
 	// Create hook with mocks
-	hook := &WorktreeCheckoutHook{
+	hook := &PostWorktreeCheckoutHook{
 		fs:            fsMock,
 		git:           gitMock,
 		prompt:        promptMock,
@@ -210,12 +210,12 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_MissingBranch(t *testin
 	fsMock.EXPECT().ReadFile("/path/to/repo/.gitattributes").Return([]byte("*.secret filter=git-crypt diff=git-crypt"), nil)
 
 	// Execute hook
-	err := hook.OnWorktreeCheckout(ctx)
+	err := hook.OnPostWorktreeCheckout(ctx)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrBranchNotFound)
 }
 
-func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_GitCryptDetectionError(t *testing.T) {
+func TestGitCryptPostWorktreeCheckoutHook_OnWorktreeCheckout_GitCryptDetectionError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -225,7 +225,7 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_GitCryptDetectionError(
 	promptMock := promptmocks.NewMockPrompter(ctrl)
 
 	// Create hook with mocks
-	hook := &WorktreeCheckoutHook{
+	hook := &PostWorktreeCheckoutHook{
 		fs:            fsMock,
 		git:           gitMock,
 		prompt:        promptMock,
@@ -248,7 +248,7 @@ func TestGitCryptWorktreeCheckoutHook_OnWorktreeCheckout_GitCryptDetectionError(
 	fsMock.EXPECT().Exists("/path/to/repo/.gitattributes").Return(false, errors.New("permission denied"))
 
 	// Execute hook
-	err := hook.OnWorktreeCheckout(ctx)
+	err := hook.OnPostWorktreeCheckout(ctx)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to detect git-crypt usage")
 }

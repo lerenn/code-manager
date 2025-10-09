@@ -68,6 +68,20 @@ func (mr *MockHookManagerInterfaceMockRecorder) ExecutePostHooks(operation, ctx 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecutePostHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecutePostHooks), operation, ctx)
 }
 
+// ExecutePostWorktreeCheckoutHooks mocks base method.
+func (m *MockHookManagerInterface) ExecutePostWorktreeCheckoutHooks(operation string, ctx *hooks.HookContext) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ExecutePostWorktreeCheckoutHooks", operation, ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ExecutePostWorktreeCheckoutHooks indicates an expected call of ExecutePostWorktreeCheckoutHooks.
+func (mr *MockHookManagerInterfaceMockRecorder) ExecutePostWorktreeCheckoutHooks(operation, ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecutePostWorktreeCheckoutHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecutePostWorktreeCheckoutHooks), operation, ctx)
+}
+
 // ExecutePreHooks mocks base method.
 func (m *MockHookManagerInterface) ExecutePreHooks(operation string, ctx *hooks.HookContext) error {
 	m.ctrl.T.Helper()
@@ -82,18 +96,18 @@ func (mr *MockHookManagerInterfaceMockRecorder) ExecutePreHooks(operation, ctx a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecutePreHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecutePreHooks), operation, ctx)
 }
 
-// ExecuteWorktreeCheckoutHooks mocks base method.
-func (m *MockHookManagerInterface) ExecuteWorktreeCheckoutHooks(operation string, ctx *hooks.HookContext) error {
+// ExecutePreWorktreeCreationHooks mocks base method.
+func (m *MockHookManagerInterface) ExecutePreWorktreeCreationHooks(operation string, ctx *hooks.HookContext) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ExecuteWorktreeCheckoutHooks", operation, ctx)
+	ret := m.ctrl.Call(m, "ExecutePreWorktreeCreationHooks", operation, ctx)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// ExecuteWorktreeCheckoutHooks indicates an expected call of ExecuteWorktreeCheckoutHooks.
-func (mr *MockHookManagerInterfaceMockRecorder) ExecuteWorktreeCheckoutHooks(operation, ctx any) *gomock.Call {
+// ExecutePreWorktreeCreationHooks indicates an expected call of ExecutePreWorktreeCreationHooks.
+func (mr *MockHookManagerInterfaceMockRecorder) ExecutePreWorktreeCreationHooks(operation, ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecuteWorktreeCheckoutHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecuteWorktreeCheckoutHooks), operation, ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecutePreWorktreeCreationHooks", reflect.TypeOf((*MockHookManagerInterface)(nil).ExecutePreWorktreeCreationHooks), operation, ctx)
 }
 
 // RegisterPostHook mocks base method.
@@ -110,16 +124,30 @@ func (mr *MockHookManagerInterfaceMockRecorder) RegisterPostHook(operation, hook
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterPostHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterPostHook), operation, hook)
 }
 
-// RegisterWorktreeCheckoutHook mocks base method.
-func (m *MockHookManagerInterface) RegisterWorktreeCheckoutHook(operation string, hook hooks.WorktreeCheckoutHook) error {
+// RegisterPostWorktreeCheckoutHook mocks base method.
+func (m *MockHookManagerInterface) RegisterPostWorktreeCheckoutHook(operation string, hook hooks.PostWorktreeCheckoutHook) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RegisterWorktreeCheckoutHook", operation, hook)
+	ret := m.ctrl.Call(m, "RegisterPostWorktreeCheckoutHook", operation, hook)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RegisterWorktreeCheckoutHook indicates an expected call of RegisterWorktreeCheckoutHook.
-func (mr *MockHookManagerInterfaceMockRecorder) RegisterWorktreeCheckoutHook(operation, hook any) *gomock.Call {
+// RegisterPostWorktreeCheckoutHook indicates an expected call of RegisterPostWorktreeCheckoutHook.
+func (mr *MockHookManagerInterfaceMockRecorder) RegisterPostWorktreeCheckoutHook(operation, hook any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterWorktreeCheckoutHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterWorktreeCheckoutHook), operation, hook)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterPostWorktreeCheckoutHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterPostWorktreeCheckoutHook), operation, hook)
+}
+
+// RegisterPreWorktreeCreationHook mocks base method.
+func (m *MockHookManagerInterface) RegisterPreWorktreeCreationHook(operation string, hook hooks.PreWorktreeCreationHook) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RegisterPreWorktreeCreationHook", operation, hook)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RegisterPreWorktreeCreationHook indicates an expected call of RegisterPreWorktreeCreationHook.
+func (mr *MockHookManagerInterfaceMockRecorder) RegisterPreWorktreeCreationHook(operation, hook any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RegisterPreWorktreeCreationHook", reflect.TypeOf((*MockHookManagerInterface)(nil).RegisterPreWorktreeCreationHook), operation, hook)
 }

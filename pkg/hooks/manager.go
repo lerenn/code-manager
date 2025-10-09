@@ -10,33 +10,37 @@ import (
 
 // HookManager manages hook registration and execution.
 type HookManager struct {
-	preHooks              map[string][]PreHook
-	postHooks             map[string][]PostHook
-	errorHooks            map[string][]ErrorHook
-	worktreeCheckoutHooks map[string][]WorktreeCheckoutHook
-	mu                    sync.RWMutex
+	preHooks                  map[string][]PreHook
+	postHooks                 map[string][]PostHook
+	errorHooks                map[string][]ErrorHook
+	postWorktreeCheckoutHooks map[string][]PostWorktreeCheckoutHook
+	preWorktreeCreationHooks  map[string][]PreWorktreeCreationHook
+	mu                        sync.RWMutex
 }
 
 // HookManagerInterface defines the interface for hook management.
 type HookManagerInterface interface {
 	// Hook registration.
 	RegisterPostHook(operation string, hook PostHook) error
-	RegisterWorktreeCheckoutHook(operation string, hook WorktreeCheckoutHook) error
+	RegisterPostWorktreeCheckoutHook(operation string, hook PostWorktreeCheckoutHook) error
+	RegisterPreWorktreeCreationHook(operation string, hook PreWorktreeCreationHook) error
 
 	// Hook execution.
 	ExecutePreHooks(operation string, ctx *HookContext) error
 	ExecutePostHooks(operation string, ctx *HookContext) error
 	ExecuteErrorHooks(operation string, ctx *HookContext) error
-	ExecuteWorktreeCheckoutHooks(operation string, ctx *HookContext) error
+	ExecutePostWorktreeCheckoutHooks(operation string, ctx *HookContext) error
+	ExecutePreWorktreeCreationHooks(operation string, ctx *HookContext) error
 }
 
 // NewHookManager creates a new HookManager instance.
 func NewHookManager() HookManagerInterface {
 	return &HookManager{
-		preHooks:              make(map[string][]PreHook),
-		postHooks:             make(map[string][]PostHook),
-		errorHooks:            make(map[string][]ErrorHook),
-		worktreeCheckoutHooks: make(map[string][]WorktreeCheckoutHook),
+		preHooks:                  make(map[string][]PreHook),
+		postHooks:                 make(map[string][]PostHook),
+		errorHooks:                make(map[string][]ErrorHook),
+		postWorktreeCheckoutHooks: make(map[string][]PostWorktreeCheckoutHook),
+		preWorktreeCreationHooks:  make(map[string][]PreWorktreeCreationHook),
 	}
 }
 
@@ -58,8 +62,8 @@ func (hm *HookManager) RegisterPostHook(operation string, hook PostHook) error {
 	return nil
 }
 
-// RegisterWorktreeCheckoutHook registers a worktree checkout hook for a specific operation.
-func (hm *HookManager) RegisterWorktreeCheckoutHook(operation string, hook WorktreeCheckoutHook) error {
+// RegisterPostWorktreeCheckoutHook registers a post-worktree checkout hook for a specific operation.
+func (hm *HookManager) RegisterPostWorktreeCheckoutHook(operation string, hook PostWorktreeCheckoutHook) error {
 	hm.mu.Lock()
 	defer hm.mu.Unlock()
 
@@ -67,12 +71,30 @@ func (hm *HookManager) RegisterWorktreeCheckoutHook(operation string, hook Workt
 		return fmt.Errorf("hook cannot be nil")
 	}
 
-	if hm.worktreeCheckoutHooks[operation] == nil {
-		hm.worktreeCheckoutHooks[operation] = make([]WorktreeCheckoutHook, 0)
+	if hm.postWorktreeCheckoutHooks[operation] == nil {
+		hm.postWorktreeCheckoutHooks[operation] = make([]PostWorktreeCheckoutHook, 0)
 	}
 
-	hm.worktreeCheckoutHooks[operation] = append(hm.worktreeCheckoutHooks[operation], hook)
-	hm.sortWorktreeCheckoutHooksByPriority(operation)
+	hm.postWorktreeCheckoutHooks[operation] = append(hm.postWorktreeCheckoutHooks[operation], hook)
+	hm.sortPostWorktreeCheckoutHooksByPriority(operation)
+	return nil
+}
+
+// RegisterPreWorktreeCreationHook registers a pre-worktree creation hook for a specific operation.
+func (hm *HookManager) RegisterPreWorktreeCreationHook(operation string, hook PreWorktreeCreationHook) error {
+	hm.mu.Lock()
+	defer hm.mu.Unlock()
+
+	if hook == nil {
+		return fmt.Errorf("hook cannot be nil")
+	}
+
+	if hm.preWorktreeCreationHooks[operation] == nil {
+		hm.preWorktreeCreationHooks[operation] = make([]PreWorktreeCreationHook, 0)
+	}
+
+	hm.preWorktreeCreationHooks[operation] = append(hm.preWorktreeCreationHooks[operation], hook)
+	hm.sortPreWorktreeCreationHooksByPriority(operation)
 	return nil
 }
 
@@ -121,15 +143,30 @@ func (hm *HookManager) ExecuteErrorHooks(operation string, ctx *HookContext) err
 	return nil
 }
 
-// ExecuteWorktreeCheckoutHooks executes all worktree checkout hooks for a specific operation.
-func (hm *HookManager) ExecuteWorktreeCheckoutHooks(operation string, ctx *HookContext) error {
+// ExecutePostWorktreeCheckoutHooks executes all post-worktree checkout hooks for a specific operation.
+func (hm *HookManager) ExecutePostWorktreeCheckoutHooks(operation string, ctx *HookContext) error {
 	hm.mu.RLock()
 	defer hm.mu.RUnlock()
 
-	// Execute operation-specific worktree checkout hooks.
-	for _, hook := range hm.worktreeCheckoutHooks[operation] {
-		if err := hook.OnWorktreeCheckout(ctx); err != nil {
-			return fmt.Errorf("worktree checkout hook %s failed: %w", hook.Name(), err)
+	// Execute operation-specific post-worktree checkout hooks.
+	for _, hook := range hm.postWorktreeCheckoutHooks[operation] {
+		if err := hook.OnPostWorktreeCheckout(ctx); err != nil {
+			return fmt.Errorf("post-worktree checkout hook %s failed: %w", hook.Name(), err)
+		}
+	}
+
+	return nil
+}
+
+// ExecutePreWorktreeCreationHooks executes all pre-worktree creation hooks for a specific operation.
+func (hm *HookManager) ExecutePreWorktreeCreationHooks(operation string, ctx *HookContext) error {
+	hm.mu.RLock()
+	defer hm.mu.RUnlock()
+
+	// Execute operation-specific pre-worktree creation hooks.
+	for _, hook := range hm.preWorktreeCreationHooks[operation] {
+		if err := hook.OnPreWorktreeCreation(ctx); err != nil {
+			return fmt.Errorf("pre-worktree creation hook %s failed: %w", hook.Name(), err)
 		}
 	}
 
@@ -154,8 +191,14 @@ func (hm *HookManager) sortHooksByPriority(operation, hookType string) {
 	}
 }
 
-func (hm *HookManager) sortWorktreeCheckoutHooksByPriority(operation string) {
-	sort.Slice(hm.worktreeCheckoutHooks[operation], func(i, j int) bool {
-		return hm.worktreeCheckoutHooks[operation][i].Priority() < hm.worktreeCheckoutHooks[operation][j].Priority()
+func (hm *HookManager) sortPostWorktreeCheckoutHooksByPriority(operation string) {
+	sort.Slice(hm.postWorktreeCheckoutHooks[operation], func(i, j int) bool {
+		return hm.postWorktreeCheckoutHooks[operation][i].Priority() < hm.postWorktreeCheckoutHooks[operation][j].Priority()
+	})
+}
+
+func (hm *HookManager) sortPreWorktreeCreationHooksByPriority(operation string) {
+	sort.Slice(hm.preWorktreeCreationHooks[operation], func(i, j int) bool {
+		return hm.preWorktreeCreationHooks[operation][i].Priority() < hm.preWorktreeCreationHooks[operation][j].Priority()
 	})
 }

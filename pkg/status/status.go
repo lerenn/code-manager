@@ -49,9 +49,10 @@ func (w *Workspace) HasRepository(repositoryName string) bool {
 
 // WorktreeInfo represents worktree information.
 type WorktreeInfo struct {
-	Remote string      `yaml:"remote"`
-	Branch string      `yaml:"branch"`
-	Issue  *issue.Info `yaml:"issue,omitempty"`
+	Remote   string      `yaml:"remote"`
+	Branch   string      `yaml:"branch"`
+	Issue    *issue.Info `yaml:"issue,omitempty"`
+	Detached bool        `yaml:"detached,omitempty"` // When true, indicates this is a standalone clone
 }
 
 // Manager interface provides status file management functionality.
@@ -124,6 +125,7 @@ type AddWorktreeParams struct {
 	WorkspacePath string
 	IssueInfo     *issue.Info
 	Remote        string
+	Detached      bool
 }
 
 // AddRepositoryParams contains parameters for AddRepository.

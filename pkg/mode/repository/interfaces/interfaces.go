@@ -44,6 +44,7 @@ type StatusParams struct {
 	WorkspacePath string
 	Remote        string
 	IssueInfo     *issue.Info
+	Detached      bool
 }
 
 // Repository defines the interface for repository operations.

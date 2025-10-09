@@ -145,6 +145,20 @@ func (mr *MockGitMockRecorder) Clone(params any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Clone", reflect.TypeOf((*MockGit)(nil).Clone), params)
 }
 
+// CloneToPath mocks base method.
+func (m *MockGit) CloneToPath(sourceRepoPath, targetPath, branch string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloneToPath", sourceRepoPath, targetPath, branch)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CloneToPath indicates an expected call of CloneToPath.
+func (mr *MockGitMockRecorder) CloneToPath(sourceRepoPath, targetPath, branch any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloneToPath", reflect.TypeOf((*MockGit)(nil).CloneToPath), sourceRepoPath, targetPath, branch)
+}
+
 // Commit mocks base method.
 func (m *MockGit) Commit(repoPath, message string) error {
 	m.ctrl.T.Helper()

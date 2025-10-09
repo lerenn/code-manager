@@ -36,7 +36,28 @@ func (w *realWorktree) Create(params CreateParams) error {
 		return err
 	}
 
-	// Create Git worktree with --no-checkout to allow hooks to prepare
+	// Create worktree or clone based on detached mode
+	if params.Detached {
+		return w.createDetachedClone(params)
+	}
+	return w.createRegularWorktree(params)
+}
+
+// createDetachedClone creates a standalone clone for detached worktrees.
+func (w *realWorktree) createDetachedClone(params CreateParams) error {
+	if err := w.git.CloneToPath(params.RepoPath, params.WorktreePath, params.Branch); err != nil {
+		// Clean up directory on failure
+		if cleanupErr := w.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
+			w.logger.Logf("Warning: failed to clean up worktree directory: %v", cleanupErr)
+		}
+		return fmt.Errorf("failed to create detached clone: %w", err)
+	}
+	w.logger.Logf("✓ Detached clone created successfully for %s:%s", params.Remote, params.Branch)
+	return nil
+}
+
+// createRegularWorktree creates a regular Git worktree.
+func (w *realWorktree) createRegularWorktree(params CreateParams) error {
 	if err := w.git.CreateWorktreeWithNoCheckout(params.RepoPath, params.WorktreePath, params.Branch); err != nil {
 		// Clean up directory on failure
 		if cleanupErr := w.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
@@ -44,7 +65,6 @@ func (w *realWorktree) Create(params CreateParams) error {
 		}
 		return fmt.Errorf("failed to create Git worktree: %w", err)
 	}
-
 	w.logger.Logf("✓ Worktree created successfully for %s:%s", params.Remote, params.Branch)
 	return nil
 }

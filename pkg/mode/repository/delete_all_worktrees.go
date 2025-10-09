@@ -84,20 +84,28 @@ func (r *realRepository) deleteSingleWorktree(
 ) error {
 	r.deps.Logger.Logf("Deleting worktree for branch: %s", worktreeInfo.Branch)
 
-	// Get worktree path from Git
-	worktreePath, err := r.deps.Git.GetWorktreePath(validationResult.RepoPath, worktreeInfo.Branch)
-	if err != nil {
-		r.deps.Logger.Logf("Failed to get worktree path for branch %s (worktree may not exist in Git): %v",
-			worktreeInfo.Branch, err)
-		// If worktree doesn't exist in Git, just remove from status
-		if err := worktreeInstance.RemoveFromStatus(validationResult.RepoURL, worktreeInfo.Branch); err != nil {
-			r.deps.Logger.Logf("Failed to remove worktree from status for branch %s: %v", worktreeInfo.Branch, err)
-			return fmt.Errorf("failed to remove worktree from status for branch %s: %w",
+	var worktreePath string
+	if worktreeInfo.Detached {
+		// For detached worktrees, build the path (they're not in Git worktree list)
+		worktreePath = worktreeInstance.BuildPath(validationResult.RepoURL, "origin", worktreeInfo.Branch)
+		r.deps.Logger.Logf("Detached worktree detected, using built path: %s", worktreePath)
+	} else {
+		// For regular worktrees, get path from Git
+		var err error
+		worktreePath, err = r.deps.Git.GetWorktreePath(validationResult.RepoPath, worktreeInfo.Branch)
+		if err != nil {
+			r.deps.Logger.Logf("Failed to get worktree path for branch %s (worktree may not exist in Git): %v",
 				worktreeInfo.Branch, err)
+			// If worktree doesn't exist in Git, just remove from status
+			if err := worktreeInstance.RemoveFromStatus(validationResult.RepoURL, worktreeInfo.Branch); err != nil {
+				r.deps.Logger.Logf("Failed to remove worktree from status for branch %s: %v", worktreeInfo.Branch, err)
+				return fmt.Errorf("failed to remove worktree from status for branch %s: %w",
+					worktreeInfo.Branch, err)
+			}
+			r.deps.Logger.Logf("Successfully removed worktree from status for branch %s (worktree did not exist in Git)",
+				worktreeInfo.Branch)
+			return nil
 		}
-		r.deps.Logger.Logf("Successfully removed worktree from status for branch %s (worktree did not exist in Git)",
-			worktreeInfo.Branch)
-		return nil
 	}
 
 	// Delete the worktree
