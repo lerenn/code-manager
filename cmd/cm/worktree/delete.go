@@ -16,12 +16,12 @@ func createDeleteCmd() *cobra.Command {
 	var all bool
 
 	deleteCmd := &cobra.Command{
-		Use:   "delete [branch] [branch2] [branch3] ... [--force/-f] [--workspace/-w] [--repository/-r] [--all/-a]",
+		Use: "delete [branch] [branch2] [branch3] ... [--force/-f] [--workspace/-w] [--repository/-r] [--all/-a]",
 		Short: "Delete worktrees for the specified branches or all worktrees " +
 			"(two-step interactive selection if no branch provided)",
-		Long:  getDeleteCmdLongDescription(),
-		Args:  createDeleteCmdArgsValidator(&all, &workspaceName, &repositoryName),
-		RunE:  createDeleteCmdRunE(&all, &force, &workspaceName, &repositoryName),
+		Long: getDeleteCmdLongDescription(),
+		Args: createDeleteCmdArgsValidator(&all, &workspaceName, &repositoryName),
+		RunE: createDeleteCmdRunE(&all, &force, &workspaceName, &repositoryName),
 	}
 
 	addDeleteCmdFlags(deleteCmd, &force, &workspaceName, &repositoryName, &all)

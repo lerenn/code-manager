@@ -32,35 +32,35 @@ func (c *realCodeManager) DeleteWorkTree(branch string, force bool, opts ...Dele
 		if branch == "" {
 			// Two-step selection: first target, then worktree
 			result, err := c.promptSelectTargetAndWorktree()
-		if err != nil {
-			return fmt.Errorf("failed to select target and worktree: %w", err)
-		}
+			if err != nil {
+				return fmt.Errorf("failed to select target and worktree: %w", err)
+			}
 
-		switch result.Type {
-		case prompt.TargetWorkspace:
-			options.WorkspaceName = result.Name
-		case prompt.TargetRepository:
-			options.RepositoryName = result.Name
-		default:
-			return fmt.Errorf("invalid target type selected: %s", result.Type)
-		}
+			switch result.Type {
+			case prompt.TargetWorkspace:
+				options.WorkspaceName = result.Name
+			case prompt.TargetRepository:
+				options.RepositoryName = result.Name
+			default:
+				return fmt.Errorf("invalid target type selected: %s", result.Type)
+			}
 
-		branch = result.Worktree
+			branch = result.Worktree
 		} else {
-		// Single-step selection: just target (branch already provided)
-		result, err := c.promptSelectTargetOnly()
-		if err != nil {
-			return fmt.Errorf("failed to select target: %w", err)
-		}
+			// Single-step selection: just target (branch already provided)
+			result, err := c.promptSelectTargetOnly()
+			if err != nil {
+				return fmt.Errorf("failed to select target: %w", err)
+			}
 
-		switch result.Type {
-		case prompt.TargetWorkspace:
-			options.WorkspaceName = result.Name
-		case prompt.TargetRepository:
-			options.RepositoryName = result.Name
-		default:
-			return fmt.Errorf("invalid target type selected: %s", result.Type)
-		}
+			switch result.Type {
+			case prompt.TargetWorkspace:
+				options.WorkspaceName = result.Name
+			case prompt.TargetRepository:
+				options.RepositoryName = result.Name
+			default:
+				return fmt.Errorf("invalid target type selected: %s", result.Type)
+			}
 		}
 	} else if branch == "" {
 		// Target specified but no branch - prompt for branch name
