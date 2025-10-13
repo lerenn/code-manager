@@ -52,7 +52,8 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 
@@ -102,6 +103,7 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 
 	// Mock no repository found
@@ -231,7 +233,8 @@ func TestCM_DeleteWorkTrees_PartialFailure(t *testing.T) {
 	for i := 0; i < len(branches); i++ {
 		mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 		if i == 1 { // branch2 fails
-			mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+			mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 		} else {
 			mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 		}
@@ -286,7 +289,8 @@ func TestCM_DeleteWorkTrees_AllFailures(t *testing.T) {
 	// Mock hook execution for each branch (2 times)
 	for i := 0; i < len(branches); i++ {
 		mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-		mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+		mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
 	}
 
 	// Mock repository detection for each branch

@@ -64,48 +64,78 @@ func (m selectModel) Init() tea.Cmd {
 // Update handles messages and updates the model.
 func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if msg, ok := msg.(tea.KeyMsg); ok {
-		switch msg.String() {
-		case "ctrl+c", "q":
-			m.quitting = true
-			return m, tea.Quit
-
-		case "enter":
-			if len(m.filteredChoices) > 0 && m.cursor < len(m.filteredChoices) {
-				selected := m.filteredChoices[m.cursor]
-				m.selected = &selected
-				return m, tea.Quit
-			}
-
-		case "up", "k":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-
-		case "down", "j":
-			if m.cursor < len(m.filteredChoices)-1 {
-				m.cursor++
-			}
-
-		case "backspace":
-			if len(m.filter) > 0 {
-				m.filter = m.filter[:len(m.filter)-1]
-				m.updateFilteredChoices()
-			}
-
-		case "esc":
-			m.filter = ""
-			m.updateFilteredChoices()
-
-		default:
-			// Handle regular character input for filtering
-			if len(msg.String()) == 1 {
-				m.filter += msg.String()
-				m.updateFilteredChoices()
-			}
-		}
+		return m.handleKeyInput(msg)
 	}
 
 	return m, nil
+}
+
+// handleKeyInput processes key input and returns the updated model and command.
+func (m *selectModel) handleKeyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	key := msg.String()
+	
+	// Handle special keys
+	if m.handleSpecialKeys(key) {
+		return m, tea.Quit
+	}
+	
+	// Handle navigation keys
+	m.handleNavigationKeys(key)
+	
+	// Handle filter keys
+	m.handleFilterKeys(key)
+	
+	return m, nil
+}
+
+// handleSpecialKeys handles special keys that cause the program to quit.
+func (m *selectModel) handleSpecialKeys(key string) bool {
+	switch key {
+	case "ctrl+c", "q":
+		m.quitting = true
+		return true
+	case "enter":
+		if len(m.filteredChoices) > 0 && m.cursor < len(m.filteredChoices) {
+			selected := m.filteredChoices[m.cursor]
+			m.selected = &selected
+			return true
+		}
+	}
+	return false
+}
+
+// handleNavigationKeys handles navigation keys (up/down).
+func (m *selectModel) handleNavigationKeys(key string) {
+	switch key {
+	case "up", "k":
+		if m.cursor > 0 {
+			m.cursor--
+		}
+	case "down", "j":
+		if m.cursor < len(m.filteredChoices)-1 {
+			m.cursor++
+		}
+	}
+}
+
+// handleFilterKeys handles filter-related keys.
+func (m *selectModel) handleFilterKeys(key string) {
+	switch key {
+	case "backspace":
+		if len(m.filter) > 0 {
+			m.filter = m.filter[:len(m.filter)-1]
+			m.updateFilteredChoices()
+		}
+	case "esc":
+		m.filter = ""
+		m.updateFilteredChoices()
+	default:
+		// Handle regular character input for filtering
+		if len(key) == 1 {
+			m.filter += key
+			m.updateFilteredChoices()
+		}
+	}
 }
 
 // updateFilteredChoices updates the filtered choices based on the current filter.

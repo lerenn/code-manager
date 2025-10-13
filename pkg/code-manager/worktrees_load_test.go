@@ -45,7 +45,8 @@ func TestCM_LoadWorktree_Success(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
@@ -81,7 +82,8 @@ func TestCM_LoadWorktree_WithIDE(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
@@ -118,7 +120,8 @@ func TestCM_LoadWorktree_NewRemote(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
@@ -154,7 +157,8 @@ func TestCM_LoadWorktree_SSHProtocol(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
@@ -192,6 +196,7 @@ func TestCM_LoadWorktree_OriginRemoteNotFound(t *testing.T) {
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecuteErrorHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
 	// Mock repository detection and worktree loading to return an error
@@ -229,6 +234,7 @@ func TestCM_LoadWorktree_OriginRemoteInvalidURL(t *testing.T) {
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecuteErrorHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
 	// Mock repository detection and worktree loading to return an error
@@ -266,6 +272,7 @@ func TestCM_LoadWorktree_FetchFailed(t *testing.T) {
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecuteErrorHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
 	// Mock repository detection and worktree loading to return an error
@@ -303,6 +310,7 @@ func TestCM_LoadWorktree_BranchNotFound(t *testing.T) {
 
 	// Mock hook execution
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecuteErrorHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 
 	// Mock repository detection and worktree loading to return an error
@@ -338,7 +346,8 @@ func TestCM_LoadWorktree_DefaultRemote(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.LoadWorktree, gomock.Any()).Return(nil)
 

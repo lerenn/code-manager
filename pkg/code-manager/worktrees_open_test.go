@@ -5,6 +5,7 @@ package codemanager
 import (
 	"testing"
 
+	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
@@ -60,6 +61,7 @@ func TestCM_OpenWorktree(t *testing.T) {
 	}, nil).Times(1)
 
 	// Mock hook manager expectations
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil).Times(1)
 	mockHookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 	mockHookManager.EXPECT().ExecutePostHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 
@@ -105,6 +107,7 @@ func TestCM_OpenWorktree_NotFound(t *testing.T) {
 	mockStatus.EXPECT().GetWorktree("github.com/octocat/Hello-World", "test-branch").Return(nil, status.ErrWorktreeNotFound).Times(1)
 
 	// Mock hook manager expectations
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil).Times(1)
 	mockHookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 	mockHookManager.EXPECT().ExecuteErrorHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 
@@ -129,6 +132,7 @@ func TestOpenWorktree_CountsIDEOpenings(t *testing.T) {
 	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	// Set up hook manager expectations
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil).Times(1)
 	mockHookManager.EXPECT().ExecutePreHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 	mockHookManager.EXPECT().ExecutePostHooks("OpenWorktree", gomock.Any()).Return(nil).Times(1)
 

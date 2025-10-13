@@ -60,7 +60,8 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 
@@ -108,7 +109,8 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 
@@ -157,7 +159,8 @@ func TestCM_CreateWorkTree_WorkspaceMode(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 
@@ -206,7 +209,8 @@ func TestCM_CreateWorkTree_WorkspaceModeWithIDE(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution
+	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
 

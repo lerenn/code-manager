@@ -134,14 +134,7 @@ func (c *realCodeManager) promptSelectTarget(filterType, context string) (Target
 		}
 
 		if len(choices) == 0 {
-			switch filterType {
-			case prompt.TargetRepository:
-				return fmt.Errorf("no repositories available for selection")
-			case prompt.TargetWorkspace:
-				return fmt.Errorf("no workspaces available for selection")
-			default:
-				return fmt.Errorf("no repositories or workspaces available for selection")
-			}
+			return c.getNoChoicesError(filterType)
 		}
 
 		if c.deps.Logger != nil {
@@ -173,6 +166,18 @@ func (c *realCodeManager) promptSelectTarget(filterType, context string) (Target
 		Type:     selectedType,
 		Worktree: "", // No worktree for target-only selection
 	}, nil
+}
+
+// getNoChoicesError returns an appropriate error message based on the filter type.
+func (c *realCodeManager) getNoChoicesError(filterType string) error {
+	switch filterType {
+	case prompt.TargetRepository:
+		return fmt.Errorf("no repositories available for selection")
+	case prompt.TargetWorkspace:
+		return fmt.Errorf("no workspaces available for selection")
+	default:
+		return fmt.Errorf("no repositories or workspaces available for selection")
+	}
 }
 
 // buildTargetChoices builds a list of target choices from repositories and workspaces.
