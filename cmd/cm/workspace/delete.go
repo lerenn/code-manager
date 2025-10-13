@@ -12,10 +12,10 @@ import (
 
 func createDeleteCmd() *cobra.Command {
 	deleteCmd := &cobra.Command{
-		Use:   "delete <workspace-name>",
+		Use:   "delete [workspace-name]",
 		Short: "Delete a workspace and all associated resources",
 		Long:  getDeleteCommandLongDescription(),
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE:  createDeleteCmdRunE,
 	}
 
@@ -40,6 +40,8 @@ The deletion process includes:
 - Removing the workspace entry from status.yaml
 - Preserving individual repository entries (they may be used by other workspaces)
 
+If no workspace name is provided, you will be prompted to select one interactively.
+
 By default, the command will show a confirmation prompt with a detailed summary
 of what will be deleted. Use the --force flag to skip confirmation prompts.
 
@@ -48,13 +50,14 @@ Examples:
   cm workspace delete my-workspace
 
   # Delete workspace without confirmation
-  cm workspace delete my-workspace --force`
+  cm workspace delete my-workspace --force
+
+  # Interactive selection
+  cm ws delete`
 }
 
 // createDeleteCmdRunE creates the RunE function for the delete command.
 func createDeleteCmdRunE(cmd *cobra.Command, args []string) error {
-	workspaceName := args[0]
-
 	// Get force flag
 	force, err := cmd.Flags().GetBool("force")
 	if err != nil {
@@ -72,19 +75,23 @@ func createDeleteCmdRunE(cmd *cobra.Command, args []string) error {
 		cmManager.SetLogger(logger.NewVerboseLogger())
 	}
 
-	// Delete workspace
+	// Create delete parameters (interactive selection handled in code-manager)
 	params := cm.DeleteWorkspaceParams{
-		WorkspaceName: workspaceName,
+		WorkspaceName: "",
 		Force:         force,
 	}
+	if len(args) > 0 {
+		params.WorkspaceName = args[0]
+	}
 
+	// Delete workspace (interactive selection handled in code-manager)
 	if err := cmManager.DeleteWorkspace(params); err != nil {
 		return err
 	}
 
 	// Print success message
 	if !cli.Quiet {
-		fmt.Printf("✓ Workspace '%s' deleted successfully\n", workspaceName)
+		fmt.Printf("✓ Workspace '%s' deleted successfully\n", params.WorkspaceName)
 	}
 
 	return nil

@@ -26,9 +26,9 @@ func createListCmd() *cobra.Command {
 
 	// Add workspace and repository flags to list command (optional)
 	listCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
-		"Name of the workspace to list worktrees for (optional)")
+		"Name of the workspace to list worktrees for (interactive selection if not provided)")
 	listCmd.Flags().StringVarP(&repositoryName, "repository", "r", "",
-		"Name of the repository to list worktrees for (optional)")
+		"Name of the repository to list worktrees for (interactive selection if not provided)")
 
 	return listCmd
 }
@@ -37,7 +37,7 @@ func getListCmdLongDescription() string {
 	return `List all worktrees for a specific workspace, repository, or current repository.
 
 Examples:
-  cm worktree list                    # List worktrees for current repository
+  cm worktree list                    # Interactive selection of workspace/repository
   cm worktree list --workspace my-workspace  # List worktrees for specific workspace
   cm worktree list --repository my-repo      # List worktrees for specific repository
   cm wt list -w my-workspace
@@ -59,6 +59,7 @@ func createListCmdRunE(workspaceName, repositoryName *string) func(*cobra.Comman
 
 		opts := buildListWorktreesOptions(*workspaceName, *repositoryName)
 
+		// List worktrees (interactive selection handled in code-manager)
 		worktrees, err := cmManager.ListWorktrees(opts...)
 		if err != nil {
 			return fmt.Errorf("failed to list worktrees: %w", err)

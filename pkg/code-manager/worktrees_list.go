@@ -7,6 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
@@ -24,6 +25,23 @@ func (c *realCodeManager) ListWorktrees(opts ...ListWorktreesOpts) ([]status.Wor
 	// Validate that workspace and repository are not both specified
 	if options.WorkspaceName != "" && options.RepositoryName != "" {
 		return nil, fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
+	}
+
+	// Handle interactive selection if neither workspace nor repository is specified
+	if options.WorkspaceName == "" && options.RepositoryName == "" {
+		result, err := c.promptSelectTargetOnly()
+		if err != nil {
+			return nil, fmt.Errorf("failed to select target: %w", err)
+		}
+
+		switch result.Type {
+		case prompt.TargetWorkspace:
+			options.WorkspaceName = result.Name
+		case prompt.TargetRepository:
+			options.RepositoryName = result.Name
+		default:
+			return nil, fmt.Errorf("invalid target type selected: %s", result.Type)
+		}
 	}
 
 	// Prepare parameters for hooks
@@ -96,6 +114,7 @@ func (c *realCodeManager) listWorkspaceWorktreesFromWorkspace(
 
 	// For workspace deletion, we need to find worktrees in ALL repositories that match the workspace's worktree references
 	// This is because workspace creation creates worktrees in all repositories but only tracks one reference
+	seenBranches := make(map[string]bool) // Track which branches we've already found
 	for _, worktreeRef := range workspace.Worktrees {
 		c.VerbosePrint("  Looking for worktree reference: %s", worktreeRef)
 		for _, repoURL := range workspace.Repositories {
@@ -111,9 +130,10 @@ func (c *realCodeManager) listWorkspaceWorktreesFromWorkspace(
 			// The worktrees are stored with "remote:branch" as the key, but workspace stores just "branch"
 			// So we need to find worktrees where the branch matches
 			for worktreeKey, worktree := range repo.Worktrees {
-				if worktree.Branch == worktreeRef {
+				if worktree.Branch == worktreeRef && !seenBranches[worktreeRef] {
 					c.VerbosePrint("    ✓ Found worktree %s (key: %s) in repository %s", worktreeRef, worktreeKey, repoURL)
 					workspaceWorktrees = append(workspaceWorktrees, worktree)
+					seenBranches[worktreeRef] = true
 					break // Found in this repository, continue to next repository
 				}
 			}

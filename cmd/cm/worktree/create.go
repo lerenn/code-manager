@@ -39,9 +39,9 @@ func createCreateCmd() *cobra.Command {
 	createCmd.Flags().StringVar(&fromIssue, "from-issue", "",
 		"Create worktree from GitHub issue (URL, number, or owner/repo#issue format)")
 	createCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
-		"Create worktrees from workspace definition in status.yaml")
+		"Create worktrees from workspace definition in status.yaml (interactive selection if not provided)")
 	createCmd.Flags().StringVarP(&repositoryName, "repository", "r", "",
-		"Create worktree for the specified repository (name from status.yaml or path)")
+		"Create worktree for the specified repository (name from status.yaml or path, interactive selection if not provided)")
 
 	return createCmd
 }
@@ -59,7 +59,7 @@ Issue Reference Formats:
   - Owner/repo#issue format: owner/repo#123
 
 Examples:
-  cm worktree create feature-branch
+  cm worktree create feature-branch                    # Interactive selection of workspace/repository
   cm wt create feature-branch --ide ` + ide.DefaultIDE + `
   cm w create feature-branch --ide cursor
   cm worktree create --from-issue https://github.com/owner/repo/issues/123
@@ -93,8 +93,8 @@ func createCreateCmdArgsValidator(
 		if *workspaceName != "" || *repositoryName != "" {
 			return cobra.ExactArgs(1)(cmd, args)
 		}
-		// Otherwise, branch name is required
-		return cobra.ExactArgs(1)(cmd, args)
+		// Otherwise, branch name is optional (interactive selection will handle target selection)
+		return cobra.MaximumNArgs(1)(cmd, args)
 	}
 }
 

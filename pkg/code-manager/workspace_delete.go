@@ -12,6 +12,15 @@ import (
 
 // DeleteWorkspace deletes a workspace and all associated resources.
 func (c *realCodeManager) DeleteWorkspace(params DeleteWorkspaceParams) error {
+	// Handle interactive selection if no workspace name is provided
+	if params.WorkspaceName == "" {
+		result, err := c.promptSelectWorkspaceOnly()
+		if err != nil {
+			return fmt.Errorf("failed to select workspace: %w", err)
+		}
+		params.WorkspaceName = result.Name
+	}
+
 	return c.executeWithHooks("delete_workspace", map[string]interface{}{
 		"workspace_name": params.WorkspaceName,
 		"force":          params.Force,

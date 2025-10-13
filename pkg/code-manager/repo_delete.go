@@ -17,6 +17,15 @@ type DeleteRepositoryParams struct {
 
 // DeleteRepository deletes a repository and all associated resources.
 func (c *realCodeManager) DeleteRepository(params DeleteRepositoryParams) error {
+	// Handle interactive selection if no repository name is provided
+	if params.RepositoryName == "" {
+		result, err := c.promptSelectRepositoryOnly()
+		if err != nil {
+			return fmt.Errorf("failed to select repository: %w", err)
+		}
+		params.RepositoryName = result.Name
+	}
+
 	return c.executeWithHooks(consts.DeleteRepository, map[string]interface{}{
 		"repository_name": params.RepositoryName,
 		"force":           params.Force,

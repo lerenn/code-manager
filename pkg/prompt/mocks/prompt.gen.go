@@ -12,6 +12,7 @@ package mocks
 import (
 	reflect "reflect"
 
+	prompt "github.com/lerenn/code-manager/pkg/prompt"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -37,6 +38,21 @@ func NewMockPrompter(ctrl *gomock.Controller) *MockPrompter {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockPrompter) EXPECT() *MockPrompterMockRecorder {
 	return m.recorder
+}
+
+// PromptForBranchName mocks base method.
+func (m *MockPrompter) PromptForBranchName() (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromptForBranchName")
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PromptForBranchName indicates an expected call of PromptForBranchName.
+func (mr *MockPrompterMockRecorder) PromptForBranchName() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForBranchName", reflect.TypeOf((*MockPrompter)(nil).PromptForBranchName))
 }
 
 // PromptForConfirmation mocks base method.
@@ -97,4 +113,19 @@ func (m *MockPrompter) PromptForWorkspacesDir(defaultWorkspacesDir string) (stri
 func (mr *MockPrompterMockRecorder) PromptForWorkspacesDir(defaultWorkspacesDir any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptForWorkspacesDir", reflect.TypeOf((*MockPrompter)(nil).PromptForWorkspacesDir), defaultWorkspacesDir)
+}
+
+// PromptSelectTarget mocks base method.
+func (m *MockPrompter) PromptSelectTarget(choices []prompt.TargetChoice, showWorktreeLabel bool) (prompt.TargetChoice, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PromptSelectTarget", choices, showWorktreeLabel)
+	ret0, _ := ret[0].(prompt.TargetChoice)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PromptSelectTarget indicates an expected call of PromptSelectTarget.
+func (mr *MockPrompterMockRecorder) PromptSelectTarget(choices, showWorktreeLabel any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PromptSelectTarget", reflect.TypeOf((*MockPrompter)(nil).PromptSelectTarget), choices, showWorktreeLabel)
 }

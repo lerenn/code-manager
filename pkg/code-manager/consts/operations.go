@@ -20,6 +20,9 @@ const (
 	// Workspace operations.
 	ListWorkspaces = "ListWorkspaces"
 
+	// Prompt operations.
+	PromptSelectTarget = "PromptSelectTarget"
+
 	// Initialization operations.
 	Init = "Init"
 )

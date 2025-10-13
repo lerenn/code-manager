@@ -7,6 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
 	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
+	"github.com/lerenn/code-manager/pkg/prompt"
 )
 
 // OpenWorktreeOpts contains optional parameters for OpenWorktree.
@@ -23,6 +24,26 @@ func (c *realCodeManager) OpenWorktree(worktreeName, ideName string, opts ...Ope
 	// Validate that workspace and repository are not both specified
 	if options.WorkspaceName != "" && options.RepositoryName != "" {
 		return fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
+	}
+
+	// Handle interactive selection if neither workspace nor repository is specified
+	if options.WorkspaceName == "" && options.RepositoryName == "" {
+		result, err := c.promptSelectTargetAndWorktree()
+		if err != nil {
+			return fmt.Errorf("failed to select target and worktree: %w", err)
+		}
+
+		switch result.Type {
+		case prompt.TargetWorkspace:
+			options.WorkspaceName = result.Name
+		case prompt.TargetRepository:
+			options.RepositoryName = result.Name
+		default:
+			return fmt.Errorf("invalid target type selected: %s", result.Type)
+		}
+
+		// Use the selected worktree as the worktree name
+		worktreeName = result.Worktree
 	}
 
 	// Prepare parameters for hooks
