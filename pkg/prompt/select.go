@@ -73,18 +73,18 @@ func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleKeyInput processes key input and returns the updated model and command.
 func (m *selectModel) handleKeyInput(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
-	
+
 	// Handle special keys
 	if m.handleSpecialKeys(key) {
 		return m, tea.Quit
 	}
-	
+
 	// Handle navigation keys
 	m.handleNavigationKeys(key)
-	
+
 	// Handle filter keys
 	m.handleFilterKeys(key)
-	
+
 	return m, nil
 }
 

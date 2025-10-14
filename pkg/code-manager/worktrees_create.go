@@ -36,41 +36,18 @@ func (c *realCodeManager) CreateWorkTree(branch string, opts ...CreateWorkTreeOp
 
 	// Handle interactive selection if neither workspace nor repository is specified
 	if options.WorkspaceName == "" && options.RepositoryName == "" {
-		result, err := c.promptSelectTargetOnly()
-		if err != nil {
-			return fmt.Errorf("failed to select target: %w", err)
-		}
-
-		switch result.Type {
-		case prompt.TargetWorkspace:
-			options.WorkspaceName = result.Name
-		case prompt.TargetRepository:
-			options.RepositoryName = result.Name
-		default:
-			return fmt.Errorf("invalid target type selected: %s", result.Type)
+		if err := c.handleInteractiveTargetSelection(&options); err != nil {
+			return err
 		}
 	}
 
 	// Handle interactive branch name input if not provided
-	if branch == "" && options.IssueRef == "" {
-		branchName, err := c.deps.Prompt.PromptForBranchName()
-		if err != nil {
-			return fmt.Errorf("failed to get branch name: %w", err)
-		}
-		branch = branchName
+	if err := c.handleBranchNameInput(&branch, options.IssueRef); err != nil {
+		return err
 	}
 
 	// Prepare parameters for hooks
-	params := map[string]interface{}{
-		"branch":         branch,
-		"issueRef":       options.IssueRef,
-		"workspaceName":  options.WorkspaceName,
-		"repositoryName": options.RepositoryName,
-		"force":          options.Force,
-	}
-	if options.IDEName != "" {
-		params["ideName"] = options.IDEName
-	}
+	params := c.prepareCreateWorkTreeParams(branch, options)
 
 	// Execute with hooks
 	return c.executeWithHooks(consts.CreateWorkTree, params, func() error {
@@ -384,4 +361,51 @@ func (c *realCodeManager) translateIssueError(err error) error {
 
 	// Return the original error if no translation is needed
 	return err
+}
+
+// handleInteractiveTargetSelection handles the interactive selection logic for target selection.
+func (c *realCodeManager) handleInteractiveTargetSelection(options *CreateWorkTreeOpts) error {
+	result, err := c.promptSelectTargetOnly()
+	if err != nil {
+		return fmt.Errorf("failed to select target: %w", err)
+	}
+
+	switch result.Type {
+	case prompt.TargetWorkspace:
+		options.WorkspaceName = result.Name
+	case prompt.TargetRepository:
+		options.RepositoryName = result.Name
+	default:
+		return fmt.Errorf("invalid target type selected: %s", result.Type)
+	}
+
+	return nil
+}
+
+// handleBranchNameInput handles interactive branch name input if not provided.
+func (c *realCodeManager) handleBranchNameInput(branch *string, issueRef string) error {
+	if *branch == "" && issueRef == "" {
+		branchName, err := c.deps.Prompt.PromptForBranchName()
+		if err != nil {
+			return fmt.Errorf("failed to get branch name: %w", err)
+		}
+		*branch = branchName
+	}
+	return nil
+}
+
+// prepareCreateWorkTreeParams prepares the parameters map for CreateWorkTree hooks.
+func (c *realCodeManager) prepareCreateWorkTreeParams(
+	branch string, options CreateWorkTreeOpts) map[string]interface{} {
+	params := map[string]interface{}{
+		"branch":         branch,
+		"issueRef":       options.IssueRef,
+		"workspaceName":  options.WorkspaceName,
+		"repositoryName": options.RepositoryName,
+		"force":          options.Force,
+	}
+	if options.IDEName != "" {
+		params["ideName"] = options.IDEName
+	}
+	return params
 }

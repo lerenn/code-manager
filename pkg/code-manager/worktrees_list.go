@@ -29,18 +29,8 @@ func (c *realCodeManager) ListWorktrees(opts ...ListWorktreesOpts) ([]status.Wor
 
 	// Handle interactive selection if neither workspace nor repository is specified
 	if options.WorkspaceName == "" && options.RepositoryName == "" {
-		result, err := c.promptSelectTargetOnly()
-		if err != nil {
-			return nil, fmt.Errorf("failed to select target: %w", err)
-		}
-
-		switch result.Type {
-		case prompt.TargetWorkspace:
-			options.WorkspaceName = result.Name
-		case prompt.TargetRepository:
-			options.RepositoryName = result.Name
-		default:
-			return nil, fmt.Errorf("invalid target type selected: %s", result.Type)
+		if err := c.handleInteractiveTargetSelectionForList(&options); err != nil {
+			return nil, err
 		}
 	}
 
@@ -62,29 +52,8 @@ func (c *realCodeManager) ListWorktrees(opts ...ListWorktreesOpts) ([]status.Wor
 			return fmt.Errorf("failed to detect project mode: %w", err)
 		}
 
-		switch projectType {
-		case mode.ModeSingleRepo:
-			if options.RepositoryName != "" {
-				result, err = c.listRepositoryWorktrees(options.RepositoryName)
-				return err
-			}
-			// Create repository instance for current directory
-			repoProvider := c.deps.RepositoryProvider
-			repoInstance := repoProvider(repository.NewRepositoryParams{
-				Dependencies:   c.deps,
-				RepositoryName: ".",
-			})
-			worktrees, err := repoInstance.ListWorktrees()
-			result = worktrees
-			return c.translateListError(err)
-		case mode.ModeWorkspace:
-			result, err = c.listWorkspaceWorktrees(options.WorkspaceName)
-			return err
-		case mode.ModeNone:
-			return ErrNoGitRepositoryOrWorkspaceFound
-		default:
-			return fmt.Errorf("unknown project type")
-		}
+		result, err = c.handleWorktreeListingByMode(projectType, options)
+		return err
 	})
 	return result, err
 }
@@ -194,4 +163,51 @@ func (c *realCodeManager) extractListWorktreesOptions(opts []ListWorktreesOpts) 
 	}
 
 	return result
+}
+
+// handleInteractiveTargetSelectionForList handles the interactive selection logic for list operations.
+func (c *realCodeManager) handleInteractiveTargetSelectionForList(options *ListWorktreesOpts) error {
+	result, err := c.promptSelectTargetOnly()
+	if err != nil {
+		return fmt.Errorf("failed to select target: %w", err)
+	}
+
+	switch result.Type {
+	case prompt.TargetWorkspace:
+		options.WorkspaceName = result.Name
+	case prompt.TargetRepository:
+		options.RepositoryName = result.Name
+	default:
+		return fmt.Errorf("invalid target type selected: %s", result.Type)
+	}
+
+	return nil
+}
+
+// handleWorktreeListingByMode handles worktree listing based on the detected project mode.
+func (c *realCodeManager) handleWorktreeListingByMode(
+	projectType mode.Mode, options ListWorktreesOpts) ([]status.WorktreeInfo, error) {
+	switch projectType {
+	case mode.ModeSingleRepo:
+		if options.RepositoryName != "" {
+			return c.listRepositoryWorktrees(options.RepositoryName)
+		}
+		// Create repository instance for current directory
+		repoProvider := c.deps.RepositoryProvider
+		repoInstance := repoProvider(repository.NewRepositoryParams{
+			Dependencies:   c.deps,
+			RepositoryName: ".",
+		})
+		worktrees, err := repoInstance.ListWorktrees()
+		if err != nil {
+			return nil, c.translateListError(err)
+		}
+		return worktrees, nil
+	case mode.ModeWorkspace:
+		return c.listWorkspaceWorktrees(options.WorkspaceName)
+	case mode.ModeNone:
+		return nil, ErrNoGitRepositoryOrWorkspaceFound
+	default:
+		return nil, fmt.Errorf("unknown project type")
+	}
 }

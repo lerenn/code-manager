@@ -72,7 +72,8 @@ func TestListWorktrees_Success(t *testing.T) {
 	mockStatus.EXPECT().GetRepository("repo1").Return(repo1, nil).Times(2) // Called for both feature-1 and feature-2
 	mockStatus.EXPECT().GetRepository("repo2").Return(repo2, nil).Times(2) // Called for both feature-1 and feature-2
 
-	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
+	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
@@ -153,7 +154,8 @@ func TestListWorktrees_EmptyWorkspace(t *testing.T) {
 	}
 	mockStatus.EXPECT().GetWorkspace("empty-workspace").Return(workspace, nil)
 
-	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
+	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
@@ -208,7 +210,8 @@ func TestListWorktrees_RepositoryNotFound(t *testing.T) {
 	mockStatus.EXPECT().GetRepository("repo1").Return(repo1, nil)
 	mockStatus.EXPECT().GetRepository("nonexistent-repo").Return(nil, errors.New("repository not found"))
 
-	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
+	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
@@ -247,7 +250,8 @@ func TestListWorktrees_RepositoryFallback(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution - interactive selection calls PromptSelectTarget first
+	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
+	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListWorktrees, gomock.Any()).Return(nil)
 	mockHookManager.EXPECT().ExecutePostHooks(consts.ListWorktrees, gomock.Any()).Return(nil)

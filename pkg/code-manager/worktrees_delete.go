@@ -29,27 +29,20 @@ func (c *realCodeManager) DeleteWorkTree(branch string, force bool, opts ...Dele
 
 	// Handle interactive selection if neither workspace nor repository is specified
 	if options.WorkspaceName == "" && options.RepositoryName == "" {
-		selectedBranch, err := c.handleInteractiveTargetSelection(branch, &options)
+		selectedBranch, err := c.handleInteractiveTargetSelectionForDelete(branch, &options)
 		if err != nil {
 			return err
 		}
 		branch = selectedBranch
 	} else if branch == "" {
 		// Target specified but no branch - prompt for branch name
-		branchName, err := c.deps.Prompt.PromptForBranchName()
-		if err != nil {
-			return fmt.Errorf("failed to get branch name: %w", err)
+		if err := c.handleBranchNameInputForDelete(&branch); err != nil {
+			return err
 		}
-		branch = branchName
 	}
 
 	// Prepare parameters for hooks
-	params := map[string]interface{}{
-		"branch":          branch,
-		"force":           force,
-		"workspace_name":  options.WorkspaceName,
-		"repository_name": options.RepositoryName,
-	}
+	params := c.prepareDeleteWorkTreeParams(branch, force, options)
 
 	// Execute with hooks
 	return c.executeWithHooks(consts.DeleteWorkTree, params, func() error {
@@ -210,8 +203,9 @@ func (c *realCodeManager) extractDeleteWorktreeOptions(opts []DeleteWorktreeOpts
 	return result
 }
 
-// handleInteractiveTargetSelection handles the interactive selection logic for target and worktree.
-func (c *realCodeManager) handleInteractiveTargetSelection(branch string, options *DeleteWorktreeOpts) (string, error) {
+// handleInteractiveTargetSelectionForDelete handles the interactive selection logic for target and worktree.
+func (c *realCodeManager) handleInteractiveTargetSelectionForDelete(
+	branch string, options *DeleteWorktreeOpts) (string, error) {
 	if branch == "" {
 		// Two-step selection: first target, then worktree
 		result, err := c.promptSelectTargetAndWorktree()
@@ -247,4 +241,25 @@ func (c *realCodeManager) handleInteractiveTargetSelection(branch string, option
 	}
 
 	return branch, nil
+}
+
+// handleBranchNameInputForDelete handles interactive branch name input for delete operations.
+func (c *realCodeManager) handleBranchNameInputForDelete(branch *string) error {
+	branchName, err := c.deps.Prompt.PromptForBranchName()
+	if err != nil {
+		return fmt.Errorf("failed to get branch name: %w", err)
+	}
+	*branch = branchName
+	return nil
+}
+
+// prepareDeleteWorkTreeParams prepares the parameters map for DeleteWorkTree hooks.
+func (c *realCodeManager) prepareDeleteWorkTreeParams(
+	branch string, force bool, options DeleteWorktreeOpts) map[string]interface{} {
+	return map[string]interface{}{
+		"branch":          branch,
+		"force":           force,
+		"workspace_name":  options.WorkspaceName,
+		"repository_name": options.RepositoryName,
+	}
 }
