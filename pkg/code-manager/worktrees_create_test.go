@@ -16,6 +16,7 @@ import (
 	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	workspaceMocks "github.com/lerenn/code-manager/pkg/mode/workspace/mocks"
+	"github.com/lerenn/code-manager/pkg/prompt"
 	promptMocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
@@ -59,6 +60,12 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
+
+	// Mock interactive selection to return a repository
+	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
+		Type: prompt.TargetRepository,
+		Name: "test-repo",
+	}, nil)
 
 	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
@@ -109,6 +116,12 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 			WithHookManager(mockHookManager),
 	})
 	assert.NoError(t, err)
+
+	// Mock interactive selection to return a repository
+	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
+		Type: prompt.TargetRepository,
+		Name: "test-repo",
+	}, nil)
 
 	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)

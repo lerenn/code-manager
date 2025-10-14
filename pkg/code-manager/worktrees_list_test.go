@@ -15,6 +15,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/logger"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
 	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
+	"github.com/lerenn/code-manager/pkg/prompt"
 	promptmocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	"github.com/lerenn/code-manager/pkg/status"
 	statusmocks "github.com/lerenn/code-manager/pkg/status/mocks"
@@ -249,6 +250,12 @@ func TestListWorktrees_RepositoryFallback(t *testing.T) {
 			WithConfig(config.NewConfigManager("/test/config.yaml")),
 	})
 	assert.NoError(t, err)
+
+	// Mock interactive selection to return a repository
+	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
+		Type: prompt.TargetRepository,
+		Name: "test-repo",
+	}, nil)
 
 	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)

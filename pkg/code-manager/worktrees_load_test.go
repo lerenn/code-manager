@@ -16,6 +16,8 @@ import (
 	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	workspaceMocks "github.com/lerenn/code-manager/pkg/mode/workspace/mocks"
+	"github.com/lerenn/code-manager/pkg/prompt"
+	promptMocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
 	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -31,6 +33,7 @@ func TestCM_LoadWorktree_Success(t *testing.T) {
 	mockFS := fsmocks.NewMockFS(ctrl)
 	mockGit := gitmocks.NewMockGit(ctrl)
 	mockStatus := statusMocks.NewMockManager(ctrl)
+	mockPrompt := promptMocks.NewMockPrompter(ctrl)
 
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
@@ -41,9 +44,16 @@ func TestCM_LoadWorktree_Success(t *testing.T) {
 			WithConfig(config.NewConfigManager("/test/config.yaml")).
 			WithFS(mockFS).
 			WithGit(mockGit).
-			WithStatusManager(mockStatus),
+			WithStatusManager(mockStatus).
+			WithPrompt(mockPrompt),
 	})
 	assert.NoError(t, err)
+
+	// Mock interactive selection to return a repository
+	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
+		Type: prompt.TargetRepository,
+		Name: "test-repo",
+	}, nil)
 
 	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
 	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
