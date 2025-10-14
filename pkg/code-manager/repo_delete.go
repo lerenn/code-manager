@@ -17,6 +17,22 @@ type DeleteRepositoryParams struct {
 
 // DeleteRepository deletes a repository and all associated resources.
 func (c *realCodeManager) DeleteRepository(params DeleteRepositoryParams) error {
+	// Validate repository name first (before interactive selection)
+	if params.RepositoryName != "" {
+		if err := c.validateRepositoryName(params.RepositoryName); err != nil {
+			return fmt.Errorf("%w: %w", ErrInvalidRepositoryName, err)
+		}
+	}
+
+	// Handle interactive selection if no repository name is provided
+	if params.RepositoryName == "" {
+		result, err := c.promptSelectRepositoryOnly()
+		if err != nil {
+			return fmt.Errorf("failed to select repository: %w", err)
+		}
+		params.RepositoryName = result.Name
+	}
+
 	return c.executeWithHooks(consts.DeleteRepository, map[string]interface{}{
 		"repository_name": params.RepositoryName,
 		"force":           params.Force,
@@ -28,11 +44,6 @@ func (c *realCodeManager) DeleteRepository(params DeleteRepositoryParams) error 
 // deleteRepository implements the repository deletion business logic.
 func (c *realCodeManager) deleteRepository(params DeleteRepositoryParams) error {
 	c.VerbosePrint("Deleting repository: %s", params.RepositoryName)
-
-	// Validate repository name
-	if err := c.validateRepositoryName(params.RepositoryName); err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidRepositoryName, err)
-	}
 
 	// Check if repository is part of any workspace
 	if err := c.validateRepositoryNotInWorkspace(params.RepositoryName); err != nil {

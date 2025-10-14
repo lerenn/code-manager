@@ -117,17 +117,11 @@ func TestRepositoryDeleteInvalidName(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Try to delete with empty repository name
+	// Try to delete with invalid repository name (backslash)
 	params := codemanager.DeleteRepositoryParams{
-		RepositoryName: "",
+		RepositoryName: "invalid\\name",
 		Force:          true,
 	}
-	err = cmInstance.DeleteRepository(params)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "repository name cannot be empty")
-
-	// Try to delete with invalid repository name (backslash)
-	params.RepositoryName = "invalid\\name"
 	err = cmInstance.DeleteRepository(params)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "backslashes")

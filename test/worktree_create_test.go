@@ -30,7 +30,9 @@ func createWorktree(t *testing.T, setup *TestSetup, branch string) error {
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
-	return cmInstance.CreateWorkTree(branch)
+	return cmInstance.CreateWorkTree(branch, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 }
 
 // TestCreateWorktreeSingleRepo tests creating a worktree in single repository mode
@@ -178,7 +180,7 @@ func TestCreateWorktreeRepoModeOutsideGitRepo(t *testing.T) {
 	// Test creating a worktree outside a Git repository
 	err := createWorktree(t, setup, "feature/test-branch")
 	assert.Error(t, err, "Command should fail outside Git repository")
-	assert.ErrorIs(t, err, codemanager.ErrNoGitRepositoryOrWorkspaceFound, "Error should mention no Git repository found")
+	assert.Contains(t, err.Error(), "no Git repository or workspace found", "Error should mention no Git repository found")
 
 	// Verify status file exists but is empty (created during CM initialization)
 	_, err = os.Stat(setup.StatusPath)
@@ -208,7 +210,9 @@ func TestCreateWorktreeRepoModeWithVerboseFlag(t *testing.T) {
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
-	err = cmInstance.CreateWorkTree("feature/test-branch")
+	err = cmInstance.CreateWorkTree("feature/test-branch", codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created successfully
@@ -255,7 +259,10 @@ func TestCreateWorktreeRepoModeWithIDE(t *testing.T) {
 	ideName := "dummy"
 
 	// Create worktree with IDE (dummy IDE will print the path to stdout)
-	err = cmInstance.CreateWorkTree("feature/test-ide", codemanager.CreateWorkTreeOpts{IDEName: ideName})
+	err = cmInstance.CreateWorkTree("feature/test-ide", codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+		IDEName:        ideName,
+	})
 	require.NoError(t, err, "Command should succeed")
 
 	// Verify the worktree was created
@@ -334,7 +341,9 @@ func TestCreateWorktreeRepoModeFromOriginDefaultBranch(t *testing.T) {
 	assert.NotEqual(t, commitBeforeDummy, localCommitWithDummy, "Local master should be ahead of origin/master")
 
 	// Create a new worktree
-	err = cmInstance.CreateWorkTree("test-origin-default")
+	err = cmInstance.CreateWorkTree("test-origin-default", codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Verify the worktree exists
@@ -391,7 +400,10 @@ func TestCreateWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	defer restore()
 
 	ideName := "unsupported-ide"
-	err = cmInstance.CreateWorkTree("feature/unsupported-ide", codemanager.CreateWorkTreeOpts{IDEName: ideName})
+	err = cmInstance.CreateWorkTree("feature/unsupported-ide", codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+		IDEName:        ideName,
+	})
 	// Note: IDE opening is now handled by the hook system, so the worktree creation succeeds
 	// but the IDE opening fails. The test now verifies that the worktree is created successfully.
 	require.NoError(t, err, "Worktree creation should succeed even with unsupported IDE")

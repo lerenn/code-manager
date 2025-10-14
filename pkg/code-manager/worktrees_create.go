@@ -11,6 +11,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
 	ws "github.com/lerenn/code-manager/pkg/mode/workspace"
+	"github.com/lerenn/code-manager/pkg/prompt"
 )
 
 // CreateWorkTreeOpts contains optional parameters for CreateWorkTree.
@@ -28,66 +29,117 @@ func (c *realCodeManager) CreateWorkTree(branch string, opts ...CreateWorkTreeOp
 	// Extract and validate options
 	options := c.extractCreateWorkTreeOptions(opts)
 
-	// Validate that workspace and repository are not both specified
+	// Validate target exclusivity
+	if err := c.validateCreateTargets(options); err != nil {
+		return err
+	}
+
+	// Resolve target and branch interactively as needed
+	if err := c.resolveCreateSelection(&branch, &options); err != nil {
+		return err
+	}
+
+	// Prepare parameters for hooks
+	params := c.prepareCreateWorkTreeParams(branch, options)
+
+	// Execute with hooks
+	return c.executeWithHooks(consts.CreateWorkTree, params, func() error {
+		return c.performCreate(branch, opts, options, params)
+	})
+}
+
+// validateCreateTargets ensures only one of WorkspaceName or RepositoryName is provided.
+func (c *realCodeManager) validateCreateTargets(options CreateWorkTreeOpts) error {
 	if options.WorkspaceName != "" && options.RepositoryName != "" {
 		return fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
 	}
 
-	// Prepare parameters for hooks
-	params := map[string]interface{}{
-		"branch":         branch,
-		"issueRef":       options.IssueRef,
-		"workspaceName":  options.WorkspaceName,
-		"repositoryName": options.RepositoryName,
-		"force":          options.Force,
-	}
-	if options.IDEName != "" {
-		params["ideName"] = options.IDEName
-	}
-
-	// Execute with hooks
-	return c.executeWithHooks(consts.CreateWorkTree, params, func() error {
-		var worktreePath string
-		var err error
-
-		// Sanitize branch name
-		sanitizedBranch, err := c.sanitizeBranchNameForCreation(branch, options.IssueRef)
-		if err != nil {
+	// Validate issue reference if provided
+	if options.IssueRef != "" {
+		if err := c.validateIssueReference(options.IssueRef); err != nil {
 			return err
 		}
+	}
 
-		// Log if branch name was sanitized
-		if sanitizedBranch != branch && c.deps.Logger != nil {
-			c.deps.Logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
+	return nil
+}
+
+// validateIssueReference validates that the issue reference format is valid.
+func (c *realCodeManager) validateIssueReference(issueRef string) error {
+	// Create a temporary forge instance to validate the issue reference
+	forgeInstance := forge.NewGitHub()
+
+	// Try to parse the issue reference
+	_, err := forgeInstance.ParseIssueReference(issueRef)
+	if err != nil {
+		// Check if it's a context-required error (issue number only)
+		if errors.Is(err, issue.ErrIssueNumberRequiresContext) {
+			// This is valid, but requires repository context
+			return nil
 		}
+		// Return the validation error
+		return err
+	}
 
-		c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
+	return nil
+}
 
-		// 1. First determine the mode (workspace or repository)
-		projectType, err := c.detectProjectMode(options.WorkspaceName, options.RepositoryName)
-		if err != nil {
-			return fmt.Errorf("failed to detect project mode: %w", err)
-		}
-
-		// 2. Then handle creation based on mode and flags
-		worktreePath, err = c.handleWorktreeCreation(handleWorktreeCreationParams{
-			ProjectType:     projectType,
-			SanitizedBranch: sanitizedBranch,
-			IssueRef:        options.IssueRef,
-			WorkspaceName:   options.WorkspaceName,
-			RepositoryName:  options.RepositoryName,
-			Options:         options,
-			Opts:            opts,
-		})
-		if err != nil {
+// resolveCreateSelection handles interactive target selection and branch prompting when needed.
+func (c *realCodeManager) resolveCreateSelection(branch *string, options *CreateWorkTreeOpts) error {
+	if options.WorkspaceName == "" && options.RepositoryName == "" {
+		if err := c.handleInteractiveTargetSelection(options); err != nil {
 			return err
 		}
+	}
+	if err := c.handleBranchNameInput(branch, options.IssueRef); err != nil {
+		return err
+	}
+	return nil
+}
 
-		// Set worktreePath in params for the IDE opening hook
-		params["worktreePath"] = worktreePath
+// performCreate computes sanitized branch, detects mode and performs creation.
+func (c *realCodeManager) performCreate(
+	branch string,
+	opts []CreateWorkTreeOpts,
+	options CreateWorkTreeOpts,
+	params map[string]interface{},
+) error {
+	// Sanitize branch name
+	sanitizedBranch, err := c.sanitizeBranchNameForCreation(branch, options.IssueRef)
+	if err != nil {
+		return err
+	}
 
-		return nil
+	// Log if branch name was sanitized
+	if sanitizedBranch != branch && c.deps.Logger != nil {
+		c.deps.Logger.Logf("Branch name sanitized: %s -> %s", branch, sanitizedBranch)
+	}
+
+	c.VerbosePrint("Starting CM execution for branch: %s (sanitized: %s)", branch, sanitizedBranch)
+
+	// Determine the mode (workspace or repository)
+	projectType, err := c.detectProjectMode(options.WorkspaceName, options.RepositoryName)
+	if err != nil {
+		return fmt.Errorf("failed to detect project mode: %w", err)
+	}
+
+	// Handle creation based on mode and flags
+	worktreePath, err := c.handleWorktreeCreation(handleWorktreeCreationParams{
+		ProjectType:     projectType,
+		SanitizedBranch: sanitizedBranch,
+		IssueRef:        options.IssueRef,
+		WorkspaceName:   options.WorkspaceName,
+		RepositoryName:  options.RepositoryName,
+		Options:         options,
+		Opts:            opts,
 	})
+	if err != nil {
+		return err
+	}
+
+	// Set worktreePath in params for the IDE opening hook
+	params["worktreePath"] = worktreePath
+	return nil
 }
 
 // extractCreateWorkTreeOptions extracts and merges options from the variadic parameter.
@@ -357,4 +409,51 @@ func (c *realCodeManager) translateIssueError(err error) error {
 
 	// Return the original error if no translation is needed
 	return err
+}
+
+// handleInteractiveTargetSelection handles the interactive selection logic for target selection.
+func (c *realCodeManager) handleInteractiveTargetSelection(options *CreateWorkTreeOpts) error {
+	result, err := c.promptSelectTargetOnly()
+	if err != nil {
+		return fmt.Errorf("failed to select target: %w", err)
+	}
+
+	switch result.Type {
+	case prompt.TargetWorkspace:
+		options.WorkspaceName = result.Name
+	case prompt.TargetRepository:
+		options.RepositoryName = result.Name
+	default:
+		return fmt.Errorf("invalid target type selected: %s", result.Type)
+	}
+
+	return nil
+}
+
+// handleBranchNameInput handles interactive branch name input if not provided.
+func (c *realCodeManager) handleBranchNameInput(branch *string, issueRef string) error {
+	if *branch == "" && issueRef == "" {
+		branchName, err := c.deps.Prompt.PromptForBranchName()
+		if err != nil {
+			return fmt.Errorf("failed to get branch name: %w", err)
+		}
+		*branch = branchName
+	}
+	return nil
+}
+
+// prepareCreateWorkTreeParams prepares the parameters map for CreateWorkTree hooks.
+func (c *realCodeManager) prepareCreateWorkTreeParams(
+	branch string, options CreateWorkTreeOpts) map[string]interface{} {
+	params := map[string]interface{}{
+		"branch":         branch,
+		"issueRef":       options.IssueRef,
+		"workspaceName":  options.WorkspaceName,
+		"repositoryName": options.RepositoryName,
+		"force":          options.Force,
+	}
+	if options.IDEName != "" {
+		params["ideName"] = options.IDEName
+	}
+	return params
 }

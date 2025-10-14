@@ -12,7 +12,7 @@ func createDeleteCmd() *cobra.Command {
 	var force bool
 
 	deleteCmd := &cobra.Command{
-		Use:   "delete <repository-name>",
+		Use:   "delete [repository-name]",
 		Short: "Delete a repository and all associated resources",
 		Long: `Delete a repository from CM and remove all associated worktrees and files.
 
@@ -21,13 +21,16 @@ This command will:
   • Remove the repository from the status file
   • Delete the repository directory (if within base path)
 
+If no repository name is provided, you will be prompted to select one interactively.
+
 Use the --force flag to skip confirmation prompts.
 
 Examples:
   cm repository delete my-repo
   cm repo delete https://github.com/user/repo.git
-  cm r delete my-repo --force`,
-		Args: cobra.ExactArgs(1),
+  cm r delete my-repo --force
+  cm r delete  # Interactive selection`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			if err := cli.CheckInitialization(); err != nil {
 				return err
@@ -41,10 +44,12 @@ Examples:
 				cmManager.SetLogger(logger.NewVerboseLogger())
 			}
 
-			// Create delete parameters
+			// Create delete parameters (interactive selection handled in code-manager)
 			params := cm.DeleteRepositoryParams{
-				RepositoryName: args[0],
-				Force:          force,
+				Force: force,
+			}
+			if len(args) > 0 {
+				params.RepositoryName = args[0]
 			}
 
 			return cmManager.DeleteRepository(params)

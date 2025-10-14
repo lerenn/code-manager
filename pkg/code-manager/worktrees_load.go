@@ -7,6 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
 	repo "github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/prompt"
 )
 
 // LoadWorktreeOpts contains optional parameters for LoadWorktree.
@@ -20,6 +21,28 @@ type LoadWorktreeOpts struct {
 func (c *realCodeManager) LoadWorktree(branchArg string, opts ...LoadWorktreeOpts) error {
 	// Parse options
 	options := c.extractLoadWorktreeOptions(opts)
+
+	// Handle interactive selection if no repository is specified
+	if options.RepositoryName == "" {
+		result, err := c.promptSelectTargetOnly()
+		if err != nil {
+			return fmt.Errorf("failed to select repository: %w", err)
+		}
+
+		if result.Type != prompt.TargetRepository {
+			return fmt.Errorf("selected target is not a repository: %s", result.Type)
+		}
+		options.RepositoryName = result.Name
+	}
+
+	// Handle interactive branch name input if not provided
+	if branchArg == "" {
+		branchName, err := c.deps.Prompt.PromptForBranchName()
+		if err != nil {
+			return fmt.Errorf("failed to get branch name: %w", err)
+		}
+		branchArg = branchName
+	}
 
 	// Prepare parameters for hooks
 	params := c.prepareLoadWorktreeParams(branchArg, options)

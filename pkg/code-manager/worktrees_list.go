@@ -7,6 +7,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/mode"
 	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/prompt"
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
@@ -24,6 +25,13 @@ func (c *realCodeManager) ListWorktrees(opts ...ListWorktreesOpts) ([]status.Wor
 	// Validate that workspace and repository are not both specified
 	if options.WorkspaceName != "" && options.RepositoryName != "" {
 		return nil, fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
+	}
+
+	// Handle interactive selection if neither workspace nor repository is specified
+	if options.WorkspaceName == "" && options.RepositoryName == "" {
+		if err := c.handleInteractiveTargetSelectionForList(&options); err != nil {
+			return nil, err
+		}
 	}
 
 	// Prepare parameters for hooks
@@ -44,29 +52,8 @@ func (c *realCodeManager) ListWorktrees(opts ...ListWorktreesOpts) ([]status.Wor
 			return fmt.Errorf("failed to detect project mode: %w", err)
 		}
 
-		switch projectType {
-		case mode.ModeSingleRepo:
-			if options.RepositoryName != "" {
-				result, err = c.listRepositoryWorktrees(options.RepositoryName)
-				return err
-			}
-			// Create repository instance for current directory
-			repoProvider := c.deps.RepositoryProvider
-			repoInstance := repoProvider(repository.NewRepositoryParams{
-				Dependencies:   c.deps,
-				RepositoryName: ".",
-			})
-			worktrees, err := repoInstance.ListWorktrees()
-			result = worktrees
-			return c.translateListError(err)
-		case mode.ModeWorkspace:
-			result, err = c.listWorkspaceWorktrees(options.WorkspaceName)
-			return err
-		case mode.ModeNone:
-			return ErrNoGitRepositoryOrWorkspaceFound
-		default:
-			return fmt.Errorf("unknown project type")
-		}
+		result, err = c.handleWorktreeListingByMode(projectType, options)
+		return err
 	})
 	return result, err
 }
@@ -96,6 +83,7 @@ func (c *realCodeManager) listWorkspaceWorktreesFromWorkspace(
 
 	// For workspace deletion, we need to find worktrees in ALL repositories that match the workspace's worktree references
 	// This is because workspace creation creates worktrees in all repositories but only tracks one reference
+	seenBranches := make(map[string]bool) // Track which branches we've already found
 	for _, worktreeRef := range workspace.Worktrees {
 		c.VerbosePrint("  Looking for worktree reference: %s", worktreeRef)
 		for _, repoURL := range workspace.Repositories {
@@ -111,9 +99,10 @@ func (c *realCodeManager) listWorkspaceWorktreesFromWorkspace(
 			// The worktrees are stored with "remote:branch" as the key, but workspace stores just "branch"
 			// So we need to find worktrees where the branch matches
 			for worktreeKey, worktree := range repo.Worktrees {
-				if worktree.Branch == worktreeRef {
+				if worktree.Branch == worktreeRef && !seenBranches[worktreeRef] {
 					c.VerbosePrint("    ✓ Found worktree %s (key: %s) in repository %s", worktreeRef, worktreeKey, repoURL)
 					workspaceWorktrees = append(workspaceWorktrees, worktree)
+					seenBranches[worktreeRef] = true
 					break // Found in this repository, continue to next repository
 				}
 			}
@@ -174,4 +163,51 @@ func (c *realCodeManager) extractListWorktreesOptions(opts []ListWorktreesOpts) 
 	}
 
 	return result
+}
+
+// handleInteractiveTargetSelectionForList handles the interactive selection logic for list operations.
+func (c *realCodeManager) handleInteractiveTargetSelectionForList(options *ListWorktreesOpts) error {
+	result, err := c.promptSelectTargetOnly()
+	if err != nil {
+		return fmt.Errorf("failed to select target: %w", err)
+	}
+
+	switch result.Type {
+	case prompt.TargetWorkspace:
+		options.WorkspaceName = result.Name
+	case prompt.TargetRepository:
+		options.RepositoryName = result.Name
+	default:
+		return fmt.Errorf("invalid target type selected: %s", result.Type)
+	}
+
+	return nil
+}
+
+// handleWorktreeListingByMode handles worktree listing based on the detected project mode.
+func (c *realCodeManager) handleWorktreeListingByMode(
+	projectType mode.Mode, options ListWorktreesOpts) ([]status.WorktreeInfo, error) {
+	switch projectType {
+	case mode.ModeSingleRepo:
+		if options.RepositoryName != "" {
+			return c.listRepositoryWorktrees(options.RepositoryName)
+		}
+		// Create repository instance for current directory
+		repoProvider := c.deps.RepositoryProvider
+		repoInstance := repoProvider(repository.NewRepositoryParams{
+			Dependencies:   c.deps,
+			RepositoryName: ".",
+		})
+		worktrees, err := repoInstance.ListWorktrees()
+		if err != nil {
+			return nil, c.translateListError(err)
+		}
+		return worktrees, nil
+	case mode.ModeWorkspace:
+		return c.listWorkspaceWorktrees(options.WorkspaceName)
+	case mode.ModeNone:
+		return nil, ErrNoGitRepositoryOrWorkspaceFound
+	default:
+		return nil, fmt.Errorf("unknown project type")
+	}
 }

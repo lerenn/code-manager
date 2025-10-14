@@ -16,8 +16,7 @@ func createListCmd() *cobra.Command {
 		Short:   "List all repositories in CM",
 		Long: `List all repositories tracked by CM with visual indicators.
 
-Repositories are displayed in a numbered list format. An asterisk (*) indicates 
-repositories that are not within the configured base path.
+An asterisk (*) indicates repositories that are not within the configured base path.
 
 Examples:
   cm repository list
@@ -48,12 +47,12 @@ Examples:
 				return nil
 			}
 
-			for i, repo := range repositories {
+			for _, repo := range repositories {
 				indicator := ""
 				if !repo.InRepositoriesDir {
 					indicator = "*"
 				}
-				fmt.Printf("  %d. %s%s\n", i+1, indicator, repo.Name)
+				fmt.Printf("  %s%s\n", indicator, repo.Name)
 			}
 
 			return nil

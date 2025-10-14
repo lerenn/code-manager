@@ -17,30 +17,34 @@ func createOpenCmd() *cobra.Command {
 	var workspaceName string
 
 	openCmd := &cobra.Command{
-		Use:   "open <branch> [--ide <ide-name>] [--workspace <workspace-name>] [--repository <repository-name>]",
+		Use:   "open [branch] [--ide <ide-name>] [--workspace <workspace-name>] [--repository <repository-name>]",
 		Short: "Open a worktree in the specified IDE",
 		Long: `Open a worktree for the specified branch in the specified IDE.
 
 Examples:
-  cm worktree open feature-branch
+  cm worktree open feature-branch                    # Interactive selection of workspace/repository
   cm wt open main
   cm w open feature-branch -i cursor
   cm worktree open main --ide ` + ide.DefaultIDE + `
   cm worktree open feature-branch --workspace my-workspace
   cm worktree open feature-branch --repository my-repo
   cm wt open main --repository /path/to/repo --ide cursor`,
-		Args: cobra.ExactArgs(1),
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
-			return openWorktree(args[0], ideName, workspaceName, repositoryName)
+			branchName := ""
+			if len(args) > 0 {
+				branchName = args[0]
+			}
+			return openWorktree(branchName, ideName, workspaceName, repositoryName)
 		},
 	}
 
 	// Add IDE, workspace, and repository flags to open command
 	openCmd.Flags().StringVarP(&ideName, "ide", "i", "", "Open in specified IDE")
 	openCmd.Flags().StringVarP(&workspaceName, "workspace", "w", "",
-		"Open worktree for the specified workspace (name from status.yaml)")
+		"Open worktree for the specified workspace (name from status.yaml, interactive selection if not provided)")
 	openCmd.Flags().StringVarP(&repositoryName, "repository", "r", "",
-		"Open worktree for the specified repository (name from status.yaml or path)")
+		"Open worktree for the specified repository (name from status.yaml or path, interactive selection if not provided)")
 
 	return openCmd
 }
@@ -65,7 +69,7 @@ func openWorktree(branchName, ideName, workspaceName, repositoryName string) err
 		ideToUse = ideName
 	}
 
-	// Prepare options for OpenWorktree
+	// Prepare options for OpenWorktree (interactive selection handled in code-manager)
 	var opts []cm.OpenWorktreeOpts
 	if workspaceName != "" {
 		opts = append(opts, cm.OpenWorktreeOpts{
@@ -78,7 +82,7 @@ func openWorktree(branchName, ideName, workspaceName, repositoryName string) err
 		})
 	}
 
-	// Open the worktree
+	// Open the worktree (interactive selection handled in code-manager)
 	if err := cmManager.OpenWorktree(branchName, ideToUse, opts...); err != nil {
 		return fmt.Errorf("failed to open worktree: %w", err)
 	}

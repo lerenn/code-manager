@@ -26,7 +26,9 @@ func loadWorktree(t *testing.T, setup *TestSetup, branchArg string) error {
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
-	return cmInstance.LoadWorktree(branchArg)
+	return cmInstance.LoadWorktree(branchArg, codemanager.LoadWorktreeOpts{
+		RepositoryName: ".",
+	})
 }
 
 func TestLoadWorktreeRepoModeWithOptionalRemote(t *testing.T) {
@@ -77,7 +79,7 @@ func TestLoadWorktreeRepoModeWithOptionalRemote(t *testing.T) {
 	t.Run("LoadEmptyArgument", func(t *testing.T) {
 		err := loadWorktree(t, setup, "")
 		assert.Error(t, err)
-		assert.ErrorIs(t, err, codemanager.ErrArgumentEmpty)
+		assert.Contains(t, err.Error(), "failed to get branch name")
 	})
 }
 

@@ -85,7 +85,9 @@ func TestCreateWorktreeRepoModeFromDefaultBranch(t *testing.T) {
 	// Create a worktree for a new branch
 	// This should now create the branch from origin/main (default branch) instead of current branch
 	newBranchName := "new-feature-branch"
-	err = cmInstance.CreateWorkTree(newBranchName)
+	err = cmInstance.CreateWorkTree(newBranchName, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err)
 
 	// Verify that the new branch was created from the remote default branch (master)
@@ -108,7 +110,9 @@ func TestCreateWorktreeRepoModeFromDefaultBranch(t *testing.T) {
 		"New branch should not be based on feature-branch")
 
 	// Verify that the worktree was created and added to status
-	worktrees, err := cmInstance.ListWorktrees()
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err)
 
 	found := false

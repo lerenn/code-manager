@@ -36,11 +36,15 @@ func TestOpenWorktreeRepoModeExisting(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = cmInstance.CreateWorkTree("feature/existing-ide")
+	err = cmInstance.CreateWorkTree("feature/existing-ide", codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Open the worktree with IDE (dummy IDE will print the path to stdout)
-	err = cmInstance.OpenWorktree("feature/existing-ide", "dummy")
+	err = cmInstance.OpenWorktree("feature/existing-ide", "dummy", codemanager.OpenWorktreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err, "Opening worktree with IDE should succeed")
 
 	// Verify that the original repository path in status.yaml is correct (not the worktree path)
@@ -84,7 +88,9 @@ func TestOpenWorktreeRepoModeNonExistent(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = cmInstance.OpenWorktree("non-existent-branch", "dummy")
+	err = cmInstance.OpenWorktree("non-existent-branch", "dummy", codemanager.OpenWorktreeOpts{
+		RepositoryName: ".",
+	})
 	assert.Error(t, err, "Opening non-existent worktree should fail")
 	assert.ErrorIs(t, err, codemanager.ErrWorktreeNotInStatus, "Error should mention worktree not found")
 }
@@ -111,11 +117,15 @@ func TestOpenWorktreeRepoModeWithUnsupportedIDE(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = cmInstance.CreateWorkTree("feature/unsupported-ide")
+	err = cmInstance.CreateWorkTree("feature/unsupported-ide", codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err, "Worktree creation should succeed")
 
 	// Try to open with unsupported IDE
-	err = cmInstance.OpenWorktree("feature/unsupported-ide", "unsupported-ide")
+	err = cmInstance.OpenWorktree("feature/unsupported-ide", "unsupported-ide", codemanager.OpenWorktreeOpts{
+		RepositoryName: ".",
+	})
 	assert.Error(t, err, "Opening with unsupported IDE should fail")
 	assert.ErrorIs(t, err, ide.ErrUnsupportedIDE, "Error should mention unsupported IDE")
 }

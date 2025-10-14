@@ -16,11 +16,12 @@ func createDeleteCmd() *cobra.Command {
 	var all bool
 
 	deleteCmd := &cobra.Command{
-		Use:   "delete <branch> [branch2] [branch3] ... [--force/-f] [--workspace/-w] [--repository/-r] [--all/-a]",
-		Short: "Delete worktrees for the specified branches or all worktrees",
-		Long:  getDeleteCmdLongDescription(),
-		Args:  createDeleteCmdArgsValidator(&all, &workspaceName, &repositoryName),
-		RunE:  createDeleteCmdRunE(&all, &force, &workspaceName, &repositoryName),
+		Use: "delete [branch] [branch2] [branch3] ... [--force/-f] [--workspace/-w] [--repository/-r] [--all/-a]",
+		Short: "Delete worktrees for the specified branches or all worktrees " +
+			"(two-step interactive selection if no branch provided)",
+		Long: getDeleteCmdLongDescription(),
+		Args: createDeleteCmdArgsValidator(&all, &workspaceName, &repositoryName),
+		RunE: createDeleteCmdRunE(&all, &force, &workspaceName, &repositoryName),
 	}
 
 	addDeleteCmdFlags(deleteCmd, &force, &workspaceName, &repositoryName, &all)
@@ -31,10 +32,13 @@ func getDeleteCmdLongDescription() string {
 	return `Delete worktrees for the specified branches or all worktrees.
 
 You can delete multiple worktrees at once by providing multiple branch names,
-or delete all worktrees using the --all flag.
+or delete all worktrees using the --all flag. If no branch is specified,
+interactive selection will prompt you to choose a repository/workspace first,
+then select a specific worktree from that target.
 
 Examples:
-  cm worktree delete feature-branch
+  cm worktree delete                              # Two-step: select repository/workspace, then worktree
+  cm worktree delete feature-branch               # One-step: select repository/workspace only
   cm wt delete feature-branch --force
   cm w delete feature-branch --force
   cm wt delete feature-branch --workspace my-workspace
@@ -61,8 +65,10 @@ func createDeleteCmdArgsValidator(
 		if *all && len(args) > 0 {
 			return fmt.Errorf("cannot specify both --all flag and branch names")
 		}
+		// Allow no arguments for interactive selection
 		if !*all && len(args) == 0 {
-			return fmt.Errorf("must specify either branch names or --all flag")
+			// This will trigger interactive selection in the code-manager
+			return nil
 		}
 		return nil
 	}
@@ -90,6 +96,7 @@ func createDeleteCmdRunE(
 		if *all {
 			return cmManager.DeleteAllWorktrees(*force)
 		}
+
 		return runDeleteWorktree(args, *force, *workspaceName, *repositoryName)
 	}
 }
@@ -97,9 +104,9 @@ func createDeleteCmdRunE(
 func addDeleteCmdFlags(cmd *cobra.Command, force *bool, workspaceName *string, repositoryName *string, all *bool) {
 	cmd.Flags().BoolVarP(force, "force", "f", false, "Skip confirmation prompts")
 	cmd.Flags().StringVarP(workspaceName, "workspace", "w", "",
-		"Name of the workspace to delete worktree from (optional)")
+		"Name of the workspace to delete worktree from (interactive selection if not provided)")
 	cmd.Flags().StringVarP(repositoryName, "repository", "r", "",
-		"Name of the repository to delete worktree from (optional)")
+		"Name of the repository to delete worktree from (interactive selection if not provided)")
 	cmd.Flags().BoolVarP(all, "all", "a", false, "Delete all worktrees")
 }
 
@@ -114,6 +121,11 @@ func runDeleteWorktree(args []string, force bool, workspaceName string, reposito
 	// If workspace or repository is specified, use single worktree deletion for each branch
 	if workspaceName != "" || repositoryName != "" {
 		return deleteWorktreesIndividually(cmManager, args, force, opts)
+	}
+
+	// If no arguments provided, use single worktree deletion with interactive selection
+	if len(args) == 0 {
+		return cmManager.DeleteWorkTree("", force, opts...)
 	}
 
 	// Otherwise use bulk deletion
