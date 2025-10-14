@@ -1,6 +1,9 @@
 package status
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 // UpdateWorkspace updates an existing workspace entry in the status file.
 func (s *realManager) UpdateWorkspace(workspaceName string, workspace Workspace) error {
@@ -9,6 +12,9 @@ func (s *realManager) UpdateWorkspace(workspaceName string, workspace Workspace)
 	if err != nil {
 		return fmt.Errorf("failed to load status: %w", err)
 	}
+
+	log.Printf("    [UpdateWorkspace] After load: status.Repositories[github.com/octocat/Hello-World].Worktrees = %v",
+		status.Repositories["github.com/octocat/Hello-World"].Worktrees)
 
 	// Check if workspace exists
 	if _, exists := status.Workspaces[workspaceName]; !exists {
@@ -22,6 +28,8 @@ func (s *realManager) UpdateWorkspace(workspaceName string, workspace Workspace)
 	if err := s.saveStatus(status); err != nil {
 		return fmt.Errorf("failed to save status: %w", err)
 	}
+
+	log.Printf("    [UpdateWorkspace] After save: status saved successfully")
 
 	// Update internal workspaces map
 	s.computeWorkspacesMap(status.Workspaces)

@@ -237,6 +237,13 @@ func (s *realManager) saveStatus(status *Status) error {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
 
+	// Log what we're about to save
+	var debugStatus Status
+	_ = yaml.Unmarshal(data, &debugStatus)
+	if repo, exists := debugStatus.Repositories["github.com/octocat/Hello-World"]; exists {
+		fmt.Printf("    [saveStatus] About to write: github.com/octocat/Hello-World.Worktrees = %v\n", repo.Worktrees)
+	}
+
 	// Write status file atomically
 	if err := s.fs.WriteFileAtomic(statusPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write status file: %w", err)

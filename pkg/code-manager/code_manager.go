@@ -244,9 +244,27 @@ func (c *realCodeManager) detectProjectMode(workspaceName, repositoryName string
 		return mode.ModeWorkspace, nil
 	}
 
-	// If repositoryName is provided, return single repository mode
+	// If repositoryName is provided, validate it exists and return single repository mode
 	if repositoryName != "" {
 		c.VerbosePrint("Repository mode detected (repository: %s)", repositoryName)
+
+		// Create repository instance to validate the repository exists
+		repoProvider := c.deps.RepositoryProvider
+		repoInstance := repoProvider(repository.NewRepositoryParams{
+			Dependencies:   c.deps,
+			RepositoryName: repositoryName,
+		})
+
+		// Check if the repository exists
+		exists, err := repoInstance.IsGitRepository()
+		if err != nil {
+			return mode.ModeNone, fmt.Errorf("failed to check repository %s: %w", repositoryName, err)
+		}
+		if !exists {
+			c.VerbosePrint("Repository %s does not exist or is not a Git repository", repositoryName)
+			return mode.ModeNone, nil
+		}
+
 		return mode.ModeSingleRepo, nil
 	}
 

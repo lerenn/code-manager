@@ -192,15 +192,11 @@ func TestDeleteWorkspaceInvalidName(t *testing.T) {
 	setup := setupTestEnvironment(t)
 	defer cleanupTestEnvironment(t, setup)
 
-	// Test with empty name
-	err := deleteWorkspace(t, setup, "", true)
-	require.Error(t, err, "Deleting workspace with empty name should fail")
-	require.Contains(t, err.Error(), "invalid workspace name", "Error should mention invalid workspace name")
-
 	// Test with invalid characters
-	err = deleteWorkspace(t, setup, "invalid/name", true)
+	err := deleteWorkspace(t, setup, "invalid/name", true)
 	require.Error(t, err, "Deleting workspace with invalid characters should fail")
 	require.Contains(t, err.Error(), "invalid workspace name", "Error should mention invalid workspace name")
+
 }
 
 // TestDeleteWorkspaceEmptyWorkspace tests workspace deletion with no worktrees
@@ -514,8 +510,8 @@ func TestDeleteWorkspaceErrorHandling(t *testing.T) {
 	defer cleanupTestEnvironment(t, setup)
 
 	// Test with invalid workspace name
-	err := deleteWorkspace(t, setup, "", true)
-	require.Error(t, err, "Should fail with empty workspace name")
+	err := deleteWorkspace(t, setup, "invalid/name", true)
+	require.Error(t, err, "Should fail with invalid workspace name")
 	require.Contains(t, err.Error(), "invalid workspace name", "Should mention invalid name")
 
 	// Test with non-existent workspace

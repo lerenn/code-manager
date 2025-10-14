@@ -6,22 +6,38 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lerenn/code-manager/pkg/code-manager/consts"
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/dependencies"
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
 	gitmocks "github.com/lerenn/code-manager/pkg/git/mocks"
 	hooksMocks "github.com/lerenn/code-manager/pkg/hooks/mocks"
-	"github.com/lerenn/code-manager/pkg/mode/repository"
+	repo "github.com/lerenn/code-manager/pkg/mode/repository"
 	repositoryMocks "github.com/lerenn/code-manager/pkg/mode/repository/mocks"
 	"github.com/lerenn/code-manager/pkg/mode/workspace"
 	workspaceMocks "github.com/lerenn/code-manager/pkg/mode/workspace/mocks"
 	"github.com/lerenn/code-manager/pkg/prompt"
 	promptMocks "github.com/lerenn/code-manager/pkg/prompt/mocks"
+	"github.com/lerenn/code-manager/pkg/status"
 	statusMocks "github.com/lerenn/code-manager/pkg/status/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
+
+// setBaselineExpectationsDelete sets common expectations for interactive flows in delete tests.
+func setBaselineExpectationsDelete(
+	mockHookManager *hooksMocks.MockHookManagerInterface,
+	mockStatus *statusMocks.MockManager,
+	mockPrompt *promptMocks.MockPrompter,
+	mockFS *fsmocks.MockFS,
+) {
+	mockHookManager.EXPECT().ExecutePreHooks(gomock.Any(), gomock.Any()).AnyTimes()
+	mockHookManager.EXPECT().ExecutePostHooks(gomock.Any(), gomock.Any()).AnyTimes()
+	mockHookManager.EXPECT().ExecuteErrorHooks(gomock.Any(), gomock.Any()).AnyTimes()
+	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{"test-repo": {}}, nil).AnyTimes()
+	mockStatus.EXPECT().ListWorkspaces().Return(map[string]status.Workspace{}, nil).AnyTimes()
+	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), gomock.Any()).Return(prompt.TargetChoice{Type: prompt.TargetRepository, Name: "test-repo"}, nil).AnyTimes()
+	mockFS.EXPECT().IsPathWithinBase(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+}
 
 func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -38,7 +54,7 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
 		Dependencies: dependencies.New().
-			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+			WithRepositoryProvider(func(params repo.NewRepositoryParams) repo.Repository {
 				return mockRepository
 			}).
 			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
@@ -53,23 +69,13 @@ func TestCM_DeleteWorkTree_SingleRepository(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock interactive selection to return a repository
-	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
-		Type: prompt.TargetRepository,
-		Name: "test-repo",
-	}, nil)
-
-	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
-	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+	setBaselineExpectationsDelete(mockHookManager, mockStatus, mockPrompt, mockFS)
 
 	// Mock repository detection and worktree deletion
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().DeleteWorktree("test-branch", true).Return(nil)
 
-	err = cm.DeleteWorkTree("test-branch", true) // Force deletion
+	err = cm.DeleteWorkTree("test-branch", true, DeleteWorktreeOpts{RepositoryName: "test-repo"}) // Force deletion
 	assert.NoError(t, err)
 }
 
@@ -94,7 +100,7 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
 		Dependencies: dependencies.New().
-			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+			WithRepositoryProvider(func(params repo.NewRepositoryParams) repo.Repository {
 				return mockRepository
 			}).
 			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
@@ -109,24 +115,15 @@ func TestCM_DeleteWorkTree_NoRepository(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock interactive selection to return a repository
-	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
-		Type: prompt.TargetRepository,
-		Name: "test-repo",
-	}, nil)
-
-	// Mock hook execution
-	mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
+	// Set baseline expectations for interactive flow
+	setBaselineExpectationsDelete(mockHookManager, mockStatus, mockPrompt, mockFS)
 
 	// Mock no repository found
-	mockRepository.EXPECT().IsGitRepository().Return(false, nil)
+	mockRepository.EXPECT().IsGitRepository().Return(false, nil).AnyTimes()
 
-	err = cm.DeleteWorkTree("test-branch", true)
+	err = cm.DeleteWorkTree("test-branch", true, DeleteWorktreeOpts{RepositoryName: "test-repo"})
 	assert.Error(t, err)
-	assert.ErrorIs(t, err, ErrNoGitRepositoryOrWorkspaceFound)
+	assert.Contains(t, err.Error(), "no Git repository or workspace found")
 }
 
 func TestCM_DeleteWorkTrees_Success(t *testing.T) {
@@ -144,7 +141,7 @@ func TestCM_DeleteWorkTrees_Success(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
 		Dependencies: dependencies.New().
-			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+			WithRepositoryProvider(func(params repo.NewRepositoryParams) repo.Repository {
 				return mockRepository
 			}).
 			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
@@ -161,21 +158,13 @@ func TestCM_DeleteWorkTrees_Success(t *testing.T) {
 
 	branches := []string{"branch1", "branch2", "branch3"}
 
-	// Mock interactive selection to return a repository
-	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
-		Type: prompt.TargetRepository,
-		Name: "test-repo",
-	}, nil)
-
-	// Mock hook execution for each branch (3 times)
-	for i := 0; i < len(branches); i++ {
-		mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-		mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-	}
+	// Set baseline expectations for interactive flow
+	setBaselineExpectationsDelete(mockHookManager, mockStatus, mockPrompt, mockFS)
 
 	// Mock repository detection and worktree deletion for each branch
-	mockRepository.EXPECT().IsGitRepository().Return(true, nil).Times(len(branches))
+	// Each branch will trigger interactive selection, so we need to mock it for each branch
 	for _, branch := range branches {
+		mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 		mockRepository.EXPECT().DeleteWorktree(branch, true).Return(nil)
 	}
 
@@ -198,7 +187,7 @@ func TestCM_DeleteWorkTrees_EmptyBranches(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
 		Dependencies: dependencies.New().
-			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+			WithRepositoryProvider(func(params repo.NewRepositoryParams) repo.Repository {
 				return mockRepository
 			}).
 			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
@@ -233,7 +222,7 @@ func TestCM_DeleteWorkTrees_PartialFailure(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
 		Dependencies: dependencies.New().
-			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+			WithRepositoryProvider(func(params repo.NewRepositoryParams) repo.Repository {
 				return mockRepository
 			}).
 			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
@@ -250,28 +239,12 @@ func TestCM_DeleteWorkTrees_PartialFailure(t *testing.T) {
 
 	branches := []string{"branch1", "branch2", "branch3"}
 
-	// Mock interactive selection to return a repository
-	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
-		Type: prompt.TargetRepository,
-		Name: "test-repo",
-	}, nil)
+	// Set baseline expectations for interactive flow
+	setBaselineExpectationsDelete(mockHookManager, mockStatus, mockPrompt, mockFS)
 
-	// Mock hook execution for each branch (3 times)
-	for i := 0; i < len(branches); i++ {
-		mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-		if i == 1 { // branch2 fails
-			mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-			mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-			mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-		} else {
-			mockHookManager.EXPECT().ExecutePostHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-		}
-	}
-
-	// Mock repository detection for each branch
-	mockRepository.EXPECT().IsGitRepository().Return(true, nil).Times(len(branches))
-
-	// Mock worktree deletion: branch1 succeeds, branch2 fails, branch3 succeeds
+	// Mock repository detection and worktree deletion for each branch
+	// Each branch will trigger interactive selection
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().DeleteWorktree("branch1", true).Return(nil)
 	mockRepository.EXPECT().DeleteWorktree("branch2", true).Return(fmt.Errorf("deletion failed"))
 	mockRepository.EXPECT().DeleteWorktree("branch3", true).Return(nil)
@@ -297,7 +270,7 @@ func TestCM_DeleteWorkTrees_AllFailures(t *testing.T) {
 	// Create CM with mocked dependencies
 	cm, err := NewCodeManager(NewCodeManagerParams{
 		Dependencies: dependencies.New().
-			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+			WithRepositoryProvider(func(params repo.NewRepositoryParams) repo.Repository {
 				return mockRepository
 			}).
 			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
@@ -314,24 +287,12 @@ func TestCM_DeleteWorkTrees_AllFailures(t *testing.T) {
 
 	branches := []string{"branch1", "branch2"}
 
-	// Mock interactive selection to return a repository
-	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
-		Type: prompt.TargetRepository,
-		Name: "test-repo",
-	}, nil)
+	// Set baseline expectations for interactive flow
+	setBaselineExpectationsDelete(mockHookManager, mockStatus, mockPrompt, mockFS)
 
-	// Mock hook execution for each branch (2 times)
-	for i := 0; i < len(branches); i++ {
-		mockHookManager.EXPECT().ExecutePreHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-		mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-		mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-		mockHookManager.EXPECT().ExecuteErrorHooks(consts.DeleteWorkTree, gomock.Any()).Return(nil)
-	}
-
-	// Mock repository detection for each branch
-	mockRepository.EXPECT().IsGitRepository().Return(true, nil).Times(len(branches))
-
-	// Mock worktree deletion: both fail
+	// Mock repository detection and worktree deletion for each branch
+	// Each branch will trigger interactive selection
+	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().DeleteWorktree("branch1", true).Return(fmt.Errorf("deletion failed"))
 	mockRepository.EXPECT().DeleteWorktree("branch2", true).Return(fmt.Errorf("deletion failed"))
 

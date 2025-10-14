@@ -22,52 +22,74 @@ func (c *realCodeManager) DeleteWorkTree(branch string, force bool, opts ...Dele
 	// Parse options
 	options := c.extractDeleteWorktreeOptions(opts)
 
-	// Validate that workspace and repository are not both specified
-	if options.WorkspaceName != "" && options.RepositoryName != "" {
-		return fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
+	// Validate exclusivity of targets
+	if err := c.validateDeleteTargets(options); err != nil {
+		return err
 	}
 
-	// Handle interactive selection if neither workspace nor repository is specified
-	if options.WorkspaceName == "" && options.RepositoryName == "" {
-		selectedBranch, err := c.handleInteractiveTargetSelectionForDelete(branch, &options)
-		if err != nil {
-			return err
-		}
-		branch = selectedBranch
-	} else if branch == "" {
-		// Target specified but no branch - prompt for branch name
-		if err := c.handleBranchNameInputForDelete(&branch); err != nil {
-			return err
-		}
+	// Resolve target/branch interactively if needed
+	updatedBranch, err := c.resolveDeleteSelection(branch, &options)
+	if err != nil {
+		return err
 	}
+	branch = updatedBranch
 
 	// Prepare parameters for hooks
 	params := c.prepareDeleteWorkTreeParams(branch, force, options)
 
 	// Execute with hooks
 	return c.executeWithHooks(consts.DeleteWorkTree, params, func() error {
-		c.VerbosePrint("Deleting worktree for branch: %s (force: %t)", branch, force)
-
-		// Detect project mode and delete accordingly
-		projectType, err := c.detectProjectMode(options.WorkspaceName, options.RepositoryName)
-		if err != nil {
-			return fmt.Errorf("failed to detect project mode: %w", err)
-		}
-
-		switch projectType {
-		case mode.ModeSingleRepo:
-			if options.RepositoryName != "" {
-				return c.deleteRepositoryWorktree(options.RepositoryName, branch, force)
-			}
-			return c.handleRepositoryDeleteMode(branch, force)
-		case mode.ModeWorkspace:
-			return c.handleWorkspaceDeleteMode(branch, force)
-		case mode.ModeNone:
-			return ErrNoGitRepositoryOrWorkspaceFound
-		default:
-			return fmt.Errorf("unknown project type")
-		}
+		return c.performDelete(branch, force, options)
 	})
+}
+
+// validateDeleteTargets ensures only one of WorkspaceName or RepositoryName is provided.
+func (c *realCodeManager) validateDeleteTargets(options DeleteWorktreeOpts) error {
+	if options.WorkspaceName != "" && options.RepositoryName != "" {
+		return fmt.Errorf("cannot specify both WorkspaceName and RepositoryName")
+	}
+	return nil
+}
+
+// resolveDeleteSelection handles interactive selection and branch prompting when needed.
+func (c *realCodeManager) resolveDeleteSelection(branch string, options *DeleteWorktreeOpts) (string, error) {
+	if options.WorkspaceName == "" && options.RepositoryName == "" {
+		selectedBranch, err := c.handleInteractiveTargetSelectionForDelete(branch, options)
+		if err != nil {
+			return "", err
+		}
+		return selectedBranch, nil
+	}
+	if branch == "" {
+		if err := c.handleBranchNameInputForDelete(&branch); err != nil {
+			return "", err
+		}
+	}
+	return branch, nil
+}
+
+// performDelete detects project mode and performs the actual deletion.
+func (c *realCodeManager) performDelete(branch string, force bool, options DeleteWorktreeOpts) error {
+	c.VerbosePrint("Deleting worktree for branch: %s (force: %t)", branch, force)
+
+	projectType, err := c.detectProjectMode(options.WorkspaceName, options.RepositoryName)
+	if err != nil {
+		return fmt.Errorf("failed to detect project mode: %w", err)
+	}
+
+	switch projectType {
+	case mode.ModeSingleRepo:
+		if options.RepositoryName != "" {
+			return c.deleteRepositoryWorktree(options.RepositoryName, branch, force)
+		}
+		return c.handleRepositoryDeleteMode(branch, force)
+	case mode.ModeWorkspace:
+		return c.handleWorkspaceDeleteMode(branch, force)
+	case mode.ModeNone:
+		return ErrNoGitRepositoryOrWorkspaceFound
+	default:
+		return fmt.Errorf("unknown project type")
+	}
 }
 
 // handleRepositoryDeleteMode handles repository mode: validation and worktree deletion.
@@ -121,7 +143,8 @@ func (c *realCodeManager) DeleteWorkTrees(branches []string, force bool) error {
 	var errors []error
 	for _, branch := range branches {
 		c.VerbosePrint("Deleting worktree for branch: %s", branch)
-		if err := c.DeleteWorkTree(branch, force); err != nil {
+		// Use current repository context for DeleteWorkTrees
+		if err := c.DeleteWorkTree(branch, force, DeleteWorktreeOpts{RepositoryName: "."}); err != nil {
 			c.VerbosePrint("Failed to delete worktree for branch %s: %v", branch, err)
 			errors = append(errors, fmt.Errorf("failed to delete worktree for branch %s: %w", branch, err))
 		} else {

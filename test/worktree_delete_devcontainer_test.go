@@ -59,7 +59,9 @@ func TestWorktreeDelete_DetachedWorktree(t *testing.T) {
 	require.NoError(t, cmd.Run())
 
 	// Create a worktree - should be detached due to devcontainer
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err)
 
 	// Verify the worktree was created in status
@@ -102,7 +104,9 @@ func TestWorktreeDelete_DetachedWorktree(t *testing.T) {
 	assert.True(t, gitDirInfo.IsDir(), "Expected .git to be a directory (standalone clone), not a file (worktree reference)")
 
 	// Delete the worktree
-	err = cmInstance.DeleteWorkTree(branchName, true) // force delete
+	err = cmInstance.DeleteWorkTree(branchName, true, codemanager.DeleteWorktreeOpts{
+		RepositoryName: ".",
+	}) // force delete
 	require.NoError(t, err)
 
 	// Verify the worktree directory was removed
@@ -145,7 +149,9 @@ func TestWorktreeDelete_RegularWorktree(t *testing.T) {
 
 	// Create a worktree - should be regular worktree (not detached)
 	branchName := "feature-branch"
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err)
 
 	// Verify the worktree was created in status
@@ -188,7 +194,9 @@ func TestWorktreeDelete_RegularWorktree(t *testing.T) {
 	assert.False(t, gitFileInfo.IsDir(), "Expected .git to be a file (worktree reference), not a directory (standalone clone)")
 
 	// Delete the worktree
-	err = cmInstance.DeleteWorkTree(branchName, true) // force delete
+	err = cmInstance.DeleteWorkTree(branchName, true, codemanager.DeleteWorktreeOpts{
+		RepositoryName: ".",
+	}) // force delete
 	require.NoError(t, err)
 
 	// Verify the worktree directory was removed

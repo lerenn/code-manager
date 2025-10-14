@@ -261,6 +261,8 @@ func TestDeleteWorkspace_InvalidName(t *testing.T) {
 	mockGit := gitmocks.NewMockGit(ctrl)
 	mockStatus := statusmocks.NewMockManager(ctrl)
 	mockConfig := configmocks.NewMockManager(ctrl)
+	mockPrompt := promptmocks.NewMockPrompter(ctrl)
+	mockHookManager := hooksMocks.NewMockHookManagerInterface(ctrl)
 
 	cm := &realCodeManager{
 		deps: dependencies.New().
@@ -268,11 +270,18 @@ func TestDeleteWorkspace_InvalidName(t *testing.T) {
 			WithGit(mockGit).
 			WithConfig(mockConfig).
 			WithStatusManager(mockStatus).
-			WithLogger(logger.NewNoopLogger()),
+			WithLogger(logger.NewNoopLogger()).
+			WithPrompt(mockPrompt).
+			WithHookManager(mockHookManager),
 	}
 
+	// Note: No baseline expectations needed since WorkspaceName is provided (no interactive selection)
+	// Only specific expectations for this test
+	mockConfig.EXPECT().GetConfigWithFallback().Return(config.Config{}, nil).AnyTimes()
+	mockFS.EXPECT().Exists(".code-workspace").Return(false, nil).AnyTimes()
+
 	params := DeleteWorkspaceParams{
-		WorkspaceName: "", // Empty name
+		WorkspaceName: "invalid/name", // Invalid name
 		Force:         true,
 	}
 

@@ -28,7 +28,9 @@ func createWorktreeForUpstreamTest(t *testing.T, setup *TestSetup, branch string
 	restore := safeChdir(t, setup.RepoPath)
 	defer restore()
 
-	return cmInstance.CreateWorkTree(branch)
+	return cmInstance.CreateWorkTree(branch, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 }
 
 // TestWorktreeUpstreamTracking tests that worktrees fail properly when upstream cannot be set
@@ -57,7 +59,9 @@ func TestWorktreeUpstreamTracking(t *testing.T) {
 	require.NoError(t, err)
 
 	restore := safeChdir(t, setup.RepoPath)
-	worktrees, err := cmInstance.ListWorktrees()
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
+		RepositoryName: ".",
+	})
 	restore()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1, "Should have one worktree")
@@ -87,7 +91,9 @@ func TestWorktreeUpstreamTrackingNewBranch(t *testing.T) {
 	require.NoError(t, err)
 
 	restore := safeChdir(t, setup.RepoPath)
-	worktrees, err := cmInstance.ListWorktrees()
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
+		RepositoryName: ".",
+	})
 	restore()
 	require.NoError(t, err)
 	assert.Len(t, worktrees, 1, "Should have one worktree")

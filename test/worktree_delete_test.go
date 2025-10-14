@@ -37,7 +37,9 @@ func deleteWorktree(t *testing.T, params deleteWorktreeParams) error {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	return cmInstance.DeleteWorkTree(params.Branch, params.Force)
+	return cmInstance.DeleteWorkTree(params.Branch, params.Force, codemanager.DeleteWorktreeOpts{
+		RepositoryName: ".",
+	})
 }
 
 // TestDeleteWorktreeSingleRepo tests deleting a worktree in single repository mode
@@ -137,7 +139,9 @@ func TestDeleteWorktreeRepoModeVerboseMode(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = cmInstance.DeleteWorkTree("feature/verbose-test", true)
+	err = cmInstance.DeleteWorkTree("feature/verbose-test", true, codemanager.DeleteWorktreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err, "Worktree deletion should succeed")
 
 	// Verify the worktree was deleted
@@ -213,7 +217,9 @@ func TestDeleteWorktreeRepoModeCLIWithVerbose(t *testing.T) {
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	err = cmInstance.DeleteWorkTree("feature/verbose-cli-test", true)
+	err = cmInstance.DeleteWorkTree("feature/verbose-cli-test", true, codemanager.DeleteWorktreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err, "Worktree deletion should succeed")
 
 	// Verify the worktree was deleted

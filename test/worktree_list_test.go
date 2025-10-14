@@ -35,7 +35,9 @@ func listWorktrees(t *testing.T, setup *TestSetup) ([]status.WorktreeInfo, error
 	require.NoError(t, err)
 	defer os.Chdir(originalDir)
 
-	worktrees, err := cmInstance.ListWorktrees()
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
+		RepositoryName: ".",
+	})
 	return worktrees, err
 }
 
@@ -72,7 +74,9 @@ func runListCommand(t *testing.T, setup *TestSetup, args ...string) (string, err
 	defer os.Chdir(originalDir)
 
 	// Call ListWorktrees directly
-	worktrees, err := cmInstance.ListWorktrees()
+	worktrees, err := cmInstance.ListWorktrees(codemanager.ListWorktreesOpts{
+		RepositoryName: ".",
+	})
 	if err != nil {
 		return err.Error(), err
 	}

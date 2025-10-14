@@ -12,6 +12,13 @@ import (
 
 // DeleteWorkspace deletes a workspace and all associated resources.
 func (c *realCodeManager) DeleteWorkspace(params DeleteWorkspaceParams) error {
+	// Validate workspace name first (before interactive selection)
+	if params.WorkspaceName != "" {
+		if err := c.validateWorkspaceName(params.WorkspaceName); err != nil {
+			return fmt.Errorf("%w: %w", ErrInvalidWorkspaceName, err)
+		}
+	}
+
 	// Handle interactive selection if no workspace name is provided
 	if params.WorkspaceName == "" {
 		result, err := c.promptSelectWorkspaceOnly()
@@ -32,11 +39,6 @@ func (c *realCodeManager) DeleteWorkspace(params DeleteWorkspaceParams) error {
 // deleteWorkspace implements the workspace deletion business logic.
 func (c *realCodeManager) deleteWorkspace(params DeleteWorkspaceParams) error {
 	c.VerbosePrint("Deleting workspace: %s", params.WorkspaceName)
-
-	// Validate workspace name
-	if err := c.validateWorkspaceName(params.WorkspaceName); err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidWorkspaceName, err)
-	}
 
 	// Get workspace and worktrees
 	workspace, worktrees, err := c.getWorkspaceAndWorktrees(params.WorkspaceName)
@@ -237,56 +239,64 @@ func (c *realCodeManager) deleteSingleWorkspaceWorktree(
 ) error {
 	c.VerbosePrint("  Deleting worktree: %s/%s", worktree.Remote, worktree.Branch)
 
-	// Find which repository this worktree belongs to
-	repoURL, repoPath, err := c.findWorktreeRepository(workspace, worktree)
-	if err != nil {
-		return err
-	}
-
 	// Get config from ConfigManager
 	cfg, err := c.deps.Config.GetConfigWithFallback()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	// Get worktree path and remove from Git
-	worktreePath := filepath.Join(cfg.RepositoriesDir, repoURL, worktree.Remote, worktree.Branch)
-	if err := c.removeWorktreeFromGit(repoPath, worktreePath, worktree, force); err != nil {
-		return err
+	// Remove worktree from all repositories in the workspace that contain it
+	var deletionErrors []error
+	for _, repoURL := range workspace.Repositories {
+		// Check if this repository has the worktree
+		repo, err := c.deps.StatusManager.GetRepository(repoURL)
+		if err != nil {
+			c.VerbosePrint("    ⚠ Skipping repository %s: %v", repoURL, err)
+			continue
+		}
+
+		// Check if worktree exists in this repository
+		hasWorktree := false
+		for _, repoWorktree := range repo.Worktrees {
+			if repoWorktree.Branch == worktree.Branch {
+				hasWorktree = true
+				break
+			}
+		}
+
+		if !hasWorktree {
+			continue
+		}
+
+		c.VerbosePrint("    Found worktree in repository: %s", repoURL)
+
+		// Get repository path for this specific repository
+		repoPath := repo.Path
+		worktreePath := filepath.Join(cfg.RepositoriesDir, repoURL, worktree.Remote, worktree.Branch)
+
+		// Remove worktree from Git
+		if err := c.removeWorktreeFromGit(repoPath, worktreePath, worktree, force); err != nil {
+			deletionErrors = append(deletionErrors, fmt.Errorf("failed to remove worktree from repository %s: %w", repoURL, err))
+			continue
+		}
+
+		// Remove worktree from status
+		if err := c.removeWorktreeFromStatus(repoURL, worktree); err != nil {
+			deletionErrors = append(deletionErrors, fmt.Errorf(
+				"failed to remove worktree from status for repository %s: %w", repoURL, err))
+			continue
+		}
+
+		c.VerbosePrint("    ✓ Deleted worktree from repository: %s", repoURL)
 	}
 
-	// Remove worktree from status
-	if err := c.removeWorktreeFromStatus(repoURL, worktree); err != nil {
-		return err
+	if len(deletionErrors) > 0 {
+		return fmt.Errorf("errors occurred while deleting worktree %s/%s: %v",
+			worktree.Remote, worktree.Branch, deletionErrors)
 	}
 
 	c.VerbosePrint("    ✓ Deleted worktree: %s/%s", worktree.Remote, worktree.Branch)
 	return nil
-}
-
-// findWorktreeRepository finds the repository that contains a specific worktree.
-func (c *realCodeManager) findWorktreeRepository(
-	workspace *status.Workspace,
-	worktree status.WorktreeInfo,
-) (string, string, error) {
-	for _, currentRepoURL := range workspace.Repositories {
-		// Get repository to check its worktrees
-		repo, err := c.deps.StatusManager.GetRepository(currentRepoURL)
-		if err != nil {
-			c.VerbosePrint("    ⚠ Skipping repository %s: %v", currentRepoURL, err)
-			continue
-		}
-
-		// Check if this worktree belongs to this repository
-		// The worktrees are stored with "remote:branch" as the key
-		worktreeKey := fmt.Sprintf("%s:%s", worktree.Remote, worktree.Branch)
-		if _, exists := repo.Worktrees[worktreeKey]; exists {
-			return currentRepoURL, repo.Path, nil
-		}
-	}
-
-	c.VerbosePrint("    ⚠ Worktree %s/%s not found in any workspace repository", worktree.Remote, worktree.Branch)
-	return "", "", fmt.Errorf("worktree %s/%s not found in any workspace repository", worktree.Remote, worktree.Branch)
 }
 
 // removeWorktreeFromGit removes a worktree from Git.

@@ -26,6 +26,22 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
+// setBaselineExpectationsCreate sets common expectations for interactive flows in create tests.
+func setBaselineExpectationsCreate(
+	mockHookManager *hooksMocks.MockHookManagerInterface,
+	mockStatus *statusMocks.MockManager,
+	mockPrompt *promptMocks.MockPrompter,
+	mockFS *fsmocks.MockFS,
+) {
+	mockHookManager.EXPECT().ExecutePreHooks(gomock.Any(), gomock.Any()).AnyTimes()
+	mockHookManager.EXPECT().ExecutePostHooks(gomock.Any(), gomock.Any()).AnyTimes()
+	mockHookManager.EXPECT().ExecuteErrorHooks(gomock.Any(), gomock.Any()).AnyTimes()
+	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{"test-repo": {}}, nil).AnyTimes()
+	mockStatus.EXPECT().ListWorkspaces().Return(map[string]status.Workspace{}, nil).AnyTimes()
+	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), gomock.Any()).Return(prompt.TargetChoice{Type: prompt.TargetRepository, Name: "test-repo"}, nil).AnyTimes()
+	mockFS.EXPECT().IsPathWithinBase(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+}
+
 func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -61,24 +77,14 @@ func TestCM_CreateWorkTree_SingleRepository(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock interactive selection to return a repository
-	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
-		Type: prompt.TargetRepository,
-		Name: "test-repo",
-	}, nil)
-
-	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
-	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+	setBaselineExpectationsCreate(mockHookManager, mockStatus, mockPrompt, mockFS)
 
 	// Mock repository detection and worktree creation
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
 	mockRepository.EXPECT().Validate().Return(nil)
 	mockRepository.EXPECT().CreateWorktree("test-branch", gomock.Any()).Return("/test/base/path/test-repo/origin/test-branch", nil)
 
-	err = cm.CreateWorkTree("test-branch")
+	err = cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{RepositoryName: "test-repo"})
 	assert.NoError(t, err)
 }
 
@@ -117,17 +123,8 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock interactive selection to return a repository
-	mockPrompt.EXPECT().PromptSelectTarget(gomock.Any(), false).Return(prompt.TargetChoice{
-		Type: prompt.TargetRepository,
-		Name: "test-repo",
-	}, nil)
-
-	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
-	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+	// Set baseline expectations for interactive flow
+	setBaselineExpectationsCreate(mockHookManager, mockStatus, mockPrompt, mockFS)
 
 	// Mock repository detection and worktree creation
 	mockRepository.EXPECT().IsGitRepository().Return(true, nil).AnyTimes()
@@ -135,7 +132,7 @@ func TestCM_CreateWorkTreeWithIDE(t *testing.T) {
 	mockRepository.EXPECT().CreateWorktree("test-branch", gomock.Any()).Return("/test/base/path/test-repo/origin/test-branch", nil)
 
 	// Note: IDE opening is now handled by the hook system, not tested here
-	err = cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{IDEName: "vscode"})
+	err = cm.CreateWorkTree("test-branch", CreateWorkTreeOpts{RepositoryName: "test-repo", IDEName: "vscode"})
 	assert.NoError(t, err)
 }
 
@@ -174,11 +171,8 @@ func TestCM_CreateWorkTree_WorkspaceMode(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
-	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+	// Set baseline expectations for interactive flow
+	setBaselineExpectationsCreate(mockHookManager, mockStatus, mockPrompt, mockFS)
 
 	// Mock workspace worktree creation
 	workspaceName := "test-workspace"
@@ -225,11 +219,8 @@ func TestCM_CreateWorkTree_WorkspaceModeWithIDE(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	// Mock hook execution - interactive selection calls ListRepositories first, then PromptSelectTarget
-	mockHookManager.EXPECT().ExecutePreHooks(consts.ListRepositories, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.PromptSelectTarget, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePreHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
-	mockHookManager.EXPECT().ExecutePostHooks(consts.CreateWorkTree, gomock.Any()).Return(nil)
+	// Set baseline expectations for interactive flow
+	setBaselineExpectationsCreate(mockHookManager, mockStatus, mockPrompt, mockFS)
 
 	// Mock workspace worktree creation
 	workspaceName := "test-workspace"

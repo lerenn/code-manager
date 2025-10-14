@@ -59,7 +59,9 @@ func TestWorktreeCreate_WithDevcontainer(t *testing.T) {
 	require.NoError(t, cmd.Run())
 
 	// Create a worktree - should be detached due to devcontainer
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err)
 
 	// Verify the status.yaml file was created and updated
@@ -154,7 +156,9 @@ func TestWorktreeCreate_WithRootDevcontainer(t *testing.T) {
 	require.NoError(t, cmd.Run())
 
 	// Create a worktree - should be detached due to devcontainer
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err)
 
 	// Verify the status.yaml file was created and updated
@@ -218,7 +222,9 @@ func TestWorktreeCreate_WithoutDevcontainer(t *testing.T) {
 
 	// Create a worktree - should be regular worktree (not detached)
 	branchName := "feature-branch"
-	err = cmInstance.CreateWorkTree(branchName)
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		RepositoryName: ".",
+	})
 	require.NoError(t, err)
 
 	// Verify the status.yaml file was created and updated
