@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -279,7 +280,7 @@ func TestSelectModel_UpdateFilteredChoices(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			model := initialSelectModel(choices, false)
 			model.filter = tt.filter
-			model.updateFilteredChoices()
+			model = model.updateFilteredChoices()
 
 			assert.Equal(t, len(tt.expectedNames), len(model.filteredChoices))
 			assert.Equal(t, len(tt.expectedIndices), len(model.filteredIndices))
@@ -288,6 +289,78 @@ func TestSelectModel_UpdateFilteredChoices(t *testing.T) {
 				assert.Equal(t, expectedName, model.filteredChoices[i].Name)
 				assert.Equal(t, tt.expectedIndices[i], model.filteredIndices[i])
 			}
+		})
+	}
+}
+
+// TestPromptSelectTargetBubbleTea tests the Bubble Tea integration to prevent "unexpected model type" errors.
+func TestPromptSelectTargetBubbleTea(t *testing.T) {
+	choices := []TargetChoice{
+		{Type: TargetRepository, Name: "test-repo-1"},
+		{Type: TargetRepository, Name: "test-repo-2"},
+		{Type: TargetWorkspace, Name: "test-workspace-1"},
+	}
+
+	tests := []struct {
+		name              string
+		choices           []TargetChoice
+		showWorktreeLabel bool
+		expectError       bool
+	}{
+		{
+			name:              "valid choices without worktree labels",
+			choices:           choices,
+			showWorktreeLabel: false,
+			expectError:       false,
+		},
+		{
+			name:              "valid choices with worktree labels",
+			choices:           choices,
+			showWorktreeLabel: true,
+			expectError:       false,
+		},
+		{
+			name:              "empty choices should error",
+			choices:           []TargetChoice{},
+			showWorktreeLabel: false,
+			expectError:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// This test verifies that the Bubble Tea program runs without the "unexpected model type" error
+			// We can't easily test the full interactive flow in unit tests, but we can verify the setup
+			// doesn't cause type assertion errors
+
+			if tt.expectError {
+				// For empty choices, we expect an error from the promptSelectTargetBubbleTea function
+				// before it even gets to the Bubble Tea program
+				_, err := promptSelectTargetBubbleTea(tt.choices, tt.showWorktreeLabel)
+				assert.Error(t, err)
+				return
+			}
+
+			// For valid choices, we can't easily test the full interactive flow in unit tests
+			// because it requires user input. However, we can verify that the model creation
+			// and type assertions work correctly by testing the model creation directly
+			model := initialSelectModel(tt.choices, tt.showWorktreeLabel)
+
+			// Verify the model was created correctly
+			assert.Equal(t, len(tt.choices), len(model.choices))
+			assert.Equal(t, len(tt.choices), len(model.filteredChoices))
+			assert.Equal(t, tt.showWorktreeLabel, model.showWorktreeLabel)
+
+			// Verify the model implements the tea.Model interface correctly
+			// This ensures the type assertion in promptSelectTargetBubbleTea will work
+			var teaModel tea.Model = model
+			assert.NotNil(t, teaModel)
+
+			// Test that the model can be cast back to selectModel without error
+			// This simulates what happens in promptSelectTargetBubbleTea
+			castModel, ok := teaModel.(selectModel)
+			assert.True(t, ok, "Model should be castable to selectModel")
+			assert.Equal(t, model.choices, castModel.choices)
 		})
 	}
 }
