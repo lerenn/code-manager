@@ -209,8 +209,16 @@ func TestWorktree_Create_DetachedMode(t *testing.T) {
 	mockGit.EXPECT().CheckReferenceConflict(params.RepoPath, params.Branch).Return(nil)
 	mockGit.EXPECT().BranchExists(params.RepoPath, params.Branch).Return(true, nil)
 	mockFS.EXPECT().MkdirAll(params.WorktreePath, gomock.Any()).Return(nil)
-	// For detached mode, should call CloneToPath instead of CreateWorktreeWithNoCheckout
-	mockGit.EXPECT().CloneToPath(params.RepoPath, params.WorktreePath, params.Branch).Return(nil)
+	// For detached mode, should get remote URL, clone from remote, and checkout branch
+	remoteURL := "https://github.com/octocat/Hello-World.git"
+	mockGit.EXPECT().GetRemoteURL(params.RepoPath, params.Remote).Return(remoteURL, nil)
+	mockGit.EXPECT().Clone(gomock.Any()).DoAndReturn(func(cloneParams git.CloneParams) error {
+		assert.Equal(t, remoteURL, cloneParams.RepoURL)
+		assert.Equal(t, params.WorktreePath, cloneParams.TargetPath)
+		assert.True(t, cloneParams.Recursive)
+		return nil
+	})
+	mockGit.EXPECT().CheckoutBranch(params.WorktreePath, params.Branch).Return(nil)
 
 	err := worktree.Create(params)
 	assert.NoError(t, err)
