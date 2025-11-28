@@ -54,49 +54,56 @@ func (w *realWorktree) createDetachedClone(params CreateParams) error {
 	}
 
 	if branchExists {
-		// Branch exists locally, clone from local path
-		w.logger.Logf("Branch exists locally, cloning from local path: %s", params.RepoPath)
-		if err := w.git.CloneToPath(params.RepoPath, params.WorktreePath, params.Branch); err != nil {
-			// Clean up directory on failure
-			if cleanupErr := w.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
-				w.logger.Logf("Warning: failed to clean up worktree directory: %v", cleanupErr)
-			}
-			return fmt.Errorf("failed to create detached clone: %w", err)
-		}
-	} else {
-		// Branch doesn't exist locally, clone from remote URL
-		remoteURL, err := w.git.GetRemoteURL(params.RepoPath, params.Remote)
-		if err != nil {
-			return fmt.Errorf("failed to get remote URL for %s: %w", params.Remote, err)
-		}
+		return w.createDetachedCloneFromLocal(params)
+	}
+	return w.createDetachedCloneFromRemote(params)
+}
 
-		w.logger.Logf("Branch doesn't exist locally, cloning from remote URL: %s", remoteURL)
+// createDetachedCloneFromLocal creates a detached clone from a local repository path.
+func (w *realWorktree) createDetachedCloneFromLocal(params CreateParams) error {
+	w.logger.Logf("Branch exists locally, cloning from local path: %s", params.RepoPath)
+	if err := w.git.CloneToPath(params.RepoPath, params.WorktreePath, params.Branch); err != nil {
+		w.cleanupOnError(params.WorktreePath)
+		return fmt.Errorf("failed to create detached clone: %w", err)
+	}
+	w.logger.Logf("✓ Detached clone created successfully for %s:%s", params.Remote, params.Branch)
+	return nil
+}
 
-		// Clone from the remote URL (this will fetch all branches)
-		if err := w.git.Clone(git.CloneParams{
-			RepoURL:    remoteURL,
-			TargetPath: params.WorktreePath,
-			Recursive:  true,
-		}); err != nil {
-			// Clean up directory on failure
-			if cleanupErr := w.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
-				w.logger.Logf("Warning: failed to clean up worktree directory: %v", cleanupErr)
-			}
-			return fmt.Errorf("failed to clone from remote: %w", err)
-		}
+// createDetachedCloneFromRemote creates a detached clone from a remote URL.
+func (w *realWorktree) createDetachedCloneFromRemote(params CreateParams) error {
+	remoteURL, err := w.git.GetRemoteURL(params.RepoPath, params.Remote)
+	if err != nil {
+		return fmt.Errorf("failed to get remote URL for %s: %w", params.Remote, err)
+	}
 
-		// Checkout the specific branch
-		if err := w.git.CheckoutBranch(params.WorktreePath, params.Branch); err != nil {
-			// Clean up directory on failure
-			if cleanupErr := w.cleanupWorktreeDirectory(params.WorktreePath); cleanupErr != nil {
-				w.logger.Logf("Warning: failed to clean up worktree directory: %v", cleanupErr)
-			}
-			return fmt.Errorf("failed to checkout branch %s: %w", params.Branch, err)
-		}
+	w.logger.Logf("Branch doesn't exist locally, cloning from remote URL: %s", remoteURL)
+
+	// Clone from the remote URL (this will fetch all branches)
+	if err := w.git.Clone(git.CloneParams{
+		RepoURL:    remoteURL,
+		TargetPath: params.WorktreePath,
+		Recursive:  true,
+	}); err != nil {
+		w.cleanupOnError(params.WorktreePath)
+		return fmt.Errorf("failed to clone from remote: %w", err)
+	}
+
+	// Checkout the specific branch
+	if err := w.git.CheckoutBranch(params.WorktreePath, params.Branch); err != nil {
+		w.cleanupOnError(params.WorktreePath)
+		return fmt.Errorf("failed to checkout branch %s: %w", params.Branch, err)
 	}
 
 	w.logger.Logf("✓ Detached clone created successfully for %s:%s", params.Remote, params.Branch)
 	return nil
+}
+
+// cleanupOnError attempts to clean up the worktree directory on error.
+func (w *realWorktree) cleanupOnError(worktreePath string) {
+	if cleanupErr := w.cleanupWorktreeDirectory(worktreePath); cleanupErr != nil {
+		w.logger.Logf("Warning: failed to clean up worktree directory: %v", cleanupErr)
+	}
 }
 
 // createRegularWorktree creates a regular Git worktree.

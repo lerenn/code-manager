@@ -22,7 +22,8 @@ func (g *realGit) CheckoutBranch(worktreePath, branch string) error {
 	output2, err2 := cmd.CombinedOutput()
 	if err2 != nil {
 		// Return the original error if both attempts fail
-		return fmt.Errorf("git checkout failed: %w (command: git checkout %s, output: %s; fallback: git checkout -b %s origin/%s, output: %s)",
+		return fmt.Errorf(
+			"git checkout failed: %w (command: git checkout %s, output: %s; fallback: git checkout -b %s origin/%s, output: %s)",
 			err, branch, string(output), branch, branch, string(output2))
 	}
 	return nil
