@@ -206,8 +206,8 @@ func TestWorktree_Create_DetachedMode(t *testing.T) {
 	mockFS.EXPECT().Exists(params.WorktreePath).Return(false, nil)
 	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(nil, errors.New("not found"))
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
-	mockGit.EXPECT().CheckReferenceConflict(params.RepoPath, params.Branch).Return(nil)
-	mockGit.EXPECT().BranchExists(params.RepoPath, params.Branch).Return(true, nil)
+	// For detached mode, check if branch exists locally - if not, clone from remote
+	mockGit.EXPECT().BranchExists(params.RepoPath, params.Branch).Return(false, nil)
 	mockFS.EXPECT().MkdirAll(params.WorktreePath, gomock.Any()).Return(nil)
 	// For detached mode, should get remote URL, clone from remote, and checkout branch
 	remoteURL := "https://github.com/octocat/Hello-World.git"

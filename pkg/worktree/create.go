@@ -27,11 +27,6 @@ func (w *realWorktree) Create(params CreateParams) error {
 		return err
 	}
 
-	// Ensure branch exists
-	if err := w.EnsureBranchExists(params.RepoPath, params.Branch); err != nil {
-		return err
-	}
-
 	// Create worktree directory
 	if err := w.createWorktreeDirectory(params.WorktreePath); err != nil {
 		return err
@@ -41,6 +36,12 @@ func (w *realWorktree) Create(params CreateParams) error {
 	if params.Detached {
 		return w.createDetachedClone(params)
 	}
+
+	// Ensure branch exists (only for regular worktrees)
+	if err := w.EnsureBranchExists(params.RepoPath, params.Branch); err != nil {
+		return err
+	}
+
 	return w.createRegularWorktree(params)
 }
 
