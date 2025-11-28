@@ -79,6 +79,10 @@ func (c *realCodeManager) VerbosePrint(msg string, args ...interface{}) {
 // SetLogger sets the logger for this CodeManager instance.
 func (c *realCodeManager) SetLogger(logger logger.Logger) {
 	c.deps.Logger = logger
+	// Also set logger on status manager for verbose output
+	if c.deps.StatusManager != nil {
+		c.deps.StatusManager.SetLogger(logger)
+	}
 }
 
 // getConfig gets the configuration from the ConfigManager with fallback.
