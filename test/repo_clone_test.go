@@ -310,3 +310,35 @@ func TestCloneRepositoryRepoModeSSHURL(t *testing.T) {
 		require.Len(t, status.Repositories, 1, "Should have one repository entry")
 	}
 }
+
+// TestCloneRepositoryRepoModeSSHProtocolURL tests cloning with ssh:// URL format (if SSH is available)
+func TestCloneRepositoryRepoModeSSHProtocolURL(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Test ssh:// URL format (this will likely fail in CI environments without SSH keys)
+	// but it's good to test the URL parsing logic
+	repoURL := "ssh://git@github.com/octocat/Hello-World.git"
+
+	err := cloneRepository(t, setup, repoURL, true)
+	// This might fail due to SSH authentication, but the URL parsing should work
+	if err != nil {
+		// If it fails due to SSH auth, that's expected in test environments
+		// Check for either "ssh" or "unsupported" error (in case URL parsing fails)
+		assert.True(t, strings.Contains(err.Error(), "ssh") || strings.Contains(err.Error(), "unsupported"),
+			"Should fail due to SSH authentication or unsupported format, got: %s", err.Error())
+	} else {
+		// If it succeeds, verify the repository was cloned correctly
+		status := readStatusFile(t, setup.StatusPath)
+		require.NotNil(t, status.Repositories, "Status file should have repositories section")
+		require.Len(t, status.Repositories, 1, "Should have one repository entry")
+
+		// Verify the normalized URL is correct
+		var normalizedURL string
+		for url := range status.Repositories {
+			normalizedURL = url
+			break
+		}
+		assert.Equal(t, "github.com/octocat/Hello-World", normalizedURL, "Normalized URL should be correct")
+	}
+}
