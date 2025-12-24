@@ -92,7 +92,23 @@ func (c *realCodeManager) normalizeRepositoryURL(repoURL string) (string, error)
 	// Remove .git suffix if present
 	normalized := strings.TrimSuffix(repoURL, ".git")
 
-	// Handle SSH URLs (git@host:user/repo) first
+	// Handle ssh:// URLs first (before other SSH format checks)
+	if strings.HasPrefix(normalized, "ssh://") {
+		parsedURL, err := url.Parse(normalized)
+		if err != nil {
+			return "", fmt.Errorf("invalid repository URL: %w", err)
+		}
+
+		host := parsedURL.Host
+		// Remove port if present (e.g., host:22 -> host)
+		if colonIdx := strings.Index(host, ":"); colonIdx != -1 {
+			host = host[:colonIdx]
+		}
+		path := strings.TrimPrefix(parsedURL.Path, "/")
+		return host + "/" + path, nil
+	}
+
+	// Handle SSH URLs (git@host:user/repo)
 	if strings.Contains(normalized, "@") && strings.Contains(normalized, ":") && !strings.HasPrefix(normalized, "http") {
 		parts := strings.Split(normalized, ":")
 		if len(parts) == 2 {

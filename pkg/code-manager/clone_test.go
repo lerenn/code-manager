@@ -392,3 +392,210 @@ func TestRealCM_Clone_InitializationFailure(t *testing.T) {
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrFailedToInitializeRepository)
 }
+
+func TestRealCM_Clone_SSHProtocolURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockRepository := repositorymocks.NewMockRepository(ctrl)
+	mockWorkspace := workspacemocks.NewMockWorkspace(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
+
+	cm, err := NewCodeManager(NewCodeManagerParams{
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus),
+	})
+	assert.NoError(t, err)
+
+	repoURL := "ssh://git@forge.lab.home.lerenn.net/homelab/lgtm.git"
+	normalizedURL := "forge.lab.home.lerenn.net/homelab/lgtm"
+	defaultBranch := "main"
+	targetPath := "/test/base/path/forge.lab.home.lerenn.net/homelab/lgtm/origin/main"
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/base/path",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
+
+	// Mock repository existence check
+	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{}, nil)
+
+	// Mock default branch detection
+	mockGit.EXPECT().GetDefaultBranch(repoURL).Return(defaultBranch, nil)
+
+	// Mock directory creation
+	mockFS.EXPECT().MkdirAll("/test/base/path/forge.lab.home.lerenn.net/homelab/lgtm/origin", gomock.Any()).Return(nil)
+
+	// Mock clone operation
+	mockGit.EXPECT().Clone(git.CloneParams{
+		RepoURL:    repoURL,
+		TargetPath: targetPath,
+		Recursive:  true,
+	}).Return(nil)
+
+	// Mock repository initialization
+	mockStatus.EXPECT().AddRepository(normalizedURL, status.AddRepositoryParams{
+		Path: targetPath,
+		Remotes: map[string]status.Remote{
+			"origin": {
+				DefaultBranch: defaultBranch,
+			},
+		},
+	}).Return(nil)
+
+	err = cm.Clone(repoURL)
+	assert.NoError(t, err)
+}
+
+func TestRealCM_Clone_SSHProtocolURLWithoutDotGit(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockRepository := repositorymocks.NewMockRepository(ctrl)
+	mockWorkspace := workspacemocks.NewMockWorkspace(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
+
+	cm, err := NewCodeManager(NewCodeManagerParams{
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus),
+	})
+	assert.NoError(t, err)
+
+	repoURL := "ssh://git@forge.lab.home.lerenn.net/homelab/lgtm"
+	normalizedURL := "forge.lab.home.lerenn.net/homelab/lgtm"
+	defaultBranch := "main"
+	targetPath := "/test/base/path/forge.lab.home.lerenn.net/homelab/lgtm/origin/main"
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/base/path",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
+
+	// Mock repository existence check
+	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{}, nil)
+
+	// Mock default branch detection
+	mockGit.EXPECT().GetDefaultBranch(repoURL).Return(defaultBranch, nil)
+
+	// Mock directory creation
+	mockFS.EXPECT().MkdirAll("/test/base/path/forge.lab.home.lerenn.net/homelab/lgtm/origin", gomock.Any()).Return(nil)
+
+	// Mock clone operation
+	mockGit.EXPECT().Clone(git.CloneParams{
+		RepoURL:    repoURL,
+		TargetPath: targetPath,
+		Recursive:  true,
+	}).Return(nil)
+
+	// Mock repository initialization
+	mockStatus.EXPECT().AddRepository(normalizedURL, status.AddRepositoryParams{
+		Path: targetPath,
+		Remotes: map[string]status.Remote{
+			"origin": {
+				DefaultBranch: defaultBranch,
+			},
+		},
+	}).Return(nil)
+
+	err = cm.Clone(repoURL)
+	assert.NoError(t, err)
+}
+
+func TestRealCM_Clone_SSHProtocolURLWithPort(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+	mockRepository := repositorymocks.NewMockRepository(ctrl)
+	mockWorkspace := workspacemocks.NewMockWorkspace(ctrl)
+	mockConfig := configmocks.NewMockManager(ctrl)
+
+	cm, err := NewCodeManager(NewCodeManagerParams{
+		Dependencies: dependencies.New().
+			WithRepositoryProvider(func(params repository.NewRepositoryParams) repository.Repository {
+				return mockRepository
+			}).
+			WithWorkspaceProvider(func(params workspace.NewWorkspaceParams) workspace.Workspace {
+				return mockWorkspace
+			}).
+			WithConfig(mockConfig).
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithStatusManager(mockStatus),
+	})
+	assert.NoError(t, err)
+
+	repoURL := "ssh://git@forge.lab.home.lerenn.net:22/homelab/lgtm.git"
+	normalizedURL := "forge.lab.home.lerenn.net/homelab/lgtm"
+	defaultBranch := "main"
+	targetPath := "/test/base/path/forge.lab.home.lerenn.net/homelab/lgtm/origin/main"
+
+	// Mock config manager
+	testConfig := config.Config{
+		RepositoriesDir: "/test/base/path",
+		WorkspacesDir:   "/test/workspaces",
+		StatusFile:      "/test/status.yaml",
+	}
+	mockConfig.EXPECT().GetConfigWithFallback().Return(testConfig, nil).AnyTimes()
+
+	// Mock repository existence check
+	mockStatus.EXPECT().ListRepositories().Return(map[string]status.Repository{}, nil)
+
+	// Mock default branch detection
+	mockGit.EXPECT().GetDefaultBranch(repoURL).Return(defaultBranch, nil)
+
+	// Mock directory creation
+	mockFS.EXPECT().MkdirAll("/test/base/path/forge.lab.home.lerenn.net/homelab/lgtm/origin", gomock.Any()).Return(nil)
+
+	// Mock clone operation
+	mockGit.EXPECT().Clone(git.CloneParams{
+		RepoURL:    repoURL,
+		TargetPath: targetPath,
+		Recursive:  true,
+	}).Return(nil)
+
+	// Mock repository initialization
+	mockStatus.EXPECT().AddRepository(normalizedURL, status.AddRepositoryParams{
+		Path: targetPath,
+		Remotes: map[string]status.Remote{
+			"origin": {
+				DefaultBranch: defaultBranch,
+			},
+		},
+	}).Return(nil)
+
+	err = cm.Clone(repoURL)
+	assert.NoError(t, err)
+}
