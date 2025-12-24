@@ -94,47 +94,71 @@ func (c *realCodeManager) normalizeRepositoryURL(repoURL string) (string, error)
 
 	// Handle ssh:// URLs first (before other SSH format checks)
 	if strings.HasPrefix(normalized, "ssh://") {
-		parsedURL, err := url.Parse(normalized)
-		if err != nil {
-			return "", fmt.Errorf("invalid repository URL: %w", err)
-		}
-
-		host := parsedURL.Host
-		// Remove port if present (e.g., host:22 -> host)
-		if colonIdx := strings.Index(host, ":"); colonIdx != -1 {
-			host = host[:colonIdx]
-		}
-		path := strings.TrimPrefix(parsedURL.Path, "/")
-		return host + "/" + path, nil
+		return c.normalizeSSHProtocolURL(normalized)
 	}
 
 	// Handle SSH URLs (git@host:user/repo)
-	if strings.Contains(normalized, "@") && strings.Contains(normalized, ":") && !strings.HasPrefix(normalized, "http") {
-		parts := strings.Split(normalized, ":")
-		if len(parts) == 2 {
-			hostParts := strings.Split(parts[0], "@")
-			if len(hostParts) == 2 {
-				host := hostParts[1]
-				path := parts[1]
-				return host + "/" + path, nil
-			}
-		}
+	if c.isSSHURL(normalized) {
+		return c.normalizeSSHURL(normalized)
 	}
 
 	// Handle HTTPS URLs
 	if strings.HasPrefix(normalized, "http") {
-		parsedURL, err := url.Parse(normalized)
-		if err != nil {
-			return "", fmt.Errorf("invalid repository URL: %w", err)
-		}
-
-		host := parsedURL.Host
-		path := strings.TrimPrefix(parsedURL.Path, "/")
-		return host + "/" + path, nil
+		return c.normalizeHTTPSURL(normalized)
 	}
 
 	// If we get here, the URL format is not supported
 	return "", fmt.Errorf("%w: %s", ErrUnsupportedRepositoryURLFormat, repoURL)
+}
+
+// normalizeSSHProtocolURL normalizes ssh:// URLs to host/path format.
+func (c *realCodeManager) normalizeSSHProtocolURL(normalized string) (string, error) {
+	parsedURL, err := url.Parse(normalized)
+	if err != nil {
+		return "", fmt.Errorf("invalid repository URL: %w", err)
+	}
+
+	host := parsedURL.Host
+	// Remove port if present (e.g., host:22 -> host)
+	if colonIdx := strings.Index(host, ":"); colonIdx != -1 {
+		host = host[:colonIdx]
+	}
+	path := strings.TrimPrefix(parsedURL.Path, "/")
+	return host + "/" + path, nil
+}
+
+// isSSHURL checks if the URL is in git@host:path format.
+func (c *realCodeManager) isSSHURL(normalized string) bool {
+	return strings.Contains(normalized, "@") && strings.Contains(normalized, ":") && !strings.HasPrefix(normalized, "http")
+}
+
+// normalizeSSHURL normalizes git@host:path URLs to host/path format.
+func (c *realCodeManager) normalizeSSHURL(normalized string) (string, error) {
+	parts := strings.Split(normalized, ":")
+	if len(parts) != 2 {
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedRepositoryURLFormat, normalized)
+	}
+
+	hostParts := strings.Split(parts[0], "@")
+	if len(hostParts) != 2 {
+		return "", fmt.Errorf("%w: %s", ErrUnsupportedRepositoryURLFormat, normalized)
+	}
+
+	host := hostParts[1]
+	path := parts[1]
+	return host + "/" + path, nil
+}
+
+// normalizeHTTPSURL normalizes https:// URLs to host/path format.
+func (c *realCodeManager) normalizeHTTPSURL(normalized string) (string, error) {
+	parsedURL, err := url.Parse(normalized)
+	if err != nil {
+		return "", fmt.Errorf("invalid repository URL: %w", err)
+	}
+
+	host := parsedURL.Host
+	path := strings.TrimPrefix(parsedURL.Path, "/")
+	return host + "/" + path, nil
 }
 
 // checkRepositoryExists checks if a repository already exists in the status file.
