@@ -2,54 +2,86 @@ package status
 
 import (
 	"fmt"
-	"log"
 )
 
 // RemoveWorktree removes a worktree entry from the status file.
 func (s *realManager) RemoveWorktree(repoURL, branch string) error {
-	// Load current status
 	status, err := s.loadStatus()
 	if err != nil {
 		return fmt.Errorf("failed to load status: %w", err)
 	}
 
-	// Check if repository exists
-	repo, exists := status.Repositories[repoURL]
-	if !exists {
-		return fmt.Errorf("%w: %s", ErrRepositoryNotFound, repoURL)
+	repo, err := s.validateRepository(status, repoURL)
+	if err != nil {
+		return err
 	}
 
-	log.Printf("    [RemoveWorktree] Before deletion: repo.Worktrees = %v", repo.Worktrees)
+	s.logRemoveWorktreeBefore(repo.Worktrees)
 
-	// Find and remove the worktree entry
-	found := false
-	for worktreeKey, worktree := range repo.Worktrees {
-		if worktree.Branch == branch {
-			log.Printf("    [RemoveWorktree] Deleting worktree with key: %s, branch: %s", worktreeKey, branch)
-			delete(repo.Worktrees, worktreeKey)
-			found = true
-			break
-		}
+	if err := s.deleteWorktreeFromRepo(&repo, branch); err != nil {
+		return fmt.Errorf("%w for repository %s branch %s", err, repoURL, branch)
 	}
 
-	if !found {
-		return fmt.Errorf("%w for repository %s branch %s", ErrWorktreeNotFound, repoURL, branch)
-	}
+	s.logRemoveWorktreeAfter(repo.Worktrees, repoURL, status)
 
-	log.Printf("    [RemoveWorktree] After deletion: repo.Worktrees = %v", repo.Worktrees)
-
-	// Update repository
 	status.Repositories[repoURL] = repo
 
-	log.Printf("    [RemoveWorktree] After update: status.Repositories[%s].Worktrees = %v",
-		repoURL, status.Repositories[repoURL].Worktrees)
-
-	// Save updated status
 	if err := s.saveStatus(status); err != nil {
 		return fmt.Errorf("failed to save status: %w", err)
 	}
 
-	log.Printf("    [RemoveWorktree] After save: status saved successfully")
+	s.logRemoveWorktreeSave()
 
 	return nil
+}
+
+// validateRepository checks if the repository exists in the status.
+func (s *realManager) validateRepository(status *Status, repoURL string) (Repository, error) {
+	repo, exists := status.Repositories[repoURL]
+	if !exists {
+		return Repository{}, fmt.Errorf("%w: %s", ErrRepositoryNotFound, repoURL)
+	}
+	return repo, nil
+}
+
+// deleteWorktreeFromRepo finds and deletes the worktree entry from the repository.
+func (s *realManager) deleteWorktreeFromRepo(repo *Repository, branch string) error {
+	for worktreeKey, worktree := range repo.Worktrees {
+		if worktree.Branch == branch {
+			s.logRemoveWorktreeDelete(worktreeKey, branch)
+			delete(repo.Worktrees, worktreeKey)
+			return nil
+		}
+	}
+	return ErrWorktreeNotFound
+}
+
+// logRemoveWorktreeBefore logs the worktrees before deletion.
+func (s *realManager) logRemoveWorktreeBefore(worktrees map[string]WorktreeInfo) {
+	if s.logger != nil {
+		s.logger.Logf("    [RemoveWorktree] Before deletion: repo.Worktrees = %v", worktrees)
+	}
+}
+
+// logRemoveWorktreeDelete logs the deletion of a worktree.
+func (s *realManager) logRemoveWorktreeDelete(worktreeKey, branch string) {
+	if s.logger != nil {
+		s.logger.Logf("    [RemoveWorktree] Deleting worktree with key: %s, branch: %s", worktreeKey, branch)
+	}
+}
+
+// logRemoveWorktreeAfter logs the worktrees after deletion.
+func (s *realManager) logRemoveWorktreeAfter(worktrees map[string]WorktreeInfo, repoURL string, status *Status) {
+	if s.logger != nil {
+		s.logger.Logf("    [RemoveWorktree] After deletion: repo.Worktrees = %v", worktrees)
+		s.logger.Logf("    [RemoveWorktree] After update: status.Repositories[%s].Worktrees = %v",
+			repoURL, status.Repositories[repoURL].Worktrees)
+	}
+}
+
+// logRemoveWorktreeSave logs after saving the status.
+func (s *realManager) logRemoveWorktreeSave() {
+	if s.logger != nil {
+		s.logger.Logf("    [RemoveWorktree] After save: status saved successfully")
+	}
 }

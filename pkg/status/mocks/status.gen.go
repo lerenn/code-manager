@@ -12,6 +12,7 @@ package mocks
 import (
 	reflect "reflect"
 
+	logger "github.com/lerenn/code-manager/pkg/logger"
 	status "github.com/lerenn/code-manager/pkg/status"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -211,6 +212,18 @@ func (m *MockManager) RemoveWorktree(repoURL, branch string) error {
 func (mr *MockManagerMockRecorder) RemoveWorktree(repoURL, branch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveWorktree", reflect.TypeOf((*MockManager)(nil).RemoveWorktree), repoURL, branch)
+}
+
+// SetLogger mocks base method.
+func (m *MockManager) SetLogger(arg0 logger.Logger) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetLogger", arg0)
+}
+
+// SetLogger indicates an expected call of SetLogger.
+func (mr *MockManagerMockRecorder) SetLogger(arg0 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetLogger", reflect.TypeOf((*MockManager)(nil).SetLogger), arg0)
 }
 
 // UpdateWorkspace mocks base method.
