@@ -34,7 +34,7 @@ func (w *realWorkspace) OpenWorktree(workspaceName, branch string) (string, erro
 	}
 
 	// Use shared utility to build workspace file path
-	workspaceFilePath := buildWorkspaceFilePath(cfg.WorkspacesDir, workspaceName, branch)
+	workspaceFilePath := BuildWorkspaceFilePath(cfg.WorkspacesDir, workspaceName, branch)
 
 	w.deps.Logger.Logf("Opening workspace file: %s", workspaceFilePath)
 	return workspaceFilePath, nil

@@ -263,9 +263,9 @@ func (w *realWorkspace) createWorkspaceFile(workspaceName, branchName string, re
 	if err != nil {
 		return "", fmt.Errorf("failed to get config: %w", err)
 	}
-	
+
 	// Use shared utility to build workspace file path
-	workspaceFilePath := buildWorkspaceFilePath(cfg.WorkspacesDir, workspaceName, branchName)
+	workspaceFilePath := BuildWorkspaceFilePath(cfg.WorkspacesDir, workspaceName, branchName)
 
 	// Ensure workspace directory exists (this will create both workspaces dir and workspace subdir)
 	workspaceDir := filepath.Dir(workspaceFilePath)
