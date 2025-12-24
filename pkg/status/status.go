@@ -8,6 +8,7 @@ import (
 	"github.com/lerenn/code-manager/pkg/config"
 	"github.com/lerenn/code-manager/pkg/fs"
 	"github.com/lerenn/code-manager/pkg/issue"
+	"github.com/lerenn/code-manager/pkg/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -83,12 +84,15 @@ type Manager interface {
 	UpdateWorkspace(workspaceName string, workspace Workspace) error
 	// ListWorkspaces lists all workspaces in the status file.
 	ListWorkspaces() (map[string]Workspace, error)
+	// SetLogger sets the logger for verbose output.
+	SetLogger(logger logger.Logger)
 }
 
 type realManager struct {
 	fs         fs.FS
 	config     config.Config
 	workspaces map[string]map[string][]WorktreeInfo // workspace -> branch -> worktrees
+	logger     logger.Logger
 }
 
 // NewManager creates a new Status Manager instance.
@@ -237,11 +241,13 @@ func (s *realManager) saveStatus(status *Status) error {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
 
-	// Log what we're about to save
-	var debugStatus Status
-	_ = yaml.Unmarshal(data, &debugStatus)
-	if repo, exists := debugStatus.Repositories["github.com/octocat/Hello-World"]; exists {
-		fmt.Printf("    [saveStatus] About to write: github.com/octocat/Hello-World.Worktrees = %v\n", repo.Worktrees)
+	// Log what we're about to save (verbose mode only)
+	if s.logger != nil {
+		var debugStatus Status
+		_ = yaml.Unmarshal(data, &debugStatus)
+		if repo, exists := debugStatus.Repositories["github.com/octocat/Hello-World"]; exists {
+			s.logger.Logf("    [saveStatus] About to write: github.com/octocat/Hello-World.Worktrees = %v", repo.Worktrees)
+		}
 	}
 
 	// Write status file atomically
@@ -253,4 +259,9 @@ func (s *realManager) saveStatus(status *Status) error {
 	s.computeWorkspacesMap(status.Workspaces)
 
 	return nil
+}
+
+// SetLogger sets the logger for verbose output.
+func (s *realManager) SetLogger(logger logger.Logger) {
+	s.logger = logger
 }
