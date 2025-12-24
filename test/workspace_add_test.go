@@ -31,7 +31,7 @@ func addRepositoryToWorkspace(t *testing.T, setup *TestSetup, workspaceName, rep
 		Repository:    repository,
 	}
 
-	return cmInstance.AddRepositoryToWorkspace(params)
+	return cmInstance.AddRepositoryToWorkspace(&params)
 }
 
 // TestAddRepositoryToWorkspaceSuccess tests successful addition of repository to workspace

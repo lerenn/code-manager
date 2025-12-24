@@ -96,7 +96,7 @@ func TestAddRepositoryToWorkspace_Success(t *testing.T) {
 	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil).Times(2)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.NoError(t, err)
 }
 
@@ -121,7 +121,7 @@ func TestAddRepositoryToWorkspace_WorkspaceNotFound(t *testing.T) {
 	// Mock workspace doesn't exist
 	mockStatus.EXPECT().GetWorkspace("non-existent-workspace").Return(nil, errors.New("not found"))
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrWorkspaceNotFound)
 }
@@ -151,7 +151,7 @@ func TestAddRepositoryToWorkspace_DuplicateRepository(t *testing.T) {
 	}
 	mockStatus.EXPECT().GetWorkspace("test-workspace").Return(existingWorkspace, nil)
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrDuplicateRepository)
 }
@@ -213,7 +213,7 @@ func TestAddRepositoryToWorkspace_NoBranchesWithAllRepos(t *testing.T) {
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
 
 	// The test should pass - no worktrees are created, so no additional mocks needed
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.NoError(t, err)
 }
 
@@ -291,7 +291,7 @@ func TestAddRepositoryToWorkspace_SomeBranchesWithAllRepos(t *testing.T) {
 	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil).Times(2)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(2)
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.NoError(t, err)
 }
 
@@ -338,7 +338,7 @@ func TestAddRepositoryToWorkspace_StatusUpdateFailure(t *testing.T) {
 	// Mock status update failure
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(errors.New("status update failed"))
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.Error(t, err)
 	assert.ErrorIs(t, err, ErrStatusUpdate)
 }
@@ -409,7 +409,7 @@ func TestAddRepositoryToWorkspace_WorktreeCreationFailure(t *testing.T) {
 	// Mock worktree creation failure
 	mockRepo.EXPECT().CreateWorktree("main", gomock.Any()).Return("", errors.New("worktree creation failed"))
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to create worktree")
 }
@@ -484,7 +484,7 @@ func TestAddRepositoryToWorkspace_WorkspaceFileUpdateFailure(t *testing.T) {
 	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("file write failed"))
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to update workspace file")
 }
@@ -526,6 +526,6 @@ func TestAddRepositoryToWorkspace_RepositoryNotFound(t *testing.T) {
 	// Mock path doesn't exist
 	mockFS.EXPECT().Exists("non-existent-repo").Return(false, nil)
 
-	err := cm.AddRepositoryToWorkspace(params)
+	err := cm.AddRepositoryToWorkspace(&params)
 	assert.Error(t, err)
 }

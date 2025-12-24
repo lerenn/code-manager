@@ -45,9 +45,9 @@ type CodeManager interface {
 	// ListWorkspaces lists all workspaces from the status file.
 	ListWorkspaces() ([]WorkspaceInfo, error)
 	// AddRepositoryToWorkspace adds a repository to an existing workspace.
-	AddRepositoryToWorkspace(params AddRepositoryToWorkspaceParams) error
+	AddRepositoryToWorkspace(params *AddRepositoryToWorkspaceParams) error
 	// RemoveRepositoryFromWorkspace removes a repository from an existing workspace.
-	RemoveRepositoryFromWorkspace(params RemoveRepositoryFromWorkspaceParams) error
+	RemoveRepositoryFromWorkspace(params *RemoveRepositoryFromWorkspaceParams) error
 	// SetLogger sets the logger for this CM instance.
 	SetLogger(logger logger.Logger)
 }

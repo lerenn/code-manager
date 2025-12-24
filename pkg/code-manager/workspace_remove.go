@@ -19,12 +19,12 @@ type RemoveRepositoryFromWorkspaceParams struct {
 }
 
 // RemoveRepositoryFromWorkspace removes a repository from an existing workspace.
-func (c *realCodeManager) RemoveRepositoryFromWorkspace(params RemoveRepositoryFromWorkspaceParams) error {
+func (c *realCodeManager) RemoveRepositoryFromWorkspace(params *RemoveRepositoryFromWorkspaceParams) error {
 	return c.executeWithHooks(consts.RemoveRepositoryFromWorkspace, map[string]interface{}{
 		"workspace_name": params.WorkspaceName,
 		"repository":     params.Repository,
 	}, func() error {
-		return c.removeRepositoryFromWorkspace(&params)
+		return c.removeRepositoryFromWorkspace(params)
 	})
 }
 

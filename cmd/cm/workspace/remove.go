@@ -83,7 +83,7 @@ func createRemoveCmdRunE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create remove parameters (interactive selection handled in code-manager)
-	params := cm.RemoveRepositoryFromWorkspaceParams{
+	params := &cm.RemoveRepositoryFromWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repository:    repoName,
 	}

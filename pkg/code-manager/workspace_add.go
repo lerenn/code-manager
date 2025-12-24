@@ -21,12 +21,12 @@ type AddRepositoryToWorkspaceParams struct {
 }
 
 // AddRepositoryToWorkspace adds a repository to an existing workspace.
-func (c *realCodeManager) AddRepositoryToWorkspace(params AddRepositoryToWorkspaceParams) error {
+func (c *realCodeManager) AddRepositoryToWorkspace(params *AddRepositoryToWorkspaceParams) error {
 	return c.executeWithHooks(consts.AddRepositoryToWorkspace, map[string]interface{}{
 		"workspace_name": params.WorkspaceName,
 		"repository":     params.Repository,
 	}, func() error {
-		return c.addRepositoryToWorkspace(&params)
+		return c.addRepositoryToWorkspace(params)
 	})
 }
 

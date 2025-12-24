@@ -83,7 +83,7 @@ func createAddCmdRunE(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create add parameters (interactive selection handled in code-manager)
-	params := cm.AddRepositoryToWorkspaceParams{
+	params := &cm.AddRepositoryToWorkspaceParams{
 		WorkspaceName: workspaceName,
 		Repository:    repoName,
 	}
