@@ -4,6 +4,7 @@ package worktree
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	fsmocks "github.com/lerenn/code-manager/pkg/fs/mocks"
@@ -78,6 +79,9 @@ func TestWorktree_Create_DirectoryExists(t *testing.T) {
 	}
 
 	// Mock expectations
+	// First check if worktree exists in status (it doesn't)
+	mockStatus.EXPECT().GetWorktree(params.RepoURL, params.Branch).Return(nil, fmt.Errorf("not found"))
+	// Then check if directory exists (it does)
 	mockFS.EXPECT().Exists(params.WorktreePath).Return(true, nil)
 
 	err := worktree.Create(params)
