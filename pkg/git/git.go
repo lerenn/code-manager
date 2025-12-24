@@ -84,6 +84,11 @@ type Git interface {
 
 	// SetUpstreamBranch sets the upstream branch for the current branch.
 	SetUpstreamBranch(repoPath, remote, branch string) error
+
+	// GetMainRepositoryPath gets the main repository path from a worktree path.
+	// If the path is already a main repository, it returns the same path.
+	// If the path is a worktree, it returns the main repository path.
+	GetMainRepositoryPath(worktreePath string) (string, error)
 }
 
 type realGit struct {

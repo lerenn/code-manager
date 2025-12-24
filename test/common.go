@@ -164,6 +164,9 @@ func createTestGitRepo(t *testing.T, repoPath string) {
 		remoteURL = "https://github.com/octocat/Hello-World.git"
 	case "Spoon-Knife":
 		remoteURL = "https://github.com/octocat/Spoon-Knife.git"
+	case "New-Repo":
+		// Use a different repository for New-Repo to avoid conflicts in workspace tests
+		remoteURL = "https://github.com/lerenn/lerenn.github.io.git"
 	default:
 		// Default fallback for other test scenarios
 		remoteURL = "https://github.com/octocat/Hello-World.git"

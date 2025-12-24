@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
@@ -206,21 +207,76 @@ func (c *realCodeManager) addRepositoriesToStatus(repositories []string) ([]stri
 }
 
 // addRepositoryToStatus adds a new repository to the status file and returns its URL.
+// It clones the repository to the managed location if it's not already there.
 func (c *realCodeManager) addRepositoryToStatus(repoPath string) (string, error) {
 	// Get repository URL from Git remote origin
-	repoURL, err := c.deps.Git.GetRemoteURL(repoPath, "origin")
+	remoteURL, err := c.deps.Git.GetRemoteURL(repoPath, "origin")
 	if err != nil {
 		// If no origin remote, use the path as the identifier
-		repoURL = repoPath
+		// In this case, we can't clone from remote, so we'll use the local path
+		repoParams := status.AddRepositoryParams{
+			Path: repoPath,
+		}
+		if err := c.deps.StatusManager.AddRepository(repoPath, repoParams); err != nil {
+			return "", fmt.Errorf("failed to add repository to status file: %w", err)
+		}
+		return repoPath, nil
 	}
 
-	// Add repository to status file
-	repoParams := status.AddRepositoryParams{
-		Path: repoPath,
+	// Normalize the repository URL
+	normalizedURL, err := c.normalizeRepositoryURL(remoteURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to normalize repository URL: %w", err)
 	}
-	if err := c.deps.StatusManager.AddRepository(repoURL, repoParams); err != nil {
+
+	// Check if repository already exists in status
+	if existingRepo, err := c.deps.StatusManager.GetRepository(normalizedURL); err == nil && existingRepo != nil {
+		// Repository already exists, return the normalized URL
+		return normalizedURL, nil
+	}
+
+	// Detect default branch from remote
+	defaultBranch, err := c.deps.Git.GetDefaultBranch(remoteURL)
+	if err != nil {
+		return "", fmt.Errorf("%w: %w", ErrFailedToDetectDefaultBranch, err)
+	}
+
+	// Generate target path for cloning
+	targetPath := c.generateClonePath(normalizedURL, defaultBranch)
+
+	// Create parent directories for the target path
+	parentDir := filepath.Dir(targetPath)
+	if err := c.deps.FS.MkdirAll(parentDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create parent directories: %w", err)
+	}
+
+	// Clone repository from remote URL to managed location
+	if err := c.deps.Git.Clone(git.CloneParams{
+		RepoURL:    remoteURL,
+		TargetPath: targetPath,
+		Recursive:  true,
+	}); err != nil {
+		return "", fmt.Errorf("%w: %w", ErrFailedToCloneRepository, err)
+	}
+
+	// Add repository to status file with the managed path
+	remotes := map[string]status.Remote{
+		"origin": {
+			DefaultBranch: defaultBranch,
+		},
+	}
+	repoParams := status.AddRepositoryParams{
+		Path:    targetPath,
+		Remotes: remotes,
+	}
+	if err := c.deps.StatusManager.AddRepository(normalizedURL, repoParams); err != nil {
 		return "", fmt.Errorf("failed to add repository to status file: %w", err)
 	}
 
-	return repoURL, nil
+	// Note: We don't automatically add the default branch worktree to status here.
+	// The worktree will be added when it's actually needed (e.g., when creating worktrees
+	// for a workspace). This avoids adding unnecessary worktrees to status when they're
+	// not going to be used.
+
+	return normalizedURL, nil
 }

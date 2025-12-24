@@ -1,11 +1,14 @@
 package workspace
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/lerenn/code-manager/pkg/mode/repository"
+	"github.com/lerenn/code-manager/pkg/status"
+	"github.com/lerenn/code-manager/pkg/worktree"
 )
 
 // CreateWorktree creates worktrees from workspace definition in status.yaml.
@@ -118,6 +121,10 @@ func (w *realWorkspace) createSingleRepositoryWorktreeWithURL(
 		actualRepoURL = extractedURL
 		w.deps.Logger.Logf("Extracted repository URL '%s' from path '%s'", actualRepoURL, repoPath)
 	}
+
+	// Check if repository path matches expected worktree path for this branch
+	// If so, add the worktree to status before trying to create it
+	w.addDefaultBranchWorktreeIfNeeded(actualRepoURL, repoPath, branch)
 
 	// Create worktree using worktree package directly
 	// Pass the actual repository path to the repository package
@@ -236,7 +243,7 @@ func (w *realWorkspace) validateRepositoryPath(repoPath string) error {
 // createWorktreeForRepositoryWithPath creates a worktree for a specific repository using repositoryProvider
 // with explicit path.
 func (w *realWorkspace) createWorktreeForRepositoryWithPath(
-	_, repoPath, branch string,
+	repoURL, repoPath, branch string,
 ) (string, error) {
 	// Create repository instance using repositoryProvider with explicit path
 	repositoryProvider := w.deps.RepositoryProvider
@@ -250,6 +257,10 @@ func (w *realWorkspace) createWorktreeForRepositoryWithPath(
 		Remote: "origin",
 	})
 	if err != nil {
+		// Check if error is because worktree already exists and handle it gracefully
+		if existingPath := w.handleWorktreeExistsError(err, repoURL, branch); existingPath != "" {
+			return existingPath, nil
+		}
 		return "", fmt.Errorf("failed to create worktree using repository: %w", err)
 	}
 
@@ -369,6 +380,108 @@ func (w *realWorkspace) updateWorkspaceStatus(workspaceName, branch string, actu
 	w.deps.Logger.Logf("Updated workspace '%s' with worktree: %s and repositories: %v",
 		workspaceName, branch, actualRepositoryURLs)
 	return nil
+}
+
+// addDefaultBranchWorktreeIfNeeded adds the default branch worktree to status if the repository
+// path matches the expected worktree path for the branch.
+// shouldAddDefaultBranchWorktree checks if the default branch worktree should be added.
+func (w *realWorkspace) shouldAddDefaultBranchWorktree(repoURL, repoPath, branch string) (string, bool) {
+	repoStatus, err := w.deps.StatusManager.GetRepository(repoURL)
+	if err != nil || repoStatus == nil || repoStatus.Remotes == nil {
+		return "", false
+	}
+
+	originRemote, ok := repoStatus.Remotes["origin"]
+	if !ok {
+		return "", false
+	}
+
+	defaultBranch := originRemote.DefaultBranch
+	if branch != defaultBranch {
+		return "", false
+	}
+
+	cfg, err := w.deps.Config.GetConfigWithFallback()
+	if err != nil {
+		return "", false
+	}
+
+	worktreeInstance := w.deps.WorktreeProvider(worktree.NewWorktreeParams{
+		FS:              w.deps.FS,
+		Git:             w.deps.Git,
+		StatusManager:   w.deps.StatusManager,
+		Logger:          w.deps.Logger,
+		Prompt:          w.deps.Prompt,
+		RepositoriesDir: cfg.RepositoriesDir,
+	})
+	expectedWorktreePath := worktreeInstance.BuildPath(repoURL, "origin", defaultBranch)
+
+	if repoPath != expectedWorktreePath {
+		return "", false
+	}
+
+	return defaultBranch, true
+}
+
+func (w *realWorkspace) addDefaultBranchWorktreeIfNeeded(repoURL, repoPath, branch string) {
+	defaultBranch, shouldAdd := w.shouldAddDefaultBranchWorktree(repoURL, repoPath, branch)
+	if !shouldAdd {
+		return
+	}
+
+	// The repository is at the default branch worktree location
+	// Add it to status if it doesn't already exist
+	existingWorktree, getErr := w.deps.StatusManager.GetWorktree(repoURL, defaultBranch)
+	if getErr != nil || existingWorktree == nil {
+		// Add default branch worktree to status
+		if addErr := w.deps.StatusManager.AddWorktree(status.AddWorktreeParams{
+			RepoURL:      repoURL,
+			Branch:       defaultBranch,
+			WorktreePath: repoPath,
+			Remote:       "origin",
+			Detached:     false,
+		}); addErr != nil {
+			w.deps.Logger.Logf("Note: Error adding default branch worktree to status: %v", addErr)
+		} else {
+			w.deps.Logger.Logf("Added default branch worktree to status: %s", defaultBranch)
+		}
+	}
+}
+
+// handleWorktreeExistsError handles the case where a worktree creation error indicates
+// the worktree already exists. Returns the existing worktree path if valid, empty string otherwise.
+func (w *realWorkspace) handleWorktreeExistsError(err error, repoURL, branch string) string {
+	// Check if error is because worktree already exists
+	if !errors.Is(err, repository.ErrWorktreeExists) && !errors.Is(err, worktree.ErrWorktreeExists) {
+		return ""
+	}
+
+	// Worktree already exists - get its path from status
+	worktreeInfo, statusErr := w.deps.StatusManager.GetWorktree(repoURL, branch)
+	if statusErr != nil || worktreeInfo == nil {
+		return ""
+	}
+
+	// Build worktree path using the remote from status
+	cfg, cfgErr := w.deps.Config.GetConfigWithFallback()
+	if cfgErr != nil {
+		return ""
+	}
+
+	worktreeInstance := w.deps.WorktreeProvider(worktree.NewWorktreeParams{
+		FS:              w.deps.FS,
+		Git:             w.deps.Git,
+		StatusManager:   w.deps.StatusManager,
+		Logger:          w.deps.Logger,
+		Prompt:          w.deps.Prompt,
+		RepositoriesDir: cfg.RepositoriesDir,
+	})
+	worktreePath := worktreeInstance.BuildPath(repoURL, worktreeInfo.Remote, branch)
+	w.deps.Logger.Logf(
+		"Worktree already exists for branch '%s' in repository '%s', using existing: %s",
+		branch, repoURL, worktreePath,
+	)
+	return worktreePath
 }
 
 // removeWorkspaceWorktreeEntry removes a worktree entry from workspace status.

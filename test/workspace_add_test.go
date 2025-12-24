@@ -98,6 +98,29 @@ func TestAddRepositoryToWorkspaceWithWorktrees(t *testing.T) {
 	createTestGitRepo(t, repo2Path)
 	createTestGitRepo(t, repo3Path)
 
+	// Switch all repositories to a temporary branch to avoid conflicts when creating worktrees
+	gitEnv := append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+	restore := safeChdir(t, repo1Path)
+	cmd := exec.Command("git", "checkout", "-b", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+	restore = safeChdir(t, repo2Path)
+	cmd = exec.Command("git", "checkout", "-b", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+	restore = safeChdir(t, repo3Path)
+	cmd = exec.Command("git", "checkout", "-b", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+
 	// Create workspace with first two repositories
 	err := createWorkspace(t, setup, "test-workspace", []string{repo1Path, repo2Path})
 	require.NoError(t, err, "Workspace creation should succeed")
@@ -119,15 +142,9 @@ func TestAddRepositoryToWorkspaceWithWorktrees(t *testing.T) {
 
 	// Create worktrees for feature branch (need to create the branch first)
 	// Switch to repo1 to create feature branch
-	restore := safeChdir(t, repo1Path)
-	gitEnv := append(os.Environ(),
-		"GIT_AUTHOR_NAME=Test User",
-		"GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=Test User",
-		"GIT_COMMITTER_EMAIL=test@example.com",
-	)
+	restore = safeChdir(t, repo1Path)
 
-	cmd := exec.Command("git", "checkout", "-b", "feature/test")
+	cmd = exec.Command("git", "checkout", "-b", "feature/test")
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 
@@ -138,6 +155,10 @@ func TestAddRepositoryToWorkspaceWithWorktrees(t *testing.T) {
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 	cmd = exec.Command("git", "commit", "-m", "Add feature")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	// Switch back to temp-branch to avoid conflicts when creating worktrees
+	cmd = exec.Command("git", "checkout", "temp-branch")
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 
@@ -155,6 +176,10 @@ func TestAddRepositoryToWorkspaceWithWorktrees(t *testing.T) {
 	cmd = exec.Command("git", "commit", "-m", "Add feature")
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
+	// Switch back to temp-branch to avoid conflicts when creating worktrees
+	cmd = exec.Command("git", "checkout", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
 	restore()
 
 	// Create worktrees for feature branch
@@ -162,6 +187,25 @@ func TestAddRepositoryToWorkspaceWithWorktrees(t *testing.T) {
 		WorkspaceName: "test-workspace",
 	})
 	require.NoError(t, err, "Worktree creation for feature/test should succeed")
+
+	// Prepare repo3: create feature/test branch and switch to a different branch to avoid conflicts
+	restore = safeChdir(t, repo3Path)
+	cmd = exec.Command("git", "checkout", "-b", "feature/test")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	testFile = filepath.Join(repo3Path, "feature.txt")
+	require.NoError(t, os.WriteFile(testFile, []byte("feature content"), 0644))
+	cmd = exec.Command("git", "add", "feature.txt")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	cmd = exec.Command("git", "commit", "-m", "Add feature")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	// Switch back to temp-branch to avoid conflicts when creating worktrees
+	cmd = exec.Command("git", "checkout", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
 
 	// Add third repository to workspace
 	err = addRepositoryToWorkspace(t, setup, "test-workspace", repo3Path)
@@ -178,41 +222,44 @@ func TestAddRepositoryToWorkspaceWithWorktrees(t *testing.T) {
 	// Verify that worktrees were created for the new repository for both branches
 	// (since both branches exist in all existing repositories)
 	// Get repository URL from status by checking all repositories
+	// The new repository should be github.com/lerenn/lerenn.github.io
 	var repo3Status Repository
 	found := false
+	expectedRepoURL := "github.com/lerenn/lerenn.github.io"
 	for url, repo := range status.Repositories {
-		if strings.Contains(url, "Custom-Repo") || strings.Contains(repo.Path, "Custom-Repo") {
+		if url == expectedRepoURL || strings.Contains(url, "lerenn.github.io") {
 			repo3Status = repo
 			found = true
 			break
 		}
 	}
-	require.True(t, found, "New repository should be in status")
+	require.True(t, found, "New repository should be in status (looking for %s)", expectedRepoURL)
 	require.Len(t, repo3Status.Worktrees, 2, "New repository should have worktrees for both branches")
 
 	// Verify that worktrees actually exist in the file system
 	cfg, err := config.NewManager(setup.ConfigPath).GetConfigWithFallback()
 	require.NoError(t, err)
 
-	// Find the repo3 URL from status
+	// Find the repo3 URL from status (reuse expectedRepoURL from above)
 	var repo3URL string
-	for url, repo := range status.Repositories {
-		if strings.Contains(url, "Custom-Repo") || strings.Contains(repo.Path, "Custom-Repo") {
+	for url := range status.Repositories {
+		if url == expectedRepoURL || strings.Contains(url, "lerenn.github.io") {
 			repo3URL = url
 			break
 		}
 	}
-	require.NotEmpty(t, repo3URL, "Should find repo3 URL")
+	require.NotEmpty(t, repo3URL, "Should find repo3 URL (looking for %s)", expectedRepoURL)
 
 	// Verify worktrees exist for both branches
+	// Note: branch name is "feature/test" but it gets sanitized in paths, so we check for "feature/test"
 	masterWorktreePath := filepath.Join(cfg.RepositoriesDir, repo3URL, "origin", "master")
-	featureWorktreePath := filepath.Join(cfg.RepositoriesDir, repo3URL, "origin", "feature-test")
+	featureWorktreePath := filepath.Join(cfg.RepositoriesDir, repo3URL, "origin", "feature/test")
 	assert.DirExists(t, masterWorktreePath, "Master worktree should exist")
 	assert.DirExists(t, featureWorktreePath, "Feature worktree should exist")
 
 	// Verify workspace files were updated
 	workspaceFile1 := filepath.Join(setup.CmPath, "workspaces", "test-workspace", "master.code-workspace")
-	workspaceFile2 := filepath.Join(setup.CmPath, "workspaces", "test-workspace", "feature-test.code-workspace")
+	workspaceFile2 := filepath.Join(setup.CmPath, "workspaces", "test-workspace", "feature-test.code-workspace") // Branch name gets sanitized
 
 	// Check that workspace files exist and contain the new repository
 	for _, workspaceFile := range []string{workspaceFile1, workspaceFile2} {
@@ -307,6 +354,24 @@ func TestAddRepositoryToWorkspaceNoMatchingBranches(t *testing.T) {
 	createTestGitRepo(t, repo1Path)
 	createTestGitRepo(t, repo2Path)
 
+	// Switch both repositories to a temporary branch to avoid conflicts when creating worktrees
+	gitEnv := append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+	restore := safeChdir(t, repo1Path)
+	cmd := exec.Command("git", "checkout", "-b", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+	restore = safeChdir(t, repo2Path)
+	cmd = exec.Command("git", "checkout", "-b", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+
 	// Create workspace with first repository
 	err := createWorkspace(t, setup, "test-workspace", []string{repo1Path})
 	require.NoError(t, err, "Workspace creation should succeed")
@@ -319,15 +384,9 @@ func TestAddRepositoryToWorkspaceNoMatchingBranches(t *testing.T) {
 	require.NoError(t, err)
 
 	// Create a unique branch in repo1 only
-	restore := safeChdir(t, repo1Path)
-	gitEnv := append(os.Environ(),
-		"GIT_AUTHOR_NAME=Test User",
-		"GIT_AUTHOR_EMAIL=test@example.com",
-		"GIT_COMMITTER_NAME=Test User",
-		"GIT_COMMITTER_EMAIL=test@example.com",
-	)
+	restore = safeChdir(t, repo1Path)
 
-	cmd := exec.Command("git", "checkout", "-b", "unique-branch")
+	cmd = exec.Command("git", "checkout", "-b", "unique-branch")
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 
@@ -337,6 +396,10 @@ func TestAddRepositoryToWorkspaceNoMatchingBranches(t *testing.T) {
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 	cmd = exec.Command("git", "commit", "-m", "Add unique")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	// Switch back to temp-branch to avoid conflicts when creating worktrees
+	cmd = exec.Command("git", "checkout", "temp-branch")
 	cmd.Env = gitEnv
 	require.NoError(t, cmd.Run())
 	restore()

@@ -13,15 +13,14 @@ func (g *realGit) extractRepoNameFromURL(url string) string {
 	// Remove .git suffix if present
 	url = strings.TrimSuffix(url, ".git")
 
+	// Handle ssh:// format: ssh://git@host/path/to/repo
+	if strings.HasPrefix(url, "ssh://") {
+		return g.extractSSHProtocolRepoName(url)
+	}
+
 	// Handle SSH format: git@host:user/repo
-	if strings.Contains(url, "@") && strings.Contains(url, ":") {
-		parts := strings.Split(url, ":")
-		if len(parts) == 2 {
-			hostParts := strings.Split(parts[0], "@")
-			if len(hostParts) == 2 {
-				return hostParts[1] + "/" + parts[1]
-			}
-		}
+	if strings.Contains(url, "@") && strings.Contains(url, ":") && !strings.Contains(url, "://") {
+		return g.extractSSHRepoName(url)
 	}
 
 	// Handle HTTPS format: https://host/user/repo
@@ -30,6 +29,43 @@ func (g *realGit) extractRepoNameFromURL(url string) string {
 	}
 
 	return ""
+}
+
+// extractSSHProtocolRepoName extracts repository name from ssh:// URLs.
+func (g *realGit) extractSSHProtocolRepoName(url string) string {
+	// Remove ssh:// prefix
+	url = strings.TrimPrefix(url, "ssh://")
+	// Now it's in format git@host/path/to/repo
+	if !strings.Contains(url, "@") {
+		return ""
+	}
+
+	parts := strings.SplitN(url, "/", 2)
+	if len(parts) != 2 {
+		return ""
+	}
+
+	hostParts := strings.Split(parts[0], "@")
+	if len(hostParts) != 2 {
+		return ""
+	}
+
+	return hostParts[1] + "/" + parts[1]
+}
+
+// extractSSHRepoName extracts repository name from SSH URLs (git@host:user/repo).
+func (g *realGit) extractSSHRepoName(url string) string {
+	parts := strings.Split(url, ":")
+	if len(parts) != 2 {
+		return ""
+	}
+
+	hostParts := strings.Split(parts[0], "@")
+	if len(hostParts) != 2 {
+		return ""
+	}
+
+	return hostParts[1] + "/" + parts[1]
 }
 
 // extractHTTPSRepoName extracts repository name from HTTPS URLs.

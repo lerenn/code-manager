@@ -303,6 +303,21 @@ func (mr *MockGitMockRecorder) GetDefaultBranch(remoteURL any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultBranch", reflect.TypeOf((*MockGit)(nil).GetDefaultBranch), remoteURL)
 }
 
+// GetMainRepositoryPath mocks base method.
+func (m *MockGit) GetMainRepositoryPath(worktreePath string) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMainRepositoryPath", worktreePath)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMainRepositoryPath indicates an expected call of GetMainRepositoryPath.
+func (mr *MockGitMockRecorder) GetMainRepositoryPath(worktreePath any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMainRepositoryPath", reflect.TypeOf((*MockGit)(nil).GetMainRepositoryPath), worktreePath)
+}
+
 // GetRemoteURL mocks base method.
 func (m *MockGit) GetRemoteURL(repoPath, remoteName string) (string, error) {
 	m.ctrl.T.Helper()
