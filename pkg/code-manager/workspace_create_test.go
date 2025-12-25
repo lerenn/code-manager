@@ -55,7 +55,7 @@ func TestCreateWorkspace_Success(t *testing.T) {
 	mockStatus.EXPECT().GetRepository("/absolute/path/repo2").Return(nil, errors.New("not found"))
 
 	// In addRepositoriesToStatus, it loops through repos and calls GetRemoteURL for each first
-	// Then for each repo, it checks if it exists in status
+	// Then normalizes the URL and checks if it exists in status using the normalized URL
 	// For repo1: exists, so skips
 	// For repo2: doesn't exist, so calls addRepositoryToStatus
 
@@ -63,11 +63,13 @@ func TestCreateWorkspace_Success(t *testing.T) {
 	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 	mockGit.EXPECT().GetRemoteURL("/absolute/path/repo2", "origin").Return("https://github.com/user/repo2.git", nil)
 
-	// Check repo1 in status using original remote URL (exists, so skip)
-	mockStatus.EXPECT().GetRepository("https://github.com/user/repo1.git").Return(existingRepo, nil)
+	// Check repo1 in status using normalized URL (exists, so skip)
+	// normalizeRepositoryURL converts https://github.com/user/repo1.git -> github.com/user/repo1
+	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
-	// Check repo2 in status using original remote URL (doesn't exist, so proceed to addRepositoryToStatus)
-	mockStatus.EXPECT().GetRepository("https://github.com/user/repo2.git").Return(nil, errors.New("not found"))
+	// Check repo2 in status using normalized URL (doesn't exist, so proceed to addRepositoryToStatus)
+	// normalizeRepositoryURL converts https://github.com/user/repo2.git -> github.com/user/repo2
+	mockStatus.EXPECT().GetRepository("github.com/user/repo2").Return(nil, errors.New("not found"))
 
 	// Now addRepositoryToStatus is called for repo2:
 	// 1. GetRemoteURL (again)
@@ -347,8 +349,9 @@ func TestCreateWorkspace_RelativePathResolution(t *testing.T) {
 	// Mock GetRemoteURL call (addRepositoriesToStatus calls it for all repos first)
 	mockGit.EXPECT().GetRemoteURL("/current/dir/relative/repo", "origin").Return("https://github.com/user/relative-repo.git", nil)
 
-	// Mock repository not found in status check (using the original remote URL)
-	mockStatus.EXPECT().GetRepository("https://github.com/user/relative-repo.git").Return(nil, errors.New("not found"))
+	// Mock repository not found in status check (using the normalized URL)
+	// normalizeRepositoryURL converts https://github.com/user/relative-repo.git -> github.com/user/relative-repo
+	mockStatus.EXPECT().GetRepository("github.com/user/relative-repo").Return(nil, errors.New("not found"))
 
 	// Mock GetRemoteURL call again (addRepositoryToStatus calls it)
 	mockGit.EXPECT().GetRemoteURL("/current/dir/relative/repo", "origin").Return("https://github.com/user/relative-repo.git", nil)
@@ -410,9 +413,11 @@ func TestCreateWorkspace_StatusUpdateFailure(t *testing.T) {
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
 	// Mock GetRemoteURL call (addRepositoriesToStatus calls it for all repos first)
-	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+	// Return URL with protocol prefix
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 
-	// Mock repository exists in status check (using the remote URL)
+	// Mock repository exists in status check (using the normalized URL)
+	// normalizeRepositoryURL converts https://github.com/user/repo1.git -> github.com/user/repo1
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
 	// Mock adding workspace to status fails
@@ -459,8 +464,9 @@ func TestCreateWorkspace_RepositoryAdditionFailure(t *testing.T) {
 	// Mock GetRemoteURL call (addRepositoriesToStatus calls it for all repos first)
 	mockGit.EXPECT().GetRemoteURL("/new/repo", "origin").Return("https://github.com/user/new-repo.git", nil)
 
-	// Mock repository not found in status check (using the original remote URL)
-	mockStatus.EXPECT().GetRepository("https://github.com/user/new-repo.git").Return(nil, errors.New("not found"))
+	// Mock repository not found in status check (using the normalized URL)
+	// normalizeRepositoryURL converts https://github.com/user/new-repo.git -> github.com/user/new-repo
+	mockStatus.EXPECT().GetRepository("github.com/user/new-repo").Return(nil, errors.New("not found"))
 
 	// Mock GetRemoteURL call again (addRepositoryToStatus calls it)
 	mockGit.EXPECT().GetRemoteURL("/new/repo", "origin").Return("https://github.com/user/new-repo.git", nil)

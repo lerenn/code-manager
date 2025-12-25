@@ -173,33 +173,45 @@ func (c *realCodeManager) addRepositoriesToStatus(repositories []string) ([]stri
 
 	for _, repo := range repositories {
 		// Get repository URL from Git remote origin
-		repoURL, err := c.deps.Git.GetRemoteURL(repo, "origin")
+		rawRepoURL, err := c.deps.Git.GetRemoteURL(repo, "origin")
 		if err != nil {
 			// If no origin remote, use the path as the identifier
-			repoURL = repo
+			finalRepos = append(finalRepos, repo)
+			c.VerbosePrint("  ✓ %s (no remote, using path)", repo)
+			continue
 		}
 
-		// Check for duplicate remote URLs within this workspace
-		if seenURLs[repoURL] {
+		// Normalize the repository URL before checking status
+		// This ensures consistent format (host/path) regardless of URL protocol (ssh://, git@, https://)
+		normalizedRepoURL, err := c.normalizeRepositoryURL(rawRepoURL)
+		if err != nil {
+			// If normalization fails, fall back to using the path as the identifier
+			c.VerbosePrint("  ⚠ Failed to normalize repository URL '%s': %v, using path as identifier", rawRepoURL, err)
+			finalRepos = append(finalRepos, repo)
+			continue
+		}
+
+		// Check for duplicate remote URLs within this workspace (using normalized URL)
+		if seenURLs[normalizedRepoURL] {
 			return nil, fmt.Errorf("%w: repository with URL '%s' already exists in this workspace",
-				ErrDuplicateRepository, repoURL)
+				ErrDuplicateRepository, normalizedRepoURL)
 		}
-		seenURLs[repoURL] = true
+		seenURLs[normalizedRepoURL] = true
 
-		// Check if repository already exists in status using the remote URL
-		if existingRepo, err := c.deps.StatusManager.GetRepository(repoURL); err == nil && existingRepo != nil {
-			finalRepos = append(finalRepos, repoURL)
+		// Check if repository already exists in status using the normalized URL
+		if existingRepo, err := c.deps.StatusManager.GetRepository(normalizedRepoURL); err == nil && existingRepo != nil {
+			finalRepos = append(finalRepos, normalizedRepoURL)
 			c.VerbosePrint("  ✓ %s (already exists in status)", repo)
 			continue
 		}
 
 		// Add new repository to status file
-		repoURL, err = c.addRepositoryToStatus(repo)
+		finalRepoURL, err := c.addRepositoryToStatus(repo)
 		if err != nil {
 			return nil, fmt.Errorf("%w: failed to add repository '%s': %w", ErrRepositoryAddition, repo, err)
 		}
 
-		finalRepos = append(finalRepos, repoURL)
+		finalRepos = append(finalRepos, finalRepoURL)
 		c.VerbosePrint("  ✓ %s (added to status)", repo)
 	}
 

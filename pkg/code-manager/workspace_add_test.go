@@ -57,10 +57,11 @@ func TestAddRepositoryToWorkspace_Success(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock GetRemoteURL call (called during resolution)
-	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+	// Mock GetRemoteURL call (called during resolution) - return URL with protocol
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 
-	// Mock repository exists in status check (using the remote URL)
+	// Mock repository exists in status check (using the normalized URL)
+	// normalizeRepositoryURL converts https://github.com/user/repo1.git -> github.com/user/repo1
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
 	// Mock getting existing repositories to check branches
@@ -223,10 +224,10 @@ func TestAddRepositoryToWorkspace_NoBranchesWithAllRepos(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock GetRemoteURL call
-	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+	// Mock GetRemoteURL call - return URL with protocol
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 
-	// Mock repository exists in status check
+	// Mock repository exists in status check (using the normalized URL)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
 	// Mock getting existing repository - only has worktree for "main", not "feature"
@@ -286,10 +287,10 @@ func TestAddRepositoryToWorkspace_SomeBranchesWithAllRepos(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock GetRemoteURL call
-	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+	// Mock GetRemoteURL call - return URL with protocol
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 
-	// Mock repository exists in status check
+	// Mock repository exists in status check (using the normalized URL)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
 	// Mock getting existing repository - has worktrees for "main" and "feature", but not "develop"
@@ -379,10 +380,10 @@ func TestAddRepositoryToWorkspace_StatusUpdateFailure(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock GetRemoteURL call
-	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+	// Mock GetRemoteURL call - return URL with protocol
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 
-	// Mock repository exists in status check
+	// Mock repository exists in status check (using the normalized URL)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
 	// Mock status update failure
@@ -431,9 +432,9 @@ func TestAddRepositoryToWorkspace_WorktreeCreationFailure(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock GetRemoteURL call - only called once during resolution (line 83)
-	// The second call at line 274 never happens because CreateWorktree fails first
-	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+	// Mock GetRemoteURL call - only called once during resolution
+	// The second call never happens because CreateWorktree fails first
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 
 	// Mock repository exists in status check
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -509,10 +510,10 @@ func TestAddRepositoryToWorkspace_WorkspaceFileUpdateFailure(t *testing.T) {
 	existingRepo := &status.Repository{Path: "/path/to/repo1"}
 	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
 
-	// Mock GetRemoteURL call
-	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("github.com/user/repo1", nil)
+	// Mock GetRemoteURL call - return URL with protocol
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return("https://github.com/user/repo1.git", nil)
 
-	// Mock repository exists in status check
+	// Mock repository exists in status check (using the normalized URL)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
 	// Mock getting existing repository
@@ -595,4 +596,66 @@ func TestAddRepositoryToWorkspace_RepositoryNotFound(t *testing.T) {
 
 	err := cm.AddRepositoryToWorkspace(&params)
 	assert.Error(t, err)
+}
+
+// TestAddRepositoryToWorkspace_SSHURLNormalization tests that SSH URLs are properly normalized.
+func TestAddRepositoryToWorkspace_SSHURLNormalization(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockFS := fsmocks.NewMockFS(ctrl)
+	mockGit := gitmocks.NewMockGit(ctrl)
+	mockStatus := statusmocks.NewMockManager(ctrl)
+
+	cm := &realCodeManager{
+		deps: dependencies.New().
+			WithFS(mockFS).
+			WithGit(mockGit).
+			WithConfig(config.NewConfigManager("/test/config.yaml")).
+			WithStatusManager(mockStatus).
+			WithLogger(logger.NewNoopLogger()),
+	}
+
+	params := AddRepositoryToWorkspaceParams{
+		WorkspaceName: "test-workspace",
+		Repository:    "repo1",
+	}
+
+	// Mock workspace exists
+	existingWorkspace := &status.Workspace{
+		Repositories: []string{},
+		Worktrees:    []string{},
+	}
+	mockStatus.EXPECT().GetWorkspace("test-workspace").Return(existingWorkspace, nil)
+
+	// Mock repository resolution - use repository name that exists in status
+	// This simplifies the test by avoiding the addRepositoryToStatus flow
+	existingRepo := &status.Repository{Path: "/path/to/repo1"}
+	mockStatus.EXPECT().GetRepository("repo1").Return(existingRepo, nil)
+
+	// Mock GetRemoteURL call with SSH URL format
+	sshURL := "ssh://git@forge.lab.home.lerenn.net/homelab/lgtm/origin/extract-lgtm.git"
+	mockGit.EXPECT().GetRemoteURL("repo1", "origin").Return(sshURL, nil)
+
+	// Mock repository already exists in status with normalized URL
+	// The normalized URL should be: forge.lab.home.lerenn.net/homelab/lgtm/origin/extract-lgtm
+	normalizedURL := "forge.lab.home.lerenn.net/homelab/lgtm/origin/extract-lgtm"
+	mockStatus.EXPECT().GetRepository(normalizedURL).Return(existingRepo, nil)
+
+	// Mock updating workspace in status - verify that the normalized URL is used
+	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Do(func(name string, workspace status.Workspace) {
+		// Verify the repository URL in workspace is normalized (not the raw SSH URL)
+		assert.Len(t, workspace.Repositories, 1)
+		assert.Equal(t, normalizedURL, workspace.Repositories[0])
+		assert.NotContains(t, workspace.Repositories[0], "ssh://")
+		assert.NotContains(t, workspace.Repositories[0], "git@")
+	}).Return(nil)
+
+	// Mock GetRepository call at the start of createWorktreesForBranches (for default branch check)
+	// Even though there are no branches, this is still called
+	existingRepoStatus := &status.Repository{Path: "/path/to/repo1"}
+	mockStatus.EXPECT().GetRepository(normalizedURL).Return(existingRepoStatus, nil)
+
+	err := cm.AddRepositoryToWorkspace(&params)
+	assert.NoError(t, err)
 }

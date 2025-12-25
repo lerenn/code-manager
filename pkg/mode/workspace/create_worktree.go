@@ -3,6 +3,7 @@ package workspace
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -201,16 +202,31 @@ func (w *realWorkspace) getRepositoryURLFromPath(repoPath string) (string, error
 		return "", fmt.Errorf("no origin remote found in repository: %s", repoPath)
 	}
 
-	// Convert the remote URL to a repository URL format
+	// Convert the remote URL to a repository URL format (normalized)
 	// e.g., "https://github.com/octocat/Hello-World.git" -> "github.com/octocat/Hello-World"
+	// e.g., "ssh://git@forge.lab.home.lerenn.net/homelab/lgtm/origin/extract-lgtm.git" ->
+	//       "forge.lab.home.lerenn.net/homelab/lgtm/origin/extract-lgtm"
 	repoURL := strings.TrimSuffix(originURL, ".git")
-	if strings.HasPrefix(repoURL, "https://") {
+	switch {
+	case strings.HasPrefix(repoURL, "ssh://"):
+		// Handle ssh:// URLs like "ssh://git@host/path"
+		parsedURL, err := url.Parse(repoURL)
+		if err != nil {
+			return "", fmt.Errorf("invalid ssh:// repository URL: %w", err)
+		}
+		host := parsedURL.Host
+		// Remove port if present (e.g., host:22 -> host)
+		if colonIdx := strings.Index(host, ":"); colonIdx != -1 {
+			host = host[:colonIdx]
+		}
+		path := strings.TrimPrefix(parsedURL.Path, "/")
+		repoURL = host + "/" + path
+	case strings.HasPrefix(repoURL, "https://"):
 		repoURL = strings.TrimPrefix(repoURL, "https://")
-	} else if strings.HasPrefix(repoURL, "git@") {
+	case strings.HasPrefix(repoURL, "git@"):
 		// Handle SSH URLs like "git@github.com:octocat/Hello-World.git"
 		repoURL = strings.TrimPrefix(repoURL, "git@")
 		repoURL = strings.Replace(repoURL, ":", "/", 1)
-		repoURL = strings.TrimSuffix(repoURL, ".git")
 	}
 
 	return repoURL, nil

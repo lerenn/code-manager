@@ -133,16 +133,27 @@ func (c *realCodeManager) resolveAndValidateRepositoryForAdd(
 	}
 
 	// Get repository URL from Git remote origin
-	repoURL, err := c.deps.Git.GetRemoteURL(resolvedRepo, "origin")
+	rawRepoURL, err := c.deps.Git.GetRemoteURL(resolvedRepo, "origin")
 	if err != nil {
 		// If no origin remote, use the path as the identifier
-		repoURL = resolvedRepo
+		// This is intentional behavior - we fall back to using the path when no remote exists
+		//nolint: nilerr // Intentionally returning nil when no origin remote exists
+		return resolvedRepo, resolvedRepo, nil
 	}
 
-	// Check if repository already exists in status using the remote URL
+	// Normalize the repository URL before checking status
+	// This ensures consistent format (host/path) regardless of URL protocol (ssh://, git@, https://)
+	normalizedRepoURL, err := c.normalizeRepositoryURL(rawRepoURL)
+	if err != nil {
+		// If normalization fails, fall back to using the path as the identifier
+		c.VerbosePrint("  ⚠ Failed to normalize repository URL '%s': %v, using path as identifier", rawRepoURL, err)
+		return resolvedRepo, resolvedRepo, nil
+	}
+
+	// Check if repository already exists in status using the normalized URL
 	var finalRepoURL string
-	if existingRepo, err := c.deps.StatusManager.GetRepository(repoURL); err == nil && existingRepo != nil {
-		finalRepoURL = repoURL
+	if existingRepo, err := c.deps.StatusManager.GetRepository(normalizedRepoURL); err == nil && existingRepo != nil {
+		finalRepoURL = normalizedRepoURL
 		c.VerbosePrint("  ✓ %s (already exists in status)", repositoryName)
 	} else {
 		// Add new repository to status file

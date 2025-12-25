@@ -436,3 +436,145 @@ func TestAddRepositoryToWorkspaceNoMatchingBranches(t *testing.T) {
 	// Should have no worktrees since unique-branch doesn't exist in repo2
 	require.Len(t, repo2Status.Worktrees, 0, "Repository should have no worktrees for non-matching branch")
 }
+
+// TestAddRepositoryToWorkspaceWithSSHURL tests that workspace file paths use normalized URLs
+// when adding repositories with SSH URL format remotes
+func TestAddRepositoryToWorkspaceWithSSHURL(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create two test Git repositories
+	repo1Path := filepath.Join(setup.TempDir, "extract-lgtm")
+	repo2Path := filepath.Join(setup.TempDir, "another-repo")
+
+	require.NoError(t, os.MkdirAll(repo1Path, 0755))
+	require.NoError(t, os.MkdirAll(repo2Path, 0755))
+
+	createTestGitRepo(t, repo1Path)
+	createTestGitRepo(t, repo2Path)
+
+	// Set up Git environment variables
+	gitEnv := append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test User",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test User",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+
+	// Set SSH URL format remotes for both repositories
+	restore := safeChdir(t, repo1Path)
+	sshURL1 := "ssh://git@forge.lab.home.lerenn.net/homelab/lgtm/origin/extract-lgtm.git"
+	cmd := exec.Command("git", "remote", "set-url", "origin", sshURL1)
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+
+	restore = safeChdir(t, repo2Path)
+	sshURL2 := "ssh://git@forge.lab.home.lerenn.net/homelab/lgtm/origin/another-repo.git"
+	cmd = exec.Command("git", "remote", "set-url", "origin", sshURL2)
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+
+	// Switch both repositories to a temporary branch to avoid conflicts when creating worktrees
+	restore = safeChdir(t, repo1Path)
+	cmd = exec.Command("git", "checkout", "-b", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+
+	restore = safeChdir(t, repo2Path)
+	cmd = exec.Command("git", "checkout", "-b", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+
+	// Create workspace with first repository
+	err := createWorkspace(t, setup, "test-workspace", []string{repo1Path})
+	require.NoError(t, err, "Workspace creation should succeed")
+
+	// Create worktree for master branch to generate workspace file
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
+	})
+	require.NoError(t, err)
+
+	err = cmInstance.CreateWorkTree("master", codemanager.CreateWorkTreeOpts{
+		WorkspaceName: "test-workspace",
+	})
+	require.NoError(t, err, "Worktree creation for master should succeed")
+
+	// Prepare repo2: create master branch and switch to temp-branch to avoid conflicts
+	restore = safeChdir(t, repo2Path)
+	cmd = exec.Command("git", "checkout", "master")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	// Switch back to temp-branch to avoid conflicts when creating worktrees
+	cmd = exec.Command("git", "checkout", "temp-branch")
+	cmd.Env = gitEnv
+	require.NoError(t, cmd.Run())
+	restore()
+
+	// Add second repository to workspace
+	err = addRepositoryToWorkspace(t, setup, "test-workspace", repo2Path)
+	require.NoError(t, err, "Adding repository to workspace should succeed")
+
+	// Verify the status.yaml file was updated
+	status := readStatusFile(t, setup.StatusPath)
+	workspace, exists := status.Workspaces["test-workspace"]
+	require.True(t, exists, "Workspace should exist in status file")
+
+	// Check that the workspace now has two repositories
+	require.Len(t, workspace.Repositories, 2, "Workspace should have two repositories after adding")
+
+	// Verify that repositories in status use normalized URLs (not raw SSH URLs)
+	normalizedURL1 := "forge.lab.home.lerenn.net/homelab/lgtm/origin/extract-lgtm"
+	normalizedURL2 := "forge.lab.home.lerenn.net/homelab/lgtm/origin/another-repo"
+
+	for _, repoURL := range workspace.Repositories {
+		// Assert that no repository URL contains ssh:// or git@ protocol prefixes
+		assert.NotContains(t, repoURL, "ssh://", "Repository URL should not contain ssh:// protocol prefix")
+		assert.NotContains(t, repoURL, "git@", "Repository URL should not contain git@ protocol prefix")
+		// Assert that URLs are normalized
+		assert.True(t, repoURL == normalizedURL1 || repoURL == normalizedURL2,
+			"Repository URL should be normalized: got %s, expected one of %s or %s",
+			repoURL, normalizedURL1, normalizedURL2)
+	}
+
+	// Verify workspace file contains normalized paths
+	workspaceFile := filepath.Join(setup.CmPath, "workspaces", "test-workspace", "master.code-workspace")
+	require.FileExists(t, workspaceFile, "Workspace file should exist")
+
+	content, err := os.ReadFile(workspaceFile)
+	require.NoError(t, err)
+
+	var workspaceConfig struct {
+		Folders []struct {
+			Name string `json:"name"`
+			Path string `json:"path"`
+		} `json:"folders"`
+	}
+	err = json.Unmarshal(content, &workspaceConfig)
+	require.NoError(t, err)
+
+	// Should have 2 folders (one for each repository)
+	require.Len(t, workspaceConfig.Folders, 2, "Workspace file should have 2 folders")
+
+	// Verify all folder paths use normalized URLs
+	cfg, err := config.NewManager(setup.ConfigPath).GetConfigWithFallback()
+	require.NoError(t, err)
+
+	expectedPath1 := filepath.Join(cfg.RepositoriesDir, normalizedURL1, "origin", "master")
+	expectedPath2 := filepath.Join(cfg.RepositoriesDir, normalizedURL2, "origin", "master")
+
+	for _, folder := range workspaceConfig.Folders {
+		// Assert that no path contains ssh:// or git@ protocol prefixes
+		assert.NotContains(t, folder.Path, "ssh://", "Folder path should not contain ssh:// protocol prefix: %s", folder.Path)
+		assert.NotContains(t, folder.Path, "git@", "Folder path should not contain git@ protocol prefix: %s", folder.Path)
+		// Assert that path uses normalized URL format
+		assert.True(t, folder.Path == expectedPath1 || folder.Path == expectedPath2,
+			"Folder path should use normalized URL: got %s, expected one of %s or %s",
+			folder.Path, expectedPath1, expectedPath2)
+	}
+}
