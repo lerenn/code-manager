@@ -33,7 +33,9 @@ func (w *realWorktree) createBranchFromRemote(repoPath, branch string) error {
 	// Fetch from remote to ensure we have the latest changes and remote branch information
 	w.logger.Logf("Fetching from origin to ensure repository is up to date")
 	if err := w.git.FetchRemote(repoPath, "origin"); err != nil {
-		return fmt.Errorf("failed to fetch from origin: %w", err)
+		// If fetch fails (e.g., remote doesn't exist or isn't accessible), fall back to local default branch
+		w.logger.Logf("Warning: failed to fetch from origin, falling back to local default branch: %v", err)
+		return w.createBranchFromLocalDefaultBranch(repoPath, branch)
 	}
 
 	// Check if the branch exists on the remote after fetching
@@ -43,7 +45,9 @@ func (w *realWorktree) createBranchFromRemote(repoPath, branch string) error {
 		Branch:     branch,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to check if branch exists on remote: %w", err)
+		// If checking remote fails, fall back to local default branch
+		w.logger.Logf("Warning: failed to check if branch exists on remote, falling back to local default branch: %v", err)
+		return w.createBranchFromLocalDefaultBranch(repoPath, branch)
 	}
 
 	if remoteBranchExists {
@@ -93,7 +97,10 @@ func (w *realWorktree) createBranchFromDefaultBranch(repoPath, branch string) er
 		NewBranch:  branch,
 		FromBranch: originDefaultBranch,
 	}); err != nil {
-		return fmt.Errorf("failed to create branch %s from %s: %w", branch, originDefaultBranch, err)
+		// If creating from remote default branch fails, fall back to local default branch
+		w.logger.Logf("Warning: failed to create branch from %s, falling back to local default branch: %v",
+			originDefaultBranch, err)
+		return w.createBranchFromLocalDefaultBranch(repoPath, branch)
 	}
 
 	return nil

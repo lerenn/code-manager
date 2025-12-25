@@ -78,16 +78,20 @@ func TestCreateWorkspace_Success(t *testing.T) {
 	// 3. Check if normalized URL exists in status
 	mockStatus.EXPECT().GetRepository("github.com/user/repo2").Return(nil, errors.New("not found"))
 
-	// 4. GetDefaultBranch
+	// 4. Check if local path is valid (determineRepositoryTargetPath checks this)
+	// Return false so it proceeds with cloning
+	mockFS.EXPECT().ValidateRepositoryPath("/absolute/path/repo2").Return(false, nil)
+
+	// 5. GetDefaultBranch
 	mockGit.EXPECT().GetDefaultBranch("https://github.com/user/repo2.git").Return("main", nil)
 
-	// 5. MkdirAll
+	// 6. MkdirAll
 	mockFS.EXPECT().MkdirAll(gomock.Any(), gomock.Any()).Return(nil)
 
-	// 6. Clone
+	// 7. Clone
 	mockGit.EXPECT().Clone(gomock.Any()).Return(nil)
 
-	// 7. AddRepository
+	// 8. AddRepository
 	mockStatus.EXPECT().AddRepository("github.com/user/repo2", gomock.Any()).Return(nil)
 
 	// Mock adding workspace to status
@@ -352,6 +356,10 @@ func TestCreateWorkspace_RelativePathResolution(t *testing.T) {
 	// Mock repository not found in status check (in addRepositoryToStatus, after normalization)
 	mockStatus.EXPECT().GetRepository("github.com/user/relative-repo").Return(nil, errors.New("not found"))
 
+	// Check if local path is valid (determineRepositoryTargetPath checks this)
+	// Return false so it proceeds with cloning
+	mockFS.EXPECT().ValidateRepositoryPath("/current/dir/relative/repo").Return(false, nil)
+
 	// Mock GetDefaultBranch for cloning
 	mockGit.EXPECT().GetDefaultBranch("https://github.com/user/relative-repo.git").Return("main", nil)
 
@@ -459,6 +467,10 @@ func TestCreateWorkspace_RepositoryAdditionFailure(t *testing.T) {
 
 	// Mock repository not found in status check (in addRepositoryToStatus, after normalization)
 	mockStatus.EXPECT().GetRepository("github.com/user/new-repo").Return(nil, errors.New("not found"))
+
+	// Check if local path is valid (determineRepositoryTargetPath checks this)
+	// Return false so it proceeds with cloning
+	mockFS.EXPECT().ValidateRepositoryPath("/new/repo").Return(false, nil)
 
 	// Mock GetDefaultBranch for cloning
 	mockGit.EXPECT().GetDefaultBranch("https://github.com/user/new-repo.git").Return("main", nil)
