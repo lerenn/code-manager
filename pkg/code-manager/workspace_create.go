@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/lerenn/code-manager/pkg/git"
 	"github.com/lerenn/code-manager/pkg/status"
 )
 
@@ -172,33 +173,45 @@ func (c *realCodeManager) addRepositoriesToStatus(repositories []string) ([]stri
 
 	for _, repo := range repositories {
 		// Get repository URL from Git remote origin
-		repoURL, err := c.deps.Git.GetRemoteURL(repo, "origin")
+		rawRepoURL, err := c.deps.Git.GetRemoteURL(repo, "origin")
 		if err != nil {
 			// If no origin remote, use the path as the identifier
-			repoURL = repo
+			finalRepos = append(finalRepos, repo)
+			c.VerbosePrint("  ✓ %s (no remote, using path)", repo)
+			continue
 		}
 
-		// Check for duplicate remote URLs within this workspace
-		if seenURLs[repoURL] {
+		// Normalize the repository URL before checking status
+		// This ensures consistent format (host/path) regardless of URL protocol (ssh://, git@, https://)
+		normalizedRepoURL, err := c.normalizeRepositoryURL(rawRepoURL)
+		if err != nil {
+			// If normalization fails, fall back to using the path as the identifier
+			c.VerbosePrint("  ⚠ Failed to normalize repository URL '%s': %v, using path as identifier", rawRepoURL, err)
+			finalRepos = append(finalRepos, repo)
+			continue
+		}
+
+		// Check for duplicate remote URLs within this workspace (using normalized URL)
+		if seenURLs[normalizedRepoURL] {
 			return nil, fmt.Errorf("%w: repository with URL '%s' already exists in this workspace",
-				ErrDuplicateRepository, repoURL)
+				ErrDuplicateRepository, normalizedRepoURL)
 		}
-		seenURLs[repoURL] = true
+		seenURLs[normalizedRepoURL] = true
 
-		// Check if repository already exists in status using the remote URL
-		if existingRepo, err := c.deps.StatusManager.GetRepository(repoURL); err == nil && existingRepo != nil {
-			finalRepos = append(finalRepos, repoURL)
+		// Check if repository already exists in status using the normalized URL
+		if existingRepo, err := c.deps.StatusManager.GetRepository(normalizedRepoURL); err == nil && existingRepo != nil {
+			finalRepos = append(finalRepos, normalizedRepoURL)
 			c.VerbosePrint("  ✓ %s (already exists in status)", repo)
 			continue
 		}
 
 		// Add new repository to status file
-		repoURL, err = c.addRepositoryToStatus(repo)
+		finalRepoURL, err := c.addRepositoryToStatus(repo)
 		if err != nil {
 			return nil, fmt.Errorf("%w: failed to add repository '%s': %w", ErrRepositoryAddition, repo, err)
 		}
 
-		finalRepos = append(finalRepos, repoURL)
+		finalRepos = append(finalRepos, finalRepoURL)
 		c.VerbosePrint("  ✓ %s (added to status)", repo)
 	}
 
@@ -206,21 +219,153 @@ func (c *realCodeManager) addRepositoriesToStatus(repositories []string) ([]stri
 }
 
 // addRepositoryToStatus adds a new repository to the status file and returns its URL.
+// It clones the repository to the managed location if it's not already there.
 func (c *realCodeManager) addRepositoryToStatus(repoPath string) (string, error) {
 	// Get repository URL from Git remote origin
-	repoURL, err := c.deps.Git.GetRemoteURL(repoPath, "origin")
+	remoteURL, err := c.deps.Git.GetRemoteURL(repoPath, "origin")
 	if err != nil {
 		// If no origin remote, use the path as the identifier
-		repoURL = repoPath
+		// In this case, we can't clone from remote, so we'll use the local path
+		repoParams := status.AddRepositoryParams{
+			Path: repoPath,
+		}
+		if err := c.deps.StatusManager.AddRepository(repoPath, repoParams); err != nil {
+			return "", fmt.Errorf("failed to add repository to status file: %w", err)
+		}
+		return repoPath, nil
 	}
 
-	// Add repository to status file
-	repoParams := status.AddRepositoryParams{
-		Path: repoPath,
+	// Normalize the repository URL
+	normalizedURL, err := c.normalizeRepositoryURL(remoteURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to normalize repository URL: %w", err)
 	}
-	if err := c.deps.StatusManager.AddRepository(repoURL, repoParams); err != nil {
+
+	// Check if repository already exists in status
+	if existingRepo, err := c.deps.StatusManager.GetRepository(normalizedURL); err == nil && existingRepo != nil {
+		// Repository already exists, return the normalized URL
+		return normalizedURL, nil
+	}
+
+	// Detect default branch from remote, fallback to local repository if remote is not accessible
+	defaultBranch := c.getDefaultBranchWithFallback(remoteURL, repoPath)
+
+	// Determine target path (use local if valid, otherwise clone)
+	targetPath, err := c.determineRepositoryTargetPath(remoteURL, normalizedURL, defaultBranch, repoPath)
+	if err != nil {
+		return "", err
+	}
+
+	// Add repository to status file with the managed path
+	remotes := map[string]status.Remote{
+		"origin": {
+			DefaultBranch: defaultBranch,
+		},
+	}
+	repoParams := status.AddRepositoryParams{
+		Path:    targetPath,
+		Remotes: remotes,
+	}
+	if err := c.deps.StatusManager.AddRepository(normalizedURL, repoParams); err != nil {
 		return "", fmt.Errorf("failed to add repository to status file: %w", err)
 	}
 
-	return repoURL, nil
+	// Note: We don't automatically add the default branch worktree to status here.
+	// The worktree will be added when it's actually needed (e.g., when creating worktrees
+	// for a workspace). This avoids adding unnecessary worktrees to status when they're
+	// not going to be used.
+
+	return normalizedURL, nil
+}
+
+// getDefaultBranchWithFallback gets the default branch from remote, falling back to local repository if needed.
+func (c *realCodeManager) getDefaultBranchWithFallback(remoteURL, repoPath string) string {
+	defaultBranch, err := c.deps.Git.GetDefaultBranch(remoteURL)
+	if err != nil {
+		// If remote is not accessible, try to get the current branch from the local repository
+		c.VerbosePrint("Warning: failed to get default branch from remote '%s', trying local repository: %v",
+			remoteURL, err)
+		currentBranch, localErr := c.deps.Git.GetCurrentBranch(repoPath)
+		if localErr != nil {
+			// If we can't get the local branch either, fall back to "main"
+			c.VerbosePrint("Warning: failed to get current branch from local repository, using 'main' as default: %v",
+				localErr)
+			return "main"
+		}
+		c.VerbosePrint("Using local repository's current branch '%s' as default branch", currentBranch)
+		return currentBranch
+	}
+	return defaultBranch
+}
+
+// cloneOrUseLocalPath attempts to clone the repository, falling back to local path if cloning fails.
+func (c *realCodeManager) cloneOrUseLocalPath(
+	remoteURL, normalizedURL, defaultBranch, repoPath string,
+) (string, error) {
+	// Generate target path for cloning
+	targetPath := c.generateClonePath(normalizedURL, defaultBranch)
+
+	// Try to clone repository from remote URL to managed location
+	cloneErr := func() error {
+		// Create parent directories for the target path
+		parentDir := filepath.Dir(targetPath)
+		if err := c.deps.FS.MkdirAll(parentDir, 0755); err != nil {
+			return fmt.Errorf("failed to create parent directories: %w", err)
+		}
+
+		// Clone repository from remote URL to managed location
+		if err := c.deps.Git.Clone(git.CloneParams{
+			RepoURL:    remoteURL,
+			TargetPath: targetPath,
+			Recursive:  true,
+		}); err != nil {
+			return fmt.Errorf("%w: %w", ErrFailedToCloneRepository, err)
+		}
+		return nil
+	}()
+
+	// If cloning failed, check if the original path is a valid local repository
+	if cloneErr != nil {
+		c.VerbosePrint("Warning: failed to clone repository from remote '%s', checking if local path is valid: %v",
+			remoteURL, cloneErr)
+		// Validate that the original path is a valid Git repository
+		isValid, err := c.deps.FS.ValidateRepositoryPath(repoPath)
+		if err != nil || !isValid {
+			// Original path is not a valid repository, return the clone error
+			return "", cloneErr
+		}
+		// Use the original local path instead of the cloned path
+		c.VerbosePrint("Using existing local repository path '%s' instead of cloning", repoPath)
+		return repoPath, nil
+	}
+
+	return targetPath, nil
+}
+
+// determineRepositoryTargetPath determines the target path for a repository,
+// using local path if valid, otherwise cloning.
+func (c *realCodeManager) determineRepositoryTargetPath(
+	remoteURL, normalizedURL, defaultBranch, repoPath string,
+) (string, error) {
+	// If repoPath looks like a local path, check if it's valid and use it
+	if c.isLocalPath(repoPath) {
+		if c.isValidLocalRepository(repoPath) {
+			c.VerbosePrint("Using existing local repository path '%s' instead of cloning", repoPath)
+			return repoPath, nil
+		}
+	}
+
+	// Not a valid local path, proceed with cloning
+	return c.cloneOrUseLocalPath(remoteURL, normalizedURL, defaultBranch, repoPath)
+}
+
+// isLocalPath checks if a path looks like a local file system path.
+func (c *realCodeManager) isLocalPath(repoPath string) bool {
+	return filepath.IsAbs(repoPath) || strings.Contains(repoPath, string(filepath.Separator))
+}
+
+// isValidLocalRepository checks if a local path is a valid Git repository.
+func (c *realCodeManager) isValidLocalRepository(repoPath string) bool {
+	isValid, err := c.deps.FS.ValidateRepositoryPath(repoPath)
+	return err == nil && isValid
 }

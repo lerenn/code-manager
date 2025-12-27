@@ -18,7 +18,9 @@ const (
 	Clone            = "Clone" // Legacy name for backward compatibility
 
 	// Workspace operations.
-	ListWorkspaces = "ListWorkspaces"
+	ListWorkspaces                = "ListWorkspaces"
+	AddRepositoryToWorkspace      = "AddRepositoryToWorkspace"
+	RemoveRepositoryFromWorkspace = "RemoveRepositoryFromWorkspace"
 
 	// Prompt operations.
 	PromptSelectTarget = "PromptSelectTarget"

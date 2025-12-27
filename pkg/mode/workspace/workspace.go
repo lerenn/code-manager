@@ -47,10 +47,10 @@ func NewWorkspace(params NewWorkspaceParams) Workspace {
 	}
 }
 
-// buildWorkspaceFilePath constructs the workspace file path for a given workspace name and branch.
+// BuildWorkspaceFilePath constructs the workspace file path for a given workspace name and branch.
 // This is a shared utility function used by create, delete, and open operations.
 // The workspace file is named: {workspaceName}/{sanitizedBranchName}.code-workspace.
-func buildWorkspaceFilePath(workspacesDir, workspaceName, branchName string) string {
+func BuildWorkspaceFilePath(workspacesDir, workspaceName, branchName string) string {
 	// Sanitize branch name for filename (replace / with -)
 	sanitizedBranchForFilename := branch.SanitizeBranchNameForFilename(branchName)
 

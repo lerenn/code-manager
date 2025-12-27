@@ -12,11 +12,6 @@ func (s *realManager) RemoveWorkspace(workspaceName string) error {
 		return fmt.Errorf("failed to load status: %w", err)
 	}
 
-	if s.logger != nil {
-		s.logger.Logf("    [RemoveWorkspace] After load: status.Repositories[github.com/octocat/Hello-World].Worktrees = %v",
-			status.Repositories["github.com/octocat/Hello-World"].Worktrees)
-	}
-
 	// Check if workspace exists
 	if _, exists := status.Workspaces[workspaceName]; !exists {
 		return fmt.Errorf("%w: %s", ErrWorkspaceNotFound, workspaceName)
@@ -28,10 +23,6 @@ func (s *realManager) RemoveWorkspace(workspaceName string) error {
 	// Save updated status
 	if err := s.saveStatus(status); err != nil {
 		return fmt.Errorf("failed to save status: %w", err)
-	}
-
-	if s.logger != nil {
-		s.logger.Logf("    [RemoveWorkspace] After save: status saved successfully")
 	}
 
 	// Update internal workspaces map

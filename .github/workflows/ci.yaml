@@ -74,7 +74,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
       - uses: dagger/dagger-for-github@8.0.0
         with:
