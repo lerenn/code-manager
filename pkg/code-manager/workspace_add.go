@@ -65,10 +65,14 @@ func (c *realCodeManager) addRepositoryToWorkspace(params *AddRepositoryToWorksp
 	params.WorkspaceName = workspaceName
 	params.Repository = finalRepoURL
 
-	// Determine branches that have worktrees in ALL existing repositories (before adding new one)
-	branchesToCreate := c.getBranchesWithWorktreesInAllRepos(workspace, workspace.Repositories)
+	// Try to create worktrees for ALL branches in the workspace
+	// If a branch doesn't exist in the new repository, it will be skipped gracefully
+	branchesToCreate := workspace.Worktrees
 
-	c.VerbosePrint("Found %d branches with worktrees in all repositories: %v", len(branchesToCreate), branchesToCreate)
+	c.VerbosePrint(
+		"Will attempt to create worktrees for %d branches in workspace: %v",
+		len(branchesToCreate), branchesToCreate,
+	)
 
 	// Update workspace in status.yaml to include new repository
 	workspace.Repositories = append(workspace.Repositories, finalRepoURL)
@@ -76,7 +80,15 @@ func (c *realCodeManager) addRepositoryToWorkspace(params *AddRepositoryToWorksp
 		return fmt.Errorf("%w: failed to update workspace: %w", ErrStatusUpdate, err)
 	}
 
-	// Create worktrees for each branch that has worktrees in all repositories
+	// Update all existing workspace files to include the new repository
+	// This must happen before worktree creation so that all workspace files are updated,
+	// regardless of whether worktrees are created for all branches
+	if err := c.updateAllWorkspaceFilesForNewRepository(workspaceName, finalRepoURL, workspace.Worktrees); err != nil {
+		return fmt.Errorf("failed to update workspace files: %w", err)
+	}
+
+	// Create worktrees for all branches in the workspace
+	// If a branch doesn't exist in the new repository, it will be skipped gracefully
 	// Pass originalRepoPath to check for local branches that might not exist in cloned repository
 	if err := c.createWorktreesForBranches(branchesToCreate, finalRepoURL, workspaceName, originalRepoPath); err != nil {
 		return err
@@ -302,62 +314,28 @@ func (c *realCodeManager) verifyAndCleanupWorktree(repoURL, branchName string) {
 	}
 }
 
-// getBranchesWithWorktreesInAllRepos returns branches that have worktrees in ALL existing repositories.
-func (c *realCodeManager) getBranchesWithWorktreesInAllRepos(
-	workspace *status.Workspace, existingRepos []string,
-) []string {
-	var branchesWithAllRepos []string
+// updateAllWorkspaceFilesForNewRepository updates all existing workspace files for a workspace
+// to include a new repository. It iterates through all branches in workspace.Worktrees and
+// updates each corresponding workspace file.
+func (c *realCodeManager) updateAllWorkspaceFilesForNewRepository(
+	workspaceName, repoURL string, branches []string,
+) error {
+	c.VerbosePrint("Updating all workspace files for workspace '%s' with new repository '%s'", workspaceName, repoURL)
 
-	// Safety check
-	if workspace == nil {
-		return branchesWithAllRepos
-	}
-
-	// For each branch in workspace.Worktrees
-	for _, branchName := range workspace.Worktrees {
-		if c.branchHasWorktreesInAllRepos(branchName, existingRepos) {
-			branchesWithAllRepos = append(branchesWithAllRepos, branchName)
-			c.VerbosePrint("  ✓ Branch '%s' has worktrees in all repositories", branchName)
+	for _, branchName := range branches {
+		c.VerbosePrint("  Updating workspace file for branch '%s'", branchName)
+		if err := c.updateWorkspaceFileForNewRepository(workspaceName, branchName, repoURL); err != nil {
+			// Log error but continue with other branches
+			// Some workspace files might not exist yet, which is handled gracefully in updateWorkspaceFileForNewRepository
+			c.VerbosePrint("  ⚠ Failed to update workspace file for branch '%s': %v", branchName, err)
+			// Only return error if it's not a "file doesn't exist" case
+			// updateWorkspaceFileForNewRepository returns nil if file doesn't exist, so any error here is real
+			return fmt.Errorf("failed to update workspace file for branch '%s': %w", branchName, err)
 		}
 	}
 
-	return branchesWithAllRepos
-}
-
-// branchHasWorktreesInAllRepos checks if a branch has worktrees in all given repositories.
-func (c *realCodeManager) branchHasWorktreesInAllRepos(branchName string, existingRepos []string) bool {
-	// Check each repository in the list
-	for _, repoURL := range existingRepos {
-		// Get repository from status
-		repo, err := c.deps.StatusManager.GetRepository(repoURL)
-		if err != nil || repo == nil {
-			c.VerbosePrint("  ⚠ Skipping repository %s: %v", repoURL, err)
-			return false
-		}
-
-		// Check if repository has a worktree for that branch
-		if !c.repositoryHasWorktreeForBranch(repo, branchName) {
-			c.VerbosePrint("  Branch '%s' missing in repository '%s'", branchName, repoURL)
-			return false
-		}
-	}
-
-	return true
-}
-
-// repositoryHasWorktreeForBranch checks if a repository has a worktree for the given branch.
-func (c *realCodeManager) repositoryHasWorktreeForBranch(repo *status.Repository, branchName string) bool {
-	if repo.Worktrees == nil {
-		return false
-	}
-
-	for _, worktree := range repo.Worktrees {
-		if worktree.Branch == branchName {
-			return true
-		}
-	}
-
-	return false
+	c.VerbosePrint("  ✓ Updated all workspace files for workspace '%s'", workspaceName)
+	return nil
 }
 
 // updateWorkspaceFileForNewRepository updates a workspace file to include a new repository.
@@ -479,15 +457,17 @@ func (c *realCodeManager) checkExistingWorktree(
 	return worktreePath, true
 }
 
-// shouldSkipWorktreeCreation checks if worktree creation should be skipped because branch doesn't exist.
-func (c *realCodeManager) shouldSkipWorktreeCreation(
+// logBranchStatus logs the status of a branch for worktree creation.
+// Worktree creation will always proceed because the worktree package's EnsureBranchExists
+// will handle creating the branch from remote (if it exists) or from default branch (if it doesn't).
+func (c *realCodeManager) logBranchStatus(
 	repoURL, branchName, mainRepoPath, originalRepoPath string,
-) bool {
+) {
 	// Check if branch exists in managed repository
 	branchExists, checkErr := c.deps.Git.BranchExists(mainRepoPath, branchName)
 	if checkErr == nil && branchExists {
 		c.VerbosePrint("  Branch '%s' exists in repository '%s', proceeding with worktree creation", branchName, repoURL)
-		return false
+		return
 	}
 
 	// Check original repository if available (for local branches)
@@ -498,7 +478,7 @@ func (c *realCodeManager) shouldSkipWorktreeCreation(
 				"  Branch '%s' exists in original repository '%s' (local branch), proceeding with worktree creation",
 				branchName, originalRepoPath,
 			)
-			return false
+			return
 		}
 	}
 
@@ -509,23 +489,33 @@ func (c *realCodeManager) shouldSkipWorktreeCreation(
 			RemoteName: "origin",
 			Branch:     branchName,
 		})
-		if remoteErr == nil && !remoteExists {
-			// Branch doesn't exist on remote either - skip worktree creation
+		if remoteErr == nil && remoteExists {
+			// Branch exists on remote but not fetched yet - let repository mode fetch and create it
+			c.VerbosePrint("  Branch '%s' exists on remote but not fetched yet, repository mode will fetch it", branchName)
+		} else {
+			// Branch doesn't exist on remote - worktree creation will create it from default branch
 			c.VerbosePrint(
-				"  Branch '%s' does not exist locally or on remote in repository '%s', skipping worktree creation",
+				"  Branch '%s' does not exist on remote in repository '%s', worktree creation will create it from default branch",
 				branchName, repoURL,
 			)
-			return true
 		}
-		// Branch exists on remote but not fetched yet - let repository mode fetch and create it
-		c.VerbosePrint("  Branch '%s' exists on remote but not fetched yet, repository mode will fetch it", branchName)
 	} else {
 		c.VerbosePrint(
 			"  Warning: Failed to check if branch '%s' exists: %v, will attempt creation anyway",
 			branchName, checkErr,
 		)
 	}
+}
 
+// shouldSkipWorktreeCreation checks if worktree creation should be skipped.
+// Currently always returns false because worktree creation will handle creating
+// branches that don't exist (from remote or default branch).
+func (c *realCodeManager) shouldSkipWorktreeCreation(
+	repoURL, branchName, mainRepoPath, originalRepoPath string,
+) bool {
+	c.logBranchStatus(repoURL, branchName, mainRepoPath, originalRepoPath)
+	// Always attempt worktree creation - the worktree package's EnsureBranchExists
+	// will handle creating the branch from remote (if it exists) or from default branch (if it doesn't)
 	return false
 }
 

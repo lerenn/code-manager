@@ -64,18 +64,26 @@ func TestAddRepositoryToWorkspace_Success(t *testing.T) {
 	// normalizeRepositoryURL converts https://github.com/user/repo1.git -> github.com/user/repo1
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
-	// Mock getting existing repositories to check branches
-	existingRepoStatus := &status.Repository{
-		Path: "/path/to/existing-repo",
-		Worktrees: map[string]status.WorktreeInfo{
-			"origin:main":    {Branch: "main", Remote: "origin"},
-			"origin:feature": {Branch: "feature", Remote: "origin"},
-		},
-	}
-	mockStatus.EXPECT().GetRepository("github.com/user/existing-repo").Return(existingRepoStatus, nil).Times(2) // Called once per branch check
-
 	// Mock updating workspace in status
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
+
+	// Mock config for workspace file path construction
+	mockConfig := config.NewConfigManager("/test/config.yaml")
+	cm.deps = cm.deps.WithConfig(mockConfig)
+
+	// NEW: updateAllWorkspaceFilesForNewRepository is called for ALL branches in workspace.Worktrees
+	// This happens BEFORE worktree creation
+	// For each branch (main and feature), it calls updateWorkspaceFileForNewRepository which:
+	// 1. Checks if workspace file exists (fs.Exists)
+	// 2. If exists, reads it (fs.ReadFile) and writes it back (fs.WriteFileAtomic)
+	// Branch "main" workspace file update (first call from updateAllWorkspaceFilesForNewRepository)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	// Branch "feature" workspace file update (first call from updateAllWorkspaceFilesForNewRepository)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock GetRepository call at the start of createWorktreesForBranches (for default branch check)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -88,10 +96,6 @@ func TestAddRepositoryToWorkspace_Success(t *testing.T) {
 	// 5. CreateWorktree
 	// 6. BranchExists (verify after creation)
 
-	// Mock config for workspace file path construction
-	mockConfig := config.NewConfigManager("/test/config.yaml")
-	cm.deps = cm.deps.WithConfig(mockConfig)
-
 	// Branch "main" sequence
 	// Inside createWorktreeForBranchInRepository:
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -101,9 +105,11 @@ func TestAddRepositoryToWorkspace_Success(t *testing.T) {
 	mockRepo.EXPECT().CreateWorktree("main", gomock.Any()).Return("/repos/github.com/user/repo1/origin/main", nil)
 	// verifyBranchExistsAfterCreation (inside createWorktreeForBranchInRepository):
 	mockGit.EXPECT().BranchExists("/path/to/repo1", "main").Return(true, nil)
-	// Workspace file update for main branch
+	// Workspace file update for main branch (second call from createWorktreesForBranches)
+	// Note: Even though repository was added in first call, the path comparison might not match
+	// due to different path formats, so the function may write again (idempotent operation)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
-	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[{"path":"/repos/github.com/user/repo1/origin/main","name":"repo1"}]}`), nil)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	// verifyAndCleanupWorktree (after worktree creation in loop):
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -119,9 +125,11 @@ func TestAddRepositoryToWorkspace_Success(t *testing.T) {
 	mockRepo.EXPECT().CreateWorktree("feature", gomock.Any()).Return("/repos/github.com/user/repo1/origin/feature", nil)
 	// verifyBranchExistsAfterCreation (inside createWorktreeForBranchInRepository):
 	mockGit.EXPECT().BranchExists("/path/to/repo1", "feature").Return(true, nil)
-	// Workspace file update for feature branch
+	// Workspace file update for feature branch (second call from createWorktreesForBranches)
+	// Note: Even though repository was added in first call, the path comparison might not match
+	// due to different path formats, so the function may write again (idempotent operation)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
-	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[{"path":"/repos/github.com/user/repo1/origin/feature","name":"repo1"}]}`), nil)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	// verifyAndCleanupWorktree (after worktree creation in loop):
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -293,19 +301,24 @@ func TestAddRepositoryToWorkspace_SomeBranchesWithAllRepos(t *testing.T) {
 	// Mock repository exists in status check (using the normalized URL)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
-	// Mock getting existing repository - has worktrees for "main" and "feature", but not "develop"
-	existingRepoStatus := &status.Repository{
-		Path: "/path/to/existing-repo",
-		Worktrees: map[string]status.WorktreeInfo{
-			"origin:main":    {Branch: "main", Remote: "origin"},
-			"origin:feature": {Branch: "feature", Remote: "origin"},
-			// No "develop" worktree
-		},
-	}
-	mockStatus.EXPECT().GetRepository("github.com/user/existing-repo").Return(existingRepoStatus, nil).Times(3) // Called once per branch check
-
 	// Mock updating workspace in status
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
+
+	// NEW: updateAllWorkspaceFilesForNewRepository is called for ALL branches in workspace.Worktrees
+	// This happens BEFORE worktree creation
+	// For each branch (main, feature, develop), it calls updateWorkspaceFileForNewRepository
+	// Branch "main" workspace file update (first call)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	// Branch "feature" workspace file update (first call)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	// Branch "develop" workspace file update (first call - no worktree created for this branch)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock GetRepository call at the start of createWorktreesForBranches (for default branch check)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -317,9 +330,11 @@ func TestAddRepositoryToWorkspace_SomeBranchesWithAllRepos(t *testing.T) {
 	mockGit.EXPECT().BranchExists("/path/to/repo1", "main").Return(true, nil)
 	mockRepo.EXPECT().CreateWorktree("main", gomock.Any()).Return("/repos/github.com/user/repo1/origin/main", nil)
 	mockGit.EXPECT().BranchExists("/path/to/repo1", "main").Return(true, nil)
-	// Workspace file update for main
+	// Workspace file update for main (second call from createWorktreesForBranches)
+	// Note: Even though repository was added in first call, the path comparison might not match
+	// due to different path formats, so the function may write again (idempotent operation)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
-	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[{"path":"/repos/github.com/user/repo1/origin/main","name":"repo1"}]}`), nil)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	// verifyAndCleanupWorktree for main
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -333,14 +348,37 @@ func TestAddRepositoryToWorkspace_SomeBranchesWithAllRepos(t *testing.T) {
 	mockGit.EXPECT().BranchExists("/path/to/repo1", "feature").Return(true, nil)
 	mockRepo.EXPECT().CreateWorktree("feature", gomock.Any()).Return("/repos/github.com/user/repo1/origin/feature", nil)
 	mockGit.EXPECT().BranchExists("/path/to/repo1", "feature").Return(true, nil)
-	// Workspace file update for feature
+	// Workspace file update for feature (second call from createWorktreesForBranches)
+	// Note: Even though repository was added in first call, the path comparison might not match
+	// due to different path formats, so the function may write again (idempotent operation)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
-	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[{"path":"/repos/github.com/user/repo1/origin/feature","name":"repo1"}]}`), nil)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 	// verifyAndCleanupWorktree for feature
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 	mockGit.EXPECT().GetMainRepositoryPath("/path/to/repo1").Return("/path/to/repo1", nil)
 	mockGit.EXPECT().BranchExists("/path/to/repo1", "feature").Return(true, nil)
+
+	// Branch "develop" sequence - branch doesn't exist, but worktree creation will create it from default branch
+	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
+	mockStatus.EXPECT().GetWorktree("github.com/user/repo1", "develop").Return(nil, status.ErrWorktreeNotFound)
+	mockGit.EXPECT().GetMainRepositoryPath("/path/to/repo1").Return("/path/to/repo1", nil)
+	// Branch doesn't exist in managed path, check original path
+	mockGit.EXPECT().BranchExists("/path/to/repo1", "develop").Return(false, nil)
+	mockGit.EXPECT().BranchExists("repo1", "develop").Return(false, nil) // Check original path
+	// Check remote - branch doesn't exist on remote, but worktree creation will create it from default branch
+	mockGit.EXPECT().BranchExistsOnRemote(gomock.Any()).Return(false, nil)
+	// Worktree creation will proceed and create the branch from default branch
+	mockRepo.EXPECT().CreateWorktree("develop", gomock.Any()).Return("/repos/github.com/user/repo1/origin/develop", nil)
+	mockGit.EXPECT().BranchExists("/path/to/repo1", "develop").Return(true, nil) // Verify after creation
+	// Workspace file update for develop (second call from createWorktreesForBranches)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[{"path":"/repos/github.com/user/repo1/origin/develop","name":"repo1"}]}`), nil)
+	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
+	// verifyAndCleanupWorktree for develop
+	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
+	mockGit.EXPECT().GetMainRepositoryPath("/path/to/repo1").Return("/path/to/repo1", nil)
+	mockGit.EXPECT().BranchExists("/path/to/repo1", "develop").Return(true, nil)
 
 	err := cm.AddRepositoryToWorkspace(&params)
 	assert.NoError(t, err)
@@ -439,17 +477,15 @@ func TestAddRepositoryToWorkspace_WorktreeCreationFailure(t *testing.T) {
 	// Mock repository exists in status check
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
-	// Mock getting existing repository
-	existingRepoStatus := &status.Repository{
-		Path: "/path/to/existing-repo",
-		Worktrees: map[string]status.WorktreeInfo{
-			"origin:main": {Branch: "main", Remote: "origin"},
-		},
-	}
-	mockStatus.EXPECT().GetRepository("github.com/user/existing-repo").Return(existingRepoStatus, nil)
-
 	// Mock updating workspace in status
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
+
+	// NEW: updateAllWorkspaceFilesForNewRepository is called for ALL branches in workspace.Worktrees
+	// This happens BEFORE worktree creation
+	// Branch "main" workspace file update (first call)
+	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
+	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
+	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 
 	// Mock GetRepository call at the start of createWorktreesForBranches (for default branch check)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
@@ -516,38 +552,12 @@ func TestAddRepositoryToWorkspace_WorkspaceFileUpdateFailure(t *testing.T) {
 	// Mock repository exists in status check (using the normalized URL)
 	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
 
-	// Mock getting existing repository
-	existingRepoStatus := &status.Repository{
-		Path: "/path/to/existing-repo",
-		Worktrees: map[string]status.WorktreeInfo{
-			"origin:main": {Branch: "main", Remote: "origin"},
-		},
-	}
-	mockStatus.EXPECT().GetRepository("github.com/user/existing-repo").Return(existingRepoStatus, nil)
-
 	// Mock updating workspace in status
 	mockStatus.EXPECT().UpdateWorkspace("test-workspace", gomock.Any()).Return(nil)
 
-	// Mock GetRepository call at the start of createWorktreesForBranches (for default branch check)
-	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
-
-	// Mock GetRepository call in createWorktreeForBranchInRepository (to get managed path)
-	mockStatus.EXPECT().GetRepository("github.com/user/repo1").Return(existingRepo, nil)
-
-	// Mock GetWorktree call to check if worktree already exists (it doesn't, so return error)
-	mockStatus.EXPECT().GetWorktree("github.com/user/repo1", "main").Return(nil, status.ErrWorktreeNotFound)
-
-	// Mock GetMainRepositoryPath and BranchExists before worktree creation
-	mockGit.EXPECT().GetMainRepositoryPath("/path/to/repo1").Return("/path/to/repo1", nil)
-	mockGit.EXPECT().BranchExists("/path/to/repo1", "main").Return(true, nil)
-
-	// Mock worktree creation success
-	mockRepo.EXPECT().CreateWorktree("main", gomock.Any()).Return("/repos/github.com/user/repo1/origin/main", nil)
-
-	// Mock verifyBranchExistsAfterCreation
-	mockGit.EXPECT().BranchExists("/path/to/repo1", "main").Return(true, nil)
-
-	// Mock workspace file update failure
+	// NEW: updateAllWorkspaceFilesForNewRepository is called for ALL branches in workspace.Worktrees
+	// This happens BEFORE worktree creation
+	// Branch "main" workspace file update failure (first call)
 	mockFS.EXPECT().Exists(gomock.Any()).Return(true, nil)
 	mockFS.EXPECT().ReadFile(gomock.Any()).Return([]byte(`{"folders":[]}`), nil)
 	mockFS.EXPECT().WriteFileAtomic(gomock.Any(), gomock.Any(), gomock.Any()).Return(errors.New("file write failed"))
