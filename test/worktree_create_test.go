@@ -1027,3 +1027,134 @@ func TestCreateWorktreeWorkspaceMode_RepositoryNames(t *testing.T) {
 	assert.Contains(t, workspaceContentStr, `"name": "Hello-World"`, "Workspace file should contain Hello-World name")
 	assert.Contains(t, workspaceContentStr, `"name": "Spoon-Knife"`, "Workspace file should contain Spoon-Knife name")
 }
+
+// TestCreateWorktreeBranchNotOnRemote_RepoMode tests creating a worktree for a branch that doesn't exist on the remote.
+// This test reproduces and verifies the fix for the bug where checkout fails when trying to create from origin/branch
+// that doesn't exist. The fix should create the branch from HEAD instead.
+func TestCreateWorktreeBranchNotOnRemote_RepoMode(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create a test Git repository
+	createTestGitRepo(t, setup.RepoPath)
+
+	// Create a worktree for a branch that doesn't exist on the remote (like deploy-v0-0-67 from the bug report)
+	branchName := "deploy-v0-0-67"
+	err := createWorktree(t, setup, branchName)
+	require.NoError(t, err, "Command should succeed even though branch doesn't exist on remote")
+
+	// Verify the status.yaml file was created and updated
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+	require.Len(t, status.Repositories, 1, "Should have one repository entry")
+
+	// Get the first repository from the map
+	var repoURL string
+	var repo Repository
+	for url, r := range status.Repositories {
+		repoURL = url
+		repo = r
+		break
+	}
+
+	assert.NotEmpty(t, repoURL, "Repository URL should be set")
+	assert.NotEmpty(t, repo.Path, "Repository path should be set")
+
+	// Check that the repository has the worktree
+	require.True(t, len(repo.Worktrees) > 0, "Repository should have at least one worktree")
+
+	// Check that the worktree for our branch exists
+	var foundWorktree bool
+	for _, worktree := range repo.Worktrees {
+		if worktree.Branch == branchName {
+			foundWorktree = true
+			break
+		}
+	}
+	assert.True(t, foundWorktree, "Should have worktree for %s", branchName)
+
+	// Verify the worktree exists in the .cm directory
+	assertWorktreeExists(t, setup, branchName)
+
+	// Verify the worktree is properly linked in the original repository
+	assertWorktreeInRepo(t, setup, branchName)
+
+	// Verify the worktree is on the correct branch
+	worktreePath := findWorktreePath(t, setup, branchName)
+	require.NotEmpty(t, worktreePath, "Worktree path should be found")
+
+	cmd := exec.Command("git", "branch", "--show-current")
+	cmd.Dir = worktreePath
+	output, err := cmd.Output()
+	require.NoError(t, err)
+	assert.Equal(t, branchName, strings.TrimSpace(string(output)), "Worktree should be on the correct branch")
+}
+
+// TestCreateWorktreeBranchNotOnRemote_WorkspaceMode tests creating worktrees from workspace for branches that don't exist on the remote.
+// This test verifies the fix works in workspace mode as well.
+func TestCreateWorktreeBranchNotOnRemote_WorkspaceMode(t *testing.T) {
+	setup := setupTestEnvironment(t)
+	defer cleanupTestEnvironment(t, setup)
+
+	// Create test repositories
+	repo1Path := filepath.Join(setup.CmPath, "Hello-World")
+	repo2Path := filepath.Join(setup.CmPath, "Spoon-Knife")
+
+	err := os.MkdirAll(repo1Path, 0755)
+	require.NoError(t, err)
+	err = os.MkdirAll(repo2Path, 0755)
+	require.NoError(t, err)
+
+	// Initialize Git repositories
+	createTestGitRepo(t, repo1Path)
+	createTestGitRepo(t, repo2Path)
+
+	// Create CM instance
+	cmInstance, err := codemanager.NewCodeManager(codemanager.NewCodeManagerParams{
+		Dependencies: createE2EDependencies(setup.ConfigPath).
+			WithConfig(config.NewManager(setup.ConfigPath)),
+	})
+	require.NoError(t, err)
+
+	// Create workspace
+	workspaceName := "test-workspace-branch-not-on-remote"
+	workspaceParams := codemanager.CreateWorkspaceParams{
+		WorkspaceName: workspaceName,
+		Repositories:  []string{repo1Path, repo2Path},
+	}
+	err = cmInstance.CreateWorkspace(workspaceParams)
+	require.NoError(t, err)
+
+	// Create worktrees from workspace for a branch that doesn't exist on remote
+	branchName := "deploy-v0-0-67"
+	err = cmInstance.CreateWorkTree(branchName, codemanager.CreateWorkTreeOpts{
+		WorkspaceName: workspaceName,
+	})
+	require.NoError(t, err, "Should succeed even though branch doesn't exist on remote")
+
+	// Verify workspace file was created
+	workspaceFilePath := filepath.Join(setup.CmPath, "workspaces", workspaceName, branchName+".code-workspace")
+	assert.FileExists(t, workspaceFilePath, "Workspace file should be created")
+
+	// Verify workspace file content
+	content, err := os.ReadFile(workspaceFilePath)
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "github.com/octocat/Hello-World")
+	assert.Contains(t, string(content), "github.com/octocat/Spoon-Knife")
+	assert.Contains(t, string(content), "folders")
+
+	// Verify worktrees were created for both repositories
+	status := readStatusFile(t, setup.StatusPath)
+	require.NotNil(t, status.Repositories, "Status file should have repositories section")
+
+	// Count worktrees for the branch
+	worktreeCount := 0
+	for _, repo := range status.Repositories {
+		for _, worktree := range repo.Worktrees {
+			if worktree.Branch == branchName {
+				worktreeCount++
+			}
+		}
+	}
+	assert.Equal(t, 2, worktreeCount, "Should have worktrees for both repositories")
+}
